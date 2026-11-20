@@ -19,22 +19,14 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         .tsimShaTsuiClockTower: (11.6, 11.6, 49.2),
         .culturalCentre: (144.3, 123.5, 56.3),
         .conventionCentre: (201.3, 349.0, 67.9),
-        // FUKUOKA-LANDMARKS: the earlier version's model, its mast to the
-        // real 234 m, turned as OpenStreetMap's outline.
-        .fukuokaTower: (19.8, 21.4, 234.0),
-        // The local studio's dome (revision-3): OpenStreetMap's outline,
-        // 84 m high, with the hall on its south-east side.
-        .fukuokaDome: (224.9, 223.9, 84.85),
-        // Hakata Station (revision-4): the main building and the platform
-        // roofs east of it, OpenStreetMap's outlines, and the Hakata exit's
-        // canopy to the west.
-        .hakataStation: (196.7, 400.7, 63.05),
     ]
 
     /// Every model decodes, near and far, as tall and wide as the surveyed
     /// building (half a metre either way), standing on its foot; the far
     /// model has at most half the near one's triangles and no colour it
-    /// lacks; each stays within one model's budget.
+    /// lacks; each stays within one model's budget, and all of them within
+    /// one map's. (Fukuoka's, registered landmarks since decision 895, are
+    /// checked by `Map3DLandmarkRegistryTests`.)
     func testTheModels() {
         XCTAssertEqual(Set(Self.surveyed.keys), Set(Map3DHongKongLandmark.allCases))
         for landmark in Map3DHongKongLandmark.allCases {
@@ -55,13 +47,8 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
             XCTAssertTrue(Set(far.vertices.map(\.color)).isSubset(of: Set(near.vertices.map(\.color))), "\(landmark) far colours")
             XCTAssertTrue(Set(near.vertices.map(\.color)).isSubset(of: Set(Map3DHongKongLandmark.materialColours)), "\(landmark) colours")
         }
-        // Each map's landmarks within one budget: Hong Kong's, and
-        // Fukuoka's (FUKUOKA-LANDMARKS), never drawn together.
-        let fukuoka: Set<Map3DHongKongLandmark> = [.fukuokaTower, .fukuokaDome, .hakataStation]
-        for map in [Set(Map3DHongKongLandmark.allCases).subtracting(fukuoka), fukuoka] {
-            let total = map.reduce(0) { $0 + $1.model(full: true).indices.count / 3 }
-            XCTAssertLessThanOrEqual(total, 60_000)
-        }
+        let total = Map3DHongKongLandmark.allCases.reduce(0) { $0 + $1.model(full: true).indices.count / 3 }
+        XCTAssertLessThanOrEqual(total, 60_000)
     }
 
     /// The encoding is read whole or not at all.
@@ -88,7 +75,9 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
             Map3DScene.Builder(originX: place.x, originY: place.y, region: region, world: world, heights: nil)
         }
         var central = builder()
-        let built = central.addHongKongLandmarks(frame: frame)
+        let names = central.addHongKongLandmarks(frame: frame)
+        let built = Set(names.compactMap(Map3DHongKongLandmark.init(rawValue:)))
+        XCTAssertEqual(built.count, names.count, "no registered landmark in Hong Kong: \(names)")
         XCTAssertTrue(built.isSuperset(of: [.twoIFC, .bankOfChinaTower, .cheungKongCenter, .hsbcMainBuilding, .theCenter, .centralPlaza, .conventionCentre]), "\(built)")
         let triangles = { (meshes: [Map3DScene.ChunkKey: Map3DMesh]) in meshes.values.reduce(0) { $0 + $1.indices.count / 3 } }
         XCTAssertEqual(triangles(central.nearMeshes), built.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })
@@ -103,43 +92,9 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         let line = stride(from: Float(-60), through: 60, by: 2).map { middle + Map3DPoint($0, 0, 0) }
         var blocked = builder()
         blocked.trackLines = [(line, .surface)]
-        XCTAssertFalse(blocked.addHongKongLandmarks(frame: frame).contains(.twoIFC))
+        XCTAssertFalse(blocked.addHongKongLandmarks(frame: frame).contains(ifc.rawValue))
         var tunnel = builder()
         tunnel.trackLines = [(line, .tunnel)]
-        XCTAssertTrue(tunnel.addHongKongLandmarks(frame: frame).contains(.twoIFC))
-    }
-
-    /// FUKUOKA-LANDMARKS: on Fukuoka's map, Fukuoka Tower stands at
-    /// Momochihama, its mast as high as the real one's.
-    func testFukuokaTowerOnFukuokasMap() throws {
-        let world = GameWorld.newOverseasGame(try FukuokaRailwaysTests.ground())
-        let frame = try XCTUnwrap(RealWorldFrame(world: world))
-        let tower = Map3DHongKongLandmark.fukuokaTower
-        let place = frame.worldPosition(latitude: tower.latitude, longitude: tower.longitude)
-        let metre = Double(WorldCoordinate.unitsPerMetre), reach = 800 * metre
-        let region = WorldRegion(minX: place.x - reach, minY: place.y - reach, maxX: place.x + reach, maxY: place.y + reach)
-        var builder = Map3DScene.Builder(originX: place.x, originY: place.y, region: region, world: world, heights: nil)
-        XCTAssertEqual(builder.addHongKongLandmarks(frame: frame), [.fukuokaTower])
-        let top = builder.nearMeshes.values.flatMap(\.vertices).map(\.y).max() ?? 0
-        XCTAssertEqual(top, 234, accuracy: 1)
-        XCTAssertTrue(builder.underLandmark(builder.point(x: place.x, y: place.y, height: 0)))
-    }
-
-    /// FUKUOKA-LANDMARKS: Fukuoka Dome stands beside the tower and Hakata
-    /// Station over the subway's Hakata station (in its tunnel, so the
-    /// building is not left out), each as high as the real one.
-    func testFukuokaDomeAndHakataStationOnFukuokasMap() throws {
-        let world = GameWorld.newOverseasGame(try FukuokaRailwaysTests.ground())
-        let frame = try XCTUnwrap(RealWorldFrame(world: world))
-        for (landmark, height) in [(Map3DHongKongLandmark.fukuokaDome, Float(84.85)), (.hakataStation, 63.05)] {
-            let place = frame.worldPosition(latitude: landmark.latitude, longitude: landmark.longitude)
-            let metre = Double(WorldCoordinate.unitsPerMetre), reach = 400 * metre
-            let region = WorldRegion(minX: place.x - reach, minY: place.y - reach, maxX: place.x + reach, maxY: place.y + reach)
-            var builder = Map3DScene.Builder(originX: place.x, originY: place.y, region: region, world: world, heights: nil)
-            XCTAssertEqual(builder.addHongKongLandmarks(frame: frame), [landmark])
-            let top = builder.nearMeshes.values.flatMap(\.vertices).map(\.y).max() ?? 0
-            XCTAssertEqual(top, height, accuracy: 1, "\(landmark)")
-            XCTAssertTrue(builder.underLandmark(builder.point(x: place.x, y: place.y, height: 0)), "\(landmark)")
-        }
+        XCTAssertTrue(tunnel.addHongKongLandmarks(frame: frame).contains(ifc.rawValue))
     }
 }

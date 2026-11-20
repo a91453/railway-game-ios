@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark fukuoka-tower: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "fukuoka-tower" : {
+      "hash" : "0329b204570ec66f",
+      "triangles" : 209
+    },
+    "fukuoka-tower-far" : {
+      "hash" : "4d509b190271b8f5",
+      "triangles" : 32
+    }
+  }
+}
