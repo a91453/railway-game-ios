@@ -19,3 +19,6 @@ big it is before it is run.
 - `lists/ship-air.txt`: ferries (ports, routes, timetables, fares) and flights
   (airports, airlines, domestic and international timetables). Some of these
   paths are probes; a 404 is recorded and the run goes on.
+- `lists/tra-delay-2026-11.txt`: Taiwan Railway delay reports of 2026-10-27 to
+  11-19, one day a path (JSON Lines, about 14 MB a day, so about 2 points), after
+  the 341 days already in the reference repository's `tdx-snapshot-2026-10/`.
