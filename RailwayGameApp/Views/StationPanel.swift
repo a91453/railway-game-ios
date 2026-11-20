@@ -733,39 +733,49 @@ struct StationPanel: View {
         if let sounds = session.selectedStationSounds {
             let language = session.language
             Section {
-                Picker(selection: Binding(
-                    get: { sounds.chime },
-                    set: { session.setSelectedStationChime($0) }
-                )) {
-                    Text(verbatim: sounds.chimeTitle(nil, in: language)).tag(StationChime?.none)
-                    ForEach(StationChime.allCases, id: \.self) { chime in
-                        Text(verbatim: sounds.chimeTitle(chime, in: language)).tag(StationChime?.some(chime))
+                HStack(spacing: 4) {
+                    Picker(selection: Binding(
+                        get: { sounds.chime },
+                        set: { session.setSelectedStationChime($0) }
+                    )) {
+                        Text(verbatim: sounds.chimeTitle(nil, in: language)).tag(StationChime?.none)
+                        ForEach(StationChime.allCases, id: \.self) { chime in
+                            Text(verbatim: sounds.chimeTitle(chime, in: language)).tag(StationChime?.some(chime))
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Arrival bell", "到站鈴"))
+                        } icon: {
+                            Image(systemName: "bell")
+                        }
                     }
-                } label: {
-                    Label {
-                        Text(verbatim: language.text("Arrival bell", "到站鈴"))
-                    } icon: {
-                        Image(systemName: "bell")
-                    }
-                }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("station.chime")
-                Picker(selection: Binding(
-                    get: { sounds.melodyPick },
-                    set: { session.setSelectedStationMelody($0) }
-                )) {
-                    ForEach(sounds.melodyPicks, id: \.self) { pick in
-                        Text(verbatim: sounds.melodyTitle(pick, in: language)).tag(pick)
-                    }
-                } label: {
-                    Label {
-                        Text(verbatim: language.text("Departure melody", "發車旋律"))
-                    } icon: {
-                        Image(systemName: "music.note")
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("station.chime")
+                    soundPreviewButton(language.text("Play the arrival bell", "試聽到站鈴"), identifier: "station.chime.play") {
+                        session.previewSelectedStationChime()
                     }
                 }
-                .pickerStyle(.menu)
-                .accessibilityIdentifier("station.departureMelody")
+                HStack(spacing: 4) {
+                    Picker(selection: Binding(
+                        get: { sounds.melodyPick },
+                        set: { session.setSelectedStationMelody($0) }
+                    )) {
+                        ForEach(sounds.melodyPicks, id: \.self) { pick in
+                            Text(verbatim: sounds.melodyTitle(pick, in: language)).tag(pick)
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("Departure melody", "發車旋律"))
+                        } icon: {
+                            Image(systemName: "music.note")
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("station.departureMelody")
+                    soundPreviewButton(language.text("Play the departure melody", "試聽發車旋律"), identifier: "station.departureMelody.play") {
+                        session.previewSelectedStationMelody()
+                    }
+                }
                 // Decision 883: write a melody for this station, or
                 // rewrite the one it plays.
                 if case .player(let id) = sounds.melodyPick, let melody = session.world.playerMelody(id: id) {
@@ -801,6 +811,25 @@ struct StationPanel: View {
                 Text(verbatim: StationSoundsChoice.note(in: language))
             }
         }
+    }
+
+    /// Decision 883 (later): the play button beside a sound's picker, which plays
+    /// what the station is set to once more.
+    private func soundPreviewButton(_ title: String, identifier: String, play: @escaping () -> Void) -> some View {
+        Button(action: play) {
+            Label {
+                Text(verbatim: title)
+            } icon: {
+                Image(systemName: "play.circle.fill")
+            }
+            .labelStyle(.iconOnly)
+            .font(.title2)
+            .frame(minWidth: 44, minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        // Its own press, not the row's (the picker's menu).
+        .buttonStyle(.borderless)
+        .accessibilityIdentifier(identifier)
     }
 
     /// Decision 883: opens the melody workshop on `draft`.

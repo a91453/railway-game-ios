@@ -292,6 +292,23 @@ final class GameAudio {
         cues.play(cue, volume: volume)
     }
 
+    /// Decision 883 (later): plays the sound for `cue` because the player asked
+    /// to hear it (a station's bell or melody tried from its panel, the
+    /// workshop's play button): with the sounds switched off too, however
+    /// lately the same one played, and never quieter than
+    /// ``previewLevel`` of its own volume, so a press always answers. The
+    /// arrivals and departures that follow keep their spacing from it.
+    func preview(_ cue: SoundCue) {
+        guard plays, isActive else { return }
+        lastPlayed[Self.spacingKey(of: cue)] = .now
+        let level = max(Float(volumes.level(of: cue.category)), Self.previewLevel)
+        cues.play(cue, volume: Self.baseVolume(of: cue) * level, again: true)
+    }
+
+    /// The least share of a sound's own volume a preview plays at
+    /// (decision 883, later), for a player whose slider is at or near nothing.
+    private static let previewLevel: Float = 0.5
+
     /// Decision 815: the tune is chosen by the device's date each time
     /// the music starts, a turn ends or the app comes back to the
     /// foreground, so the winter tune begins on 1 December and gives way
@@ -711,13 +728,16 @@ private final class CuePlayers: @unchecked Sendable {
     }()
 
     /// Plays `cue` at `volume`, on a free player of its few, soon after.
-    func play(_ cue: SoundCue, volume: Float) {
+    /// `again` (decision 883, later, a preview) stops the cue's players first, so
+    /// a second press starts it over instead of playing over itself.
+    func play(_ cue: SoundCue, volume: Float, again: Bool = false) {
         queue.async { [self] in
             FrameCostMeter.shared.measure(.soundPlayback) {
                 let players = players[cue] ?? load(cue)
                 // Decision 883: a player melody starts again from the
                 // start rather than over itself.
                 if case .playerDeparture = cue { players.forEach { $0.stop() } }
+                if again { players.forEach { $0.stop() } }
                 guard let player = players.first(where: { !$0.isPlaying }) ?? players.first else { return }
                 player.volume = volume
                 player.currentTime = 0
@@ -736,10 +756,14 @@ private final class CuePlayers: @unchecked Sendable {
             if players.keys.count(where: { if case .playerDeparture = $0 { true } else { false } }) >= 4 {
                 players = players.filter { if case .playerDeparture = $0.key { false } else { true } }
             }
-            let made = (0..<1).compactMap { _ in try? AVAudioPlayer(data: wav) }
+            let made = (0..<1).compactMap { _ in try? AVAudioPlayer(data: wav, fileTypeHint: AVFileType.wav.rawValue) }
             made.forEach { $0.volume = GameAudio.baseVolume(of: cue); $0.prepareToPlay() }
-            players[cue] = made
-            return made
+            // Decision 883 (later): a melody that cannot be played from memory
+            // falls through to the file below rather than to silence.
+            if !made.isEmpty {
+                players[cue] = made
+                return made
+            }
         }
         let file = cue.resource
         let made = (0..<3).compactMap { _ in GameAudio.player(named: file.name, extension: file.extension, volume: GameAudio.baseVolume(of: cue)) }
