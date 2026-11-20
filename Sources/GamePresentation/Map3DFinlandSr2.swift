@@ -71,7 +71,7 @@ extension Map3DFinlandSr2 {
         id: "finlandIntercity",
         sets: [Map3DTrainSet.finlandIntercity(), .finlandIntercity(far: true)],
         showcase: [
-            Map3DShowcase.Entry(key, "Finnish intercity, Sr2 electric", "芬蘭城際列車（Sr2 電力機車）", .other,
+            Map3DShowcase.Entry(key, "Finnish intercity, Sr2 electric", "芬蘭城際列車（Sr2 電力機車）", .finland,
                                 cars: cars, most: 10, gauge: 1.524),
         ],
         triangles: 3_000...11_700, length: 19.0...26.45)

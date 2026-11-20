@@ -63,7 +63,7 @@ extension Map3DMTREastRailLine {
         id: "mtrEastRailLine",
         sets: [Map3DTrainSet.mtrEastRailLine(), .mtrEastRailLine(far: true)],
         showcase: [
-            Map3DShowcase.Entry(key, "Hong Kong East Rail line train", "香港東鐵綫列車", .metro, cars: 9, fixed: true),
+            Map3DShowcase.Entry(key, "Hong Kong East Rail line train", "香港東鐵綫列車", .hongKong, cars: 9, fixed: true),
         ],
         triangles: 2_500...11_700, length: 24.1...25.1)
 }
