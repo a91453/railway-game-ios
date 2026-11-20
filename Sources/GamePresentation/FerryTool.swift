@@ -82,27 +82,33 @@ public struct RealFerry: Hashable, Sendable {
     /// Tamsui–Bali across the Tamsui River's mouth: the two ferry piers,
     /// 1,260 m apart in a straight line (the crossing takes about 10
     /// minutes, New Taipei transport department, 2026-05-18). The
-    /// coordinates are the piers' as on the map, not checked against
-    /// OpenStreetMap here (UNVERIFIED: the extract and Overpass could not
-    /// be reached).
+    /// coordinates are OpenStreetMap's (ODbL; osmtoday's Taiwan extract of
+    /// 2026-11-20, decision 585 續 FERRY-STATION-TAP): the ferry terminals
+    /// 淡水渡船頭 (node 6806993047) and 八里渡船頭 (node 6778518834).
     public static let tamsuiBali = RealFerry(
         name: "淡水—八里", englishName: "Tamsui–Bali",
         piers: [
-            Pier(name: "淡水", englishName: "Tamsui", latitude: 25.1693, longitude: 121.4395),
-            Pier(name: "八里", englishName: "Bali", latitude: 25.1585, longitude: 121.4357)
+            Pier(name: "淡水", englishName: "Tamsui", latitude: 25.169611, longitude: 121.439047),
+            Pier(name: "八里", englishName: "Bali", latitude: 25.159292, longitude: 121.435885)
         ],
         legMetres: [1_260]
     )
 
     /// Gushan–Cijin across Kaohsiung harbour's mouth: the two ferry
-    /// piers, 715 m apart in a straight line (about 5 minutes). The
-    /// coordinates as Tamsui–Bali's (UNVERIFIED).
+    /// piers, 715 m apart (about 5 minutes; OpenStreetMap's sailed way
+    /// 388956320 is 709 m). Cijin's pier is OpenStreetMap's, as
+    /// Tamsui–Bali's: that way's south end, at the terminal 旗津輪渡站 (way
+    /// 255744758). Gushan's stays some 90 m west of the way's north end
+    /// (node 3921289758): the real boats berth against the terminal
+    /// building, which the 3D map draws standing on the water, so a pier
+    /// there would put the boat inside it
+    /// (``ScreenshotSceneTests/testTheRealFerryPiersStandAtTheDrawnShore``).
     public static let gushanCijin = RealFerry(
         name: "鼓山—旗津", englishName: "Gushan–Cijin",
         piers: [
             Pier(name: "鼓山", englishName: "Gushan", latitude: 22.6195, longitude: 120.2690,
                  terminalLatitude: 22.6198008, terminalLongitude: 120.2700518),
-            Pier(name: "旗津", englishName: "Cijin", latitude: 22.6135, longitude: 120.2665,
+            Pier(name: "旗津", englishName: "Cijin", latitude: 22.6141421, longitude: 120.2698082,
                  terminalLatitude: 22.6139938, terminalLongitude: 120.2697235)
         ],
         legMetres: [715]
