@@ -177,7 +177,7 @@ public enum Map3DCollectionShowcase {
     static let coveredBelow: Float = 0.45
 
     /// The cabins of each line, in order: Maokong's two, Sun Moon Lake's
-    /// four, Ngong Ping's two (decision 896).
+    /// four, Ngong Ping's two (decision 897).
     static let cableLines: [[String]] = [
         Map3DCableCar.Cabin.allCases.map { "cablecar-cabin-" + $0.rawValue },
         Map3DCableCar.SunMoonCabin.allCases.map { "cablecar-cabin-sunmoon-" + $0.rawValue },

@@ -133,6 +133,12 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
     /// dark, and Fukuoka Tower's sky glass), lit at night.
     static let glassMaterials: Set<Int> = [0, 1, 2, 18]
 
+    /// FUKUOKA-TOWER-GLASS: the glass whose floors show more than its
+    /// mullions (``Map3DVertex/floorLines``: a line every 5 m up, faint
+    /// ones 1.6 m apart along the wall), as Fukuoka Tower's bands of
+    /// mirror panes; lit at night as the rest.
+    static let bandedGlassMaterials: Set<Int> = [18]
+
     /// The model in full close by, or the studio's far model.
     func model(full: Bool) -> LandmarkMesh {
         let name = rawValue + (full ? "" : "-far")
@@ -173,7 +179,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
             let n = Map3DPoint(q.x - p.x, q.y - p.y, q.z - p.z).cross(Map3DPoint(s.x - p.x, s.y - p.y, s.z - p.z)).normalized
             if glassMaterials.contains(paint), let n, abs(n.z) < 0.7, let along = Map3DPoint(-n.y, n.x, 0).normalized {
                 let uv = [p, q, s].map { (x: $0.x * along.x + $0.y * along.y, y: $0.z) }
-                mesh.tri(p, q, s, materialColours[paint], LandmarkMesh.curtain, uv)
+                mesh.tri(p, q, s, materialColours[paint], bandedGlassMaterials.contains(paint) ? LandmarkMesh.floors : LandmarkMesh.curtain, uv)
             } else {
                 mesh.tri(p, q, s, materialColours[paint], LandmarkMesh.plain)
             }

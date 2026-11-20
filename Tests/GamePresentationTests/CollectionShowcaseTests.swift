@@ -29,7 +29,7 @@ final class CollectionShowcaseTests: XCTestCase {
         XCTAssertEqual(RealCableway.maokong.stops.filter(\.boards).count, 4)
         XCTAssertEqual(RealCableway.maokong.stops.filter { !$0.boards }.count, 2)
         XCTAssertEqual(RealCableway.sunMoonLake.stops.count, 2)
-        // Decision 896: Ngong Ping's 5.7 km (the game's 5,767 m), its two
+        // Decision 897: Ngong Ping's 5.7 km (the game's 5,767 m), its two
         // stations that board and two angle stations.
         let ngongPing = chinese[2].lines.joined(separator: "\n")
         for figure in ["2006 年 9 月 18 日", "5.7 公里", "2 個車站、2 個轉角站"] {
@@ -80,7 +80,7 @@ final class CollectionShowcaseTests: XCTestCase {
         XCTAssertEqual(cabins.map(\.model), Map3DCableCar.Cabin.allCases.map { "cablecar-cabin-" + $0.rawValue }
                        + Map3DCableCar.SunMoonCabin.allCases.map { "cablecar-cabin-sunmoon-" + $0.rawValue }
                        + Map3DNgongPingCabin.Kind.allCases.map { "cablecar-cabin-ngongping-" + $0.rawValue })
-        // Decision 896: three lines, each two towers and two ropes.
+        // Decision 897: three lines, each two towers and two ropes.
         XCTAssertEqual(layout.pieces.filter { $0.model == "cablecar-tower" }.count, 6)
         XCTAssertEqual(layout.ropes.count, 6)
         let height = Map3DCableCar.ropeHeight(ofTower: Map3DCableCar.towerHeight)

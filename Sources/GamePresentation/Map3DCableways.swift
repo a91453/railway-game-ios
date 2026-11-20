@@ -58,7 +58,7 @@ public struct Map3DCableways: Sendable {
 
     /// Decision 615: the cabins a cable car runs, picked by where it is,
     /// not by the player: the Sun Moon Lake Ropeway's near it, Maokong's
-    /// everywhere else; decision 896: the Ngong Ping cable car's near it.
+    /// everywhere else; decision 897: the Ngong Ping cable car's near it.
     public enum CabinLook: Sendable { case maokong, sunMoonLake, ngongPing }
 
     /// Decision 615: within this of either of the Sun Moon Lake Ropeway's
@@ -68,7 +68,7 @@ public struct Map3DCableways: Sendable {
     /// Maokong some 130 km.
     public static let sunMoonLakeReach: Double = 5_000
 
-    /// Decision 896: within this of any of the Ngong Ping cable car's
+    /// Decision 897: within this of any of the Ngong Ping cable car's
     /// stations (``RealCableway/ngongPing``), a stop puts its cable car on
     /// Lantau, as ``sunMoonLakeReach`` does at the lake: Tung Chung's
     /// station to Ngong Ping's is some 5.7 km in a line, so every stop of a
@@ -211,7 +211,7 @@ public struct Map3DCableways: Sendable {
         /// Decision 615: the Sun Moon Lake cabins; empty in a pack without
         /// them, which then runs Maokong's there too.
         let sunMoon: [Map3DCableCar.SunMoonCabin: (near: Int, far: Int)]
-        /// Decision 896: the Ngong Ping cabins; empty in a pack without
+        /// Decision 897: the Ngong Ping cabins; empty in a pack without
         /// them, which then runs Maokong's there.
         let ngongPing: [Map3DNgongPingCabin.Kind: (near: Int, far: Int)]
 

@@ -331,7 +331,7 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
         let built = try XCTUnwrap(session.world.cableways.last)
         XCTAssertEqual(RealCableway.matching(built, in: session.world), .ngongPing)
-        // Decision 896: its own cabins, not Maokong's.
+        // Decision 897: its own cabins, not Maokong's.
         XCTAssertEqual(Map3DCableways.look(of: built, in: session.world), .ngongPing)
         XCTAssertEqual(session.realCablewayOffers, [])
     }
@@ -432,7 +432,8 @@ final class CablewayToolTests: XCTestCase {
     /// with no line bought, carries a tenth of its visitors.
     func testAnOlderHongKongSaveGetsTheBuddhaAndTheCableCarItsVisitors() throws {
         let session = try realSession(latitude: 22.2735, longitude: 113.92, cells: 128)
-        XCTAssertEqual(session.world.tourism?.attractions.map(\.name), ["天壇大佛"])
+        // Decision 894: and the other sights of Hong Kong on this map.
+        XCTAssertEqual(session.world.tourism?.attractions.first?.name, "天壇大佛")
         XCTAssertEqual(session.world.tourism?.attractions.first?.kind, .landmark)
         session.traceRealCableway(.ngongPing)
         XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
@@ -460,7 +461,7 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertNil(taiwan.world.tourism)
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: 22.2735, longitudeDegrees: 113.92))
         let fresh = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 128 * Self.cell, height: 128 * Self.cell), land: [])
-        XCTAssertEqual(fresh.tourism?.attractions.map(\.englishName), ["Tian Tan Buddha"])
+        XCTAssertEqual(fresh.tourism?.attractions.first?.englishName, "Tian Tan Buddha")
         XCTAssertLessThan(AttractionCatalog.hongKongSpots[0].stars, GameWorld.alertedSightStars)
     }
 

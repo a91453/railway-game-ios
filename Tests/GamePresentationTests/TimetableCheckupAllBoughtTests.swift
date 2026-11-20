@@ -74,8 +74,12 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// 6.0 minutes; the Nanakuma Line's are its trains too few for its
     /// peak (two more run it on time, but its ends have no tracks for
     /// them: FUKUOKA-NANAKUMA-FLEET).
+    /// Decision 881, later (EAL-LMC-PEAK-GAP): under a new game's rules
+    /// the Kuko Line's longest peak gap is 7.4 minutes, 24 s more (+5
+    /// for +4), its worst run 2.0 minutes late for 3.7, the runs late as
+    /// they were: fewer of the day's moves into the other berth of an end.
     static let budgets: [String: TimetableCheckup.Budget] = [
-        "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 127, lateOutOfDepot: 0, peakGapMinutes: 4),
+        "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 127, lateOutOfDepot: 0, peakGapMinutes: 5),
         "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 126, lateOutOfDepot: 0, peakGapMinutes: 4),
         "taiwan ntdlrt:V+ntdlrt:VB simple": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 7),
         "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),

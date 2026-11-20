@@ -258,23 +258,135 @@ public enum AttractionCatalog {
         Spot("t192", "布袋漁港", "Budai Fishing Port", .harbour, 250, 23.37931, 120.15568),
     ]
 
-    /// Decision 880: Hong Kong's sights, kept apart from Taiwan's table
-    /// (which `tools/tourism-spots` writes). The first is the one the
-    /// Ngong Ping cable car goes up to: the Tian Tan Buddha, OpenStreetMap
-    /// way 45659816 (`tourism=attraction`, 天壇大佛; osmtoday.com's Hong
-    /// Kong extract of 2026-11-18, ODbL), 460 m from the cable car's upper
-    /// station. Three and a half stars, below the alert bubbles' rating
-    /// as decision 250's are, so the map asks for no line to it.
+    // Decision 894: each country's sights are a table of their own:
+    // Taiwan's above (``spots``, which `tools/tourism-spots` writes), then
+    // Hong Kong's, Finland's and Japan's, in ``byCountry``. A map holds the
+    // ones inside its bounds, so each map lists its own country's only.
+    // The overseas places are OpenStreetMap's (ODbL 1.0, credited in
+    // `DataSourceCredits`), read from osmtoday.com's whole extracts of
+    // 2026-11-20 (`asia/china/hong_kong.pbf`, `europe/finland.pbf`,
+    // `asia/japan/kyushu.pbf`); each row names the element it was read
+    // from. The few rated four stars or more ask for a line on a new map
+    // (``MapAlerts/alertedSightStars``), as Taiwan's best-known do: two or
+    // three a map.
+
+    /// Decision 880: Hong Kong's sights. The first is the one the Ngong
+    /// Ping cable car goes up to: the Tian Tan Buddha, way 45659816
+    /// (`tourism=attraction`), 460 m from the cable car's upper station.
+    /// Decision 894 added the rest.
     public static let hongKongSpots: [Spot] = [
         Spot("hk01", "天壇大佛", "Tian Tan Buddha", .landmark, 350, 22.25395, 113.90502),
+        // Way 143716612, the Peak Tower at the Peak Tram's upper end.
+        Spot("hk02", "太平山頂", "Victoria Peak", .mountain, 400, 22.27127, 114.15005),
+        // Way 377094298 (`tourism=theme_park`); the Disneyland Resort line's end.
+        Spot("hk03", "香港迪士尼樂園", "Hong Kong Disneyland", .town, 400, 22.31194, 114.04238),
+        // The park is a relation; its middle, between its substations (ways 301326736, 657941234).
+        Spot("hk04", "海洋公園", "Ocean Park", .town, 400, 22.24600, 114.17600),
+        // Way 880775625.
+        Spot("hk05", "廟街夜市", "Temple Street Night Market", .nightMarket, 350, 22.30689, 114.17008),
+        // Way 880780511.
+        Spot("hk06", "女人街", "Ladies' Market", .nightMarket, 300, 22.31710, 114.17102),
+        // Way 264462808.
+        Spot("hk07", "黃大仙祠", "Wong Tai Sin Temple", .temple, 350, 22.34274, 114.19374),
+        // Way 109743814.
+        Spot("hk08", "志蓮淨苑", "Chi Lin Nunnery", .temple, 300, 22.34062, 114.20553),
+        // Way 137331476.
+        Spot("hk09", "車公廟", "Che Kung Temple", .temple, 300, 22.37331, 114.18300),
+        // Way 319658451, on Hollywood Road.
+        Spot("hk10", "文武廟", "Man Mo Temple", .temple, 300, 22.28396, 114.15009),
+        // The clock tower of the 3D map's landmarks (decision 791), beside the Cultural Centre.
+        Spot("hk11", "尖沙咀鐘樓", "Tsim Sha Tsui Clock Tower", .landmark, 350, 22.29358, 114.16954),
+        // Way 998741825, before the Convention Centre (decision 791).
+        Spot("hk12", "金紫荊廣場", "Golden Bauhinia Square", .landmark, 300, 22.28425, 114.17385),
+        // Node 2106910301, in the International Commerce Centre (decision 791).
+        Spot("hk13", "天際100", "Sky100", .landmark, 300, 22.30334, 114.16038),
+        // Way 549702815.
+        Spot("hk14", "M+", "M+", .museum, 350, 22.30078, 114.15906),
+        // Way 640750810.
+        Spot("hk15", "香港故宮文化博物館", "Hong Kong Palace Museum", .museum, 350, 22.30168, 114.15562),
+        // Way 323202866.
+        Spot("hk16", "香港摩天輪", "Hong Kong Observation Wheel", .landmark, 300, 22.28545, 114.16172),
+        // Way 988355887.
+        Spot("hk17", "蘭桂坊", "Lan Kwai Fong", .town, 300, 22.28077, 114.15528),
+        // Node 1122164722.
+        Spot("hk18", "赤柱市集", "Stanley Market", .town, 300, 22.21820, 114.21252),
+        // Way 155997180.
+        Spot("hk19", "淺水灣", "Repulse Bay", .coast, 300, 22.23665, 114.19594),
+        // Way 244105525, the fishing village's market.
+        Spot("hk20", "大澳", "Tai O", .harbour, 300, 22.25461, 113.86176),
+        // Way 100134959.
+        Spot("hk21", "香港濕地公園", "Hong Kong Wetland Park", .coast, 300, 22.46892, 114.00620),
     ]
+
+    /// Decision 894: Finland's sights, round Rovaniemi on the Arctic Circle.
+    public static let finlandSpots: [Spot] = [
+        // Way 638826898 (`tourism=theme_park`), the village of decision 818 and its reindeer (decision 840).
+        Spot("fi01", "聖誕老人村", "Santa Claus Village", .landmark, 450, 66.54302, 25.84579),
+        // Node 13626402703.
+        Spot("fi02", "北極圈科學館", "Arktikum", .museum, 400, 66.50754, 25.72598),
+        // Way 550880589, the ski slopes over the town.
+        Spot("fi03", "歐納斯山", "Ounasvaara", .mountain, 350, 66.50565, 25.78707),
+        // Way 788810046.
+        Spot("fi04", "伐木工蠟燭橋", "Lumberjack's Candle Bridge", .landmark, 250, 66.50286, 25.74243),
+        // Way 190256486.
+        Spot("fi05", "羅瓦涅米教堂", "Rovaniemi Church", .temple, 250, 66.49462, 25.72877),
+        // Way 154893241.
+        Spot("fi06", "科倫迪文化館", "Korundi House of Culture", .museum, 250, 66.50089, 25.71866),
+        // Way 49921713, Alvar Aalto's hall.
+        Spot("fi07", "拉普蘭廳", "Lappia Hall", .landmark, 250, 66.49696, 25.72019),
+        // Way 347217443.
+        Spot("fi08", "羅瓦涅米民俗博物館", "Rovaniemi Local Heritage Museum", .museum, 200, 66.47979, 25.74117),
+        // Way 49747658.
+        Spot("fi09", "拉普蘭森林博物館", "Forestry Museum of Lapland", .museum, 200, 66.47792, 25.75895),
+        // Way 220594337, at the Kemijärvi line's end.
+        Spot("fi10", "凱米耶爾維教堂", "Kemijärvi Church", .temple, 200, 66.71546, 27.43843),
+    ]
+
+    /// Decision 894: Japan's sights, round Fukuoka.
+    public static let japanSpots: [Spot] = [
+        // Way 772670439, the 3D map's tower (decision 854).
+        Spot("jp01", "福岡塔", "Fukuoka Tower", .landmark, 400, 33.59333, 130.35151),
+        // Way 28445837, the 3D map's dome.
+        Spot("jp02", "福岡巨蛋", "Fukuoka Dome", .landmark, 350, 33.59530, 130.36215),
+        // Node 4908537226.
+        Spot("jp03", "中洲屋台", "Nakasu Yatai", .nightMarket, 400, 33.59139, 130.40706),
+        // Way 45779975.
+        Spot("jp04", "櫛田神社", "Kushida Shrine", .temple, 350, 33.59300, 130.41041),
+        // Between its two bicycle parks (nodes 13040556464, 13040556495).
+        Spot("jp05", "博多運河城", "Canal City Hakata", .town, 350, 33.59025, 130.41112),
+        // Way 23344558.
+        Spot("jp06", "大濠公園", "Ohori Park", .town, 350, 33.58706, 130.37695),
+        // Way 345642780, the castle's park.
+        Spot("jp07", "福岡城跡", "Fukuoka Castle Ruins", .landmark, 300, 33.58440, 130.38230),
+        // Node 7077357362, the main hall.
+        Spot("jp08", "筥崎宮", "Hakozaki Shrine", .temple, 300, 33.61459, 130.42346),
+        // Way 767775372.
+        Spot("jp09", "東長寺", "Tocho-ji", .temple, 300, 33.59513, 130.41410),
+        // Way 210616030.
+        Spot("jp10", "福岡市博物館", "Fukuoka City Museum", .museum, 300, 33.58982, 130.35310),
+        // Node 1423779941.
+        Spot("jp11", "福岡亞洲美術館", "Fukuoka Asian Art Museum", .museum, 250, 33.59497, 130.40582),
+        // Way 169652278.
+        Spot("jp12", "福岡市動植物園", "Fukuoka Zoo and Botanical Garden", .town, 300, 33.57333, 130.38927),
+        // Node 7077424152, on Shikanoshima.
+        Spot("jp13", "志賀海神社", "Shikaumi Shrine", .temple, 250, 33.66808, 130.31316),
+    ]
+
+    /// Decision 894: every country's table, Taiwan's first.
+    public static let byCountry: [[Spot]] = [spots, hongKongSpots, finlandSpots, japanSpots]
+
+    /// Every country's sights, in ``byCountry``'s order.
+    public static let allSpots: [Spot] = byCountry.flatMap { $0 }
+
+    /// The sights outside Taiwan.
+    static let overseasSpots: [Spot] = byCountry.dropFirst().flatMap { $0 }
 
     /// The spots that lie inside a world of `bounds` laid over the Earth as
     /// `frame` says, as attractions numbered from 1 in the catalog's order
-    /// (Taiwan's, then Hong Kong's). Empty away from both.
+    /// (``byCountry``). Empty away from them all.
     public static func attractions(in frame: RealWorldFrame, bounds: WorldBounds, only ids: Set<String>? = nil) -> [Attraction] {
         var found: [Attraction] = []
-        for spot in spots + hongKongSpots where ids?.contains(spot.id) ?? true {
+        for spot in allSpots where ids?.contains(spot.id) ?? true {
             let position = frame.worldPosition(latitude: spot.latitude, longitude: spot.longitude)
             guard position.x >= 0, position.y >= 0, position.x < Double(bounds.width), position.y < Double(bounds.height) else { continue }
             found.append(Attraction(
@@ -286,17 +398,26 @@ public enum AttractionCatalog {
     }
 
     /// Decision 880: `world` with the sights of its map, when it is a free
-    /// game on a real-world map that had none when it was saved and has
-    /// some now (Hong Kong, whose first sight came with decision 880): as
-    /// ``AirportCatalog/withAirports(_:)`` gives an older save its
-    /// airports. Any other world is returned as it is: one with sights
-    /// keeps its own, shops and counts and all.
+    /// game on a real-world map outside Taiwan whose catalog has sights
+    /// the world lacks: as ``AirportCatalog/withAirports(_:)`` gives an
+    /// older save its airports. Decision 894: a world with none gets them
+    /// all; one with some (a Hong Kong save holding only the Tian Tan
+    /// Buddha) keeps its own, shops and counts and all, and gets the
+    /// missing ones after them (``GameWorld/addAttractions(_:)``), told
+    /// apart by their English names. Taiwan's maps, the scenarios and a
+    /// demo with tourism turned off on Taiwan's ground are returned as
+    /// they are.
     public static func withSights(_ world: GameWorld) -> GameWorld {
-        guard world.tourism == nil, world.scenario == nil, let frame = RealWorldFrame(world: world) else { return world }
-        let sights = attractions(in: frame, bounds: world.bounds, only: Set(hongKongSpots.map(\.id)))
+        guard world.scenario == nil, let frame = RealWorldFrame(world: world) else { return world }
+        let sights = attractions(in: frame, bounds: world.bounds, only: Set(overseasSpots.map(\.id)))
         guard !sights.isEmpty else { return world }
         var world = world
-        world.setTourism(sights)
+        guard let held = world.tourism?.attractions else {
+            world.setTourism(sights)
+            return world
+        }
+        let names = Set(held.map(\.englishName))
+        world.addAttractions(sights.filter { !names.contains($0.englishName) })
         return world
     }
 }

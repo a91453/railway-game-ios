@@ -4455,7 +4455,7 @@ public final class GameSession {
             var found = (placeNames.landmarks?.landmarks(near: here, within: metres) ?? []).map {
                 (name: $0.thing.name, kind: StationNameChoice.Kind.landmark($0.thing.kind), metres: $0.metres)
             }
-            for spot in AttractionCatalog.spots {
+            for spot in AttractionCatalog.allSpots {
                 let distance = RealStationTransfers.distanceMetres(here, RealRailways.Coordinate(latitude: spot.latitude, longitude: spot.longitude))
                 if distance <= metres {
                     found.append((PlaceNames.Name(chinese: spot.name, english: spot.englishName), .attraction, distance))

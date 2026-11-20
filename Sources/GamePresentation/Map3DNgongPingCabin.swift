@@ -1,6 +1,6 @@
 import Foundation
 
-/// Decision 896: the Ngong Ping cable car's own cabins, made by the local
+/// Decision 897: the Ngong Ping cable car's own cabins, made by the local
 /// studio (`a91453/railway-assets-private-2`
 /// `game-art-previews/docs/art/hongkong-ngong-ping-cabin-2026-11/revision-2`,
 /// #156; lessons in `docs/studio/lessons/hongkong-ngong-ping-cabin.md`) and
@@ -25,7 +25,7 @@ public enum Map3DNgongPingCabin {
     /// The cabin of `kind`, near or `far`; its glass see-through near as
     /// the other cabins' (``Map3DCableCar/seeThrough(_:far:)``) and lit
     /// after dark with its benches and ceiling lamp, as every cabin is
-    /// (decision 896). `nil` if its mesh does not decode.
+    /// (decision 897). `nil` if its mesh does not decode.
     public static func model(_ kind: Kind, far: Bool = false) -> Map3DModelPack.Model? {
         let name = "cablecar-cabin-ngongping-" + kind.rawValue + (far ? "-far" : "")
         guard let text = encoded[name], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters),

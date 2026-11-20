@@ -1,7 +1,7 @@
 @testable import GamePresentation
 import XCTest
 
-/// Decision 896: every cable car's cabins and halls are lit after dark,
+/// Decision 897: every cable car's cabins and halls are lit after dark,
 /// as the trains' windows are: a cabin's glass lit from within, near
 /// cabins with their seats and a lamp lit too, a hall's glass band lit.
 /// The checks read the drawn pack by name, so a cabin or hall added later
