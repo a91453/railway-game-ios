@@ -200,8 +200,8 @@ extension Map3DScene.Builder {
     /// scene holds their middle and no track or platform but a tunnel's
     /// runs within their body: in full close by, the far model from afar.
     /// Unlike Taipei's they clear no 64 m cell (the towers of Central stand
-    /// closer than that); the footprint their body covers is left undrawn
-    /// (``landmarkPlots``). Returns those built.
+    /// closer than that); the footprints their model stands on are left
+    /// undrawn (``landmarkPlans``). Returns those built.
     @discardableResult
     mutating func addHongKongLandmarks(frame: RealWorldFrame) -> Set<Map3DHongKongLandmark> {
         var built = Set<Map3DHongKongLandmark>()
@@ -222,17 +222,73 @@ extension Map3DScene.Builder {
                 self.mesh(at: centre) { $0.append(mesh) }
             }
             target = saved
-            landmarkPlots.append(PlacedSquare(minX: body.map(\.x).min()!, minZ: body.map(\.z).min()!,
-                                              maxX: body.map(\.x).max()!, maxZ: body.map(\.z).max()!))
+            // OLD-PORT-AUDIT: the ground the model itself covers, not the
+            // rectangle round it (Hakata station's, 197 m by 400 m, left
+            // 13 real buildings beside it undrawn).
+            landmarkPlans.append(LandmarkPlan(models[false]!.placed(origin: centre, ground: ground, rotation: 0)))
             built.insert(landmark)
         }
         return built
     }
 
-    /// Whether the scene point `middle` stands within a landmark's body,
-    /// so the footprint round it (the surveyed building the landmark
-    /// draws) is not drawn again.
+    /// Whether the scene point `middle` stands on a landmark's ground (or
+    /// within a cell of it), so the footprint round it (the surveyed
+    /// building the landmark draws) is not drawn again.
     func underLandmark(_ middle: Map3DPoint) -> Bool {
         landmarkPlots.contains { $0.minX <= middle.x && middle.x <= $0.maxX && $0.minZ <= middle.z && middle.z <= $0.maxZ }
+            || landmarkPlans.contains { $0.covers(middle) }
+    }
+
+    /// OLD-PORT-AUDIT: whether a landmark stands on a third or more of
+    /// the `outline`'s corners: a surveyed building whose middle is clear
+    /// of the model but which the model stands in is not drawn either.
+    func underLandmark(outline: [Map3DPoint]) -> Bool {
+        guard !landmarkPlans.isEmpty, !outline.isEmpty else { return false }
+        return landmarkPlans.contains { plan in outline.filter(plan.covers).count * 3 >= outline.count }
+    }
+}
+
+/// OLD-PORT-AUDIT: the ground a placed landmark's model covers, seen from
+/// above, in cells ``cell`` metres square: what its rectangle was taken
+/// for before (decision 791), which is far more than an L-shaped station
+/// or a three-sided tower stands on.
+struct LandmarkPlan: Sendable, Equatable {
+    static let cell: Float = 4
+    let minX: Float, minZ: Float
+    let columns: Int, rows: Int
+    private(set) var covered: [Bool]
+
+    /// The plan of `mesh` as it stands in the scene.
+    init(_ mesh: Map3DMesh) {
+        let xs = mesh.vertices.map(\.x), zs = mesh.vertices.map(\.z)
+        minX = xs.min() ?? 0
+        minZ = zs.min() ?? 0
+        columns = Int((((xs.max() ?? 0) - minX) / Self.cell).rounded(.down)) + 1
+        rows = Int((((zs.max() ?? 0) - minZ) / Self.cell).rounded(.down)) + 1
+        covered = Array(repeating: false, count: columns * rows)
+        // Each triangle's points, close enough that no cell under it is
+        // stepped over.
+        for at in stride(from: 0, to: mesh.indices.count - 2, by: 3) {
+            let a = mesh.vertices[Int(mesh.indices[at])], b = mesh.vertices[Int(mesh.indices[at + 1])], c = mesh.vertices[Int(mesh.indices[at + 2])]
+            let longest = max(hypot(b.x - a.x, b.z - a.z), hypot(c.x - a.x, c.z - a.z), hypot(c.x - b.x, c.z - b.z))
+            let steps = max(1, Int((longest / (Self.cell / 2)).rounded(.up)))
+            for i in 0...steps {
+                for j in 0...(steps - i) {
+                    let u = Float(i) / Float(steps), v = Float(j) / Float(steps)
+                    let x = a.x + (b.x - a.x) * u + (c.x - a.x) * v, z = a.z + (b.z - a.z) * u + (c.z - a.z) * v
+                    let column = min(columns - 1, Int((x - minX) / Self.cell)), row = min(rows - 1, Int((z - minZ) / Self.cell))
+                    covered[row * columns + column] = true
+                }
+            }
+        }
+    }
+
+    /// Whether the model stands over `point`'s cell or one beside it.
+    func covers(_ point: Map3DPoint) -> Bool {
+        let column = Int(((point.x - minX) / Self.cell).rounded(.down)), row = Int(((point.z - minZ) / Self.cell).rounded(.down))
+        for r in (row - 1)...(row + 1) where r >= 0 && r < rows {
+            for c in (column - 1)...(column + 1) where c >= 0 && c < columns && covered[r * columns + c] { return true }
+        }
+        return false
     }
 }
