@@ -719,8 +719,8 @@ public enum StationMasterAdvice: Hashable, Sendable {
             )
         case .buildTrack:
             language.text(
-                "Welcome! Tap Build, the hammer at the bottom left, and lay some track to begin.",
-                "歡迎！點左下的鐵鎚「建設」，鋪一段軌道吧。"
+                "Welcome! Tap Build, the hammer, and lay some track to begin.",
+                "歡迎！點鐵鎚「建設」，鋪一段軌道吧。"
             )
         case .buildStation:
             language.text(
