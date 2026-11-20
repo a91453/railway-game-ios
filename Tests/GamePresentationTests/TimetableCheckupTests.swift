@@ -213,10 +213,12 @@ final class TimetableCheckupFullTests: XCTestCase {
     /// Blue Coast Line's timetable for when the Green Mountain Line is
     /// already bought, `ntdlrt:VB after ntdlrt:V`, is not a line on sale
     /// of its own; `DanhaiBothLinesDayTests` plays the two.)
+    /// Fukuoka's lines are not Taiwan's: they are played on their own
+    /// map, bought together (`TimetableCheckupAllBoughtTests.testFukuokaLines`).
     func testTaiwanMetroLines() throws {
         try full()
         let ids = try BundledRealData.railways().metroRuns.keys.filter {
-            !$0.hasPrefix("hkmtr:") && !$0.hasPrefix("vr:") && !$0.contains(" after ")
+            !$0.hasPrefix("hkmtr:") && !$0.hasPrefix("vr:") && !$0.hasPrefix("fksubway:") && !$0.contains(" after ")
         }.sorted()
         for id in ids {
             for (label, rules) in Self.rules { try check("\(id) \(label)", TimetableCheckupWorlds.taiwan(id, rules: rules)) }
