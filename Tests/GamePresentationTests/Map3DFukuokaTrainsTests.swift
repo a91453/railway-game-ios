@@ -1,8 +1,8 @@
 import XCTest
 @testable import GamePresentation
 
-/// Decision 893: the local studio's Fukuoka Airport line and Kaizuka line
-/// trains, and the garage that lists every train a map draws.
+/// Decision 893: the local studio's Fukuoka Airport line, Nanakuma line
+/// and Kaizuka line trains, and the garage that lists every train a map draws.
 final class Map3DFukuokaTrainsTests: XCTestCase {
     func testEveryAirportLineUnitDecodesNearAndFarInTheSameFrame() throws {
         for unit in Map3DFukuokaAirportLine.Unit.allCases {
@@ -78,6 +78,48 @@ final class Map3DFukuokaTrainsTests: XCTestCase {
         XCTAssertEqual(layout.map(\.length).reduce(0, +), 39.0, accuracy: 0.1)
     }
 
+    func testEveryNanakumaLineUnitDecodesNearAndFarInTheSameFrame() throws {
+        for unit in Map3DFukuokaNanakumaLine.Unit.allCases {
+            let near = try XCTUnwrap(Map3DFukuokaNanakumaLine.model(unit), unit.rawValue)
+            let far = try XCTUnwrap(Map3DFukuokaNanakumaLine.model(unit, far: true), unit.rawValue)
+            XCTAssertEqual(near.length, unit.pitch, accuracy: 0.01, unit.rawValue)
+            XCTAssertEqual(far.length, near.length, accuracy: 0.01)
+            XCTAssertEqual(near.maximum.y - near.minimum.y, 2.49, accuracy: 0.03, "\(unit.rawValue) is 2.49 m wide")
+            XCTAssertEqual(near.minimum.z, 0, accuracy: 0.03, unit.rawValue)
+            // The operator's highest point, the lowered pantograph too.
+            XCTAssertEqual(near.maximum.z, 3.145, accuracy: 0.01, unit.rawValue)
+            XCTAssertLessThan(far.triangleCount * 2, near.triangleCount, unit.rawValue)
+            XCTAssertTrue(Set(far.vertices.map(\.color)).isSubset(of: Set(near.vertices.map(\.color))), unit.rawValue)
+        }
+    }
+
+    /// A white body, a green window band with the lime line along its top
+    /// (some 0.18 m, 2.70 to 2.87 m up), the pale blue band at its foot.
+    func testTheNanakumaLineHasItsGreenBandAndLimeLine() throws {
+        XCTAssertEqual(Map3DPalette.lime, Map3DColor.rgb(0xA8D430))
+        for unit in Map3DFukuokaNanakumaLine.Unit.allCases {
+            let middle = try XCTUnwrap(Map3DFukuokaNanakumaLine.model(unit)).vertices.filter { abs($0.x) < 4 && abs($0.y) > 1 }
+            let lime = middle.filter { $0.color == Map3DPalette.lime }.map(\.z)
+            XCTAssertFalse(lime.isEmpty, unit.rawValue)
+            XCTAssertEqual((lime.max() ?? 0) - (lime.min() ?? 0), 0.18, accuracy: 0.04, "\(unit.rawValue): the lime line 0.18 m")
+            XCTAssertFalse(middle.filter { $0.color == Map3DPalette.gymGreen && $0.z > 1.5 && $0.z < 2.7 }.isEmpty, unit.rawValue)
+            XCTAssertFalse(middle.filter { $0.color == Map3DPalette.skyBlue && $0.z < 1 }.isEmpty, unit.rawValue)
+        }
+    }
+
+    /// Four cars as the real trains run: cab, two middle cars, cab.
+    func testTheNanakumaLinesFourCarsAreLaidAsTheRealTrains() throws {
+        let pack = Map3DModelPack.standard
+        let key = Map3DFukuokaNanakumaLine.key
+        let names = try (0..<4).map { car in
+            let index = try XCTUnwrap(pack.modelIndex(forType: key, carIndex: car, count: 4))
+            return pack.models[index].name
+        }
+        XCTAssertEqual(names, ["head", "car", "carBack", "tail"].map { "set-\(key)-\($0)" })
+        let layout = try XCTUnwrap(pack.layout(forType: key, count: 4))
+        XCTAssertEqual(layout.map(\.length).reduce(0, +), 16.75 * 2 + 16.5 * 2, accuracy: 0.1, "66.5 m")
+    }
+
     /// The Kaizuka line's red band is the tail lamps' red. Its lamps are
     /// lit by material: no band face is lit, near or far, in the model or
     /// in the lamps the game lights at night, and its tail lamps are the
@@ -130,6 +172,7 @@ final class Map3DFukuokaTrainsTests: XCTestCase {
         // Each overseas map's trains under its country.
         XCTAssertEqual(Map3DShowcase.entry(Map3DFukuokaAirportLine.key)?.category, .japan)
         XCTAssertEqual(Map3DShowcase.entry(Map3DFukuokaKaizukaLine.key)?.category, .japan)
+        XCTAssertEqual(Map3DShowcase.entry(Map3DFukuokaNanakumaLine.key)?.category, .japan)
         XCTAssertEqual(Map3DShowcase.entry(Map3DFinlandSr2.key)?.category, .finland)
         for key in [Map3DMTRAirportLine.expressKey, Map3DMTRAirportLine.tungChungKey, Map3DMTRUrbanLine.key, Map3DMTRTuenMaLine.key,
                     Map3DMTREastRailLine.key, Map3DMTRSouthIslandLine.key, Map3DMTRDisneylandLine.key] {

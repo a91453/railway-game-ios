@@ -396,10 +396,11 @@ public struct Map3DRealTrains: Sendable {
             return Formation(key: Map3DFinlandSr2.key, cars: Map3DFinlandSr2.cars)
         case "fksubway":
             // Decision 893: the Airport line's newest six-car train on
-            // the Airport and Hakozaki lines, which run the same trains;
-            // the Nanakuma line has no set of its own yet: boxes.
+            // the Airport and Hakozaki lines, which run the same trains,
+            // and the Nanakuma line's own four cars.
             switch id {
             case "K", "H": return Formation(key: Map3DFukuokaAirportLine.key, cars: Map3DFukuokaAirportLine.cars)
+            case "N": return Formation(key: Map3DFukuokaNanakumaLine.key, cars: Map3DFukuokaNanakumaLine.cars)
             default: return Formation(key: "", cars: 3)
             }
         default:

@@ -99,10 +99,11 @@ final class Map3DRealTrainsTests: XCTestCase {
         for id in ["KJA", "MUL"] {
             XCTAssertEqual(Map3DRealTrains.formation(system: "vr", id: id, name: id), .init(key: Map3DFinlandSr2.key, cars: 7), id)
         }
-        // Decision 893: Fukuoka's Airport and Hakozaki lines the Airport line's six cars.
+        // Decision 893: Fukuoka's Airport and Hakozaki lines the Airport line's six cars, the Nanakuma line its own four.
         for id in ["K", "H"] {
             XCTAssertEqual(Map3DRealTrains.formation(system: "fksubway", id: id, name: id), .init(key: Map3DFukuokaAirportLine.key, cars: 6), id)
         }
+        XCTAssertEqual(Map3DRealTrains.formation(system: "fksubway", id: "N", name: "N"), .init(key: Map3DFukuokaNanakumaLine.key, cars: 4))
         // Decision 851: the South Island line its own.
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "SIL", name: "SIL"), .init(key: Map3DMTRSouthIslandLine.key, cars: 3))
         // Decision 852: the Disneyland Resort line its own.
