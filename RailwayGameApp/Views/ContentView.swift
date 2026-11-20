@@ -12,6 +12,9 @@ import SwiftUI
 /// show; the lines, a station and the company's figures slide in at that
 /// side too, rather than as sheets over the map. The same on every device:
 /// a phone is held on its side (decision 106), an iPad either way.
+/// Decision 892: on a phone the tools are a column down the trailing edge
+/// instead (decision 226 had it at the leading edge), the card and the
+/// panels beside it; Undo, Redo and Done keep the bottom leading corner.
 struct ContentView: View {
     let session: GameSession
     /// Saves the game and goes back to the start screen (Stage C4).
@@ -614,19 +617,31 @@ struct ContentView: View {
             // details card rather than beside it in the middle of the map;
             // the panel or card ends above them where the credits' band has
             // no room for them.
+            let panelOrCard: CGFloat = sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
             let buttonsUnderPanel = MapCornerButtons.place(
                 compactHeight: compactHeight,
-                coverWidth: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0,
+                // Decision 892: beside the tools column too, so on a phone
+                // they always stand in that row, panel or not.
+                coverWidth: (compactHeight ? max(dockSize.width, 1) : 0) + panelOrCard,
                 viewportWidth: proxy.size.width, besideCover: true, tutorialRuns: session.tutorial != nil
             ) == .underPanel
             let rowRaise = CGFloat(MapCornerRow.panelRaise(underPanel: buttonsUnderPanel, inBand: screen.mapRowInBand))
             let panelBottom = strip + margin + rowRaise
-            // Decision 226: on a phone held sideways the tools are a column
-            // down the leading edge, not a dock along the bottom; the map
-            // keeps its height. `dockSize` measures either. In the tutorial
-            // too (decision 226, later: its steps point at the game's own
-            // controls, not a dock it alone had).
+            // Decision 226: on a phone held sideways the tools are a column,
+            // not a dock along the bottom; the map keeps its height.
+            // `dockSize` measures either. In the tutorial too (decision 226,
+            // later: its steps point at the game's own controls, not a dock
+            // it alone had).
+            // Decision 892: the column stands down the trailing edge, under
+            // the thumb of the hand that holds that side; the card and a
+            // panel beside the map stand beside it (`columnTrailing`, the
+            // column with its margin), and Undo, Redo and Done keep the
+            // bottom leading corner.
             let toolsColumn = compactHeight
+            let columnTrailing: CGFloat = toolsColumn ? dockSize.width : 0
+            // What covers the map's trailing side: the column, and the
+            // panel or the card beside it.
+            let coverTrailing = columnTrailing + panelOrCard
             // With the column, the bottom row is the column's foot, the
             // map's own buttons (layers, map style, expansion) and the
             // station master with its title, side by side
@@ -686,6 +701,8 @@ struct ContentView: View {
                             .tutorialTarget(.detailsCard)
                             .padding(.top, pillDepth)
                             .padding([.top, .trailing], margin)
+                            // Decision 892: beside a phone's tools column.
+                            .padding(.trailing, columnTrailing)
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { cardDepth = $0 }
                             // Decision 253: in from its edge, out faster.
                             .transition(.card(from: .trailing, reduceMotion: reduceMotion))
@@ -699,8 +716,11 @@ struct ContentView: View {
                         // As far as the card or a panel beside the map, and
                         // beside the building tools while they are out: they
                         // reach up to the pill (the follow bar alone then).
-                        let trailing = sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
-                        let leading = showsRail ? (toolsColumn ? dockSize.width : BuildToolRail.width + margin) : 0
+                        // Decision 892: a phone's column, at the trailing
+                        // side, keeps below the layer strip; without the
+                        // strip it reaches up to the pill.
+                        let trailing = showsLayerStrip ? coverTrailing - columnTrailing : coverTrailing
+                        let leading = showsRail && !toolsColumn ? BuildToolRail.width + margin : 0
                         let rowWidth = max(0, proxy.size.width - leading - trailing - 2 * margin)
                         // Decision 469: on a narrow screen the strip folds
                         // to one button, then the next step goes, then the
@@ -761,7 +781,7 @@ struct ContentView: View {
                             .transition(.card(from: .leading, reduceMotion: reduceMotion))
                     }
                 }
-                .overlay(alignment: .bottomLeading) {
+                .overlay(alignment: toolsColumn ? .bottomTrailing : .bottomLeading) {
                     // The card gives way to a panel beside the map: while
                     // one is open the toggle could only set what shows after
                     // it closes, with nothing to see now.
@@ -798,16 +818,19 @@ struct ContentView: View {
                     // panel changed under the finger) must not leave them faded.
                     .onChange(of: session.tool) { _, _ in endDrawingUnderTools() }
                     .onChange(of: screen.panel) { _, _ in endDrawingUnderTools() }
-                    .padding([.leading, .bottom], margin)
+                    .padding(toolsColumn ? Edge.Set.trailing : Edge.Set.leading, margin)
+                    .padding(.bottom, margin)
                     .onGeometryChange(for: CGSize.self) { $0.size } action: { dockSize = $0 }
                     // 98.1 (the planner's (a)): the column runs down beside
-                    // a real-world map's credits, which start past it
-                    // (``EnvironmentValues/mapCreditsLeading``); the dock
+                    // a real-world map's credits, which end short of it
+                    // (``EnvironmentValues/mapCreditsTrailing``); the dock
                     // stands on them.
                     .padding(.bottom, toolsColumn ? 0 : strip)
                 }
-                // Decision 226: Undo and Redo beside the tools column's
-                // foot, when there is an edit to take back or make again.
+                // Decision 226: Undo and Redo on a phone's bottom row, when
+                // there is an edit to take back or make again. Decision 892:
+                // in the bottom leading corner, under the other thumb, where
+                // a panel beside the column does not cover them.
                 .overlay(alignment: .bottomLeading) {
                     if toolsColumn {
                         HStack(alignment: .bottom, spacing: ControlPanel.tileGap) {
@@ -833,7 +856,7 @@ struct ContentView: View {
                             // the legend under a panel keeps clear of it.
                             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { screen.editsFrame = $0 }
                             .onDisappear { screen.editsFrame = .zero }
-                            .padding(.leading, dockSize.width + ControlPanel.tileGap)
+                            .padding(.leading, margin)
                             .padding(.bottom, strip + margin)
                             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { editsWidth = $0 }
                     }
@@ -846,8 +869,13 @@ struct ContentView: View {
                     // Short of the map's bottom-trailing column too
                     // (#366): beside a phone's dock the bubble reached
                     // the zoom buttons, and a tap there only closed it.
-                    let corner = screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX
-                    let trailing = max(sidePanel != nil ? sideWidth + margin : isOpen && besideDock ? cardWidth + margin : 0, corner)
+                    // Decision 892: and of the buttons' row beside a
+                    // phone's column, where it stands above the credits'
+                    // band or on a map with none, on the bubble's row.
+                    let row = screen.mapRowInBand || screen.mapCornerRowFrame.isEmpty
+                        ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerRowFrame.minX
+                    let corner = max(row, screen.mapCornerFrame.isEmpty ? 0 : proxy.frame(in: .global).maxX - screen.mapCornerFrame.minX)
+                    let trailing = max(columnTrailing + (sidePanel != nil ? sideWidth + margin : isOpen && besideDock ? cardWidth + margin : 0), corner)
                     // Nothing where a panel beside the map would cover it:
                     // on a landscape phone the panel's edge (x 365 of 750)
                     // lies over the station master beside the dock (x
@@ -860,7 +888,8 @@ struct ContentView: View {
                     // map, not over them.
                     let rowEnd = toolsColumn && screen.mapLeadingRowFrame.width > 0
                         ? screen.mapLeadingRowFrame.maxX - proxy.frame(in: .global).minX : 0
-                    let beside = max(dockSize.width + (toolsColumn && showsFootRow ? editsWidth - dockSize.width : 0), rowEnd)
+                    // Decision 892: a phone's column is at the other side.
+                    let beside = max(toolsColumn ? (showsFootRow ? editsWidth : 0) : dockSize.width, rowEnd)
                     let isCovered = beside + margin + StationMasterCorner.avatarSize + margin > proxy.size.width - trailing
                     let showsStationMaster = drawing.showsMapExtras && session.buildModeChrome(
                         guidesFirstLine: FirstLineGuide.hint(in: session, choice: launcher.preferences.firstLineGuide) != nil
@@ -906,9 +935,9 @@ struct ContentView: View {
                     // squeezed beside them off the screen (TestFlight 95.1).
                     let insets = StationPairDrawerLayout.insets(
                         screenWidth: Double(proxy.size.width), margin: Double(margin),
-                        leading: toolsColumn ? Double(dockSize.width) : 0,
+                        leading: 0,
                         rail: showsRail && !toolsColumn ? Double(BuildToolRail.width + margin) : 0,
-                        panel: sidePanel != nil ? Double(sideWidth + margin) : 0,
+                        panel: Double(columnTrailing) + (sidePanel != nil ? Double(sideWidth + margin) : 0),
                         card: isOpen && besideDock ? Double(cardWidth + margin) : 0,
                         corner: Double(corner),
                         cornerHeight: screen.mapCornerFrame.isEmpty ? 0 : Double(global.maxY - screen.mapCornerFrame.minY),
@@ -948,6 +977,9 @@ struct ContentView: View {
                             // on a phone.
                             .padding(.top, pillDepth)
                             .padding([.top, .trailing], margin)
+                            // Decision 892: beside a phone's tools column,
+                            // whose lit button closes it.
+                            .padding(.trailing, columnTrailing)
                             .padding(.bottom, panelBottom)
                             .transition(.card(from: .trailing, fades: false, reduceMotion: reduceMotion))
                     }
@@ -959,20 +991,22 @@ struct ContentView: View {
                     map
                         .environment(\.mapInsets, EdgeInsets(
                             top: mapTop,
-                            // Past Undo and Redo too when they show.
-                            leading: toolsColumn ? max(dockSize.width, showsFootRow ? editsWidth : 0)
+                            // Past Undo and Redo when they show (a phone's
+                            // column is at the trailing side, decision 892).
+                            leading: toolsColumn ? (showsFootRow ? editsWidth : 0)
                                 : showsRail ? BuildToolRail.width + margin : 0,
                             bottom: dockBottom,
-                            trailing: sidePanel != nil ? sideWidth + margin : isOpen ? cardWidth + margin : 0
+                            trailing: coverTrailing
                         ))
+                        .environment(\.mapTrailingColumn, columnTrailing)
                         // A panel beside the map runs down its whole side.
                         .environment(\.mapTrailingInsetDepth, sidePanel != nil ? .infinity : isOpen ? cardDepth : 0)
                         .environment(\.mapButtonsUnderPanel, buttonsUnderPanel)
                         .environment(\.mapDetailsOpen, isOpen)
                         .environment(\.mapSafeArea, proxy.safeAreaInsets)
-                        .environment(\.mapCreditsLeading, toolsColumn ? dockSize.width : 0)
-                        // Mac playtest A3: at the top, the column alone.
-                        .environment(\.mapTopLeading, toolsColumn ? dockSize.width : nil)
+                        .environment(\.mapCreditsTrailing, columnTrailing)
+                        // Mac playtest A3: at the top, not Undo and Redo.
+                        .environment(\.mapTopLeading, toolsColumn ? 0 : nil)
                         .environment(\.mapShowsLayerStrip, showsLayerStrip)
                         // Decision 226 (2026-10-15, the owner): on a phone
                         // the map's layers and expansion buttons stand on
@@ -1195,7 +1229,8 @@ private struct ControlDock: View {
 }
 
 /// Decision 226: on a phone held sideways, the tools in a column down the
-/// leading edge, anchored at the bottom where the thumb rests, so the map
+/// trailing edge (decision 892; the leading edge before), anchored at the
+/// bottom where the thumb rests, so the map
 /// keeps its height: the details card's toggle on top, then the tools
 /// (``ControlPanel/Arrangement/toolsColumn``, Build at the bottom). While
 /// building, the building tools (``BuildToolRail``, decision 114) take the
@@ -1695,6 +1730,10 @@ final class GameScreenState {
     /// room in the credits' band, as the map measured it: where they did
     /// not, the panel ends above them.
     var mapRowInBand = false
+    /// Decision 892: where that row stands on the screen (global
+    /// coordinates), empty while it does not show: the station master's
+    /// bubble keeps short of it.
+    var mapCornerRowFrame: CGRect = .zero
     /// Where the map's bottom-leading buttons stand on the screen, as the
     /// map measured them: on a phone's bottom row the station master
     /// stands past them (decision 226).

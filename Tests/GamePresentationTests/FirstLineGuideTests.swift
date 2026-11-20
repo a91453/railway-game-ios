@@ -192,7 +192,7 @@ final class FirstLineGuideTests: XCTestCase {
         let empty = try world(stations: 0, track: false)
         XCTAssertEqual(hint(empty).target, .buildEntry)
         XCTAssertEqual(hint(empty).symbol, FirstLineGuide.buildSymbol)
-        XCTAssertEqual(hint(empty).text(in: .traditionalChinese), "點左下的鐵鎚「建設」，開始鋪軌道。")
+        XCTAssertEqual(hint(empty).text(in: .traditionalChinese), "點鐵鎚「建設」，開始鋪軌道。")
         XCTAssertNil(hint(empty, tool: .network).target, "the track is drawn on the map")
         XCTAssertEqual(hint(empty, tool: .network, mode: .remove).target, .networkModes)
         XCTAssertEqual(hint(empty, tool: .train).target, .networkTool)
@@ -209,7 +209,7 @@ final class FirstLineGuideTests: XCTestCase {
         XCTAssertEqual(hint(two, tool: .network).target, .selectTool, "Done first")
         XCTAssertEqual(hint(two).target, .linesButton)
         XCTAssertEqual(hint(two).symbol, FirstLineGuide.linesSymbol)
-        XCTAssertEqual(hint(two).text(in: .traditionalChinese), "點左下的「路線」，開一條路線。")
+        XCTAssertEqual(hint(two).text(in: .traditionalChinese), "點「路線」，開一條路線。")
         XCTAssertEqual(hint(two, lines: true).target, .pickLineStops)
         XCTAssertNil(hint(two, lines: true, picking: true).target)
     }
@@ -229,7 +229,7 @@ final class FirstLineGuideTests: XCTestCase {
 
     /// The station master's words name the buttons as they are labelled.
     func testTheAdviceNamesTheButtonsAsLabelled() {
-        XCTAssertEqual(StationMasterAdvice.buildTrack.text(in: .traditionalChinese), "歡迎！點左下的鐵鎚「建設」，鋪一段軌道吧。")
+        XCTAssertEqual(StationMasterAdvice.buildTrack.text(in: .traditionalChinese), "歡迎！點鐵鎚「建設」，鋪一段軌道吧。")
         XCTAssertEqual(StationMasterAdvice.createLine.text(in: .traditionalChinese), "車站都好了。打開「路線」，把它們連成一條路線。")
         XCTAssertTrue(StationMasterAdvice.createLine.isFirstLineStep)
         XCTAssertFalse(StationMasterAdvice.inDebt.isFirstLineStep)
