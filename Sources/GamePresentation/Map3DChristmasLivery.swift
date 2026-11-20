@@ -519,8 +519,11 @@ struct Dresser {
         let knot = at(outer * 0.82, 0.75, 0.1), w = outer * 0.55, h = outer * 0.4
         let side = Map3DPoint(0, 1, 0)
         let knotColour = redBody ? Map3DChristmasLivery.gold : Map3DChristmasLivery.red
-        tri(knot, knot - side * w + upSlope * (h * 0.6), knot - side * w - upSlope * h, knotColour, outward: outward)
-        tri(knot, knot + side * w - upSlope * h, knot + side * w + upSlope * (h * 0.6), knotColour, outward: outward)
+        // The bow's lower corners hang forward of the knot down the slope:
+        // held to the front as the ring is (decision 905, the Puyuma's tip).
+        func held(_ p: Map3DPoint) -> Map3DPoint { Map3DPoint(min(p.x * nose, front) * nose, p.y, p.z) }
+        tri(knot, held(knot - side * w + upSlope * (h * 0.6)), held(knot - side * w - upSlope * h), knotColour, outward: outward)
+        tri(knot, held(knot + side * w - upSlope * h), held(knot + side * w + upSlope * (h * 0.6)), knotColour, outward: outward)
         return true
     }
 }
