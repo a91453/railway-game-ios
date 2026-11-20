@@ -32,6 +32,8 @@ import json
 import os
 import struct
 
+import ground_plate
+
 MATERIALS = ["glassBlueGrey", "glassSilver", "glassDark", "mullionWhite", "steelGrey", "goldBand",
              "podiumStone", "roofGrey", "brickRed", "graniteLight", "tilePink", "mast",
              # FUKUOKA-LANDMARKS: the Fukuoka brief's own (Hakata Station, Fukuoka Dome).
@@ -121,6 +123,7 @@ def main():
     parser.add_argument("--source", default="railway-assets-private, game-art-previews/docs/art/hk-landmarks-2026-11/\n// revision-11",
                         help="where the GLBs are, for the generated file's header")
     parser.add_argument("--centre", action="store_true", help="move the footprint's middle to the origin")
+    parser.add_argument("--allow-ground-plate", action="store_true", help="a level plate beyond the body belongs to the model")
     parser.add_argument("glbs", nargs="+")
     args = parser.parse_args()
     lines = [
@@ -133,6 +136,7 @@ def main():
     ]
     for path in sorted(args.glbs):
         data, v, t = encode(path, args.centre)
+        ground_plate.check(data, path, allow=args.allow_ground_plate)
         name = os.path.splitext(os.path.basename(path))[0]
         print(f"{name}: {v} vertices, {t} triangles, {len(data)} bytes")
         lines.append(f'        // {v} vertices, {t} triangles.')
