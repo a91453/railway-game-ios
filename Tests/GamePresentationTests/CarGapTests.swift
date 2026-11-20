@@ -84,7 +84,8 @@ final class CarGapTests: XCTestCase {
         }
         XCTAssertEqual(whole("highSpeed", 12), 305.3, accuracy: 1)
         XCTAssertEqual(whole("metroC381", 6), 142.2, accuracy: 1)
-        XCTAssertEqual(whole("taroko", 8), 190.9, accuracy: 1)
+        // Decision 906: the studio's Taroko at the real car lengths (21.995 m and 20.5 m).
+        XCTAssertEqual(whole("taroko", 8), 167.0, accuracy: 1)
         XCTAssertEqual(whole("emu3000", 12), 245.7, accuracy: 1)
         for key in [Map3DTrainSet.wenhu370Key, Map3DTrainSet.wenhuVAL256Key] {
             XCTAssertEqual(whole(key, 4), 55.1, accuracy: 0.5, key)
