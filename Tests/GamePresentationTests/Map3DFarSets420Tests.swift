@@ -45,23 +45,23 @@ final class Map3DFarSets420Tests: XCTestCase {
         }
     }
 
-    /// The operating near set still uses the authored near cars after a
-    /// deliberate art revision. Its cab cars add the set's running lamps.
+    /// The operating near set is the studio's cars (decision 906), the
+    /// cab cars with their own lamps lit: the same shape as the static
+    /// studies'.
     func testTheNearTarokoUsesTheAuthoredCars() throws {
         let units: [(String, Map3DTEMU1000.Unit, Bool)] = [
             ("head", .leading, true), ("car", .middle, false),
             ("tail", .trailing, true), ("panto", .pantograph, false)
         ]
-        for (name, unit, hasRunningLamps) in units {
+        for (name, unit, cab) in units {
             let authored = Map3DTEMU1000.model(unit)
             let staticCar = try model(authored.name)
             let operatingCar = try model("set-taroko-\(name)")
             XCTAssertEqual(staticCar.vertices, authored.vertices, name)
             XCTAssertEqual(operatingCar.minimum.x, authored.minimum.x, name)
             XCTAssertEqual(operatingCar.maximum.x, authored.maximum.x, name)
-            XCTAssertGreaterThanOrEqual(operatingCar.vertices.count, authored.vertices.count, name)
-            XCTAssertEqual(Array(operatingCar.vertices.prefix(authored.vertices.count)), authored.vertices, name)
-            XCTAssertEqual(operatingCar.vertices.count > authored.vertices.count, hasRunningLamps, name)
+            XCTAssertEqual(operatingCar.vertices.map(\.position), authored.vertices.map(\.position), name)
+            XCTAssertEqual(operatingCar.vertices.contains(where: \.glows), cab, name)
         }
     }
 }

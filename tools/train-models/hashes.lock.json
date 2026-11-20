@@ -1934,36 +1934,36 @@
       "triangles" : 72
     },
     "light-set-taroko-car" : {
-      "hash" : "433516c8d791225",
-      "triangles" : 112
+      "hash" : "48e2b76e5e7beb1d",
+      "triangles" : 72
     },
     "light-set-taroko-head" : {
-      "hash" : "dafeac7fe446cc2b",
-      "triangles" : 89
+      "hash" : "e3e074795931da45",
+      "triangles" : 60
     },
     "light-set-taroko-panto" : {
-      "hash" : "433516c8d791225",
-      "triangles" : 112
+      "hash" : "48e2b76e5e7beb1d",
+      "triangles" : 72
     },
     "light-set-taroko-tail" : {
-      "hash" : "17656740009b1ddb",
-      "triangles" : 89
+      "hash" : "8c46f101fa492f45",
+      "triangles" : 60
     },
     "light-set-tarokoFar-car" : {
-      "hash" : "cf3dd707aa8e33ad",
-      "triangles" : 8
+      "hash" : "48e2b76e5e7beb1d",
+      "triangles" : 72
     },
     "light-set-tarokoFar-head" : {
-      "hash" : "52881da1251fdd03",
-      "triangles" : 9
+      "hash" : "e3e074795931da45",
+      "triangles" : 60
     },
     "light-set-tarokoFar-panto" : {
-      "hash" : "cf3dd707aa8e33ad",
-      "triangles" : 8
+      "hash" : "48e2b76e5e7beb1d",
+      "triangles" : 72
     },
     "light-set-tarokoFar-tail" : {
-      "hash" : "d8a8b42de41d264b",
-      "triangles" : 9
+      "hash" : "8c46f101fa492f45",
+      "triangles" : 60
     },
     "light-set-threeCarUrban-car" : {
       "hash" : "c93e9b9a33556dd1",
@@ -3242,36 +3242,36 @@
       "triangles" : 2208
     },
     "set-taroko-car" : {
-      "hash" : "3a30e36fba09fb86",
-      "triangles" : 1408
+      "hash" : "94ecfc6ea2ef51e6",
+      "triangles" : 2840
     },
     "set-taroko-head" : {
-      "hash" : "1fdffcacdddf08e",
-      "triangles" : 2766
+      "hash" : "4765d40a983a4ce1",
+      "triangles" : 5240
     },
     "set-taroko-panto" : {
-      "hash" : "13d1b9024de112de",
-      "triangles" : 1512
+      "hash" : "996010848a1acebc",
+      "triangles" : 3036
     },
     "set-taroko-tail" : {
-      "hash" : "c2b5a51ac3893e38",
-      "triangles" : 2762
+      "hash" : "55db287cda7e8996",
+      "triangles" : 5240
     },
     "set-tarokoFar-car" : {
-      "hash" : "8a8161f57f836691",
-      "triangles" : 560
+      "hash" : "b11cc4e0e84de7e2",
+      "triangles" : 1384
     },
     "set-tarokoFar-head" : {
-      "hash" : "7be5713da4364042",
-      "triangles" : 1058
+      "hash" : "f9b9ebfda36bee65",
+      "triangles" : 1952
     },
     "set-tarokoFar-panto" : {
-      "hash" : "3d5443d8046cc918",
-      "triangles" : 632
+      "hash" : "3e69951e11965f0e",
+      "triangles" : 1480
     },
     "set-tarokoFar-tail" : {
-      "hash" : "41bf5b77ddebf8c4",
-      "triangles" : 1058
+      "hash" : "ae968ac221599ef9",
+      "triangles" : 1952
     },
     "set-threeCarUrban-car" : {
       "hash" : "1e2fec8cc1b62099",
@@ -3374,24 +3374,24 @@
       "triangles" : 1252
     },
     "temu1000-formation" : {
-      "hash" : "6035abce8d5e82de",
-      "triangles" : 14136
+      "hash" : "8f0e40d07981d5ed",
+      "triangles" : 27912
     },
     "temu1000-leading" : {
-      "hash" : "2e837862af7d6338",
-      "triangles" : 2742
+      "hash" : "c18e9e74b60d7fc2",
+      "triangles" : 5240
     },
     "temu1000-middle" : {
-      "hash" : "3a30e36fba09fb86",
-      "triangles" : 1408
+      "hash" : "94ecfc6ea2ef51e6",
+      "triangles" : 2840
     },
     "temu1000-pantograph" : {
-      "hash" : "13d1b9024de112de",
-      "triangles" : 1512
+      "hash" : "996010848a1acebc",
+      "triangles" : 3036
     },
     "temu1000-trailing" : {
-      "hash" : "9fbb3d4357bec940",
-      "triangles" : 2738
+      "hash" : "9925bdf9e1f89097",
+      "triangles" : 5240
     },
     "temu2000-formation" : {
       "hash" : "bdc850c00e94e8d5",
