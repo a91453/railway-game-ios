@@ -1758,52 +1758,52 @@
       "triangles" : 428
     },
     "light-set-puyuma-car" : {
-      "hash" : "491ef31cb7c59d31",
-      "triangles" : 264
+      "hash" : "bf8837dc4b3929df",
+      "triangles" : 508
     },
     "light-set-puyuma-centre" : {
-      "hash" : "491ef31cb7c59d31",
-      "triangles" : 264
+      "hash" : "bf8837dc4b3929df",
+      "triangles" : 508
     },
     "light-set-puyuma-head" : {
-      "hash" : "b723336d97efb28e",
-      "triangles" : 220
+      "hash" : "162e87f99c589cea",
+      "triangles" : 414
     },
     "light-set-puyuma-panto" : {
-      "hash" : "c9ccb5b1c2d76317",
-      "triangles" : 274
+      "hash" : "bf8837dc4b3929df",
+      "triangles" : 508
     },
     "light-set-puyuma-pantoBack" : {
-      "hash" : "26e8f1b3ca45f417",
-      "triangles" : 274
+      "hash" : "53fa7215cac81bdf",
+      "triangles" : 508
     },
     "light-set-puyuma-tail" : {
-      "hash" : "d519aa1af0067ad6",
-      "triangles" : 196
+      "hash" : "a55d656397d1faea",
+      "triangles" : 414
     },
     "light-set-puyumaFar-car" : {
-      "hash" : "d5a39485d8ab3829",
-      "triangles" : 24
+      "hash" : "e4e3168bf79c9d5",
+      "triangles" : 188
     },
     "light-set-puyumaFar-centre" : {
-      "hash" : "d5a39485d8ab3829",
-      "triangles" : 24
+      "hash" : "e4e3168bf79c9d5",
+      "triangles" : 188
     },
     "light-set-puyumaFar-head" : {
-      "hash" : "d7bd46b62ab9b362",
-      "triangles" : 28
+      "hash" : "4909eed1ad1f22fd",
+      "triangles" : 148
     },
     "light-set-puyumaFar-panto" : {
-      "hash" : "62c08945e3450a61",
-      "triangles" : 28
+      "hash" : "e4e3168bf79c9d5",
+      "triangles" : 188
     },
     "light-set-puyumaFar-pantoBack" : {
-      "hash" : "32d881f9812c1161",
-      "triangles" : 28
+      "hash" : "5bba1846755c15d5",
+      "triangles" : 188
     },
     "light-set-puyumaFar-tail" : {
-      "hash" : "1c976984794eefba",
-      "triangles" : 36
+      "hash" : "95a44a3e4ad702fd",
+      "triangles" : 148
     },
     "light-set-R100CK-car" : {
       "hash" : "2d6cad0d4d66cb7",
@@ -3030,52 +3030,52 @@
       "triangles" : 3992
     },
     "set-puyuma-car" : {
-      "hash" : "6fdd0e9eade525e6",
-      "triangles" : 1800
+      "hash" : "6ba6c3e3e57e386e",
+      "triangles" : 4836
     },
     "set-puyuma-centre" : {
-      "hash" : "be4628237761e6b1",
-      "triangles" : 1812
+      "hash" : "6ba6c3e3e57e386e",
+      "triangles" : 4836
     },
     "set-puyuma-head" : {
-      "hash" : "a10251f760132eef",
-      "triangles" : 6980
+      "hash" : "e7427a029f985b7d",
+      "triangles" : 8182
     },
     "set-puyuma-panto" : {
-      "hash" : "5f6f962a74ffac64",
-      "triangles" : 1952
+      "hash" : "18dede58c55dbcc4",
+      "triangles" : 5056
     },
     "set-puyuma-pantoBack" : {
-      "hash" : "1f07f53c90fd85e1",
-      "triangles" : 1952
+      "hash" : "c4024653c832fe0e",
+      "triangles" : 5056
     },
     "set-puyuma-tail" : {
-      "hash" : "26077da8d54f3731",
-      "triangles" : 6932
+      "hash" : "442fc8d81071a9a8",
+      "triangles" : 8182
     },
     "set-puyumaFar-car" : {
-      "hash" : "de0122b9399c7fa1",
-      "triangles" : 760
+      "hash" : "d2c6a4aeba73d5f",
+      "triangles" : 2356
     },
     "set-puyumaFar-centre" : {
-      "hash" : "564b267821f66b50",
-      "triangles" : 772
+      "hash" : "d2c6a4aeba73d5f",
+      "triangles" : 2356
     },
     "set-puyumaFar-head" : {
-      "hash" : "97a39b52a37ef611",
-      "triangles" : 2812
+      "hash" : "f3ccfc6935fd725b",
+      "triangles" : 3664
     },
     "set-puyumaFar-panto" : {
-      "hash" : "455a8a3e8f2503fc",
-      "triangles" : 832
+      "hash" : "9fd5e35bbb8e273a",
+      "triangles" : 2512
     },
     "set-puyumaFar-pantoBack" : {
-      "hash" : "4aa2908037cb6d90",
-      "triangles" : 832
+      "hash" : "8415f763a99341de",
+      "triangles" : 2512
     },
     "set-puyumaFar-tail" : {
-      "hash" : "494e6375b0930991",
-      "triangles" : 2860
+      "hash" : "460aa145809a76ef",
+      "triangles" : 3664
     },
     "set-R100CK-car" : {
       "hash" : "9f2aebebb2477e4b",
@@ -3394,48 +3394,48 @@
       "triangles" : 2738
     },
     "temu2000-formation" : {
-      "hash" : "8bea2ce8e427a819",
-      "triangles" : 25040
+      "hash" : "a1db3641f22ec72b",
+      "triangles" : 45820
     },
     "temu2000-leading" : {
-      "hash" : "f0450d3a69c625a8",
-      "triangles" : 6980
+      "hash" : "5582364ebc64caba",
+      "triangles" : 8182
     },
     "temu2000-leading-far" : {
-      "hash" : "884a3de3bbfe3d62",
-      "triangles" : 2812
+      "hash" : "725d4e929f438be0",
+      "triangles" : 3664
     },
     "temu2000-tema" : {
-      "hash" : "6fdd0e9eade525e6",
-      "triangles" : 1800
+      "hash" : "6ba6c3e3e57e386e",
+      "triangles" : 4836
     },
     "temu2000-tema-far" : {
-      "hash" : "de0122b9399c7fa1",
-      "triangles" : 760
+      "hash" : "d2c6a4aeba73d5f",
+      "triangles" : 2356
     },
     "temu2000-temb" : {
-      "hash" : "be4628237761e6b1",
-      "triangles" : 1812
+      "hash" : "6ba6c3e3e57e386e",
+      "triangles" : 4836
     },
     "temu2000-temb-far" : {
-      "hash" : "564b267821f66b50",
-      "triangles" : 772
+      "hash" : "d2c6a4aeba73d5f",
+      "triangles" : 2356
     },
     "temu2000-tep" : {
-      "hash" : "1f07f53c90fd85e1",
-      "triangles" : 1952
+      "hash" : "18dede58c55dbcc4",
+      "triangles" : 5056
     },
     "temu2000-tep-far" : {
-      "hash" : "4aa2908037cb6d90",
-      "triangles" : 832
+      "hash" : "9fd5e35bbb8e273a",
+      "triangles" : 2512
     },
     "temu2000-trailing" : {
-      "hash" : "151b8384e4c993c2",
-      "triangles" : 6932
+      "hash" : "bcb9743fc6200e91",
+      "triangles" : 8182
     },
     "temu2000-trailing-far" : {
-      "hash" : "14ce08a5f6af2d84",
-      "triangles" : 2860
+      "hash" : "a44462298bfa3cc3",
+      "triangles" : 3664
     },
     "urban-three-formation" : {
       "hash" : "4bd45bdc4d152ed3",

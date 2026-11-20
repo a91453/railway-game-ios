@@ -217,7 +217,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Self.digest(before.map(\.name)), "45d52b8e433922ec")
         // Decision 891: the red commuter car's body and band in the
         // palette's colours (its three models in `hashes.lock.json`).
-        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "bcdb568d51f7d777")
+        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "f5e494b7b30b4719")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
         XCTAssertEqual(Array(pack.models[firstCable + cable.count..<firstCable + cable.count + ferry.count].map(\.name)),
                        Map3DFerry.drawn.map(\.name))
@@ -256,7 +256,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         // its later amendment: dark brown antlers, the sleigh's team brown.
         // Decision 897: every cabin and hall lit after dark (their new
         // hashes in `hashes.lock.json`).
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "5c952774f2d67d5f")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "e24e9d15e4f8c851")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -269,11 +269,11 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
         XCTAssertEqual(lamps(movingBack: 0).count, 373)
         XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count + winter.count
-                                                          + santa.count + taiwanCars.count + herd.count + plain.count + finland.count + tits.count)), "7db229ea0d66cff0")
+                                                          + santa.count + taiwanCars.count + herd.count + plain.count + finland.count + tits.count)), "3421409230698883")
         // Decision 889: the windows after the cable car move by the
         // yellow tit's 4; decision 897: and by the Ngong Ping cabins' 4.
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "cdb82e7c67ed2e4e")
-        XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "fa5b331e73425206")
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "7e0e154729378481")
+        XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "f3b6fff6e3bcf878")
     }
 
     /// Decision 782: each registered train's models are exactly those its
