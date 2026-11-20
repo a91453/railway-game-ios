@@ -141,36 +141,107 @@ public enum Map3DJapaneseNameBoards {
     }
 }
 
-/// FUKUOKA-NAME-BOARDS: what a Japanese station's boards write, and the
-/// colours of its lines.
-struct Map3DJapaneseSign: Equatable {
-    let japanese: String
-    let kana: String
-    let english: String?
-    let numbers: [String]
-    /// Each line's colour, by its letters.
-    let colours: [String: UInt32]
-
-    /// The board on the platform of `realLine` (none known: the first
-    /// line's): its number and its line's colour.
-    func board(realLine: String?) -> Map3DPlatformProps.JapaneseBoard? {
-        let line = realLine.map(Map3DJapaneseNameBoards.line(ofRealLine:))
-        guard let number = numbers.first(where: { Map3DJapaneseNameBoards.line(ofNumber: $0) == line }) ?? numbers.first,
-              let colour = colours[Map3DJapaneseNameBoards.line(ofNumber: number)] else { return nil }
-        return Map3DPlatformProps.JapaneseBoard(kana: kana, number: number, colour: colour)
+extension Map3DJapaneseNameBoards {
+    /// Whether station number `number` (`K11`, `BL12`, `R10`) is on the
+    /// line a real line's key names (`K`, `BL`, `R_XBT`, Kaohsiung's
+    /// `KR`, Taichung's `TG`): its letters are the line's, a branch's
+    /// suffix (`_XBT`) aside, or the line's but its first letter.
+    static func number(_ number: String, isOn line: String) -> Bool {
+        let letters = Self.line(ofNumber: number)
+        let base = String(line.split(separator: "_").first ?? Substring(line))
+        return letters == base || (base.count > 1 && letters == String(base.dropFirst()))
     }
 }
 
 extension Map3DPlatformProps {
-    /// FUKUOKA-NAME-BOARDS: a Japanese board's reading, number and line colour.
-    struct JapaneseBoard: Equatable {
-        let kana: String
-        let number: String
+    /// NAME-BOARD-STYLES (decision 882's later note): the boards of a
+    /// system that are not decision 882's (Taiwan Railway's, which the
+    /// railway, the High Speed Rail and the Alishan line keep).
+    public enum BoardStyle: Equatable, Sendable {
+        /// A metro's: white, the line's colour along its bottom, the
+        /// station's number (where it has one) in the line's colour at
+        /// its left, the name large with its other name under it (a
+        /// Japanese station's reading over it).
+        case metro
+        /// Finland's: white letters on blue, the name in Finnish alone.
+        case finnish
+    }
+
+    /// Each system's boards, by its id; one not here has decision 882's.
+    public static let boardStyles: [String: BoardStyle] = [
+        "mrt": .metro, "tymc": .metro, "ntdlrt": .metro, "ntalrt": .metro, "sanying": .metro, "krtc": .metro, "tmrt": .metro,
+        "hkmtr": .metro, "fksubway": .metro, "vr": .finnish,
+    ]
+
+    /// The systems of `station_transfers.json` (TDX's station IDs, the
+    /// operators' station numbers) whose numbers a system's stations carry.
+    static let boardNumberSystems: [String: [String]] = [
+        "mrt": ["TRTC", "NTMC"], "tymc": ["TYMC"], "ntdlrt": ["NTDLRT"], "ntalrt": ["NTALRT"], "sanying": ["SANYING"],
+        "krtc": ["KRTC", "KLRT"], "tmrt": ["TMRT"],
+    ]
+
+    /// A board in a system's style: its reading (a Japanese name's kana),
+    /// its station number and its line's colour.
+    struct StyledBoard: Equatable {
+        let style: BoardStyle
+        let reading: String?
+        let number: String?
         let colour: UInt32
     }
 
-    /// The Japanese board's band along its face's bottom (a share of its height).
-    static let japaneseBand: Float = 0.16
+    /// A metro board's band along its face's bottom (a share of its height).
+    static let metroBand: Float = 0.16
+}
+
+extension Map3DPalette {
+    /// NAME-BOARD-STYLES: Finland's railway signs' blue (RAL 5017, traffic
+    /// blue), white letters on it.
+    public static let finnishSignBlue = Map3DColor.rgb(0x00538A)
+}
+
+/// NAME-BOARD-STYLES: what a station's boards write in each of its
+/// systems' styles.
+struct Map3DBoardSign: Equatable {
+    struct Board: Equatable {
+        let style: Map3DPlatformProps.BoardStyle
+        let name: String
+        let second: String?
+        let reading: String?
+        let numbers: [String]
+        /// Each of the system's lines' colours, by the line's id (`BL`).
+        let colours: [String: UInt32]
+    }
+
+    /// By system id.
+    var boards: [String: Board] = [:]
+    /// The system a platform with no real line of its own takes: the
+    /// station's first real system, when it has a style.
+    var fallback: String?
+
+    /// The system id of a real line's key (`trtc:BL`, `tra:PINGXI`).
+    static func system(ofRealLine key: String) -> String {
+        let system = String(key.split(whereSeparator: { $0 == "|" || $0 == ":" }).first ?? Substring(key))
+        return system == "trtc" ? "mrt" : system == "tra" ? "tra_sched" : system
+    }
+
+    /// The board on the platform of `realLine` (`nil`: one with none of its
+    /// own): its name, its second name and its style; `nil` for decision
+    /// 882's.
+    func board(realLine: String?) -> (name: String, second: String?, board: Map3DPlatformProps.StyledBoard)? {
+        guard let system = realLine.map(Self.system(ofRealLine:)) ?? fallback, let board = boards[system] else { return nil }
+        let line = realLine.map(Map3DJapaneseNameBoards.line(ofRealLine:))
+        let number: String?
+        if let line {
+            number = board.numbers.first { Map3DJapaneseNameBoards.number($0, isOn: line) } ?? (board.numbers.count == 1 ? board.numbers[0] : nil)
+        } else {
+            number = board.numbers.first
+        }
+        let lines = board.colours.sorted { $0.key < $1.key }
+        var colour = line.flatMap { board.colours[$0] }
+        if colour == nil, let number { colour = lines.first { Map3DJapaneseNameBoards.number(number, isOn: $0.key) }?.value }
+        let shown = colour ?? lines.first?.value ?? Map3DPalette.playerRim
+        return (board.name, board.second, Map3DPlatformProps.StyledBoard(style: board.style, reading: board.reading, number: number, colour: shown))
+    }
 }
 
 extension Map3DPlatformProps {
@@ -248,26 +319,52 @@ extension Map3DScene.Builder {
         return names
     }
 
-    /// FUKUOKA-NAME-BOARDS: the signs of each of `world`'s stations that is
-    /// a real one of a system with Japanese boards (``Map3DJapaneseNameBoards``).
-    static func boardJapaneseSigns(_ world: GameWorld, _ railways: RealRailways, _ frame: RealWorldFrame) -> [StationID: Map3DJapaneseSign] {
-        var signs: [StationID: Map3DJapaneseSign] = [:]
+    /// NAME-BOARD-STYLES: the signs of each of `world`'s stations that is a
+    /// real one of a system with a style of its own (``Map3DPlatformProps/boardStyles``):
+    /// a Japanese station's name and reading (``Map3DJapaneseNameBoards``),
+    /// a Taiwanese metro station's numbers (`station_transfers.json`), a
+    /// Finnish station's Finnish name.
+    static func boardSigns(_ world: GameWorld, _ railways: RealRailways, _ frame: RealWorldFrame) -> [StationID: Map3DBoardSign] {
+        typealias Props = Map3DPlatformProps
+        var signs: [StationID: Map3DBoardSign] = [:]
         for station in world.stations where !station.isDepot {
             let at = frame.coordinate(worldX: Double(station.location.x), worldY: Double(station.location.y))
             let real = railways.stations(named: station.name, near: RealRailways.Coordinate(latitude: at.latitude, longitude: at.longitude))
-            guard let found = real.lazy.compactMap({ real in
-                Map3DJapaneseNameBoards.systems[real.system.id]?[real.chinese].map { (real, $0) }
-            }).first else { continue }
-            let (first, entry) = found
-            var colours: [String: UInt32] = [:]
-            for number in entry.numbers {
-                let line = Map3DJapaneseNameBoards.line(ofNumber: number)
-                guard let rgb = first.system.color(ofLine: "\(first.system.id)|\(line)") else { continue }
-                colours[line] = Map3DColor.rgb(UInt32(rgb.red) << 16 | UInt32(rgb.green) << 8 | UInt32(rgb.blue))
+            var sign = Map3DBoardSign()
+            for found in real {
+                let system = found.system.id
+                guard let style = Props.boardStyles[system], sign.boards[system] == nil else { continue }
+                let key = RealRailways.stationKey(station.name)
+                let english = found.english.map(RealRailways.Station.shown)
+                var name = station.name, reading: String?, numbers: [String] = []
+                var second = english.map { RealRailways.stationKey($0) == key } ?? false ? found.chinese : english
+                if let japanese = Map3DJapaneseNameBoards.systems[system]?[found.chinese] {
+                    name = japanese.japanese
+                    reading = japanese.kana
+                    numbers = japanese.numbers
+                    second = english
+                }
+                if style == .finnish {
+                    name = english ?? station.name
+                    second = nil
+                }
+                if let transfers = railways.transfers {
+                    for numbered in Props.boardNumberSystems[system] ?? [] {
+                        numbers += transfers.stations(inSystem: numbered, named: found.chinese, near: found.coordinate).map(\.stationId)
+                    }
+                }
+                if let shown = second, RealRailways.stationKey(shown) == RealRailways.stationKey(name) { second = nil }
+                var colours: [String: UInt32] = [:]
+                for (lineKey, rgb) in found.system.lineColors where lineKey.hasPrefix("\(system)|") {
+                    colours[String(lineKey.dropFirst(system.count + 1))] =
+                        Map3DColor.rgb(UInt32(rgb.red) << 16 | UInt32(rgb.green) << 8 | UInt32(rgb.blue))
+                }
+                sign.boards[system] = Map3DBoardSign.Board(style: style, name: name, second: second, reading: reading, numbers: numbers,
+                                                           colours: colours)
             }
-            signs[station.id] = Map3DJapaneseSign(japanese: entry.japanese, kana: entry.kana,
-                                                  english: first.english.map(RealRailways.Station.shown), numbers: entry.numbers,
-                                                  colours: colours)
+            guard !sign.boards.isEmpty else { continue }
+            sign.fallback = real.first.map(\.system.id).flatMap { sign.boards[$0] != nil ? $0 : nil }
+            signs[station.id] = sign
         }
         return signs
     }
@@ -282,7 +379,7 @@ extension Map3DScene.Builder {
     /// `name` in navy over the band; its face lit at night
     /// (`underground`: always).
     static func addNameBoard(_ mesh: inout Map3DMesh, foot: Map3DPoint, out: Map3DPoint, name: String, second: String? = nil,
-                             japanese: Map3DPlatformProps.JapaneseBoard? = nil, underground: Bool) {
+                             styled: Map3DPlatformProps.StyledBoard? = nil, underground: Bool) {
         typealias Props = Map3DPlatformProps
         guard let out = Map3DPoint(out.x, 0, out.z).normalized else { return }
         let along = Map3DPoint(-out.z, 0, out.x)
@@ -307,10 +404,25 @@ extension Map3DScene.Builder {
             mesh.addQuad(corner(x0, y0), corner(x1, y0), corner(x1, y1), corner(x0, y1), color: colour)
         }
         let first = mesh.vertices.count
-        quad(-faceLength / 2, 0, faceLength / 2, faceHeight, 0, Map3DPalette.sidewalk)
+        let finnish = styled?.style == .finnish
+        quad(-faceLength / 2, 0, faceLength / 2, faceHeight, 0, finnish ? Map3DPalette.finnishSignBlue : Map3DPalette.sidewalk)
         if underground { mesh.makeGlowing(from: first) } else { mesh.makeNightLit(from: first) }
-        let band = japanese == nil ? Props.nameBoardBand : 0...Props.japaneseBand
-        quad(-faceLength / 2, faceHeight * band.lowerBound, faceLength / 2, faceHeight * band.upperBound, 0.004, japanese?.colour ?? Props.nameBoardGreen)
+        let grid = Float(Map3DBoardGlyphs.grid)
+        // NAME-BOARD-STYLES: Finland's, its name alone in white on blue.
+        if finnish {
+            let text = Map3DBoardGlyphs.layout(name)
+            guard text.width > 0 else { return }
+            let cell = min(faceHeight * 0.62 / grid, (faceLength - 0.3) / Float(text.width))
+            let left = -Float(text.width) * cell / 2, top = faceHeight / 2 + grid * cell / 2
+            for r in text.rectangles {
+                let x0 = left + Float(r.x) * cell, x1 = x0 + Float(r.width) * cell
+                let y1 = top - Float(r.y) * cell, y0 = y1 - Float(r.height) * cell
+                quad(x0, y0, x1, y1, 0.008, Map3DPalette.sidewalk)
+            }
+            return
+        }
+        let band = styled == nil ? Props.nameBoardBand : 0...Props.metroBand
+        quad(-faceLength / 2, faceHeight * band.lowerBound, faceLength / 2, faceHeight * band.upperBound, 0.004, styled?.colour ?? Props.nameBoardGreen)
         // An arrow at each end of the band, pointing out, as on the
         // railway's boards.
         let bandLow = faceHeight * band.lowerBound, bandHigh = faceHeight * band.upperBound, mid = (bandLow + bandHigh) / 2
@@ -325,7 +437,6 @@ extension Map3DScene.Builder {
         }
         // The name over the band, as large as fits, its second name small
         // under it when it has one.
-        let grid = Float(Map3DBoardGlyphs.grid)
         let room = faceHeight * (1 - band.upperBound)
         func write(_ text: (width: Int, rectangles: [Map3DBoardGlyphs.Rectangle]), height: Float, middle: Float,
                    centre: Float = 0, span: Float = faceLength - 0.2, ink: UInt32 = Map3DPalette.playerRim, lift: Float = 0.008) {
@@ -338,26 +449,39 @@ extension Map3DScene.Builder {
                 quad(x0, y0, x1, y1, lift, ink)
             }
         }
-        if let japanese {
-            // FUKUOKA-NAME-BOARDS: the station's number in its line's
-            // colour at the left, its letters over its figures in white;
-            // the reading over the name, the English name under it.
-            let side = min(room * 0.78, 0.6), middle = bandHigh + room / 2
-            let badgeLeft = -faceLength / 2 + 0.1, badgeRight = badgeLeft + side
-            quad(badgeLeft, middle - side / 2, badgeRight, middle + side / 2, 0.006, japanese.colour)
-            let letters = Map3DJapaneseNameBoards.line(ofNumber: japanese.number)
-            let figures = String(japanese.number.dropFirst(letters.count))
-            let badgeMiddle = (badgeLeft + badgeRight) / 2
-            write(Map3DBoardGlyphs.layout(letters), height: side * 0.36, middle: middle + side * 0.2, centre: badgeMiddle,
-                  span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
-            write(Map3DBoardGlyphs.layout(figures), height: side * 0.42, middle: middle - side * 0.17, centre: badgeMiddle,
-                  span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
-            let textLeft = badgeRight + 0.08, textRight = faceLength / 2 - 0.1
+        if let styled {
+            // NAME-BOARD-STYLES: a metro's: the station's number in its
+            // line's colour at the left, its letters over its figures in
+            // white; the reading (a Japanese name's) over the name, the
+            // other name under it.
+            var textLeft = -faceLength / 2 + 0.1
+            if let number = styled.number {
+                let side = min(room * 0.78, 0.6), middle = bandHigh + room / 2
+                let badgeLeft = textLeft, badgeRight = badgeLeft + side
+                quad(badgeLeft, middle - side / 2, badgeRight, middle + side / 2, 0.006, styled.colour)
+                let letters = Map3DJapaneseNameBoards.line(ofNumber: number)
+                let figures = String(number.dropFirst(letters.count))
+                let badgeMiddle = (badgeLeft + badgeRight) / 2
+                write(Map3DBoardGlyphs.layout(letters), height: side * 0.36, middle: middle + side * 0.2, centre: badgeMiddle,
+                      span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
+                write(Map3DBoardGlyphs.layout(figures), height: side * 0.42, middle: middle - side * 0.17, centre: badgeMiddle,
+                      span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
+                textLeft = badgeRight + 0.08
+            }
+            let textRight = faceLength / 2 - 0.1
             let centre = (textLeft + textRight) / 2, span = textRight - textLeft
-            write(Map3DBoardGlyphs.layout(japanese.kana), height: room * 0.19, middle: bandHigh + room * 0.86, centre: centre, span: span)
-            write(Map3DBoardGlyphs.layout(name), height: room * 0.5, middle: bandHigh + room * 0.52, centre: centre, span: span)
-            if let second {
-                write(Map3DBoardGlyphs.layout(second), height: room * 0.17, middle: bandHigh + room * 0.14, centre: centre, span: span)
+            let shownName = Map3DBoardGlyphs.layout(Self.boardText(name))
+            if let reading = styled.reading {
+                write(Map3DBoardGlyphs.layout(reading), height: room * 0.19, middle: bandHigh + room * 0.86, centre: centre, span: span)
+                write(shownName, height: room * 0.5, middle: bandHigh + room * 0.52, centre: centre, span: span)
+                if let second {
+                    write(Map3DBoardGlyphs.layout(second), height: room * 0.17, middle: bandHigh + room * 0.14, centre: centre, span: span)
+                }
+            } else if let second {
+                write(shownName, height: room * 0.6, middle: bandHigh + room * 0.62, centre: centre, span: span)
+                write(Map3DBoardGlyphs.layout(second), height: room * 0.24, middle: bandHigh + room * 0.18, centre: centre, span: span)
+            } else {
+                write(shownName, height: room * 0.8, middle: bandHigh + room / 2, centre: centre, span: span)
             }
             return
         }
