@@ -17,7 +17,9 @@ final class Map3DGlowTests: XCTestCase {
         let spot = try XCTUnwrap(spots.first)
         // The head 8.5 m up (model space: +z up), out over the road.
         XCTAssertEqual(spot.centre.z, 8.54, accuracy: 0.1)
-        XCTAssertEqual(spot.radius, Map3DGlow.radius(across: 0.75), accuracy: 0.01)
+        // Decision 903: the studio's flat head, its lit underside 0.54 m
+        // across.
+        XCTAssertEqual(spot.radius, Map3DGlow.radius(across: 0.54), accuracy: 0.01)
         XCTAssertEqual(spot.red, 1)
         XCTAssertGreaterThan(spot.green, 0.7, "warm white, not orange")
         XCTAssertLessThan(spot.blue, spot.green)

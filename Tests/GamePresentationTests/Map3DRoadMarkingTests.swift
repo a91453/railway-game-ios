@@ -474,7 +474,8 @@ final class Map3DRoadMarkingTests: XCTestCase {
         for prop in [Map3DProp.signalGo, .signalStop, .signalAmber, .busStop, .vending] {
             let model = try XCTUnwrap(pack.models.first { $0.name == prop.modelName })
             sizes[prop.rawValue] = model.triangleCount
-            XCTAssertLessThanOrEqual(model.triangleCount, 300, prop.rawValue)
+            // Decision 903: the studio's signals are 308 triangles.
+            XCTAssertLessThanOrEqual(model.triangleCount, 320, prop.rawValue)
             // Standing on its foot.
             XCTAssertEqual(model.minimum.z, 0, accuracy: 0.01, prop.rawValue)
         }
