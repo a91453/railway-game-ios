@@ -69,6 +69,110 @@ public enum Map3DBoardGlyphs {
     }
 }
 
+/// FUKUOKA-NAME-BOARDS (decision 882's later note): the boards of a
+/// railway in Japan, as its own: the station's Japanese name large, its
+/// reading in kana over it and its English name under it, its station
+/// number in the line's colour at the left, the line's colour along the
+/// bottom. A system listed in ``systems`` has these boards on every map
+/// it is on; a new map in Japan lists its stations here.
+public enum Map3DJapaneseNameBoards {
+    /// A station's board: its Japanese name, its reading and its numbers
+    /// (one for each line calling, `K11`), keyed by the station's name in
+    /// the game's data.
+    public struct Station: Equatable, Sendable {
+        public let japanese: String
+        public let kana: String
+        public let numbers: [String]
+    }
+
+    /// The Fukuoka City Subway's 36 stations: the Japanese names of its
+    /// map pack's `station_names.json` (MLIT's railway data, CC BY 4.0),
+    /// the numbers of its `track_stations.geojson` (OpenStreetMap's, the
+    /// operator's own numbering), and their readings, from the operator's
+    /// station list.
+    public static let systems: [String: [String: Station]] = [
+        "fksubway": [
+            "姪濱": Station(japanese: "姪浜", kana: "めいのはま", numbers: ["K01"]),
+            "室見": Station(japanese: "室見", kana: "むろみ", numbers: ["K02"]),
+            "藤崎": Station(japanese: "藤崎", kana: "ふじさき", numbers: ["K03"]),
+            "西新": Station(japanese: "西新", kana: "にしじん", numbers: ["K04"]),
+            "唐人町": Station(japanese: "唐人町", kana: "とうじんまち", numbers: ["K05"]),
+            "大濠公園": Station(japanese: "大濠公園", kana: "おおほりこうえん", numbers: ["K06"]),
+            "赤坂": Station(japanese: "赤坂", kana: "あかさか", numbers: ["K07"]),
+            "天神": Station(japanese: "天神", kana: "てんじん", numbers: ["K08"]),
+            "中洲川端": Station(japanese: "中洲川端", kana: "なかすかわばた", numbers: ["K09", "H01"]),
+            "祇園": Station(japanese: "祇園", kana: "ぎおん", numbers: ["K10"]),
+            "博多": Station(japanese: "博多", kana: "はかた", numbers: ["K11", "N18"]),
+            "東比惠": Station(japanese: "東比恵", kana: "ひがしひえ", numbers: ["K12"]),
+            "福岡機場": Station(japanese: "福岡空港", kana: "ふくおかくうこう", numbers: ["K13"]),
+            "吳服町": Station(japanese: "呉服町", kana: "ごふくまち", numbers: ["H02"]),
+            "千代縣廳口": Station(japanese: "千代県庁口", kana: "ちよけんちょうぐち", numbers: ["H03"]),
+            "馬出九大病院前": Station(japanese: "馬出九大病院前", kana: "まいだしきゅうだいびょういんまえ", numbers: ["H04"]),
+            "箱崎宮前": Station(japanese: "箱崎宮前", kana: "はこざきみやまえ", numbers: ["H05"]),
+            "箱崎九大前": Station(japanese: "箱崎九大前", kana: "はこざききゅうだいまえ", numbers: ["H06"]),
+            "貝塚": Station(japanese: "貝塚", kana: "かいづか", numbers: ["H07"]),
+            "橋本": Station(japanese: "橋本", kana: "はしもと", numbers: ["N01"]),
+            "次郎丸": Station(japanese: "次郎丸", kana: "じろうまる", numbers: ["N02"]),
+            "賀茂": Station(japanese: "賀茂", kana: "かも", numbers: ["N03"]),
+            "野芥": Station(japanese: "野芥", kana: "のけ", numbers: ["N04"]),
+            "梅林": Station(japanese: "梅林", kana: "うめばやし", numbers: ["N05"]),
+            "福大前": Station(japanese: "福大前", kana: "ふくだいまえ", numbers: ["N06"]),
+            "七隈": Station(japanese: "七隈", kana: "ななくま", numbers: ["N07"]),
+            "金山": Station(japanese: "金山", kana: "かなやま", numbers: ["N08"]),
+            "茶山": Station(japanese: "茶山", kana: "ちゃやま", numbers: ["N09"]),
+            "別府": Station(japanese: "別府", kana: "べふ", numbers: ["N10"]),
+            "六本松": Station(japanese: "六本松", kana: "ろっぽんまつ", numbers: ["N11"]),
+            "櫻坂": Station(japanese: "桜坂", kana: "さくらざか", numbers: ["N12"]),
+            "藥院大通": Station(japanese: "薬院大通", kana: "やくいんおおどおり", numbers: ["N13"]),
+            "藥院": Station(japanese: "薬院", kana: "やくいん", numbers: ["N14"]),
+            "渡邊通": Station(japanese: "渡辺通", kana: "わたなべどおり", numbers: ["N15"]),
+            "天神南": Station(japanese: "天神南", kana: "てんじんみなみ", numbers: ["N16"]),
+            "櫛田神社前": Station(japanese: "櫛田神社前", kana: "くしだじんじゃまえ", numbers: ["N17"]),
+        ],
+    ]
+
+    /// The line a number is on: its letters (`K` of `K11`).
+    static func line(ofNumber number: String) -> String { String(number.prefix { $0.isLetter }) }
+
+    /// The line of a real line's key (`fksubway|K`, `fksubway:K`): what
+    /// follows its system.
+    static func line(ofRealLine key: String) -> String {
+        String(key.split(whereSeparator: { $0 == "|" || $0 == ":" }).last ?? Substring(key))
+    }
+}
+
+/// FUKUOKA-NAME-BOARDS: what a Japanese station's boards write, and the
+/// colours of its lines.
+struct Map3DJapaneseSign: Equatable {
+    let japanese: String
+    let kana: String
+    let english: String?
+    let numbers: [String]
+    /// Each line's colour, by its letters.
+    let colours: [String: UInt32]
+
+    /// The board on the platform of `realLine` (none known: the first
+    /// line's): its number and its line's colour.
+    func board(realLine: String?) -> Map3DPlatformProps.JapaneseBoard? {
+        let line = realLine.map(Map3DJapaneseNameBoards.line(ofRealLine:))
+        guard let number = numbers.first(where: { Map3DJapaneseNameBoards.line(ofNumber: $0) == line }) ?? numbers.first,
+              let colour = colours[Map3DJapaneseNameBoards.line(ofNumber: number)] else { return nil }
+        return Map3DPlatformProps.JapaneseBoard(kana: kana, number: number, colour: colour)
+    }
+}
+
+extension Map3DPlatformProps {
+    /// FUKUOKA-NAME-BOARDS: a Japanese board's reading, number and line colour.
+    struct JapaneseBoard: Equatable {
+        let kana: String
+        let number: String
+        let colour: UInt32
+    }
+
+    /// The Japanese board's band along its face's bottom (a share of its height).
+    static let japaneseBand: Float = 0.16
+}
+
 extension Map3DPlatformProps {
     /// A name board, the old version's (SwiftRailMac's side platform
     /// modules `45e46be7` and `460efb19`: 4.1 m by 1.77 m, scaled as the
@@ -141,6 +245,30 @@ extension Map3DScene.Builder {
         return names
     }
 
+    /// FUKUOKA-NAME-BOARDS: the signs of each of `world`'s stations that is
+    /// a real one of a system with Japanese boards (``Map3DJapaneseNameBoards``).
+    static func boardJapaneseSigns(_ world: GameWorld, _ railways: RealRailways, _ frame: RealWorldFrame) -> [StationID: Map3DJapaneseSign] {
+        var signs: [StationID: Map3DJapaneseSign] = [:]
+        for station in world.stations where !station.isDepot {
+            let at = frame.coordinate(worldX: Double(station.location.x), worldY: Double(station.location.y))
+            let real = railways.stations(named: station.name, near: RealRailways.Coordinate(latitude: at.latitude, longitude: at.longitude))
+            guard let found = real.lazy.compactMap({ real in
+                Map3DJapaneseNameBoards.systems[real.system.id]?[real.chinese].map { (real, $0) }
+            }).first else { continue }
+            let (first, entry) = found
+            var colours: [String: UInt32] = [:]
+            for number in entry.numbers {
+                let line = Map3DJapaneseNameBoards.line(ofNumber: number)
+                guard let rgb = first.system.color(ofLine: "\(first.system.id)|\(line)") else { continue }
+                colours[line] = Map3DColor.rgb(UInt32(rgb.red) << 16 | UInt32(rgb.green) << 8 | UInt32(rgb.blue))
+            }
+            signs[station.id] = Map3DJapaneseSign(japanese: entry.japanese, kana: entry.kana,
+                                                  english: first.english.map(RealRailways.Station.shown), numbers: entry.numbers,
+                                                  colours: colours)
+        }
+        return signs
+    }
+
     /// Decision 882: a name as its board writes it: 臺 as 台, whose fewer
     /// strokes stay clear on the glyphs' 16-cell grid.
     static func boardText(_ name: String) -> String { name.replacingOccurrences(of: "臺", with: "台") }
@@ -151,7 +279,7 @@ extension Map3DScene.Builder {
     /// `name` in navy over the band; its face lit at night
     /// (`underground`: always).
     static func addNameBoard(_ mesh: inout Map3DMesh, foot: Map3DPoint, out: Map3DPoint, name: String, second: String? = nil,
-                             underground: Bool) {
+                             japanese: Map3DPlatformProps.JapaneseBoard? = nil, underground: Bool) {
         typealias Props = Map3DPlatformProps
         guard let out = Map3DPoint(out.x, 0, out.z).normalized else { return }
         let along = Map3DPoint(-out.z, 0, out.x)
@@ -178,8 +306,8 @@ extension Map3DScene.Builder {
         let first = mesh.vertices.count
         quad(-faceLength / 2, 0, faceLength / 2, faceHeight, 0, Map3DPalette.sidewalk)
         if underground { mesh.makeGlowing(from: first) } else { mesh.makeNightLit(from: first) }
-        let band = Props.nameBoardBand
-        quad(-faceLength / 2, faceHeight * band.lowerBound, faceLength / 2, faceHeight * band.upperBound, 0.004, Props.nameBoardGreen)
+        let band = japanese == nil ? Props.nameBoardBand : 0...Props.japaneseBand
+        quad(-faceLength / 2, faceHeight * band.lowerBound, faceLength / 2, faceHeight * band.upperBound, 0.004, japanese?.colour ?? Props.nameBoardGreen)
         // An arrow at each end of the band, pointing out, as on the
         // railway's boards.
         let bandLow = faceHeight * band.lowerBound, bandHigh = faceHeight * band.upperBound, mid = (bandLow + bandHigh) / 2
@@ -196,15 +324,39 @@ extension Map3DScene.Builder {
         // under it when it has one.
         let grid = Float(Map3DBoardGlyphs.grid)
         let room = faceHeight * (1 - band.upperBound)
-        func write(_ text: (width: Int, rectangles: [Map3DBoardGlyphs.Rectangle]), height: Float, middle: Float) {
+        func write(_ text: (width: Int, rectangles: [Map3DBoardGlyphs.Rectangle]), height: Float, middle: Float,
+                   centre: Float = 0, span: Float = faceLength - 0.2, ink: UInt32 = Map3DPalette.playerRim, lift: Float = 0.008) {
             guard text.width > 0 else { return }
-            let cell = min(height / grid, (faceLength - 0.2) / Float(text.width))
-            let left = -Float(text.width) * cell / 2, top = middle + grid * cell / 2
+            let cell = min(height / grid, span / Float(text.width))
+            let left = centre - Float(text.width) * cell / 2, top = middle + grid * cell / 2
             for r in text.rectangles {
                 let x0 = left + Float(r.x) * cell, x1 = x0 + Float(r.width) * cell
                 let y1 = top - Float(r.y) * cell, y0 = y1 - Float(r.height) * cell
-                quad(x0, y0, x1, y1, 0.008, Map3DPalette.playerRim)
+                quad(x0, y0, x1, y1, lift, ink)
             }
+        }
+        if let japanese {
+            // FUKUOKA-NAME-BOARDS: the station's number in its line's
+            // colour at the left, its letters over its figures in white;
+            // the reading over the name, the English name under it.
+            let side = min(room * 0.78, 0.6), middle = bandHigh + room / 2
+            let badgeLeft = -faceLength / 2 + 0.1, badgeRight = badgeLeft + side
+            quad(badgeLeft, middle - side / 2, badgeRight, middle + side / 2, 0.006, japanese.colour)
+            let letters = Map3DJapaneseNameBoards.line(ofNumber: japanese.number)
+            let figures = String(japanese.number.dropFirst(letters.count))
+            let badgeMiddle = (badgeLeft + badgeRight) / 2
+            write(Map3DBoardGlyphs.layout(letters), height: side * 0.36, middle: middle + side * 0.2, centre: badgeMiddle,
+                  span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
+            write(Map3DBoardGlyphs.layout(figures), height: side * 0.42, middle: middle - side * 0.17, centre: badgeMiddle,
+                  span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
+            let textLeft = badgeRight + 0.08, textRight = faceLength / 2 - 0.1
+            let centre = (textLeft + textRight) / 2, span = textRight - textLeft
+            write(Map3DBoardGlyphs.layout(japanese.kana), height: room * 0.19, middle: bandHigh + room * 0.86, centre: centre, span: span)
+            write(Map3DBoardGlyphs.layout(name), height: room * 0.5, middle: bandHigh + room * 0.52, centre: centre, span: span)
+            if let second {
+                write(Map3DBoardGlyphs.layout(second), height: room * 0.17, middle: bandHigh + room * 0.14, centre: centre, span: span)
+            }
+            return
         }
         // 臺 is written 台 (as on many of the railway's own boards): its
         // strokes run together on the glyphs' grid.

@@ -383,7 +383,12 @@ extension Map3DScene.Builder {
             let top = Self.platformHeight
             let canopyShare = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
             let shellRoofed = shellRoofed
-            let name = world.station(id: platform.station)?.name, second = boardSecondNames[platform.station]
+            // FUKUOKA-NAME-BOARDS: a Japanese station's board writes its
+            // Japanese name and the number of the line on this platform.
+            let sign = boardJapaneseSigns[platform.station]
+            let japanese = sign?.board(realLine: platform.edge.flatMap { screenDoors.realLine(edge: $0, station: platform.station) })
+            let name = japanese != nil ? sign?.japanese : world.station(id: platform.station)?.name
+            let second = japanese != nil ? sign?.english : boardSecondNames[platform.station]
             mesh(at: path.at(path.length / 2).point) { mesh in
                 func place(_ along: Float, _ across: Float, _ up: Float) -> (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint) {
                     let at = path.at(min(max(along, 0), path.length))
@@ -443,7 +448,8 @@ extension Map3DScene.Builder {
                     for board in Map3DPlatformProps.nameBoards(length: path.length, depth: platform.width, island: platform.island,
                                                                forward: forward, bins: bins, columns: columns) {
                         let at = place(board, back, top)
-                        Self.addNameBoard(&mesh, foot: at.point, out: at.right * -side, name: name, second: second, underground: under)
+                        Self.addNameBoard(&mesh, foot: at.point, out: at.right * -side, name: name, second: second, japanese: japanese,
+                                          underground: under)
                     }
                 }
                 guard !(under && platform.island) else { return }
