@@ -103,7 +103,7 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // the Sun Moon Lake cabins and the Maokong cabins' ceiling lamps (4
         // models, 12,840 vertices more, 514 KB a copy).
         XCTAssertEqual(models.count, 936)
-        XCTAssertEqual(vertices, 6_635_403)
+        XCTAssertEqual(vertices, 6_710_895)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

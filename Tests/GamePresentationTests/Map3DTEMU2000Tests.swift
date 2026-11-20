@@ -10,9 +10,11 @@ final class Map3DTEMU2000Tests: XCTestCase {
         ])
         XCTAssertEqual(Map3DTEMU2000.centres.count, 8)
         XCTAssertEqual(Map3DTEMU2000.rotations.count, 8)
-        XCTAssertEqual(Map3DTEMU2000.rotations[5], .pi, accuracy: 0.0001,
-                       "Second TEP pantograph must face toward the far TED")
-        XCTAssertTrue(Map3DTEMU2000.rotations.enumerated().allSatisfy { $0.offset == 5 || $0.element == 0 })
+        // Decision 905: the studio's TEP has its pantograph toward +x, so
+        // the first TEP is turned to point it toward car 1.
+        XCTAssertEqual(Map3DTEMU2000.rotations[2], .pi, accuracy: 0.0001,
+                       "First TEP pantograph must face toward the near TED")
+        XCTAssertTrue(Map3DTEMU2000.rotations.enumerated().allSatisfy { $0.offset == 2 || $0.element == 0 })
         XCTAssertEqual(Map3DTEMU2000.formationLength, 168.390, accuracy: 0.001)
         XCTAssertEqual(Map3DTEMU2000.leadingOverallLength, 22.095, accuracy: 0.001)
         XCTAssertEqual(Map3DTEMU2000.intermediateOverallLength, 20.700, accuracy: 0.001)
@@ -25,14 +27,15 @@ final class Map3DTEMU2000Tests: XCTestCase {
         // tools write the formation as an assembly of the units instead
         // (`tools/temu2000/assembly-spec.json`).
         XCTAssertGreaterThan(formation.triangleCount, Map3DModelFile.maximumTriangles)
-        XCTAssertEqual(formation.minimum.z, 0, accuracy: 0.012)
+        // Decision 905: the studio's wheel flanges 25 mm below the rail.
+        XCTAssertEqual(formation.minimum.z, -0.025, accuracy: 0.012)
         // 168.39 m is the coupled train envelope; visible carbody ends can
         // stop at the 21.745 m TED body length inside the coupler envelope.
         XCTAssertGreaterThan(formation.length, 167.9)
         XCTAssertLessThanOrEqual(formation.length, Map3DTEMU2000.formationLength + 0.05)
-        XCTAssertTrue(parts.allSatisfy { abs($0.minimum.z) < 0.012 })
+        XCTAssertTrue(parts.allSatisfy { abs($0.minimum.z + 0.025) < 0.012 })
         XCTAssertGreaterThan(Map3DTEMU2000.model(.tep).maximum.z,
-                             Map3DTEMU2000.model(.tema).maximum.z + 0.2)
+                             Map3DTEMU2000.model(.tema).maximum.z + 0.1)
         XCTAssertNotEqual(Map3DTEMU2000.model(.leading).vertices,
                           Map3DTEMU1000.model(.leading).vertices,
                           "TEMU2000 must have its own native shape")
@@ -86,7 +89,8 @@ final class Map3DTEMU2000Tests: XCTestCase {
         let layout = try XCTUnwrap(pack.layout(forType: "puyuma", count: 8))
         XCTAssertEqual(layout.count, 8)
         XCTAssertTrue(layout.allSatisfy { $0.gap == 0 })
-        XCTAssertEqual(layout.reduce(0) { $0 + $1.length }, 165.26, accuracy: 0.05)
+        // Decision 905: the studio's cars end at their couplers.
+        XCTAssertEqual(layout.reduce(0) { $0 + $1.length }, Map3DTEMU2000.formationLength, accuracy: 0.05)
         // Whatever the train's length, the formation is the eight units.
         XCTAssertEqual(try XCTUnwrap(pack.layout(forType: "puyuma", count: 3)).count, 8)
     }
@@ -95,7 +99,9 @@ final class Map3DTEMU2000Tests: XCTestCase {
     /// turned round as in the static formation: both point outwards.
     func testThePantographsAreOnTheTwoTEPCarsPointingOutwards() throws {
         let cars = try models("puyuma")
-        let roof = Map3DTEMU2000.model(.tema).maximum.z + 0.2
+        // Decision 905: the studio's lowered pantograph stands 0.16 m
+        // over the roof covers.
+        let roof = Map3DTEMU2000.model(.tema).maximum.z + 0.1
         for (index, car) in cars.enumerated() {
             let high = car.vertices.filter { $0.z > roof }
             XCTAssertEqual(!high.isEmpty, index == 2 || index == 5, "car \(index + 1)")
@@ -119,8 +125,9 @@ final class Map3DTEMU2000Tests: XCTestCase {
                 let lit = cars[index].vertices.filter(\.glows)
                 XCTAssertFalse(lit.isEmpty, "\(key) car \(index + 1)")
                 XCTAssertEqual(Set(lit.map(\.color)), [Map3DTrainStyle.headlamp, Map3DPalette.lantern], "\(key) car \(index + 1)")
-                // On the sloped face, between the pods and the forehead.
-                XCTAssertTrue(lit.allSatisfy { $0.x * nose > 8 && $0.z > 2.1 && $0.z < 3.7 && abs($0.y) < 1.0 },
+                // On the face, from the nose's tail lamps up to the
+                // head lamps by the windscreen (decision 905).
+                XCTAssertTrue(lit.allSatisfy { $0.x * nose > 8 && $0.z > 1.7 && $0.z < 3.7 && abs($0.y) < 1.0 },
                               "\(key) car \(index + 1): on the face")
                 // Left and right alike.
                 XCTAssertEqual(lit.filter { $0.y > 0 }.count, lit.filter { $0.y < 0 }.count, "\(key) car \(index + 1)")
@@ -156,9 +163,10 @@ final class Map3DTEMU2000Tests: XCTestCase {
             XCTAssertEqual(far.minimum.x, near.minimum.x, accuracy: 0.02, "\(unit)")
             XCTAssertEqual(far.maximum.x, near.maximum.x, accuracy: 0.02, "\(unit)")
             XCTAssertEqual(far.maximum.z, near.maximum.z, accuracy: 0.05, "\(unit)")
-            XCTAssertEqual(far.minimum.z, 0, accuracy: 0.012, "\(unit)")
-            // Under 45 % of the triangles in the near car's own colours.
-            XCTAssertLessThan(far.triangleCount * 20, near.triangleCount * 9, "\(unit): \(far.triangleCount) of \(near.triangleCount)")
+            XCTAssertEqual(far.minimum.z, -0.025, accuracy: 0.012, "\(unit)")
+            // Under half the triangles (the studio's brief), in the near
+            // car's own colours.
+            XCTAssertLessThan(far.triangleCount * 2, near.triangleCount, "\(unit): \(far.triangleCount) of \(near.triangleCount)")
             XCTAssertTrue(Set(far.vertices.map(\.color)).isSubset(of: Set(near.vertices.map(\.color))), "\(unit)")
             XCTAssertTrue(far.vertices.contains { $0.color == Map3DTEMU2000.band }, "\(unit): the waist band")
             XCTAssertTrue(far.vertices.contains { $0.color == Map3DTEMU2000.glass }, "\(unit)")
@@ -171,12 +179,13 @@ final class Map3DTEMU2000Tests: XCTestCase {
     /// under 20,000 triangles a car near, under half the near car far.
     /// Decision 484: revision-2's cab noses cost more than the Taroko's
     /// (about 1.8 times the eight cars), still far under the budget.
+    /// Decision 905: the studio's cars, about 1.8 times revision-2's.
     func testTheEightCarSetIsWithinTheBudget() throws {
         let near = try models("puyuma"), far = try models("puyumaFar")
         let nearTriangles = near.reduce(0) { $0 + $1.triangleCount }, farTriangles = far.reduce(0) { $0 + $1.triangleCount }
-        XCTAssertEqual(nearTriangles, 25_040)
-        XCTAssertEqual(farTriangles, 10_400)
-        XCTAssertLessThan(farTriangles * 20, nearTriangles * 9)
+        XCTAssertEqual(nearTriangles, 45_820)
+        XCTAssertEqual(farTriangles, 21_776)
+        XCTAssertLessThan(farTriangles * 2, nearTriangles)
         for (n, f) in zip(near, far) {
             XCTAssertLessThanOrEqual(n.triangleCount, 20_000, n.name)
             XCTAssertLessThan(f.triangleCount * 2, n.triangleCount, f.name)
@@ -184,9 +193,9 @@ final class Map3DTEMU2000Tests: XCTestCase {
         XCTAssertLessThanOrEqual(farTriangles, 120_000)
     }
 
-    /// The near units are #1456's revision-2 (decision 484).
+    /// The near units are the studio's revision-3 (decision 905).
     func testTheNearUnitsAreUnchanged() {
-        XCTAssertEqual(Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.model($0).triangleCount }, [6980, 1800, 1952, 1812, 6932])
+        XCTAssertEqual(Map3DTEMU2000.Unit.allCases.map { Map3DTEMU2000.model($0).triangleCount }, [8182, 4836, 5056, 4836, 8182])
         var hash: UInt64 = 0xcbf2_9ce4_8422_2325
         func mix(_ word: UInt32) {
             for shift in stride(from: 0, to: 32, by: 8) { hash = (hash ^ UInt64((word >> UInt32(shift)) & 0xFF)) &* 0x100_0000_01b3 }
@@ -197,7 +206,7 @@ final class Map3DTEMU2000Tests: XCTestCase {
                 mix(v.color)
             }
         }
-        // Measured on #1456's revision-2 (FNV-1a over every vertex's bits).
-        XCTAssertEqual(hash, 7293891619195826796)
+        // Measured on the studio's revision-3 (FNV-1a over every vertex's bits).
+        XCTAssertEqual(hash, 2802128194625242010)
     }
 }
