@@ -307,6 +307,22 @@ extension Map3DScene.Builder {
             roof = Map3DNordic.flatRoof
         }
         let far = isFar
+        // NORDIC-HOUSES: near, a Finnish house or block of flats one of the
+        // studio's models fits (``Map3DNordicHouses``) drawn as it, in its
+        // own colours, its back to one side or the other by where it
+        // stands; afar, the box below.
+        if nordic, !far, !canopy, !hipped, polygons.count == 1, polygons[0].count == 1,
+           let unit = Map3DNordicHouses.unit(kind: kind, storeys: storeys, pitched: pitched, length: box.length, width: box.width),
+           let model = Map3DNordicHouses.models[unit] {
+            let colours = Map3DNordicHouses.colours(wall: wall, roof: unit.isBlock ? Map3DNordic.flatRoof : roof)
+            let scale = (along: box.length / unit.body.length, across: box.width / unit.body.width)
+            let base = Map3DPoint(box.centre.x, ground, box.centre.z)
+            mesh(at: centre) {
+                $0.appendNordic(model, at: base, forward: box.along, scale: scale, colours: colours, backLeft: r(1044) < 0.5)
+            }
+            addShadow(centre: centre, forward: box.along, length: box.length, width: box.width, spread: min(6, 2 + height * 0.08), darkness: 0.32)
+            return
+        }
         // Decision 455: afar, an outline of four corners each within
         // ``rectangleReach`` of the box round it is drawn as that box (as
         // an instance, ``Map3DBoxInstance``): its walls, their bands and
