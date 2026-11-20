@@ -56,6 +56,22 @@ struct Map3DSunMoonLandmark: Sendable, Equatable {
     /// Half the length (right) and width (back) of the stone base it
     /// stands on, down to the lowest ground under it; none on the water.
     var base: (x: Float, y: Float)?
+    /// OLD-PORT-AUDIT: how many lower terraces stand round the base's
+    /// front and sides on a slope, each ``terraceStep`` wider and an
+    /// equal share of the drop lower, so no wall of the base is the whole
+    /// drop high (the earlier scene's one block was 9.3 m of blank stone
+    /// under the temple's downhill corner).
+    var terraces = 0
+    /// How wide the stairs down its front are, from the base to the
+    /// ground before the lowest terrace; none without.
+    var stairs: Float?
+    /// How far below the highest ground under it the base may stand
+    /// (its model's own stone platform takes the difference).
+    var sink: Float = 0
+    /// How much wider each terrace is than the one above, and how tall a
+    /// stair's step is at most.
+    static let terraceStep: Float = 2.5
+    static let stairRise: Float = 0.3
 
     static func == (a: Map3DSunMoonLandmark, b: Map3DSunMoonLandmark) -> Bool { a.name == b.name }
 
@@ -79,7 +95,9 @@ struct Map3DSunMoonLandmark: Sendable, Equatable {
     ///   scene's first boxes, would stand in the middle boat).
     /// - The temple: on the middle hall of 文武廟 (OpenStreetMap's way
     ///   799608745), its front down the hill to the lake as the real
-    ///   halls', on the earlier scene's 39 m by 29 m stone base. It takes
+    ///   halls', on a stone base as wide as its own platform and steps
+    ///   (the earlier scene's was one block 39 m by 29 m), with two
+    ///   terraces and the stairs down its front on the slope. It takes
     ///   the middle hall's place (its footprint is not drawn again,
     ///   ``Map3DScene/Builder/replacedPlots``); the real temple's front
     ///   and rear halls, 27 m and 29 m from its middle, stay as the map's
@@ -87,7 +105,8 @@ struct Map3DSunMoonLandmark: Sendable, Equatable {
     ///   the hill as the real ones do.
     /// - The pavilion: at 梅荷園 on the shore west of the pier
     ///   (OpenStreetMap's node 3605024438), as the earlier scene's stood
-    ///   66 m west of its pier, turned 0.5 rad from it, on its 8 m base.
+    ///   66 m west of its pier, turned 0.5 rad from it, on a base as wide as
+    ///   its roof (the earlier scene's was 8 m).
     static let all: [Map3DSunMoonLandmark] = [
         Map3DSunMoonLandmark(name: "shuishe-pier", model: .pier, latitude: 23.864247, longitude: 120.911915, rotation: pierRotation, lift: 0.45, shoreEnd: rampEnd),
     ] + [Float(-16), -2, 12].enumerated().map { index, x in
@@ -95,9 +114,9 @@ struct Map3DSunMoonLandmark: Sendable, Equatable {
                              offset: (x, 20), turn: 0.05 * Float(index - 1) * 180 / .pi, shoreEnd: rampEnd)
     } + [
         Map3DSunMoonLandmark(name: "wenwu-temple", model: .temple, latitude: 23.869939, longitude: 120.927681, rotation: -57.2,
-                             base: (19.5, 14.5)),
+                             base: (17.4, 13.3), terraces: 2, stairs: 8, sink: 1),
         Map3DSunMoonLandmark(name: "shore-pavilion", model: .pavilion, latitude: 23.863852, longitude: 120.911119,
-                             rotation: pierRotation + 0.5 * 180 / .pi, base: (4, 4)),
+                             rotation: pierRotation + 0.5 * 180 / .pi, base: (2.5, 2.5)),
     ]
 
     /// The game's colour of each of the models' materials, in
@@ -209,22 +228,63 @@ extension Map3DScene.Builder {
             var ground = (sunk.map { drawnGround(x: $0.x, z: $0.z) }.max() ?? 0) + landmark.lift
             let saved = target
             if let base = landmark.base {
-                // On the highest ground under its base, the base down to
-                // the lowest.
-                let corners = LandmarkMesh.corners(base, origin: centre, rotation: rotation)
-                let heights = (corners + [centre]).map { drawnGround(x: $0.x, z: $0.z) }
-                ground = heights.max() ?? ground
-                let foot = (heights.min() ?? ground) - 0.25
-                let r = rotation * .pi / 180
+                // On the highest ground under its base (less what it may
+                // sink), the base down to the lowest; on a slope, its
+                // terraces round its front and sides, each down to the
+                // lowest ground under itself, and the stairs down its
+                // front.
+                typealias L = Map3DSunMoonLandmark
+                let r = rotation * .pi / 180, right = Map3DPoint(cos(r), 0, -sin(r)), front = Map3DPoint(sin(r), 0, cos(r))
+                func tier(_ number: Int) -> (middle: Map3DPoint, half: (x: Float, y: Float), lowest: Float) {
+                    let wider = Float(number) * L.terraceStep
+                    let middle = centre + front * (wider / 2), half = (x: base.x + wider, y: base.y + wider / 2)
+                    let corners = [(-half.x, -half.y), (half.x, -half.y), (half.x, half.y), (-half.x, half.y)].map {
+                        middle + right * $0.0 + front * $0.1
+                    }
+                    return (middle, half, (corners + [middle]).map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0)
+                }
+                let heights = (LandmarkMesh.corners(base, origin: centre, rotation: rotation) + [centre]).map { drawnGround(x: $0.x, z: $0.z) }
+                let highest = heights.max() ?? ground
+                ground = highest - min(landmark.sink, highest - (heights.min() ?? highest))
+                let drop = ground - tier(landmark.terraces).lowest
+                // Terraces only where each would be a step worth seeing.
+                let terraces = drop >= Float(landmark.terraces + 1) * 0.5 ? landmark.terraces : 0
+                let step = drop / Float(terraces + 1)
+                // The stairs: from the base's front edge out 1 m past the
+                // lowest terrace, down to the ground there.
+                var steps: [(middle: Map3DPoint, length: Float, top: Float)] = []
+                if landmark.stairs != nil {
+                    let run = Float(landmark.terraces + 1) * L.terraceStep + 1
+                    let end = centre + front * (base.y + run), rise = ground - drawnGround(x: end.x, z: end.z)
+                    let count = min(40, Int((rise / L.stairRise).rounded(.up)))
+                    if count >= 2 {
+                        for index in 1..<count {
+                            let at = centre + front * (base.y + (Float(index) + 0.5) * run / Float(count))
+                            steps.append((at, run / Float(count), ground - rise * Float(index) / Float(count)))
+                        }
+                    }
+                }
+                let tiers = (0...terraces).map { (tier: tier($0), top: ground - Float($0) * step) }
+                let treads = steps.map { step in
+                    (step: step, foot: min(drawnGround(x: step.middle.x, z: step.middle.z) - 0.25, step.top - L.stairRise))
+                }
+                let stairs = landmark.stairs ?? 0
                 for level in [Target.close, .standIn, .far] {
                     target = level
                     mesh(at: centre) { mesh in
-                        mesh.addBox(base: Map3DPoint(centre.x, foot, centre.z), forward: Map3DPoint(cos(r), 0, -sin(r)),
-                                    length: base.x * 2, width: base.y * 2, height: ground - foot,
-                                    top: Map3DPalette.stone, side: Map3DPalette.stone)
+                        for (tier, top) in tiers {
+                            mesh.addBox(base: Map3DPoint(tier.middle.x, tier.lowest - 0.25, tier.middle.z), forward: right,
+                                        length: tier.half.x * 2, width: tier.half.y * 2, height: top - tier.lowest + 0.25,
+                                        top: Map3DPalette.stone, side: Map3DPalette.stone)
+                        }
+                        guard level != .far else { return }
+                        for (step, foot) in treads {
+                            mesh.addBox(base: Map3DPoint(step.middle.x, foot, step.middle.z), forward: right, length: stairs, width: step.length,
+                                        height: step.top - foot, top: Map3DPalette.granite, side: Map3DPalette.granite)
+                        }
                     }
                 }
-                keptColours.insert(Map3DPalette.stone)
+                keptColours.formUnion([Map3DPalette.stone, Map3DPalette.granite])
             }
             // In full only in the closest detail (the pier and the temple
             // are 10,000 and 15,000 triangles); its far model in its
