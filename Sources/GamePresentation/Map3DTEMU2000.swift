@@ -45,9 +45,11 @@ public enum Map3DTEMU2000 {
         }
         let name = "temu2000-\(unit.rawValue)" + (far ? "-far" : "")
         guard let text = encoded[file + (far ? "-far" : "")], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
-              let model = Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette, glass: 4,
+              let decoded = Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette, glass: 4,
                                                        lamps: lamps ? [9, 10] : [])
         else { preconditionFailure("\(file): its mesh does not decode") }
+        guard unit == .leading || unit == .trailing else { return decoded }
+        let model = windscreen(of: decoded)
         guard unit == .trailing else { return model }
         let turned = model.vertices.map { vertex -> Map3DVertex in
             var vertex = vertex
@@ -58,6 +60,33 @@ public enum Map3DTEMU2000 {
                                     minimum: Map3DPoint(-model.maximum.x, -model.maximum.y, model.minimum.z),
                                     maximum: Map3DPoint(-model.minimum.x, -model.minimum.y, model.maximum.z))
     }
+
+    /// Decision 905: the studio drew the cab's windscreen in the black
+    /// mask's material, not the glass's (the real car's windscreen sits in
+    /// its black face). Its faces of the mask facing forward, within
+    /// ``windscreenReach`` of the front and over ``windscreenFloor``, are
+    /// the cab's window glass (``Map3DVertex/trainGlass``), so its glass
+    /// shines and the Christmas wreath (decision 806) finds the windscreen
+    /// and stays under it; the mask's lower nose and its band along the
+    /// side windows stay as they are.
+    static func windscreen(of model: Map3DModelPack.Model) -> Map3DModelPack.Model {
+        var vertices = model.vertices
+        let front = model.maximum.x
+        for first in stride(from: 0, to: vertices.count - 2, by: 3) {
+            let face = vertices[first ..< first + 3]
+            guard face.allSatisfy({ $0.color == dark && $0.layer == Map3DVertex.plain }), vertices[first].nx > 0.3,
+                  vertices[first].nz >= Map3DTrainMaterial.lowestNormal,
+                  face.allSatisfy({ $0.x > front - windscreenReach && $0.z > windscreenFloor }) else { continue }
+            for index in first ..< first + 3 { vertices[index].layer = Map3DVertex.trainGlass }
+        }
+        return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum, maximum: model.maximum)
+    }
+
+    /// Metres back from the cab's front, and up from the rail, that its
+    /// windscreen lies within: the black of the mask over 2.2 m (the
+    /// headlamps' and the nose's black are lower), in the front 5 m.
+    static let windscreenReach: Float = 5
+    static let windscreenFloor: Float = 2.2
 
     /// The colours of the mesh's palette indices, in the order the
     /// studio's material names were given to `glb_to_swift.py` (the
