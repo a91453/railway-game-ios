@@ -185,7 +185,7 @@ final class Map3DGarbageTruckTests: XCTestCase {
         }
     }
 
-    /// The models the app bundles, converted from the owner's Meshy batch.
+    /// The models the app bundles: the studio's rebuild of the owner's Meshy batch (decision 908).
     static let bundled: [Map3DStreetModel: URL] = Dictionary(uniqueKeysWithValues: Map3DGarbageTruck.fileNames.map { model, name in
         (model, URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appendingPathComponent("RailwayGameApp/Resources/Models/\(name).\(Map3DGarbageTruck.fileExtension)"))
@@ -203,9 +203,11 @@ final class Map3DGarbageTruckTests: XCTestCase {
             XCTAssertEqual(extent.x, Map3DGarbageTruck.size.length, accuracy: 0.2)
             XCTAssertEqual(extent.y, Map3DGarbageTruck.size.width, accuracy: 0.2)
             XCTAssertEqual(read.minimum.z, 0, accuracy: 0.01)
-            // In the game's colours.
-            let colours = Set(read.vertices.map(\.color))
-            XCTAssertTrue(colours.contains(model == .garbageTruck ? Map3DGarbageTruck.yellow : Map3DGarbageTruck.green), "\(model)")
+            // Decision 908: the studio's colours, kept as they are (white
+            // stays white, not steel).
+            let colours = Set(read.vertices.filter { $0.layer != Map3DVertex.glowing }.map(\.color))
+            XCTAssertTrue(colours.isSubset(of: Map3DGarbageTruck.studioColours), "\(model)")
+            XCTAssertTrue(colours.contains(model == .garbageTruck ? Map3DGarbageTruck.yellow : Map3DPalette.sidewalk), "\(model)")
         }
         // A file that cannot be read leaves the box-built one.
         let missing = Map3DGarbageTruck.pack(Map3DModelPack.standard, files: [.garbageTruck: URL(fileURLWithPath: "/nonexistent")])
