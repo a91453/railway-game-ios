@@ -1,0 +1,71 @@
+{
+  "comment" : "Decision 782: the models of the registered train fukuokaNanakumaLine (Map3DFukuokaNanakumaLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 8,
+  "lamps" : "fad5634cbf1f7235",
+  "models" : {
+    "light-set-fukuokaNanakumaLine-car" : {
+      "hash" : "774a158e31c19b39",
+      "triangles" : 40
+    },
+    "light-set-fukuokaNanakumaLine-carBack" : {
+      "hash" : "12b198e5041a1d39",
+      "triangles" : 40
+    },
+    "light-set-fukuokaNanakumaLine-head" : {
+      "hash" : "63f6ff68d36a8db5",
+      "triangles" : 36
+    },
+    "light-set-fukuokaNanakumaLine-tail" : {
+      "hash" : "f8fc30f0398997b5",
+      "triangles" : 36
+    },
+    "light-set-fukuokaNanakumaLineFar-car" : {
+      "hash" : "774a158e31c19b39",
+      "triangles" : 40
+    },
+    "light-set-fukuokaNanakumaLineFar-carBack" : {
+      "hash" : "12b198e5041a1d39",
+      "triangles" : 40
+    },
+    "light-set-fukuokaNanakumaLineFar-head" : {
+      "hash" : "63f6ff68d36a8db5",
+      "triangles" : 36
+    },
+    "light-set-fukuokaNanakumaLineFar-tail" : {
+      "hash" : "f8fc30f0398997b5",
+      "triangles" : 36
+    },
+    "set-fukuokaNanakumaLine-car" : {
+      "hash" : "858406876550d9fa",
+      "triangles" : 3158
+    },
+    "set-fukuokaNanakumaLine-carBack" : {
+      "hash" : "2101f4cd56bdc28d",
+      "triangles" : 3158
+    },
+    "set-fukuokaNanakumaLine-head" : {
+      "hash" : "7a54e448a6d91624",
+      "triangles" : 7672
+    },
+    "set-fukuokaNanakumaLine-tail" : {
+      "hash" : "643eeb6ce6d1249c",
+      "triangles" : 7672
+    },
+    "set-fukuokaNanakumaLineFar-car" : {
+      "hash" : "80ed93dc965107f3",
+      "triangles" : 1478
+    },
+    "set-fukuokaNanakumaLineFar-carBack" : {
+      "hash" : "362af6d59aea7053",
+      "triangles" : 1478
+    },
+    "set-fukuokaNanakumaLineFar-head" : {
+      "hash" : "86f013c6b4d464c2",
+      "triangles" : 3392
+    },
+    "set-fukuokaNanakumaLineFar-tail" : {
+      "hash" : "cbe0eee403ad556a",
+      "triangles" : 3392
+    }
+  }
+}

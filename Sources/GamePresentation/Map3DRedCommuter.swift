@@ -56,7 +56,14 @@ public enum Map3DRedCommuter {
     /// (``Map3DVertex/trainGlass``, ``Map3DTrainMaterial/marksOwnGlass(_:)``):
     /// the dark greys of a door or a window's frame, close to the glass in
     /// colour, stay what they are.
-    static func decodedMesh(_ bytes: [UInt8], named name: String, palette: [UInt32] = meshPalette, glass: Int? = nil) -> Map3DModelPack.Model? {
+    ///
+    /// Decision 893: `lamps`, the palette indices of the studio's lamp
+    /// lenses, lit (``Map3DVertex/glowing``) face by face: for a car whose
+    /// lenses share their colour with its paint (the Kaizuka line's red
+    /// band and tail lamps), so the lamps are its materials', not its
+    /// colours' (``Map3DTrainLights/marksOwnLamps(_:)``).
+    static func decodedMesh(_ bytes: [UInt8], named name: String, palette: [UInt32] = meshPalette, glass: Int? = nil,
+                            lamps: Set<Int> = []) -> Map3DModelPack.Model? {
         var at = 0
         func u16() -> Int? {
             guard at + 2 <= bytes.count else { return nil }
@@ -84,7 +91,8 @@ public enum Map3DRedCommuter {
             guard let normal = (corners[1] - corners[0]).cross(corners[2] - corners[0]).normalized else { continue }
             // A face looking down is not glass (the pack's rule,
             // ``Map3DTrainMaterial/lowestNormal``): not seen against the sky.
-            let layer = paint == glass && normal.z >= Map3DTrainMaterial.lowestNormal ? Map3DVertex.trainGlass : Map3DVertex.plain
+            let layer = lamps.contains(paint) ? Map3DVertex.glowing
+                : paint == glass && normal.z >= Map3DTrainMaterial.lowestNormal ? Map3DVertex.trainGlass : Map3DVertex.plain
             for p in corners {
                 vertices.append(Map3DVertex(p, normal: normal, color: palette[paint], layer: layer))
                 low = Map3DPoint(min(low.x, p.x), min(low.y, p.y), min(low.z, p.z))

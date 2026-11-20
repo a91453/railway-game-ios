@@ -142,4 +142,38 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
             XCTAssertTrue(builder.underLandmark(builder.point(x: place.x, y: place.y, height: 0)), "\(landmark)")
         }
     }
+
+    /// OLD-PORT-AUDIT: a landmark keeps the surveyed buildings off the
+    /// ground its model stands on, not off the rectangle round it. Hakata
+    /// station is an L: a corner of its rectangle is open ground, where
+    /// the buildings beside it are drawn again.
+    func testOnlyTheGroundTheModelCovers() throws {
+        let world = GameWorld.newOverseasGame(try FukuokaRailwaysTests.ground())
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let hakata = Map3DHongKongLandmark.hakataStation
+        let place = frame.worldPosition(latitude: hakata.latitude, longitude: hakata.longitude)
+        let metre = Double(WorldCoordinate.unitsPerMetre), reach = 400 * metre
+        let region = WorldRegion(minX: place.x - reach, minY: place.y - reach, maxX: place.x + reach, maxY: place.y + reach)
+        var builder = Map3DScene.Builder(originX: place.x, originY: place.y, region: region, world: world, heights: nil)
+        XCTAssertEqual(builder.addHongKongLandmarks(frame: frame), [.hakataStation])
+        XCTAssertTrue(builder.landmarkPlots.isEmpty)
+        let plan = try XCTUnwrap(builder.landmarkPlans.first)
+        XCTAssertEqual(builder.landmarkPlans.count, 1)
+        // Less than two thirds of its rectangle is under the model.
+        XCTAssertLessThan(plan.covered.filter { $0 }.count * 3, plan.covered.count * 2)
+        let maxX = plan.minX + Float(plan.columns) * LandmarkPlan.cell, maxZ = plan.minZ + Float(plan.rows) * LandmarkPlan.cell
+        let inset: Float = 20
+        let corners = [Map3DPoint(plan.minX + inset, 0, plan.minZ + inset), Map3DPoint(maxX - inset, 0, plan.minZ + inset),
+                       Map3DPoint(plan.minX + inset, 0, maxZ - inset), Map3DPoint(maxX - inset, 0, maxZ - inset)]
+        let open = try XCTUnwrap(corners.first { !builder.underLandmark($0) }, "a corner of the rectangle is open")
+        let middle = builder.point(x: place.x, y: place.y, height: 0)
+        // A building standing in the model though its middle is clear of
+        // it is not drawn; one that only touches it is.
+        XCTAssertTrue(builder.underLandmark(outline: [middle, middle, open, open]))
+        XCTAssertFalse(builder.underLandmark(outline: [middle, open, open, open]))
+        XCTAssertFalse(builder.underLandmark(outline: []))
+        // Beyond the rectangle nothing is.
+        XCTAssertFalse(plan.covers(Map3DPoint(plan.minX - 3 * LandmarkPlan.cell, 0, plan.minZ)))
+        XCTAssertFalse(plan.covers(Map3DPoint(maxX + 3 * LandmarkPlan.cell, 0, maxZ)))
+    }
 }

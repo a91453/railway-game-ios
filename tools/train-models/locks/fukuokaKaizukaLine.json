@@ -1,0 +1,39 @@
+{
+  "comment" : "Decision 782: the models of the registered train fukuokaKaizukaLine (Map3DFukuokaKaizukaLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 4,
+  "lamps" : "64b0ac94b90d3578",
+  "models" : {
+    "light-set-fukuokaKaizukaLine-head" : {
+      "hash" : "47200a84853437e9",
+      "triangles" : 88
+    },
+    "light-set-fukuokaKaizukaLine-tail" : {
+      "hash" : "1dfd239d972db0e9",
+      "triangles" : 88
+    },
+    "light-set-fukuokaKaizukaLineFar-head" : {
+      "hash" : "b834c2a60cbbd39d",
+      "triangles" : 56
+    },
+    "light-set-fukuokaKaizukaLineFar-tail" : {
+      "hash" : "b67598107823739d",
+      "triangles" : 56
+    },
+    "set-fukuokaKaizukaLine-head" : {
+      "hash" : "107aa928661d5ea7",
+      "triangles" : 7106
+    },
+    "set-fukuokaKaizukaLine-tail" : {
+      "hash" : "b4e827996cb1b8be",
+      "triangles" : 6946
+    },
+    "set-fukuokaKaizukaLineFar-head" : {
+      "hash" : "76b10c8e79cd0d03",
+      "triangles" : 2780
+    },
+    "set-fukuokaKaizukaLineFar-tail" : {
+      "hash" : "b3ab1a78a4cad45d",
+      "triangles" : 2608
+    }
+  }
+}

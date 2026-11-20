@@ -1330,6 +1330,9 @@ extension Map3DScene {
         /// Decision 791: the ground Hong Kong's landmarks stand on, where
         /// no footprint is drawn.
         var landmarkPlots: [PlacedSquare] = []
+        /// OLD-PORT-AUDIT: the ground each of the cities' landmarks
+        /// covers (``LandmarkPlan``), where no footprint is drawn.
+        var landmarkPlans: [LandmarkPlan] = []
         /// Decision 879: the squares a model stands on in the place of one
         /// real building (the Wenwu temple's middle hall): the footprint
         /// whose middle is within one is not drawn again, but counts as

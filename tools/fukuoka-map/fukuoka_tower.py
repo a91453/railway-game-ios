@@ -32,6 +32,9 @@ import os
 import struct
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "hk-landmarks"))
+import ground_plate  # noqa: E402
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'hk-landmarks'))
 from glb_to_swift import MATERIALS, accessor, read_glb  # noqa: E402
 
@@ -155,6 +158,8 @@ def main(glb, swift):
         if len({ka, kb, kc}) == 3:
             triangles.append((ka, kb, kc, paint))
     near = encode(points, triangles)
+    # OLD-PORT-AUDIT: the old plaza (material 0) must stay out.
+    ground_plate.check(near, "fukuoka-tower")
 
     # The far model: the outline of everything up to 128 m, and of the
     # mast above it, each a prism.

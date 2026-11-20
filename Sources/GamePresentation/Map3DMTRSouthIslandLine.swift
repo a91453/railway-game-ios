@@ -65,7 +65,7 @@ extension Map3DMTRSouthIslandLine {
         id: "mtrSouthIslandLine",
         sets: [Map3DTrainSet.mtrSouthIslandLine(), .mtrSouthIslandLine(far: true)],
         showcase: [
-            Map3DShowcase.Entry(key, "Hong Kong South Island line train", "香港南港島綫列車", .metro, cars: 3, fixed: true),
+            Map3DShowcase.Entry(key, "Hong Kong South Island line train", "香港南港島綫列車", .hongKong, cars: 3, fixed: true),
         ],
         triangles: 3_100...11_500, length: 21.9...23.1)
 }

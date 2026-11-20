@@ -139,6 +139,24 @@ public enum Map3DTrainLights {
         Map3DPalette.lantern, Map3DColor.shaded(Map3DPalette.lantern, 0.6), Map3DPalette.tunnelLamp,
     ]
 
+    /// Decision 893: the sets whose recipes light their lamps face by face
+    /// (``Map3DRedCommuter/decodedMesh(_:named:palette:glass:lamps:)``)
+    /// and paint something else in a lens's colour: the Kaizuka line's red
+    /// band is the tail lamps' red. Their lamps are their lit faces alone.
+    static let ownLampSets: Set<String> = [Map3DFukuokaKaizukaLine.key, Map3DFukuokaKaizukaLine.key + "Far"]
+
+    /// Whether model `name` (a set's car, `set-<key>-…`) is one of
+    /// ``ownLampSets``: its lamps its lit faces, not its lens colours.
+    static func marksOwnLamps(_ name: String) -> Bool {
+        ownLampSets.contains { name.hasPrefix("set-\($0)-") }
+    }
+
+    /// Whether `vertex` of a model is a lamp's: lit, or (unless the model
+    /// marks its own lamps, ``marksOwnLamps(_:)``) a lens's colour.
+    static func isLamp(_ vertex: Map3DVertex, ownLamps: Bool) -> Bool {
+        vertex.glows || (!ownLamps && lensColours.contains(vertex.color))
+    }
+
     /// Whether `colour` is a tail lamp's red rather than a headlamp's white.
     static func isRed(_ colour: UInt32) -> Bool {
         let r = Float(colour & 0xFF), g = Float((colour >> 8) & 0xFF), b = Float((colour >> 16) & 0xFF)
@@ -153,9 +171,10 @@ public enum Map3DTrainLights {
     public static func car(_ model: Map3DModelPack.Model) -> Car {
         var head: [Bool: [Map3DVertex]] = [:], tail: [Bool: [Map3DVertex]] = [:]
         let reach = model.length * 0.3
+        let ownLamps = marksOwnLamps(model.name)
         for start in stride(from: 0, to: model.vertices.count - 2, by: 3) {
             let corners = Array(model.vertices[start ..< start + 3])
-            guard corners[0].glows || lensColours.contains(corners[0].color) else { continue }
+            guard isLamp(corners[0], ownLamps: ownLamps) else { continue }
             let x = (corners[0].x + corners[1].x + corners[2].x) / 3
             let front = x > 0
             guard front ? x > model.maximum.x - reach : x < model.minimum.x + reach else { continue }
@@ -233,7 +252,8 @@ public enum Map3DTrainLights {
     /// back cab has no lamps drawn).
     public static func windowModel(of model: Map3DModelPack.Model) -> Map3DModelPack.Model? {
         // An end with lamps, lit or not, is a cab's.
-        let lamps = model.vertices.filter { $0.glows || lensColours.contains($0.color) }
+        let ownLamps = marksOwnLamps(model.name)
+        let lamps = model.vertices.filter { isLamp($0, ownLamps: ownLamps) }
         let frontCab = lamps.contains { $0.x > model.maximum.x - model.length * 0.3 }
         let backCab = lamps.contains { $0.x < model.minimum.x + model.length * 0.3 }
         let middle = (model.minimum.x + model.maximum.x) / 2
