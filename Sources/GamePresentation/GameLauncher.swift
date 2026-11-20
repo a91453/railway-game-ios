@@ -166,6 +166,12 @@ public final class GameLauncher {
         didSet { session?.playSound = playSound }
     }
 
+    /// The app's player of the sounds the player asks to hear
+    /// (``GameSession/previewSound``, decision 883, later).
+    @ObservationIgnored public var previewSound: (@MainActor (SoundCue) -> Void)? {
+        didSet { session?.previewSound = previewSound }
+    }
+
     /// The app's music, handed to every game it starts
     /// (``GameSession/duckMusic``, decision 219); back to full when a game
     /// starts or ends.
@@ -1963,6 +1969,7 @@ public final class GameLauncher {
         // 419).
         started.readLandRoundStations(roads: roads)
         started.playSound = playSound
+        started.previewSound = previewSound
         started.worksOutPreviewsOnTheNextTurn = worksOutPreviewsOnTheNextTurn
         started.duckMusic = duckMusic
         duckMusic?(1)

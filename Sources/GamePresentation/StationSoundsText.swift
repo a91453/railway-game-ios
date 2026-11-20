@@ -74,8 +74,16 @@ public struct StationSoundsChoice: Hashable, Sendable {
     /// What the row does for the player.
     public static func note(in language: DisplayLanguage) -> String {
         language.text(
-            "The bell rings as trains arrive; the melody plays as the doors close on a train you are watching, at 60× or slower. Picking one plays it once.",
-            "到站鈴在列車進站時響；發車旋律在你看著的列車關門時響（60 倍速以下）。選好會先播一次給你聽。"
+            "The bell rings as trains arrive; the melody plays as the doors close on a train you are watching, at 60× or slower. Picking one plays it once, and the play buttons play it again.",
+            "到站鈴在列車進站時響；發車旋律在你看著的列車關門時響（60 倍速以下）。選好會先播一次，按右邊的播放鈕可以再聽。"
+        ) + " " + silentModeNote(in: language)
+    }
+
+    /// Decision 883 (later): why a sound the player asked for may not be heard.
+    public static func silentModeNote(in language: DisplayLanguage) -> String {
+        language.text(
+            "If you hear nothing, turn off the phone's silent mode and turn its volume up.",
+            "聽不到時，請關掉手機的靜音模式並調高音量。"
         )
     }
 }
@@ -100,7 +108,7 @@ extension GameSession {
                 : language.text("\(station.name) now rings the \(rung.title(in: .english)).",
                                 "\(station.name) 的到站鈴改為\(rung.title(in: .traditionalChinese))。")
         }
-        if done != nil { playSound?(.arrival(watched: true, chime: StationChime.of(station.id, in: world))) }
+        if done != nil { previewSelectedStationChime() }
     }
 
     /// Decision 866: sets the selected station's departure melody, `nil`
@@ -117,9 +125,35 @@ extension GameSession {
             return language.text("\(station.name) now plays \(melody.title(in: .english)) as doors close.",
                                  "\(station.name) 的發車旋律改為\(melody.title(in: .traditionalChinese))。")
         }
-        guard done != nil else { return }
-        let heard = melody ?? world.lines.first { !$0.isFreight && $0.stops.contains(station.id) }.map { DepartureMelody.of(lineNamed: $0.name, atStationNamed: station.name) }
-        if let heard { playSound?(.departure(heard)) }
+        if done != nil { previewSelectedStationMelody() }
+    }
+
+    /// Decision 883 (later): plays `cue` because the player asked to hear it.
+    func preview(_ cue: SoundCue) {
+        (previewSound ?? playSound)?(cue)
+    }
+
+    /// Decision 883 (later): rings the selected station's arrival bell once, the
+    /// one set or the automatic one.
+    public func previewSelectedStationChime() {
+        guard let station = selectedStation, !station.isDepot else { return }
+        preview(.arrival(watched: true, chime: StationChime.of(station.id, in: world)))
+    }
+
+    /// Decision 883 (later): plays the selected station's departure melody once:
+    /// the one the player wrote or picked, or else what the first line
+    /// calling there plays at this station (decision 868), melody 1 where
+    /// no line calls yet.
+    public func previewSelectedStationMelody() {
+        guard let station = selectedStation, !station.isDepot else { return }
+        preview(selectedStationMelodyCue(station))
+    }
+
+    private func selectedStationMelodyCue(_ station: Station) -> SoundCue {
+        if let melody = station.playerMelody.flatMap({ world.playerMelody(id: $0) }) { return .playerDeparture(melody.notes) }
+        if let melody = station.departureMelody { return .departure(melody) }
+        let line = world.lines.first { !$0.isFreight && $0.stops.contains(station.id) }
+        return .departure(line.map { DepartureMelody.of(lineNamed: $0.name, atStationNamed: station.name) } ?? .a)
     }
 }
 
