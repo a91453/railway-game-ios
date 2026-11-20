@@ -76,14 +76,15 @@ public struct StationSoundsChoice: Hashable, Sendable {
         language.text(
             "The bell rings as trains arrive; the melody plays as the doors close on a train you are watching, at 60× or slower. Picking one plays it once, and the play buttons play it again.",
             "到站鈴在列車進站時響；發車旋律在你看著的列車關門時響（60 倍速以下）。選好會先播一次，按右邊的播放鈕可以再聽。"
-        ) + " " + silentModeNote(in: language)
+        ) + " " + quietPhoneNote(in: language)
     }
 
-    /// Decision 883 (later): why a sound the player asked for may not be heard.
-    public static func silentModeNote(in language: DisplayLanguage) -> String {
+    /// Decision 883 (later): why a sound the player asked for may not be heard (it plays with the
+    /// silent switch on, but not with the volume down).
+    public static func quietPhoneNote(in language: DisplayLanguage) -> String {
         language.text(
-            "If you hear nothing, turn off the phone's silent mode and turn its volume up.",
-            "聽不到時，請關掉手機的靜音模式並調高音量。"
+            "If you hear nothing, turn the phone's volume up.",
+            "聽不到時，請調高手機音量。"
         )
     }
 }
