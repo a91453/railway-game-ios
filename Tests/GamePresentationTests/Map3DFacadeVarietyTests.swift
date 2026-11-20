@@ -154,4 +154,21 @@ final class Map3DFacadeVarietyTests: XCTestCase {
         }
         XCTAssertGreaterThan(lit, 0)
     }
+
+    /// FUKUOKA-TOWER-GLASS: Fukuoka Tower's mirror glass is banded by
+    /// its floors, not by mullions: its walls are floor-lined glass (lit
+    /// at night as curtain glass is), and none of it curtain glass.
+    func testFukuokaTowersGlassIsBandedByItsFloors() throws {
+        for full in [true, false] {
+            let vertices = Map3DHongKongLandmark.fukuokaTower.model(full: full).vertices
+            let banded = vertices.filter { $0.layer == Map3DVertex.floorLines }
+            XCTAssertGreaterThan(banded.count, 0)
+            XCTAssertTrue(banded.allSatisfy { abs($0.nz) < 0.7 }, "only walls")
+            XCTAssertEqual(Set(banded.map(\.color)), [Map3DHongKongLandmark.materialColours[18]])
+            XCTAssertTrue(banded.contains { $0.v > 100 }, "v is the height in metres")
+            XCTAssertFalse(vertices.contains { $0.layer == Map3DVertex.curtainGlass })
+        }
+        // The other landmarks keep their curtain glass.
+        XCTAssertFalse(Map3DHongKongLandmark.fukuokaDome.model(full: true).vertices.contains { $0.layer == Map3DVertex.floorLines && $0.color == Map3DHongKongLandmark.materialColours[18] })
+    }
 }
