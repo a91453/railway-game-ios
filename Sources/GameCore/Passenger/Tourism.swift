@@ -573,6 +573,25 @@ extension GameWorld {
         passengerPlan = PassengerPlanCache()
     }
 
+    /// Decision 894: adds `attractions` after the ones tourism already
+    /// has, numbered on from ``Tourism/nextID``, each with no shop and no
+    /// tourists; the ones already there keep their numbers, shops and
+    /// counts. A map whose catalog gained sights after it was saved gets
+    /// them this way. Nothing happens with tourism off, with none given,
+    /// or past ``Tourism/maximumAttractions``.
+    public mutating func addAttractions(_ attractions: [Attraction]) {
+        guard var tourism, !attractions.isEmpty else { return }
+        let room = max(0, Tourism.maximumAttractions - tourism.attractions.count)
+        guard room > 0 else { return }
+        for source in attractions.prefix(room) {
+            tourism.attractions.append(Attraction(id: AttractionID(rawValue: tourism.nextID), name: source.name, englishName: source.englishName,
+                                                  point: source.point, kind: source.kind, baseStars: max(100, min(500, source.baseStars))))
+            tourism.nextID += 1
+        }
+        self.tourism = tourism
+        passengerPlan = PassengerPlanCache()
+    }
+
     /// Turns tourism on for a blank map with three to five attractions drawn
     /// from `seed` for each tile of ``MapExpansion/tileLength`` (16.384 km)
     /// a side (decision 174; decision 250: by the map's area, so a map that

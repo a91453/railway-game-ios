@@ -523,7 +523,8 @@ extension GameWorld {
     /// with no service of a line without runs, a spare (decision 58),
     /// which nothing else moves, or of a line with runs standing at an end
     /// of its line with no depot of the line to go into and no run from
-    /// there before `candidate` is due there (LAST-TRAIN-TERMINUS: the
+    /// there before `candidate`, as late as it is, is due there
+    /// (LAST-TRAIN-TERMINUS: the
     /// Sanying Line's trains that had ended their day there, the depot
     /// full, on the berths the night's last services were bound for).
     /// Decision 571's dispatcher sent such a
@@ -556,12 +557,21 @@ extension GameWorld {
             // line's way at Sanchong), while a depot has room (the train
             // at Taipei Main Station went in minutes later), and while a
             // run from there may take it first, it is left to wait.
+            // `candidate` is due there as late as it leaves here
+            // (EAL-LMC-PEAK-GAP): by its timetable alone a late train
+            // counted one about to leave on its run as standing for the
+            // night, as at Lok Ma Chau, which has no depot, where a train
+            // five minutes late went round one whose run left four
+            // minutes on, before it could have come.
             if let line = assignedLine(of: id, memo: &memo), line.hasRuns {
                 guard !line.isRing, call == line.stops.first || call == line.stops.last,
                       !line.depots.contains(where: { depotHasRoom($0, for: other) })
                 else { return nil }
                 let starts = pendingRunStarts(of: line, from: call)
-                let due = candidate.scheduledArrival(of: stop, cycle: cycle).seconds
+                var due = candidate.scheduledArrival(of: stop, cycle: cycle).seconds
+                if case .waitingAtStop(let here, let hereCycle)? = train(id: candidate.id)?.execution {
+                    due += max(0, clock.now.seconds - candidate.scheduledDeparture(of: here, cycle: hereCycle).seconds)
+                }
                 guard !starts.isEmpty, !starts.contains(where: { $0 <= due }) else { return nil }
             }
         case .waitingAtStop(let otherStop, let otherCycle)?:
