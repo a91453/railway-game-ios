@@ -55,6 +55,11 @@ public struct Map3DFerries: Sendable {
         let route: FerryRoute
         let boat: Map3DFerry.Boat
         let piers: [Pier]
+        /// Each leg's bend (decision 585 續, FERRY-STATION-TAP): the
+        /// control point of the quadratic curve its boats sail from berth
+        /// to berth, the berths' middle for a straight crossing
+        /// (``bends(of:in:)``).
+        var bends: [Map3DPoint] = []
     }
 
     let lines: [Line]
@@ -111,7 +116,13 @@ public struct Map3DFerries: Sendable {
                 berth.y = origin.y
                 return Pier(origin: origin, out: out, berth: berth)
             }
-            return Line(id: route.id, route: route, boat: boat, piers: piers)
+            var line = Line(id: route.id, route: route, boat: boat, piers: piers)
+            line.bends = piers.indices.dropLast().map { leg in
+                let a = piers[leg].berth, b = piers[leg + 1].berth
+                let middle = (a + b) * 0.5, length = (b - a).length
+                return Self.bend(from: a, to: b, in: scene.drawnWater(round: middle, radius: length * (0.5 + Self.mostBend) + 20))
+            }
+            return line
         }
     }
 
@@ -204,6 +215,49 @@ public struct Map3DFerries: Sendable {
         }
         guard let best else { return nil }
         return (best.edge, best.way)
+    }
+
+    /// How far the bend of a leg may lie off the straight line, as a share
+    /// of the leg's length: the curve itself strays half as far.
+    static let mostBend: Float = 0.6
+    /// The steps the bend is looked for in, metres.
+    static let bendStep: Float = 8
+
+    /// The control point of the curve boats sail from berth `a` to berth
+    /// `b` (decision 585 續, FERRY-STATION-TAP): the berths' middle, a
+    /// straight crossing, when that is all open water drawn; else the
+    /// nearest point off the middle, to either side, whose curve is
+    /// (out of Kaohsiung harbour's mouth, the straight line from the
+    /// Gushan ferry station to Cijin's cuts Shaochuantou's point, and the
+    /// real boats swing east round it, OpenStreetMap's way 388956320);
+    /// the middle when none within ``mostBend`` is. Every map's ferries
+    /// are laid this way.
+    static func bend(from a: Map3DPoint, to b: Map3DPoint, in drawn: Map3DScene.DrawnWater) -> Map3DPoint {
+        let middle = (a + b) * 0.5, length = (b - a).length
+        guard length > 1 else { return middle }
+        let across = Map3DPoint(-(b.z - a.z) / length, 0, (b.x - a.x) / length)
+        let samples = max(Int(length / 4), 2)
+        func open(_ c: Map3DPoint) -> Bool {
+            (0...samples).allSatisfy { i in
+                let p = curve(a, c, b, t: Float(i) / Float(samples))
+                return drawn.isOpenWater(x: p.x, z: p.z)
+            }
+        }
+        if open(middle) { return middle }
+        for off in stride(from: bendStep, through: length * mostBend, by: bendStep) {
+            for side: Float in [1, -1] {
+                let c = middle + across * (off * side)
+                if open(c) { return c }
+            }
+        }
+        return middle
+    }
+
+    /// The quadratic curve from `a` to `b` with control point `c`, at `t`
+    /// (0–1).
+    static func curve(_ a: Map3DPoint, _ c: Map3DPoint, _ b: Map3DPoint, t: Float) -> Map3DPoint {
+        let u = 1 - t
+        return a * (u * u) + c * (2 * u * t) + b * (t * t)
     }
 
     /// The side (row and column steps) of `cell` whose neighbour is water
@@ -332,10 +386,22 @@ public struct Map3DFerries: Sendable {
 
     // MARK: - Where a boat is
 
-    /// The way leg `leg` runs out, level.
-    static func way(_ line: Line, leg: Int) -> Map3DPoint {
+    /// The way leg `leg` runs out, level, at `t` (0–1) of its curve
+    /// (``bend(from:to:in:)``): at 0 the way it leaves its first pier, at
+    /// 1 the way it comes to its second; the same all along a straight
+    /// leg.
+    static func way(_ line: Line, leg: Int, at t: Float = 0) -> Map3DPoint {
         let a = line.piers[leg].berth, b = line.piers[leg + 1].berth
-        return Map3DPoint(b.x - a.x, 0, b.z - a.z).normalized ?? line.piers[leg].out
+        let c = leg < line.bends.count ? line.bends[leg] : (a + b) * 0.5
+        let d = (c - a) * (2 * (1 - t)) + (b - c) * (2 * t)
+        return Map3DPoint(d.x, 0, d.z).normalized ?? Map3DPoint(b.x - a.x, 0, b.z - a.z).normalized ?? line.piers[leg].out
+    }
+
+    /// Where on leg `leg` of `line` a boat is at `t` (0–1) of the way out.
+    static func point(_ line: Line, leg: Int, at t: Float) -> Map3DPoint {
+        let a = line.piers[leg].berth, b = line.piers[leg + 1].berth
+        let c = leg < line.bends.count ? line.bends[leg] : (a + b) * 0.5
+        return curve(a, c, b, t: t)
     }
 
     /// `a` turned towards `b` by `share`, the short way round, or by half
@@ -363,22 +429,22 @@ public struct Map3DFerries: Sendable {
         let double = line.boat.isDoubleEnded, last = line.piers.count - 1
         switch stage {
         case .sailing(let leg, let share, let outbound):
-            let a = line.piers[leg].berth, b = line.piers[leg + 1].berth
-            let s = eased(share)
-            let point = outbound ? a + (b - a) * s : b + (a - b) * s
-            let way = way(line, leg: leg)
+            let s = eased(share), t = outbound ? s : 1 - s
+            var point = Self.point(line, leg: leg, at: t)
+            point.y = line.piers[leg].berth.y + (line.piers[leg + 1].berth.y - line.piers[leg].berth.y) * t
+            let way = way(line, leg: leg, at: t)
             return (point, outbound || double ? way : -way)
         case .docked(let pier, let share, let outbound):
             let point = line.piers[pier].berth
             let s = eased(share)
             if outbound {
-                let came = way(line, leg: pier - 1)
+                let came = way(line, leg: pier - 1, at: 1)
                 if pier == last { return (point, double ? came : turned(came, -came, share: s, halfTurn: true)) }
                 return (point, turned(came, way(line, leg: pier), share: s))
             }
             let came = way(line, leg: pier)
             if pier == 0 { return (point, double ? came : turned(-came, came, share: s, halfTurn: true)) }
-            let next = way(line, leg: pier - 1)
+            let next = way(line, leg: pier - 1, at: 1)
             return (point, double ? turned(came, next, share: s) : turned(-came, -next, share: s))
         }
     }

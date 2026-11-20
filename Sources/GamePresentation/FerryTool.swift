@@ -66,6 +66,12 @@ public struct RealFerry: Hashable, Sendable {
         public let englishName: String
         public let latitude: Double
         public let longitude: Double
+        /// Where its ferry station's building stands on the 3D map, when
+        /// it is drawn apart from the pier's point (decision 592's
+        /// terminals): a tap there opens the ferry too (decision 585 續,
+        /// FERRY-STATION-TAP). `nil` where none is drawn.
+        public var terminalLatitude: Double? = nil
+        public var terminalLongitude: Double? = nil
     }
 
     public let name: String
@@ -76,31 +82,68 @@ public struct RealFerry: Hashable, Sendable {
     /// Tamsui–Bali across the Tamsui River's mouth: the two ferry piers,
     /// 1,260 m apart in a straight line (the crossing takes about 10
     /// minutes, New Taipei transport department, 2026-05-18). The
-    /// coordinates are the piers' as on the map, not checked against
-    /// OpenStreetMap here (UNVERIFIED: the extract and Overpass could not
-    /// be reached).
+    /// coordinates are OpenStreetMap's (ODbL; osmtoday's Taiwan extract of
+    /// 2026-11-20, decision 585 續 FERRY-STATION-TAP): the ferry terminals
+    /// 淡水渡船頭 (node 6806993047) and 八里渡船頭 (node 6778518834).
     public static let tamsuiBali = RealFerry(
         name: "淡水—八里", englishName: "Tamsui–Bali",
         piers: [
-            Pier(name: "淡水", englishName: "Tamsui", latitude: 25.1693, longitude: 121.4395),
-            Pier(name: "八里", englishName: "Bali", latitude: 25.1585, longitude: 121.4357)
+            Pier(name: "淡水", englishName: "Tamsui", latitude: 25.169611, longitude: 121.439047),
+            Pier(name: "八里", englishName: "Bali", latitude: 25.159292, longitude: 121.435885)
         ],
         legMetres: [1_260]
     )
 
     /// Gushan–Cijin across Kaohsiung harbour's mouth: the two ferry
-    /// piers, 715 m apart in a straight line (about 5 minutes). The
-    /// coordinates as Tamsui–Bali's (UNVERIFIED).
+    /// piers, 715 m apart (about 5 minutes; OpenStreetMap's sailed way
+    /// 388956320 is 709 m). Cijin's pier is OpenStreetMap's, as
+    /// Tamsui–Bali's: that way's south end, at the terminal 旗津輪渡站 (way
+    /// 255744758). Gushan's stays some 90 m west of the way's north end
+    /// (node 3921289758): the real boats berth against the terminal
+    /// building, which the 3D map draws standing on the water, so a pier
+    /// there would put the boat inside it
+    /// (``ScreenshotSceneTests/testTheRealFerryPiersStandAtTheDrawnShore``).
     public static let gushanCijin = RealFerry(
         name: "鼓山—旗津", englishName: "Gushan–Cijin",
         piers: [
-            Pier(name: "鼓山", englishName: "Gushan", latitude: 22.6195, longitude: 120.2690),
-            Pier(name: "旗津", englishName: "Cijin", latitude: 22.6135, longitude: 120.2665)
+            Pier(name: "鼓山", englishName: "Gushan", latitude: 22.6195, longitude: 120.2690,
+                 terminalLatitude: 22.6198008, terminalLongitude: 120.2700518),
+            Pier(name: "旗津", englishName: "Cijin", latitude: 22.6141421, longitude: 120.2698082,
+                 terminalLatitude: 22.6139938, terminalLongitude: 120.2697235)
         ],
         legMetres: [715]
     )
 
     public static let all = [tamsuiBali, gushanCijin]
+
+    /// How near a real ferry's pier, or its station's building, a tap with
+    /// no tool opens its ferry (decision 585 續, FERRY-STATION-TAP): 150 m,
+    /// about a terminal and its quay.
+    static let stationReach: Double = 150 * Double(WorldCoordinate.unitsPerMetre)
+
+    /// The real ferry, and its pier, whose station stands within
+    /// ``stationReach`` of `point` on `world`'s map, the nearest; `nil` on
+    /// a map not on the Earth or away from every real ferry station.
+    /// Every map shares this: a new real ferry in ``all`` is tapped the
+    /// same way.
+    public static func station(near point: PlanPoint, in world: GameWorld) -> (ferry: RealFerry, pier: Pier)? {
+        guard let frame = RealWorldFrame(world: world) else { return nil }
+        var best: (distance: Double, ferry: RealFerry, pier: Pier)?
+        for ferry in all {
+            for pier in ferry.piers {
+                var spots = [(pier.latitude, pier.longitude)]
+                if let latitude = pier.terminalLatitude, let longitude = pier.terminalLongitude { spots.append((latitude, longitude)) }
+                for (latitude, longitude) in spots {
+                    let (x, y) = frame.worldPosition(latitude: latitude, longitude: longitude)
+                    guard x.isFinite, y.isFinite else { continue }
+                    let dx = x - Double(point.x), dy = y - Double(point.y)
+                    let distance = (dx * dx + dy * dy).squareRoot()
+                    if distance <= stationReach, best.map({ distance < $0.distance }) ?? true { best = (distance, ferry, pier) }
+                }
+            }
+        }
+        return best.map { ($0.ferry, $0.pier) }
+    }
 
     /// How far from a pier's point its cell may be: the nearest cell a
     /// pier can stand on within this many cells.
@@ -309,8 +352,16 @@ extension GameSession {
     /// (decision 585's demo), while nothing is drawn and none is open from
     /// its first pier; `nil` otherwise.
     public var realFerryOffer: RealFerry? {
-        guard ferryDraft.isEmpty else { return nil }
-        return RealFerry.all.first { real in
+        realFerryOffers.first
+    }
+
+    /// Every real ferry on this map the mode offers to lay as it is, in
+    /// ``RealFerry/all``'s order (decision 585 續, FERRY-STATION-TAP: the
+    /// whole of Taiwan offered only the first, so Tamsui–Bali hid
+    /// Gushan–Cijin once Tamsui's land was read in).
+    public var realFerryOffers: [RealFerry] {
+        guard ferryDraft.isEmpty else { return [] }
+        return RealFerry.all.filter { real in
             // Decision 585 續 (FERRY-QIJIN): on a map whose land is read in
             // as it is needed, one near the land read.
             if readsLandForFerries, !real.lies(in: world) { return false }
@@ -326,6 +377,38 @@ extension GameSession {
         ferryDraft = piers
         ferryDraftLegs = real.legMetres
         lookAt(piers[piers.count / 2].middle)
+    }
+
+    /// A tap with no tool at `point` (decision 585 續, FERRY-STATION-TAP):
+    /// on a real ferry station (``RealFerry/station(near:in:)``), the
+    /// pier or its building, opens the transit tool's ferry mode, with
+    /// the real route laid for the action button when it is not open yet,
+    /// so the Gushan and Cijin ferry stations are a ferry's stations, not
+    /// only buildings to look at. Returns whether it did. Never changes
+    /// the world.
+    @discardableResult
+    public func openRealFerryStation(at point: PlanPoint) -> Bool {
+        guard tool == .select, tutorial == nil, allowsFerryMode, world.bounds.contains(point),
+              let (real, pier) = RealFerry.station(near: point, in: world) else { return false }
+        selectTool(.bus)
+        setBusMode(.ferries)
+        let station = language.text("\(pier.englishName) ferry station", "\(pier.name)渡輪站")
+        if realFerryOffers.contains(real) {
+            traceRealFerry(real)
+            message = StatusMessage(kind: .success, text: language.text(
+                "\(station): the \(real.englishName) ferry is laid. Choose its boats, then open it.",
+                "\(station)：已照真實航線拉好\(real.name)，選好船與班距就能開航。"
+            ))
+        } else if realFerryPiers(real).map({ piers in world.ferryRoutes.contains { $0.piers.first == piers.first } }) == true {
+            message = StatusMessage(kind: .success, text: language.text(
+                "\(station): the \(real.englishName) ferry already sails.", "\(station)：\(real.name)已經開航。"
+            ))
+        } else {
+            message = StatusMessage(kind: .failure, text: language.text(
+                "\(station): this map has no shore here for its pier yet.", "\(station)：這張地圖這裡還沒有能蓋碼頭的岸邊。"
+            ))
+        }
+        return true
     }
 
     // MARK: - Building

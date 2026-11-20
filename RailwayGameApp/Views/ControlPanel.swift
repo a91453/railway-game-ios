@@ -450,7 +450,7 @@ private struct FerryControls: View {
                 }
                 .disabled(session.ferryDraft.isEmpty)
                 .accessibilityIdentifier("ferry.undo")
-                if let real = session.realFerryOffer {
+                ForEach(session.realFerryOffers, id: \.name) { real in
                     Button {
                         session.traceRealFerry(real)
                     } label: {
@@ -460,7 +460,7 @@ private struct FerryControls: View {
                             Image(systemName: "ferry")
                         }
                     }
-                    .accessibilityIdentifier("ferry.real")
+                    .accessibilityIdentifier(real == session.realFerryOffers.first ? "ferry.real" : "ferry.real.\(real.englishName)")
                 }
             }
             .buttonStyle(.bordered)
