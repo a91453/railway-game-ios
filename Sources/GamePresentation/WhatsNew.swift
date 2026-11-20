@@ -35,12 +35,56 @@ public enum WhatsNew {
             id: "2026-11-20-142",
             items: [
                 Line(
-                    english: "Fukuoka opens: fly there from Taoyuan or Kaohsiung, download its map, and run its three subway lines.",
-                    chinese: "福岡開放：從桃園或高雄飛福岡，下載地圖後經營市營地鐵三條線。"
+                    english: "Fukuoka opens: fly there from Taoyuan or Kaohsiung, download its map, and run its three subway lines with their own trains.",
+                    chinese: "福岡開放：從桃園或高雄飛福岡，下載地圖後經營市營地鐵三條線，跑的是福岡自己的列車。"
                 ),
                 Line(
                     english: "Fukuoka's 3D map has Japanese streets and buildings, Fukuoka Tower, the Dome and Hakata Station.",
                     chinese: "福岡的 3D 地圖有日本的街道與建築、福岡塔、巨蛋與博多站。"
+                ),
+                Line(
+                    english: "Hong Kong, Rovaniemi and Fukuoka have their own tourist spots, and visitors come by train.",
+                    chinese: "香港、羅瓦涅米、福岡都有自己的觀光景點，遊客會搭車來玩。"
+                ),
+                Line(
+                    english: "Tap a real ferry station to open its ferry; piers stand at the real terminals.",
+                    chinese: "點真實的渡輪站就能開航，碼頭照真實位置，航線繞過岬角。"
+                ),
+                Line(
+                    english: "Your own houses, shops and office blocks look like real Taiwanese buildings up close.",
+                    chinese: "自己蓋的住宅、商店與辦公大樓，近看換成台灣街上的透天厝、騎樓店面與辦公樓。"
+                ),
+                Line(
+                    english: "Stations you build use new station buildings.",
+                    chinese: "自己蓋的車站與小站換上新的站房。"
+                ),
+                Line(
+                    english: "Rovaniemi has Finnish wooden houses and flats, and new Finnish trains, night sleepers among them.",
+                    chinese: "羅瓦涅米多了北歐木屋與公寓，還有芬蘭的新機車、雙層控制車與臥鋪夜車。"
+                ),
+                Line(
+                    english: "Platform name boards follow each system's own style.",
+                    chinese: "月台站名牌依各地系統換上自己的樣式：福岡、台灣捷運、港鐵、芬蘭。"
+                ),
+                Line(
+                    english: "Cable cars light up at night, and Ngong Ping has its own cabins.",
+                    chinese: "纜車天黑後亮燈，昂坪纜車換上自己的吊廂。"
+                ),
+                Line(
+                    english: "Holding the phone sideways, the tools sit at the right edge, under your thumb.",
+                    chinese: "手機橫拿時，資料、路線、建設搬到右邊，拇指就按得到。"
+                ),
+                Line(
+                    english: "Put the Christmas livery on every passenger line in one tap.",
+                    chinese: "聖誕塗裝可以一鍵套到全部客運路線。"
+                ),
+                Line(
+                    english: "Level crossings show their flangeways and wing rails in 3D.",
+                    chinese: "平面交叉在 3D 裡畫出輪緣槽與翼軌。"
+                ),
+                Line(
+                    english: "The station master sometimes flies to the platform you are watching.",
+                    chinese: "站長黃山雀白天偶爾會飛到你正在看的月台。"
                 ),
                 Line(
                     english: "Hong Kong's Sunny Bay and Tsing Yi each have one island where two lines meet.",
@@ -48,6 +92,26 @@ public enum WhatsNew {
                 ),
             ],
             fixes: [
+                Line(
+                    english: "Fukuoka's Airport and Nanakuma Lines keep to time at peak hours; the Nanakuma Line comes with its depot.",
+                    chinese: "福岡空港線、七隈線尖峰不再晚點；七隈線連橋本機廠一起買。"
+                ),
+                Line(
+                    english: "Lok Ma Chau's peak trains on Hong Kong's East Rail Line come as often as the timetable says.",
+                    chinese: "港鐵東鐵綫落馬洲尖峰的班距回到時刻表的樣子。"
+                ),
+                Line(
+                    english: "Hongshulin has enough tracks for the Blue Coast Line's trains to stay overnight.",
+                    chinese: "紅樹林站照真實鋪足股道，藍海線的車可以在紅樹林過夜。"
+                ),
+                Line(
+                    english: "Laying track clears only the real buildings it actually covers.",
+                    chinese: "鋪軌道、月台與站房時，只清掉真的壓到的建築。"
+                ),
+                Line(
+                    english: "Melody previews play even with the phone on silent.",
+                    chinese: "試聽到站鈴與發車旋律時，手機靜音也聽得到。"
+                ),
                 Line(
                     english: "Sanying Line's early train at Yingtao Fude leaves on time instead of waiting behind an empty train.",
                     chinese: "三鶯線鶯桃福德的早班車不再被空車擋住，準時發車。"
