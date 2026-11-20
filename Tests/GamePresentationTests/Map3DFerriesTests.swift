@@ -23,7 +23,7 @@ final class Map3DFerriesTests: XCTestCase {
             XCTAssertEqual(solids.triangles.count, triangles, "model \(index)")
             XCTAssertEqual(solids.openSolids(), [], "model \(index)")
         }
-        for boat in Map3DFerry.Boat.allCases {
+        for boat in [Map3DFerry.Boat.tamsui, .cijin] {
             let near = Map3DFerry.model(boat), far = Map3DFerry.model(boat, far: true)
             XCTAssertLessThan(far.triangleCount, near.triangleCount)
             // Port red, starboard green and the masthead white glow at night.
@@ -41,6 +41,36 @@ final class Map3DFerriesTests: XCTestCase {
         }
         XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 715), .cijin)
         XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 1_260), .tamsui)
+    }
+
+    /// Decision 909: Hong Kong's ferry and two piers as the studio made
+    /// them (revision-3's `stats.json`): the triangles, the sizes, the
+    /// window bands lit, the colours the game's own.
+    func testHongKongsFerryAndPiersAreTheStudios() throws {
+        let boat = Map3DFerry.model(.hongKong), boatFar = Map3DFerry.model(.hongKong, far: true)
+        XCTAssertEqual(boat.triangleCount, 4_296)
+        XCTAssertEqual(boatFar.triangleCount, 524)
+        XCTAssertEqual(boat.maximum.x - boat.minimum.x, 34, accuracy: 0.01)
+        XCTAssertEqual(boat.maximum.y - boat.minimum.y, 8.6, accuracy: 0.01)
+        XCTAssertEqual(boat.minimum.z, -0.6, accuracy: 0.01)
+        XCTAssertEqual(Set(boat.vertices.filter(\.glows).map(\.color)), [CableParts.Paint.warm])
+        XCTAssertTrue(Map3DFerry.Boat.hongKong.isDoubleEnded)
+        let finger = Map3DFerry.pier(.finger), hall = Map3DFerry.pier(.hall)
+        XCTAssertEqual(finger.triangleCount, 3_262)
+        XCTAssertEqual(Map3DFerry.pier(.finger, far: true).triangleCount, 354)
+        XCTAssertEqual(hall.triangleCount, 2_740)
+        XCTAssertEqual(Map3DFerry.pier(.hall, far: true).triangleCount, 472)
+        // The finger pier's 72 m, past the millimetre encoding's reach.
+        XCTAssertEqual(finger.minimum.x, 0, accuracy: 0.01)
+        XCTAssertEqual(finger.maximum.x, Map3DFerry.PierKind.finger.reach, accuracy: 0.01)
+        XCTAssertEqual(hall.maximum.x, Map3DFerry.PierKind.hall.reach, accuracy: 0.01)
+        XCTAssertEqual(hall.maximum.y - hall.minimum.y, 70, accuracy: 0.01)
+        XCTAssertTrue(finger.vertices.allSatisfy { !$0.glows })
+        for model in [boat, boatFar, finger, hall] {
+            XCTAssertTrue(Set(model.vertices.map(\.color)).isSubset(of: Set(Map3DHongKongFerry.meshPalette)), model.name)
+        }
+        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 715, in: .hongKong), .hongKong)
+        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 715, in: .taiwan), .cijin)
     }
 
     func testTheDrawnModelsAreInTheGamesPack() {
@@ -178,7 +208,7 @@ final class Map3DFerriesTests: XCTestCase {
         // 06:00: no sailing, three boats beside the pier.
         let dawn = laid.frame(second: 6 * 3_600, eye: eye, target: pier, pack: pack)
         XCTAssertEqual(dawn.nearBoats, 3)
-        XCTAssertTrue(dawn.instances.contains { $0.model == models.pier.near })
+        XCTAssertTrue(dawn.instances.contains { $0.model == models.pier[.pontoon]!.near })
         XCTAssertEqual(dawn.instances.filter { $0.model == models.boat[.tamsui]!.near }.count, 3)
         // 07:01: one sailing, two idle.
         let morning = laid.frame(second: 7 * 3_600 + 60, eye: eye, target: pier, pack: pack)
@@ -186,7 +216,7 @@ final class Map3DFerriesTests: XCTestCase {
         let far = laid.frame(second: 6 * 3_600, eye: pier + Map3DPoint(0, 600, -1_000), target: pier, pack: pack)
         XCTAssertEqual(far.nearBoats, 0)
         XCTAssertEqual(far.farBoats, 3)
-        XCTAssertTrue(far.instances.contains { $0.model == models.pier.far })
+        XCTAssertTrue(far.instances.contains { $0.model == models.pier[.pontoon]!.far })
         let gone = laid.frame(second: 6 * 3_600, eye: pier + Map3DPoint(0, 600, -5_000), target: pier, pack: pack)
         XCTAssertTrue(gone.instances.isEmpty)
         // The idle boats side by side, not on one another.

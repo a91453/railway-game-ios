@@ -11,6 +11,11 @@ source as encoded meshes (no third-party modules).
 `--scale N` draws the models N times larger than the GLBs (the yellow tit,
 decision 889, made at a real bird's 13 cm).
 
+`--centimetres` writes each coordinate in centimetres instead of
+millimetres, for a model reaching more than 32.7 m from its origin (decision
+909: Hong Kong's 72 m ferry pier); the Swift side reads it with
+`perMetre: 100`.
+
 The studio builds a car in Blender with one material per palette colour
 (`.claude/skills/model-look/SKILL.md`, the brief's material table) and
 exports a GLB: glTF's axes, +y up, the car along x with its cab at +x, the
@@ -91,14 +96,15 @@ def triangles(path, materials, scale=1.0):
     return out
 
 
-def encode(tris):
+def encode(tris, per_metre=1000):
     index, points, faces = {}, [], []
     for pts, paint in tris:
         ids = []
         for p in pts:
-            key = tuple(round(v * 1000) for v in p)
+            key = tuple(round(v * per_metre) for v in p)
             if any(abs(v) > 32767 for v in key):
-                raise SystemExit("a vertex is more than 32.7 m from the origin")
+                raise SystemExit(f"a vertex is more than {32767 / per_metre:g} m from the origin"
+                                 + ("" if per_metre == 100 else "; try --centimetres"))
             if key not in index:
                 index[key] = len(points)
                 points.append(key)
@@ -123,6 +129,8 @@ def main():
     parser.add_argument("--out", required=True)
     parser.add_argument("--scale", type=float, default=1.0,
                         help="how many times larger the game draws the models than the GLBs (default 1)")
+    parser.add_argument("--centimetres", action="store_true",
+                        help="write coordinates in centimetres, not millimetres (models over 32.7 m from the origin)")
     parser.add_argument("glbs", nargs="+")
     a = parser.parse_args()
     materials = a.materials.split(",")
@@ -136,7 +144,7 @@ def main():
     ]
     for path in a.glbs:
         name = os.path.splitext(os.path.basename(path))[0]
-        text, count = encode(triangles(path, materials, a.scale))
+        text, count = encode(triangles(path, materials, a.scale), 100 if a.centimetres else 1000)
         print(f"{name}: {count} triangles")
         lines.append(f'        // {count} triangles.')
         lines.append(f'        "{name}": """')

@@ -63,7 +63,7 @@ public enum Map3DRedCommuter {
     /// band and tail lamps), so the lamps are its materials', not its
     /// colours' (``Map3DTrainLights/marksOwnLamps(_:)``).
     static func decodedMesh(_ bytes: [UInt8], named name: String, palette: [UInt32] = meshPalette, glass: Int? = nil,
-                            lamps: Set<Int> = []) -> Map3DModelPack.Model? {
+                            lamps: Set<Int> = [], perMetre: Float = 1000) -> Map3DModelPack.Model? {
         var at = 0
         func u16() -> Int? {
             guard at + 2 <= bytes.count else { return nil }
@@ -75,7 +75,9 @@ public enum Map3DRedCommuter {
         points.reserveCapacity(vertexCount)
         for _ in 0..<vertexCount {
             guard let x = u16(), let y = u16(), let z = u16() else { return nil }
-            func metres(_ n: Int) -> Float { Float(Int16(truncatingIfNeeded: n)) / 1000 }
+            // Millimetres, or centimetres for a model over 32.7 m from its
+            // origin (`glb_to_swift.py --centimetres`, decision 909).
+            func metres(_ n: Int) -> Float { Float(Int16(truncatingIfNeeded: n)) / perMetre }
             points.append(Map3DPoint(metres(x), metres(y), metres(z)))
         }
         guard let triangleCount = u16() else { return nil }
