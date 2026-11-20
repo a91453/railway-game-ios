@@ -16,7 +16,10 @@ import GameCore
 public enum Map3DShowcase {
     /// The kinds the picker groups the trains in.
     public enum Category: String, CaseIterable, Sendable {
-        case taiwanRailway, highSpeed, metro, lightRail, other
+        /// Decision 893: the overseas maps' trains each under their
+        /// country, so a map's trains are found together
+        /// (GARAGE-MISSING-OVERSEAS).
+        case taiwanRailway, highSpeed, metro, lightRail, hongKong, finland, japan, other
 
         public func name(in language: DisplayLanguage) -> String {
             switch self {
@@ -24,6 +27,9 @@ public enum Map3DShowcase {
             case .highSpeed: language.text("High-Speed Rail", "高鐵")
             case .metro: language.text("Metro", "捷運")
             case .lightRail: language.text("Light Rail", "輕軌")
+            case .hongKong: language.text("Hong Kong", "香港")
+            case .finland: language.text("Finland", "芬蘭")
+            case .japan: language.text("Japan", "日本")
             case .other: language.text("Other", "其他")
             }
         }
@@ -31,11 +37,14 @@ public enum Map3DShowcase {
         /// The track's gauge under them, metres: the high-speed line's,
         /// the metros' and the light rail's standard gauge, Taiwan
         /// Railway's 1,067 mm (the steam train and the commuter sets run
-        /// on it too).
+        /// on it too); decision 893: the MTR's standard gauge, Japan's
+        /// narrow one as Taiwan Railway's.
         var gauge: Float {
             switch self {
-            case .highSpeed, .metro, .lightRail: 1.435
-            case .taiwanRailway, .other: 1.067
+            case .highSpeed, .metro, .lightRail, .hongKong: 1.435
+            case .taiwanRailway, .japan, .other: 1.067
+            // Decision 864: Finland's 1,524 mm.
+            case .finland: 1.524
             }
         }
     }

@@ -74,7 +74,7 @@ extension Map3DMTRUrbanLine {
         id: "mtrUrbanLine",
         sets: [Map3DTrainSet.mtrUrbanLine(), .mtrUrbanLine(far: true)],
         showcase: [
-            Map3DShowcase.Entry(key, "Hong Kong urban line train", "香港市區綫列車", .metro, cars: 8, fixed: true),
+            Map3DShowcase.Entry(key, "Hong Kong urban line train", "香港市區綫列車", .hongKong, cars: 8, fixed: true),
         ],
         triangles: 2_000...9_000, length: 22.5...24.7)
 }

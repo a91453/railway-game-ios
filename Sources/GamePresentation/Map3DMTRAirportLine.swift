@@ -88,8 +88,8 @@ extension Map3DMTRAirportLine {
         id: "mtrAirportLine",
         sets: [Map3DTrainSet.mtrAirportExpress(), .mtrAirportExpress(far: true), .mtrTungChung(), .mtrTungChung(far: true)],
         showcase: [
-            Map3DShowcase.Entry(expressKey, "Hong Kong Airport Express train", "香港機場快綫列車", .metro, cars: 8, fixed: true),
-            Map3DShowcase.Entry(tungChungKey, "Hong Kong Tung Chung line train", "香港東涌綫列車", .metro, cars: 8, fixed: true),
+            Map3DShowcase.Entry(expressKey, "Hong Kong Airport Express train", "香港機場快綫列車", .hongKong, cars: 8, fixed: true),
+            Map3DShowcase.Entry(tungChungKey, "Hong Kong Tung Chung line train", "香港東涌綫列車", .hongKong, cars: 8, fixed: true),
         ],
         triangles: 1_000...8_000, length: 22.4...24.7)
 }
