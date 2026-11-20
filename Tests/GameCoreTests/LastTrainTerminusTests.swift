@@ -141,4 +141,30 @@ final class LastTrainTerminusTests: XCTestCase {
         guard case .onEdge(let standing, _)? = world.train(id: x)?.position else { return XCTFail("X placed") }
         XCTAssertEqual(standing.edge, aEast, "X stands at E1")
     }
+
+    /// The rule for any terminus without a depot, whatever the map: for
+    /// X leaving 0 to 12 minutes late, a train whose run leaves before X
+    /// can come is never taken for one standing for the night (X waits
+    /// for its berth), and one whose run leaves well after is passed.
+    func testHoweverLateATrainAboutToLeaveIsNotTakenForOneStandingForTheNight() throws {
+        for late in [0, 1, 2, 3, 5, 8, 12] {
+            // X is `late` - 1 minutes behind when its service starts, so
+            // it is due at E at 00:19 + late or later.
+            let soon = Int64(18 + late)
+            var (world, x, _, w, _, aEast) = try makeWorld(yLeavesAt: soon * 60, late: late)
+            while world.clock.now < GameTime(minutes: soon - 1) {
+                try world.advance(ticks: 1)
+                XCTAssertFalse(world.train(id: x)?.movement.edges.contains(aEast) ?? false, "\(late) min late: X does not go for E1 at \(world.clock.now.minuteOfDay)")
+                XCTAssertEqual(world.stationsStoppedAt(by: x), [w], "\(late) min late: X waits at W at \(world.clock.now.minuteOfDay)")
+            }
+
+            var (later, x2, _, _, e, _) = try makeWorld(yLeavesAt: Int64(60 + late) * 60, late: late)
+            var arrived = false
+            for _ in 0..<30 {
+                try later.advance(ticks: 1)
+                if later.stationsStoppedAt(by: x2) == [e] { arrived = true }
+            }
+            XCTAssertTrue(arrived, "\(late) min late: X takes the free berth past a train whose run is an hour off")
+        }
+    }
 }
