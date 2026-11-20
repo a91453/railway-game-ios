@@ -437,6 +437,24 @@ public struct RealTrainTraffic: Sendable {
             longest = runs.map { $0.end - $0.start }.max() ?? 0
         }
 
+        /// FINLAND-TRAINS-2: runs each with its own key and the train's
+        /// name (``RealTimetableTrip/name``), when every trip has one.
+        init(keyed: [(key: String, run: RealTrainRun, name: String?)]) {
+            let sorted = keyed.sorted { ($0.run.start, $0.key) < ($1.run.start, $1.key) }
+            runs = sorted.map(\.run)
+            keys = sorted.map(\.key)
+            longest = runs.map { $0.end - $0.start }.max() ?? 0
+            let names = sorted.compactMap(\.name)
+            numbers = names.count == sorted.count ? names : nil
+        }
+
+        /// FINLAND-TRAINS-2: the name of the train whose key is `key`, if
+        /// the timetable names its trains.
+        func name(ofKey key: String) -> String? {
+            guard let numbers, let index = keys?.firstIndex(of: key) ?? Int(key), numbers.indices.contains(index) else { return nil }
+            return numbers[index]
+        }
+
         /// Run `index`'s key.
         func key(_ index: Int) -> String {
             keys?[index] ?? "\(index)"
@@ -568,7 +586,7 @@ public struct RealTrainTraffic: Sendable {
                     // Airport MRT's), each run keyed by its trip
                     // (``expressKey(trip:kind:)``).
                     sets[name] = Runs(keyed: trips.enumerated().compactMap { index, trip in
-                        RealTrainRun(trip: trip, line: line, stationKm: stationKm).map { (Self.expressKey(trip: index, kind: trip.kind), $0) }
+                        RealTrainRun(trip: trip, line: line, stationKm: stationKm).map { (Self.expressKey(trip: index, kind: trip.kind), $0, trip.name) }
                     })
                 } else {
                     sets[name] = Runs(trips.compactMap { RealTrainRun(trip: $0, line: line, stationKm: stationKm) })
@@ -705,6 +723,16 @@ public struct RealTrainTraffic: Sendable {
             t += dwell
         }
         return RealTrainRun(stops: stops, performance: .of(system: system))
+    }
+
+    /// FINLAND-TRAINS-2: the name of the train at `line`'s place `key`
+    /// (``places(of:at:on:dayBefore:)``), as its timetable gives it
+    /// (`PYO 265`); `nil` where the timetable names none.
+    public func trainName(of line: Line, place key: String) -> String? {
+        guard case .sets(_, let sets) = line.schedule else { return nil }
+        let own = key.hasPrefix("-") ? key.dropFirst() : key[...]
+        guard let hash = own.lastIndex(of: "#"), let runs = sets[String(own[..<hash])] else { return nil }
+        return runs.name(ofKey: String(own[own.index(after: hash)...]))
     }
 
     /// Where `line`'s trains are at second `second` of game day `day` (a
