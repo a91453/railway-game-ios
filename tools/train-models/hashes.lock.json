@@ -4652,6 +4652,22 @@
     "fi-give-way-sign" : {
       "hash" : "70db5bc1d7f67f32",
       "triangles" : 138
+    },
+    "tw-yellow-tit-perch" : {
+      "hash" : "6070f726e7688fa9",
+      "triangles" : 370
+    },
+    "tw-yellow-tit-wings-up" : {
+      "hash" : "7afe18c07e39dfd5",
+      "triangles" : 314
+    },
+    "tw-yellow-tit-wings-down" : {
+      "hash" : "629a2b627dd19da5",
+      "triangles" : 314
+    },
+    "tw-yellow-tit-glide" : {
+      "hash" : "c09af23c792a85f6",
+      "triangles" : 314
     }
   }
 }

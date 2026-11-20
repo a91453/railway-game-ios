@@ -2,7 +2,7 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// Decision 889: the 3D map's colours come from ``Map3DPalette``. The
+/// Decision 891: the 3D map's colours come from ``Map3DPalette``. The
 /// owner's old models brought into the game are drawn in its colours, and
 /// no colour written in GamePresentation outside it may be new: those
 /// there were on 2026-11-20 are listed in `tools/palette-guard/baseline.txt`,
@@ -83,13 +83,13 @@ final class Map3DPaletteGuardTests: XCTestCase {
         let added = loose.subtracting(baseline).sorted()
         XCTAssertEqual(added, [], """
             Colours not in Map3DPalette: use one of its colours, or add the colour to \
-            Map3DPalette with its reason (decision 889). Never add them to tools/palette-guard/baseline.txt.
+            Map3DPalette with its reason (decision 891). Never add them to tools/palette-guard/baseline.txt.
             """)
         let gone = baseline.subtracting(loose).sorted()
         XCTAssertEqual(gone, [], "No longer in the sources: remove these lines from tools/palette-guard/baseline.txt.")
     }
 
-    /// The owner's old models in the game (decision 889's list) are drawn
+    /// The owner's old models in the game (decision 891's list) are drawn
     /// in the palette's colours only.
     func testTheOldModelsAreInThePalette() throws {
         let palette = Set(Self.paletteHexes(try Self.sourceFiles()).map { Map3DColor.rgb(UInt32($0, radix: 16)!) })

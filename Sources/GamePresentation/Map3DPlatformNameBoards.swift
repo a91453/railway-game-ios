@@ -83,7 +83,7 @@ extension Map3DPlatformProps {
     /// The frame's width round the white face.
     static let nameBoardFrame: Float = 0.06
     /// The old board's green band across its face, from its bottom (a
-    /// share of the face's height), and its colour: decision 889, the
+    /// share of the face's height), and its colour: decision 891, the
     /// palette's green sheet-steel roof (``Map3DPalette/cityRoofs`` [3],
     /// #3C8A5A) rather than the old texture's #106118, which the palette
     /// has nothing near.

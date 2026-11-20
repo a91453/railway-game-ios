@@ -1,4 +1,4 @@
-# 色票檢查（決策 889）
+# 色票檢查（決策 891）
 
 `Tests/GamePresentationTests/Map3DPaletteGuardTests.swift` 讀 `Sources/GamePresentation/*.swift`：
 

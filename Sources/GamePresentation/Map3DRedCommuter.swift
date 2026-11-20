@@ -21,7 +21,7 @@ public enum Map3DRedCommuter {
     /// the door frames), the grey-white body, the dark underframe and cab
     /// panels, the light band round the windows, the red body, the blue
     /// marks and the glass (which lights at night and catches the sky,
-    /// ``Map3DTrainLights``, ``Map3DTrainMaterial``). Decision 889: the
+    /// ``Map3DTrainLights``, ``Map3DTrainMaterial``). Decision 891: the
     /// grey-white body and the light band are the palette's nearest
     /// (``Map3DPalette/shedWalls`` [2] for #C9CECC, ``Map3DPalette/acUnit``
     /// for #E9EBE5, ΔE 1.2 and 2.1).

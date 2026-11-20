@@ -890,7 +890,7 @@ public enum Map3DPalette {
     public static let timber = Map3DColor.rgb(0x9A7657)
     public static let terrazzo = Map3DColor.rgb(0xE3DCCB)
     public static let arcade = Map3DColor.rgb(0x6F6A64)
-    /// Decision 889: the gold of the landmarks' ornaments (Central Plaza's
+    /// Decision 891: the gold of the landmarks' ornaments (Central Plaza's
     /// band, the Sun Moon Lake temple's ridge ornaments), which the Hong
     /// Kong landmarks' brief added (decision 854) and the palette had not
     /// listed.

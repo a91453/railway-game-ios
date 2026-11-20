@@ -193,7 +193,10 @@ final class Map3DWinterLightsTests: XCTestCase {
         let finland = Map3DFinlandStreet.Unit.allCases.map(\.rawValue)
         let firstFinland = first + 8 + herd.count + plain.count
         XCTAssertEqual(Array(names[firstFinland..<firstFinland + finland.count]), finland)
-        XCTAssertEqual(names[firstFinland + finland.count], Map3DLowFloorBus.routeModel().name)
+        // Decision 889: then the yellow tit's four poses.
+        let tits = Map3DYellowTit.drawn.map(\.name)
+        XCTAssertEqual(Array(names[firstFinland + finland.count..<firstFinland + finland.count + tits.count]), tits)
+        XCTAssertEqual(names[firstFinland + finland.count + tits.count], Map3DLowFloorBus.routeModel().name)
         for decor in Map3DWinterDecor.allCases {
             XCTAssertEqual(pack.models[first + decor.index].triangleCount, try XCTUnwrap(decor.model).triangleCount)
         }

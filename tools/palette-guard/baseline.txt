@@ -1,4 +1,4 @@
-# Decision 889: the colours written as `rgb(0x…)` / `rgbColor(0x…)` in
+# Decision 891: the colours written as `rgb(0x…)` / `rgbColor(0x…)` in
 # Sources/GamePresentation outside `Map3DPalette` that are not the
 # palette's, as they stood on 2026-11-20 (file, then the colour).
 # Map3DPaletteGuardTests fails on a colour not listed here, and on a line
