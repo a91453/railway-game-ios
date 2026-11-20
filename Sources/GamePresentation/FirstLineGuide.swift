@@ -160,16 +160,16 @@ public enum FirstLineGuide {
             if !building {
                 return track
                     ? Hint(target: .buildEntry, symbol: buildSymbol,
-                           english: "Tap the hammer, Build, at the bottom left to lay track.",
-                           chinese: "點左下的鐵鎚「建設」，開始鋪軌道。")
+                           english: "Tap the hammer, Build, to lay track.",
+                           chinese: "點鐵鎚「建設」，開始鋪軌道。")
                     : Hint(target: .buildEntry, symbol: buildSymbol,
-                           english: "Tap the hammer, Build, at the bottom left to add a station.",
-                           chinese: "點左下的鐵鎚「建設」，在軌道上蓋車站。")
+                           english: "Tap the hammer, Build, to add a station.",
+                           chinese: "點鐵鎚「建設」，在軌道上蓋車站。")
             }
             if tool != .network {
                 return Hint(target: .networkTool, symbol: nil,
-                            english: "Tap Network in the tools on the left.",
-                            chinese: "點左邊工具裡的「路網」。")
+                            english: "Tap Network in the build tools.",
+                            chinese: "點建設工具裡的「路網」。")
             }
             if track {
                 if networkMode != .build {
@@ -196,13 +196,13 @@ public enum FirstLineGuide {
         }
         if building {
             return Hint(target: .selectTool, symbol: "xmark",
-                        english: "Two stations. Tap ✕ at the bottom left to stop building.",
-                        chinese: "兩座車站好了。按左下的 ✕ 結束建造。")
+                        english: "Two stations. Tap ✕ to stop building.",
+                        chinese: "兩座車站好了。按 ✕ 結束建造。")
         }
         if !linesPanelShown {
             return Hint(target: .linesButton, symbol: linesSymbol,
-                        english: "Tap Lines at the bottom left to make a line.",
-                        chinese: "點左下的「路線」，開一條路線。")
+                        english: "Tap Lines to make a line.",
+                        chinese: "點「路線」，開一條路線。")
         }
         if !picking {
             return Hint(target: .pickLineStops, symbol: "hand.tap",

@@ -37,11 +37,10 @@ final class MapButtonsUITests: XCTestCase {
         }
     }
 
-    /// Decision 382 (TestFlight 85.1): on a phone on its side, with the
-    /// card folded, the zoom buttons stand on the bottom row, on the line
-    /// of the tools column's foot (the glass 4 points below Build), not 14
-    /// points above it. Where the lines are is `HUDMarginsTests` on Linux.
-    func testThePhonesZoomButtonsStandOnTheColumnsLine() throws {
+    /// Decision 892: on a phone on its side, with the card folded too, the
+    /// zoom buttons stand in their row at the screen's foot, beside the
+    /// tools column at the trailing side, and a finger reaches them.
+    func testThePhonesZoomButtonsStandInTheRowBesideTheColumn() throws {
         try XCTSkipIf(UIDevice.current.userInterfaceIdiom != .phone, "a phone held on its side")
         let app = launch(orientation: .landscapeLeft)
         defer { app.terminate() }
@@ -56,9 +55,8 @@ final class MapButtonsUITests: XCTestCase {
         XCTAssertTrue(zoomIn.appears(within: 10))
         XCTAssertTrue(zoomIn.becomesHittable(within: 10), "\(zoomIn) is covered: \(zoomIn.frame)")
         build.waitUntilSettled()
-        // Build is touched 2 below what it draws (decision 509).
-        let foot = build.frame.maxY - 2 + 4
-        XCTAssertLessThan(abs(zoomIn.frame.maxY - foot), 3, "On the column's line: \(zoomIn.frame) and \(build.frame)")
+        XCTAssertLessThanOrEqual(zoomIn.frame.maxX, build.frame.minX, "Beside the column: \(zoomIn.frame) and \(build.frame)")
+        XCTAssertGreaterThan(zoomIn.frame.midY, build.frame.minY, "In the bottom row: \(zoomIn.frame) and \(build.frame)")
     }
 
     /// Decision 382, later (TestFlight 85.1): while building, Build stood
@@ -78,10 +76,11 @@ final class MapButtonsUITests: XCTestCase {
         XCTAssertTrue(build.becomesHittable(within: 10), "Build is covered: \(build.frame)")
         let window = app.windows.firstMatch.frame
         XCTAssertLessThanOrEqual(build.frame.maxY, window.maxY - 10, "Whole above the screen's foot: \(build.frame)")
-        // The card's toggle beside Build, not over the tools (98.1).
+        // The card's toggle on Build's row, not over the tools (98.1); in
+        // the bottom leading corner since decision 892.
         let toggle = app.buttons["controls.toggle"]
         if toggle.exists {
-            XCTAssertGreaterThanOrEqual(toggle.frame.minX, build.frame.maxX, "Beside Build: \(toggle.frame) and \(build.frame)")
+            XCTAssertLessThanOrEqual(toggle.frame.maxX, build.frame.minX, "Beside Build: \(toggle.frame) and \(build.frame)")
             XCTAssertLessThanOrEqual(abs(toggle.frame.midY - build.frame.midY), build.frame.height / 2, "Beside Build: \(toggle.frame) and \(build.frame)")
         }
         build.tap()
@@ -111,7 +110,8 @@ final class MapButtonsUITests: XCTestCase {
         XCTAssertTrue(status.appears(within: 5))
         let done = app.buttons["tool.select"]
         XCTAssertTrue(done.appears(within: 5))
-        XCTAssertGreaterThanOrEqual(done.frame.minX, build.frame.maxX, "Done beside Build: \(done.frame) and \(build.frame)")
+        // Decision 892: on Build's row, in the bottom leading corner.
+        XCTAssertLessThanOrEqual(done.frame.maxX, build.frame.minX, "Done on Build's row: \(done.frame) and \(build.frame)")
         XCTAssertEqual(done.frame.midY, build.frame.midY, accuracy: 0.5, "Done beside Build: \(done.frame) and \(build.frame)")
         XCTAssertLessThan(network.frame.maxY, build.frame.minY, "The tools over Build: \(network.frame) and \(build.frame)")
         // Each button is touched 2 past what it draws, above and below
