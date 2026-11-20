@@ -93,6 +93,20 @@ final class TimetableCheckupTests: XCTestCase {
             budget: .init(notSent: 1, late: 118, lateOutOfDepot: 6, peakGapMinutes: 19)
         )
     }
+
+    /// EAL-LMC-PEAK-GAP (decision 881, later): the East Rail Line's Lok
+    /// Ma Chau branch, its whole second day against the nightly budget,
+    /// some 15 s. A change to how a train takes another berth of a
+    /// terminus moved its evening peak, and only the nightly run played
+    /// the line: one stretch of 7 km with a throat at each end and no
+    /// depot, it shows first what a line with a depot hides.
+    func testTheLokMaChauBranchDay() throws {
+        let name = "hk EAL_LMC simple"
+        try TimetableCheckupWorlds.check(
+            name, TimetableCheckupWorlds.hongKong(["EAL_LMC"], rules: .simple), day: 1,
+            budget: XCTUnwrap(TimetableCheckupFullTests.budgets[name])
+        )
+    }
 }
 
 /// Decision 844: the pull request checkup, Taiwan's part (a class of its
