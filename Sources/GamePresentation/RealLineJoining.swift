@@ -242,3 +242,31 @@ extension RealLineLaying {
         return best.map { ($0.edge, $0.distance) }
     }
 }
+
+extension RealBranchLine {
+    /// HONGSHULIN-TURN: `runs` with more tracks at an end of this line
+    /// that a line bought after it runs on to over its track
+    /// (``leavesAt``): enough for both lines' trains the real timetables
+    /// leave there at midnight, as many as the end can be laid with. The
+    /// Green Mountain Line's Hongshulin: 6 tracks for its own 4 trains
+    /// and its turns, 7 with the Blue Coast Line's 3. With 6, only two of
+    /// the Blue Coast Line's stood there and the third at Tamsui
+    /// Fisherman's Wharf, so Hongshulin was a train short all day and its
+    /// runs from there left up to 20 minutes late. `runs` as it is for
+    /// any other line, and for a line laid after another.
+    func joinedTracks(_ runs: RealLineRuns, in railways: RealRailways) -> RealLineRuns {
+        guard isUrban, after == nil, let first = runs.stops.first, let last = runs.stops.last else { return runs }
+        var joined = runs
+        let layout = cars > RealLineLayout.lightRailCars ? RealLineLayout.metro : .lightRail
+        for other in Self.urbanLines where other.shares == id && Self.leavesAt(system: other.system, network: other.network) != nil {
+            guard let full = Self.metroRuns(of: "\(Self.dataSystem(of: other.system)):\(other.network)", after: nil, in: railways) else { continue }
+            for name in Set([first, last]) {
+                guard let theirs = full.overnight[name], theirs > 0 else { continue }
+                let most = 1 + RealLineLaying.endStationSides(of: self, name: name, loops: 0, layout: layout).count
+                let wanted = min(most, (runs.overnight[name] ?? 0) + theirs)
+                joined.tracks[name] = max(runs.tracks[name] ?? 1, wanted)
+            }
+        }
+        return joined
+    }
+}

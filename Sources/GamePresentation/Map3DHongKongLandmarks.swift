@@ -124,11 +124,14 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         0xC4C8D6, // roofFlat: Map3DPalette.roof
         0xBBB2A9, // wallWarm: cityConcreteWalls[3]
         0x5A4E4A, // roofWarm: cityRoofs[2]
+        // FUKUOKA-TOWER-COLOUR: Fukuoka Tower's mirror glass, the sky's
+        // blue in it by day.
+        0x9FB3C2, // glassSky: officeWalls[2]
     ].map(Map3DColor.rgb)
 
     /// Decision 817: the materials that are glass (blue-grey, silver and
-    /// dark), lit at night.
-    static let glassMaterials: Set<Int> = [0, 1, 2]
+    /// dark, and Fukuoka Tower's sky glass), lit at night.
+    static let glassMaterials: Set<Int> = [0, 1, 2, 18]
 
     /// The model in full close by, or the studio's far model.
     func model(full: Bool) -> LandmarkMesh {

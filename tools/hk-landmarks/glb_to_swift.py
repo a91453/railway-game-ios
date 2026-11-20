@@ -35,7 +35,9 @@ import struct
 MATERIALS = ["glassBlueGrey", "glassSilver", "glassDark", "mullionWhite", "steelGrey", "goldBand",
              "podiumStone", "roofGrey", "brickRed", "graniteLight", "tilePink", "mast",
              # FUKUOKA-LANDMARKS: the Fukuoka brief's own (Hakata Station, Fukuoka Dome).
-             "wallPale", "bandDark", "roofGreen", "roofFlat", "wallWarm", "roofWarm"]
+             "wallPale", "bandDark", "roofGreen", "roofFlat", "wallWarm", "roofWarm",
+             # FUKUOKA-TOWER-COLOUR: Fukuoka Tower's mirror glass.
+             "glassSky"]
 # Other briefs' names for a colour already in the table.
 ALIASES = {"roofSlate": "roofGrey", "steel": "steelGrey"}
 
