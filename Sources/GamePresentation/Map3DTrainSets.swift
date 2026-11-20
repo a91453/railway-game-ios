@@ -864,7 +864,13 @@ public struct Map3DTrainSet: Sendable {
             func part(_ role: Map3DEMU900.Role, reversed: Bool = false) -> Map3DModelPack.Model {
                 Map3DEMU900.model(role, reversed: reversed, light: far)
             }
-            return Cars(head: lit(part(.ed), front: true), middle: part(.emToilet), tail: lit(part(.ed, reversed: true), front: false),
+            // Decision 904: near, the studio's cab with its own lamps; the
+            // light units' cab is still #1339's.
+            func cab(front: Bool) -> Map3DModelPack.Model {
+                let model = part(.ed, reversed: !front)
+                return far ? lit(model, front: front) : Map3DEMU900.litCab(model, front: front)
+            }
+            return Cars(head: cab(front: true), middle: part(.emToilet), tail: cab(front: false),
                         single: nil, pantograph: part(.epCompressor), centre: part(.emSIV), middleBack: part(.emToilet, reversed: true),
                         pantographBack: part(.epCompressor, reversed: true), centreBack: part(.emSIV, reversed: true),
                         fourth: part(.emCrew), fourthBack: part(.epAccessible, reversed: true))

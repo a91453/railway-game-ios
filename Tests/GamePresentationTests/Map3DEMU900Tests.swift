@@ -26,7 +26,8 @@ final class Map3DEMU900Tests: XCTestCase {
             if light {XCTAssertLessThanOrEqual(m.triangleCount,role == .ed ? 2467:1592)}
             if !far && !light {XCTAssertLessThanOrEqual(m.triangleCount,role == .ed ? 11506:5400)}
             XCTAssertEqual(role.hasPantograph,role == .epCompressor || role == .epAccessible)
-            XCTAssertEqual(m.minimum.z,0,accuracy:0.00001)
+            // Decision 904: the studio cab's wheel flanges reach 25 mm under the rail's top.
+            XCTAssertEqual(m.minimum.z,role == .ed && !light ? -0.025 : 0,accuracy:0.00001)
             XCTAssertEqual(m.vertices.count,r.vertices.count)
             for (a,b) in zip(m.vertices,r.vertices) {
                 XCTAssertEqual(a.x,-b.x);XCTAssertEqual(a.y,-b.y);XCTAssertEqual(a.z,b.z)
@@ -57,24 +58,24 @@ final class Map3DEMU900Tests: XCTestCase {
     /// Full-vertex pins protect the delivered near/far/light payload during later integration.
     func testDeliveredNearFarAndLightPayloadPins() {
         let expected: [String: String] = [
-            "emu900-ed": "1c1b03af655d024a",
-            "emu900-ed-light": "490003b967e88746",
-            "emu900-emToilet": "77beb47b4062c431",
-            "emu900-emToilet-light": "864067e5141ee7",
-            "emu900-emSIV": "e14b040e50d14de5",
-            "emu900-emSIV-light": "2d62dc15b0994ded",
-            "emu900-emCrew": "fa95f9430ea49585",
-            "emu900-emCrew-light": "ee2e4bec215ae3a1",
-            "emu900-epCompressor": "bf2256208d78dbc6",
-            "emu900-epCompressor-light": "576cbb355e826acd",
-            "emu900-epAccessible": "2f57b4c48c8c920e",
-            "emu900-epAccessible-light": "29ad776ec37250eb",
-            "emu900-ed-far": "71d014c5bc910713",
-            "emu900-emToilet-far": "4333c46cdd021e1d",
-            "emu900-emSIV-far": "3ddecc12918c2c53",
-            "emu900-emCrew-far": "d4d3787ab0f5235f",
-            "emu900-epCompressor-far": "38f605c04537b046",
-            "emu900-epAccessible-far": "2c4e2af7530f97d6",
+            "emu900-ed": "f01b77ab100f8917",
+            "emu900-ed-light": "ada921d6864f5e7e",
+            "emu900-emToilet": "26ee9b5c87b38799",
+            "emu900-emToilet-light": "76570eba69c81b3f",
+            "emu900-emSIV": "543981796aacd98d",
+            "emu900-emSIV-light": "31d6034846913155",
+            "emu900-emCrew": "d51cc0c416861aed",
+            "emu900-emCrew-light": "54e711eb37a5fa29",
+            "emu900-epCompressor": "4199e544682f820e",
+            "emu900-epCompressor-light": "9f23716e134f4e55",
+            "emu900-epAccessible": "26f802f610e7016",
+            "emu900-epAccessible-light": "d66dc94568152263",
+            "emu900-ed-far": "1104e197da3d19f8",
+            "emu900-emToilet-far": "3c2e5696ed5b45d5",
+            "emu900-emSIV-far": "f628895cc820f12b",
+            "emu900-emCrew-far": "f64dfc178309597",
+            "emu900-epCompressor-far": "8818c7d05749b3ce",
+            "emu900-epAccessible-far": "fa17f342165fb78e",
         ]
         for (far, light) in [(false,false),(true,false),(false,true)] {
             for role in Map3DEMU900.Role.allCases {

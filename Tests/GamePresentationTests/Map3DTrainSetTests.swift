@@ -67,8 +67,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu3000" ? ([set.headName,set.tailName].contains(name) ? 6_000...9_200:4_000...6_100)
                     // Decision 432: #1320's EMU800 near units, 11,500 a cab and 5,200 to 5,400 the others; #1312's EMU500, 4,500 a cab (and the EM) and 2,800 to 2,950 the others.
                     : set.key == "emu800" ? ([set.headName, set.tailName].contains(name) ? 11_000...12_000 : 5_000...5_500)
-                    // Decision 435: #1339's EMU900 near units, 9,256 a cab and 4,990 to 5,270 the others.
-                    : set.key == "emu900" ? ([set.headName, set.tailName].contains(name) ? 9_000...9_500 : 4_900...5_300)
+                    // Decision 435: #1339's EMU900 near units, 4,990 to 5,270 the others;
+                    // decision 904: the studio's cab, 7,045.
+                    : set.key == "emu900" ? ([set.headName, set.tailName].contains(name) ? 7_000...7_100 : 4_900...5_300)
                     // Decision 560: #1730's EMU700, 13,740 a cab and 5,988 to 6,104 the others near, its far cab 6,728.
                     : set.key == "emu700" ? ([set.headName, set.tailName].contains(name) ? 13_500...14_000 : 5_900...6_200)
                     : set.key == "emu700Far" && [set.headName, set.tailName].contains(name) ? 6_600...6_800
