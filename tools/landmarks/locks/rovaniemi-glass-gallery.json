@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark rovaniemi-glass-gallery: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "rovaniemi-glass-gallery" : {
+      "hash" : "b4a8ea5a32427088",
+      "triangles" : 1306
+    },
+    "rovaniemi-glass-gallery-far" : {
+      "hash" : "0ae29d2d6dbe982e",
+      "triangles" : 250
+    }
+  }
+}

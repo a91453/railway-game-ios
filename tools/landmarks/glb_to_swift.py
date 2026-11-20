@@ -49,6 +49,7 @@ tool
 import argparse
 import base64
 import json
+import math
 import os
 import struct
 import sys
@@ -150,12 +151,14 @@ def primitives(path, gltf, nodes):
             yield prim, place
 
 
-def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 1), unsigned_z=True, centre=False):
+def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 1), unsigned_z=True, centre=False, turn=0.0):
     """The GLB at `path` encoded; its vertex and triangle counts, and its
     bounds in metres."""
     aliases = aliases or {}
     gltf, blob = read_glb(path)
     keys, points, triangles = {}, [], []
+    # `turn`: degrees anticlockwise seen from above, about the GLB's origin.
+    turn_cos, turn_sin = math.cos(math.radians(turn)), math.sin(math.radians(turn))
     for prim, place in primitives(path, gltf, nodes):
         if prim.get("mode", 4) != 4:
             raise SystemExit(f"{path}: only triangle lists are read")
@@ -177,7 +180,8 @@ def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 
                 x, y, z = (x + t[0]) * scale[0], (y + t[1]) * scale[1], (z + t[2]) * scale[2]
             if axes == "enu":
                 # glTF (+x east, +y up, +z south) onto (+x east, +y north, +z up).
-                key = (round(x * 100), round(-z * 100), round(y * 100))
+                east, north = x * turn_cos + z * turn_sin, x * turn_sin - z * turn_cos
+                key = (round(east * 100), round(north * 100), round(y * 100))
             else:
                 key = (round(x * 100), round(y * 100), round(z * 100))
             if key not in keys:
@@ -258,6 +262,8 @@ def main():
     parser.add_argument("--materials", help="material names in palette order, comma-separated")
     parser.add_argument("--source", help="where the GLBs are, for the file's first line")
     parser.add_argument("--centre", action="store_true", help="move the footprint's middle to the origin")
+    parser.add_argument("--turn", type=float, default=0.0,
+                        help="turn the models this many degrees anticlockwise, seen from above, as OpenStreetMap lays them")
     parser.add_argument("--legacy", choices=sorted(LEGACY), help="write a landmark file made before the registry")
     parser.add_argument("--assets", help="--legacy sunmoon: the folder of the Sun Moon Lake GLBs")
     parser.add_argument("--allow-ground-plate", action="store_true", help="a level plate beyond the body belongs to the model")
@@ -286,7 +292,7 @@ def main():
     materials = a.materials.split(",")
     models = []
     for path in a.glbs:
-        data, v, t, _, _ = encode(path, materials, centre=a.centre)
+        data, v, t, _, _ = encode(path, materials, centre=a.centre, turn=a.turn)
         name = os.path.splitext(os.path.basename(path))[0]
         ground_plate.check(data, name, allow=a.allow_ground_plate)
         print(f"{name}: {v} vertices, {t} triangles, {len(data)} bytes")
