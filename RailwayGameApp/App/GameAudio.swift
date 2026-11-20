@@ -82,6 +82,12 @@ final class GameAudio {
     @ObservationIgnored private var isActive = false
     /// Whether the app is active, as the scene last said.
     @ObservationIgnored private var appIsActive = false
+    /// Decision 883 (later): whether a sound the player asked for is
+    /// playing through the silent switch (``preview(_:)``), which one (a
+    /// newer press takes over), and the wait for its end.
+    @ObservationIgnored private var isAuditioning = false
+    @ObservationIgnored private var auditionSerial = 0
+    @ObservationIgnored private var audition: Task<Void, Never>?
     /// Decision 184: the latest tap of the phone a cue asked for, which
     /// the app's scene gives (`sensoryFeedback`): a refusal, a warning or
     /// something put up.
@@ -223,6 +229,13 @@ final class GameAudio {
         guard active != appIsActive else { return }
         appIsActive = active
         guard active else {
+            // The next time the app is active sets the session again.
+            if isAuditioning {
+                isAuditioning = false
+                audition?.cancel()
+                audition = nil
+                cues.stopPreviews()
+            }
             isActive = false
             updatePlayers()
             return
@@ -247,7 +260,7 @@ final class GameAudio {
     /// The session is set: play, unless the app has left the foreground
     /// since.
     private func sessionIsSet() {
-        guard appIsActive, !isActive else { return }
+        guard appIsActive, !isActive, !isAuditioning else { return }
         isActive = true
         updatePlayers()
     }
@@ -298,11 +311,49 @@ final class GameAudio {
     /// lately the same one played, and never quieter than
     /// ``previewLevel`` of its own volume, so a press always answers. The
     /// arrivals and departures that follow keep their spacing from it.
+    ///
+    /// Decision 883 (later, the second note): it sounds with the phone's
+    /// silent switch on too. The game's session follows the switch
+    /// (ambient); for as long as the sound lasts the session is one that
+    /// does not (playback, still mixing with the player's own music), and
+    /// everything else the game plays is paused meanwhile, so nothing but
+    /// what was asked for is heard through the switch.
     func preview(_ cue: SoundCue) {
-        guard plays, isActive else { return }
+        guard plays, appIsActive, isActive || isAuditioning else { return }
         lastPlayed[Self.spacingKey(of: cue)] = .now
         let level = max(Float(volumes.level(of: cue.category)), Self.previewLevel)
-        cues.play(cue, volume: Self.baseVolume(of: cue) * level, again: true)
+        let volume = Self.baseVolume(of: cue) * level
+        auditionSerial &+= 1
+        let serial = auditionSerial
+        isAuditioning = true
+        isActive = false
+        updatePlayers()
+        let cues = cues
+        Self.sessionQueue.async {
+            _ = try? AVAudioSession.sharedInstance().setCategory(.playback, options: .mixWithOthers)
+            cues.play(cue, volume: volume, again: true)
+        }
+        audition?.cancel()
+        audition = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(cue.previewSeconds))
+            guard !Task.isCancelled, let self, self.auditionSerial == serial else { return }
+            self.endAudition()
+        }
+    }
+
+    /// The asked-for sound has rung out (or the app left the foreground):
+    /// the session follows the silent switch again, and the game's own
+    /// sounds come back.
+    private func endAudition() {
+        guard isAuditioning else { return }
+        isAuditioning = false
+        audition?.cancel()
+        audition = nil
+        cues.stopPreviews()
+        Self.sessionQueue.async {
+            _ = try? AVAudioSession.sharedInstance().setCategory(.ambient)
+            Task { @MainActor in self.sessionIsSet() }
+        }
     }
 
     /// The least share of a sound's own volume a preview plays at
@@ -728,6 +779,18 @@ private final class CuePlayers: @unchecked Sendable {
     }()
 
     /// Plays `cue` at `volume`, on a free player of its few, soon after.
+    /// Decision 883 (later): the cue a preview last played, stopped when
+    /// its turn through the silent switch ends; only on ``queue``.
+    private var previewed: SoundCue?
+
+    /// Stops the preview still sounding, if any.
+    func stopPreviews() {
+        queue.async { [self] in
+            if let previewed { players[previewed]?.forEach { $0.stop() } }
+            previewed = nil
+        }
+    }
+
     /// `again` (decision 883, later, a preview) stops the cue's players first, so
     /// a second press starts it over instead of playing over itself.
     func play(_ cue: SoundCue, volume: Float, again: Bool = false) {
@@ -737,7 +800,11 @@ private final class CuePlayers: @unchecked Sendable {
                 // Decision 883: a player melody starts again from the
                 // start rather than over itself.
                 if case .playerDeparture = cue { players.forEach { $0.stop() } }
-                if again { players.forEach { $0.stop() } }
+                if again {
+                    if let previewed, previewed != cue { self.players[previewed]?.forEach { $0.stop() } }
+                    players.forEach { $0.stop() }
+                    previewed = cue
+                }
                 guard let player = players.first(where: { !$0.isPlaying }) ?? players.first else { return }
                 player.volume = volume
                 player.currentTime = 0
