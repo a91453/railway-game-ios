@@ -1407,6 +1407,9 @@ public final class GameSession {
             selectBuilding(building.id, at: point)
             return
         }
+        // Decision 585 續 (FERRY-STATION-TAP): a real ferry station, with
+        // no station of the company's there, opens its ferry.
+        if station == nil, openRealFerryStation(at: point) { return }
         // A stop the draft refused keeps the message saying why.
         var refused = false
         if isPickingLineStops, let station {
