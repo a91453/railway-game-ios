@@ -2,7 +2,7 @@ import Foundation
 import GameCore
 
 /// Decision 827: the Tamsui-Xinyi line's elevated stations, the local
-/// studio's four shells (`tools/tpe-mrt-stations/glb_to_swift.py`): the
+/// studio's four shells (`tools/landmarks/glb_to_swift.py --legacy tpe-mrt`): the
 /// palace-style standard station (Yuanshan to Qiyan), Jiantan's
 /// suspension station, Beitou's four-track station and Xinbeitou's
 /// terminus. A shell is drawn over a station of the game whose platforms
@@ -46,7 +46,7 @@ enum Map3DTaipeiMRTStation: String, CaseIterable, Sendable {
         }
     }
 
-    /// The materials' colours, in `glb_to_swift.py`'s `MATERIALS` order,
+    /// The materials' colours, in `tools/landmarks/glb_to_swift.py`'s `TPE_MRT` order,
     /// each one the game already has.
     static let materialColours: [UInt32] = [
         0xF2C94C, // roofGold: Map3DPalette.platformEdge (round 4, deeper than hallWalls[4])
@@ -101,7 +101,7 @@ enum Map3DTaipeiMRTStation: String, CaseIterable, Sendable {
         return triangles
     }
 
-    /// Reads `glb_to_swift.py`'s encoding.
+    /// Reads `tools/landmarks/glb_to_swift.py --legacy tpe-mrt`'s encoding.
     static func decoded(_ bytes: [UInt8]) -> [(Map3DPoint, Map3DPoint, Map3DPoint, UInt32)]? {
         var at = 0
         func u16() -> Int? {

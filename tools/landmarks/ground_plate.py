@@ -5,7 +5,7 @@ them: Fukuoka Tower's file begins with a 40 m square of plaza lying on the
 ground (about 1 in 40 of the earlier catalogue's models has one as a
 material of its own). The map draws its own ground and roads, so a model
 that goes into the game leaves it out. `check` reads a model as
-`glb_to_swift.py` encodes it and stops when level faces looking up, lying
+`tools/landmarks/glb_to_swift.py` encodes it and stops when level faces looking up, lying
 on the model's lowest level, reach beyond its body (the box round
 everything more than a metre, or an eighth of its height, above its foot)
 by more than `LIMIT` square metres. Leave the plate out (as
@@ -57,5 +57,5 @@ def check(data, name, signed_z=False, allow=False):
     area = plate_area(data, signed_z)
     if area > LIMIT and not allow:
         raise SystemExit(f"{name}: {area:.0f} m2 of ground plate lies beyond its body; leave it out, "
-                         "or pass --allow-ground-plate if it belongs (tools/hk-landmarks/ground_plate.py)")
+                         "or pass --allow-ground-plate if it belongs (tools/landmarks/ground_plate.py)")
     return area

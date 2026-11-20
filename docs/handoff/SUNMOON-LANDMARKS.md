@@ -4,7 +4,7 @@
 
 ## 做了什麼
 
-- 作者舊版日月潭場景的碼頭、三艘遊艇、廟、涼亭搬進台灣地圖：水社碼頭、文武廟中殿、梅荷園（`Map3DSunMoonLandmarks.swift`，模型由 `tools/sunmoon-landmarks/glb_to_swift.py` 產生）。
+- 作者舊版日月潭場景的碼頭、三艘遊艇、廟、涼亭搬進台灣地圖：水社碼頭、文武廟中殿、梅荷園（`Map3DSunMoonLandmarks.swift`，模型由 `tools/landmarks/glb_to_swift.py --legacy sunmoon` 產生）。
 - 新的 `replacedPlots`：地標換掉一棟建物時只是不畫它，周圍的民宅照舊（`Map3DFootprints.swift`）。
 
 ## 還留下什麼（都未派，分數在素材庫 `a91453/railway-assets-private-2` `docs/priorities/SUNMOON-LANDMARKS.md`）
@@ -17,5 +17,5 @@
 
 ## 注意
 
-- 產生模型：`python3 -I tools/sunmoon-landmarks/glb_to_swift.py --assets ../railway-reference-private/OpenWorld/reference_snapshot/play/assets/sunmoon --out Sources/GamePresentation/Map3DSunMoonLandmarkMeshes.swift`。
+- 產生模型：`python3 -I tools/landmarks/glb_to_swift.py --legacy sunmoon --assets ../railway-reference-private/OpenWorld/reference_snapshot/play/assets/sunmoon --out Sources/GamePresentation/Map3DSunMoonLandmarkMeshes.swift`。
 - 拍圖的鏡頭寫在 `docs/art/sunmoon-landmarks-2026-11-18/README.md`。文武廟的地面約 828 m、湖面約 748 m，鏡頭高度要照這個給。
