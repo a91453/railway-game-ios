@@ -176,10 +176,12 @@ public enum Map3DCollectionShowcase {
     /// raises what it shows by this much (decision 632's screenshots).
     static let coveredBelow: Float = 0.45
 
-    /// The cabins of each line, in order: Maokong's two, Sun Moon Lake's four.
+    /// The cabins of each line, in order: Maokong's two, Sun Moon Lake's
+    /// four, Ngong Ping's two (decision 896).
     static let cableLines: [[String]] = [
         Map3DCableCar.Cabin.allCases.map { "cablecar-cabin-" + $0.rawValue },
-        Map3DCableCar.SunMoonCabin.allCases.map { "cablecar-cabin-sunmoon-" + $0.rawValue }
+        Map3DCableCar.SunMoonCabin.allCases.map { "cablecar-cabin-sunmoon-" + $0.rawValue },
+        Map3DNgongPingCabin.Kind.allCases.map { "cablecar-cabin-ngongping-" + $0.rawValue }
     ]
 
     /// `exhibit` laid out, with its far models when `far`. Decision 701:

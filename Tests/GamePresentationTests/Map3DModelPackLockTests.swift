@@ -248,11 +248,15 @@ final class Map3DModelPackLockTests: XCTestCase {
         // furniture after them; its fourth later note: and its second
         // batch (shelter, double street light, give-way sign) after those.
         // Decision 889: and the yellow tit's four poses after those.
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "99a1b0d684533022")
+        // Decision 896: and the Ngong Ping cabins' four after the Sun
+        // Moon Lake cabins (every model after them moves by 4).
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "ddad2b1609dbbe18")
         // Decision 840: and the studio's sleigh in the stand-in's place
         // (the same name and order; its model is new, `hashes.lock.json`);
         // its later amendment: dark brown antlers, the sleigh's team brown.
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "f50ffcfe27436175")
+        // Decision 896: every cabin and hall lit after dark (their new
+        // hashes in `hashes.lock.json`).
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "e1e69aa8e224296c")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -267,8 +271,8 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count + winter.count
                                                           + santa.count + taiwanCars.count + herd.count + plain.count + finland.count + tits.count)), "71b8c8010a530da0")
         // Decision 889: the windows after the cable car move by the
-        // yellow tit's 4.
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "f1759087474b4aa0")
+        // yellow tit's 4; decision 896: and by the Ngong Ping cabins' 4.
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "e041607a84fe5602")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "a436d2fecc70c5aa")
     }
 

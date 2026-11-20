@@ -895,6 +895,11 @@ public enum Map3DPalette {
     /// Kong landmarks' brief added (decision 854) and the palette had not
     /// listed.
     public static let gold = Map3DColor.rgb(0xC8A24E)
+    /// Decision 896: the Ngong Ping cable car's gold slats, the six bands
+    /// on a standard cabin's lower half (the studio's sample of the real
+    /// cabin's sunlit slats #A58548, #9C7F3E; agreed 2026-11-20), deeper
+    /// than ``gold`` so they read apart from the steel corner posts.
+    public static let slatGold = Map3DColor.rgb(0xA8904A)
     public static let tankBlue = Map3DColor.rgb(0x3B7DD8)
     public static let tankSteel = Map3DColor.rgb(0xC8CDD2)
     public static let trunk = Map3DColor.rgb(0x8A6A4F)

@@ -331,7 +331,8 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
         let built = try XCTUnwrap(session.world.cableways.last)
         XCTAssertEqual(RealCableway.matching(built, in: session.world), .ngongPing)
-        XCTAssertEqual(Map3DCableways.look(of: built, in: session.world), .maokong)
+        // Decision 896: its own cabins, not Maokong's.
+        XCTAssertEqual(Map3DCableways.look(of: built, in: session.world), .ngongPing)
         XCTAssertEqual(session.realCablewayOffers, [])
     }
 
