@@ -147,7 +147,7 @@ public struct MelodyDraft: Hashable, Sendable {
         language.text(
             "Tap the grid to put a note down or take it away. Saved melodies can be played at any station.",
             "點格子放下或拿掉一個音。存好的旋律可以指定給任何車站。"
-        )
+        ) + " " + StationSoundsChoice.quietPhoneNote(in: language)
     }
 }
 
@@ -155,7 +155,7 @@ extension GameSession {
     /// Decision 883: plays `notes` once, as a station set to them would.
     public func playMelodyPreview(_ notes: [MelodyNote]) {
         guard !notes.isEmpty else { return }
-        playSound?(.playerDeparture(notes))
+        preview(.playerDeparture(notes))
     }
 
     /// Decision 883: saves `draft`, a new melody or the one it rewrites,

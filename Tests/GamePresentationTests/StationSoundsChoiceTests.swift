@@ -74,4 +74,48 @@ final class StationSoundsChoiceTests: XCTestCase {
             .command(.edit(.setStationDepartureMelody(Self.west, .b))), .command(.edit(.setStationDepartureMelody(Self.west, nil))),
         ])
     }
+
+    /// Decision 883 (later): the play buttons beside the pickers play
+    /// what the station is set to through the player's own way in, the
+    /// one that sounds with the sounds switched off; a station no line
+    /// calls at plays melody 1, a depot nothing.
+    @MainActor
+    func testThePlayButtonsPlayWhatTheStationIsSetTo() throws {
+        var world = try makeStationsWorld()
+        try world.buildStation(named: "Alone", at: PlanPoint(x: 7_680, y: 1_024))
+        let alone = try XCTUnwrap(world.stations.last?.id)
+        let session = GameSession(world: world)
+        var heard: [SoundCue] = []
+        var asked: [SoundCue] = []
+        session.playSound = { heard.append($0) }
+        session.previewSound = { asked.append($0) }
+        session.previewSelectedStationChime()
+        session.previewSelectedStationMelody()
+        XCTAssertEqual(asked, [], "no station selected")
+        session.selectStation(Self.west)
+        session.previewSelectedStationChime()
+        session.previewSelectedStationMelody()
+        session.setSelectedStationChime(.tourist)
+        session.setSelectedStationDepartureMelody(.e)
+        session.previewSelectedStationChime()
+        session.previewSelectedStationMelody()
+        session.selectStation(alone)
+        session.previewSelectedStationMelody()
+        let own = SoundCue.departure(DepartureMelody.of(lineNamed: "Shuttle", atStationNamed: "West"))
+        XCTAssertEqual(asked, [
+            .arrival(watched: true, chime: .local), own,
+            .arrival(watched: true, chime: .tourist), .departure(.e),
+            .arrival(watched: true, chime: .tourist), .departure(.e),
+            .departure(.a),
+        ])
+        XCTAssertEqual(heard, [], "never through the game's own sounds, which the switch turns off")
+        // The melodies ring out before the game's own sounds come back.
+        XCTAssertGreaterThan(own.previewSeconds, 7.8)
+        XCTAssertGreaterThan(SoundCue.playerDeparture([]).previewSeconds, 7.8)
+        XCTAssertGreaterThan(SoundCue.arrival(watched: true, chime: .tourist).previewSeconds, 2.4)
+        for language in [DisplayLanguage.english, .traditionalChinese] {
+            XCTAssertTrue(StationSoundsChoice.note(in: language).hasSuffix(StationSoundsChoice.quietPhoneNote(in: language)))
+            XCTAssertTrue(MelodyDraft.note(in: language).hasSuffix(StationSoundsChoice.quietPhoneNote(in: language)))
+        }
+    }
 }

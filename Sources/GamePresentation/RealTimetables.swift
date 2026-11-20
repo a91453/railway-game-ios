@@ -390,7 +390,9 @@ public struct RealLineRuns: Sendable, Equatable {
     public let overnight: [String: Int]
     /// The tracks with a platform each station needs: the most trainsets
     /// standing there at once (decision 315); 1 where the file does not say.
-    public let tracks: [String: Int]
+    /// HONGSHULIN-TURN: more at an end another line's trains run on to
+    /// (``RealBranchLine/joinedTracks(_:in:)``).
+    public internal(set) var tracks: [String: Int]
     /// Decision 535 (continued, KLRT): whether the line is a ring (the
     /// Kaohsiung Circular Light Rail), its runs going round it each way,
     /// its last stop followed by its first.

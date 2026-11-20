@@ -483,8 +483,11 @@ final class SharedStationLayoutTests: XCTestCase {
         }
         let switches = world.network.nodes.filter { $0.ends.count == 3 && (WorldVector($0.position.plan) - WorldVector(world.station(id: shalun)!.location)).length < 300 * RealLineAcquisition.metre }
         XCTAssertEqual(switches.count, 2, "the two lines part at each platform track's west end, and nowhere else near")
-        // Its trains stand overnight two at Hongshulin, at the Green
-        // Mountain Line's platforms there no train of it stands at, and
+        // Its trains stand overnight three at Hongshulin, as the real
+        // ones do, at the Green Mountain Line's platforms there no train
+        // of it stands at (HONGSHULIN-TURN: the Green Mountain Line's end
+        // there laid with 7 tracks, not 6, so the third does not stand
+        // at the wharf and leave Hongshulin a train short all day), and
         // the rest on its own track.
         let own = Set(world.network.edges.map(\.id)).subtracting(greenTrack)
         let hongshulin = try XCTUnwrap(world.stations.first { $0.name == "紅樹林" && !$0.isDepot })
@@ -495,7 +498,8 @@ final class SharedStationLayoutTests: XCTestCase {
             XCTAssertTrue(world.network.platforms(of: hongshulin.id).contains { $0.edge == traversal.edge }, "\(train) at Hongshulin")
             atHongshulin.append(traversal.edge)
         }
-        XCTAssertEqual(Set(atHongshulin).count, 2, "two of its trains at Hongshulin, on two platform tracks")
+        XCTAssertEqual(Set(atHongshulin).count, 3, "three of its trains at Hongshulin, on three platform tracks")
+        XCTAssertEqual(world.network.platforms(of: hongshulin.id).count, 7, "Hongshulin's 7 tracks: 4 Green Mountain Line trains and 3 Blue Coast Line trains at night")
         XCTAssertEqual(blue.assignedTrains.count, 5)
     }
 

@@ -106,6 +106,16 @@ final class MelodyWorkshopTests: XCTestCase {
         XCTAssertEqual(session.selectedStationSounds?.melodyPick, .lines)
         session.setSelectedStationMelody(.player(id))
         heard.removeAll()
+        // Decision 883 (later): the panel's play button and the
+        // workshop's play it through the player's own way in.
+        var asked: [SoundCue] = []
+        session.previewSound = { asked.append($0) }
+        session.previewSelectedStationMelody()
+        session.playMelodyPreview(notes)
+        session.playMelodyPreview([])
+        XCTAssertEqual(asked, [.playerDeparture(notes), .playerDeparture(notes)])
+        XCTAssertEqual(heard, [])
+        session.previewSound = nil
 
         var world = session.world
         let train = try world.purchaseTrain(named: "T").id
