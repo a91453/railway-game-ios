@@ -21,8 +21,9 @@ import XCTest
 /// rules (no block sections), traffic control on, as a new game starts.
 final class LastTrainTerminusTests: XCTestCase {
     /// `yLeavesAt`: when the line's run E → W, Y's next, leaves (seconds
-    /// after midnight).
-    private func makeWorld(yLeavesAt: Int64) throws -> (world: GameWorld, x: TrainID, y: TrainID, w: StationID, e: StationID, aEast: TrackEdgeID) {
+    /// after midnight). `late`: the minutes that pass before X's service
+    /// starts, X then that much less a minute behind its timetable.
+    private func makeWorld(yLeavesAt: Int64, late: Int = 0) throws -> (world: GameWorld, x: TrainID, y: TrainID, w: StationID, e: StationID, aEast: TrackEdgeID) {
         var world = try GameWorld(
             bounds: WorldBounds(width: 229_376, height: 65_536), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(speed: .normal)
@@ -64,6 +65,7 @@ final class LastTrainTerminusTests: XCTestCase {
             ScheduledStop(station: e, arrival: GameTime(minutes: 20), departure: GameTime(minutes: 20)),
         ])
         try world.setTrafficControl(true)
+        try world.advance(ticks: late)
         try world.startTrainService(x)
         return (world, x, y, w, e, aEast)
     }
@@ -105,6 +107,64 @@ final class LastTrainTerminusTests: XCTestCase {
             try world.advance(ticks: 1)
             XCTAssertFalse(world.train(id: x)?.movement.edges.contains(aEast) ?? false, "X does not go for E1 at \(world.clock.now.minuteOfDay)")
             XCTAssertEqual(world.stationsStoppedAt(by: x), [w], "X waits at W at \(world.clock.now.minuteOfDay)")
+        }
+    }
+
+    /// EAL-LMC-PEAK-GAP: X leaves W five minutes late, so it is due at
+    /// E at 00:25, not at the 00:20 of its timetable, and Y's next run
+    /// leaves at 00:23: Y is not standing there for the night, it will
+    /// have gone when X comes. X waits for E2 and does not go for E1
+    /// against the planned way. (On the East Rail Line's Lok Ma Chau
+    /// branch, which has no depot, a train five minutes late went round
+    /// one four minutes from its run each morning, and the evening peak's
+    /// longest gap went from 19 to 21 minutes.)
+    func testALateServiceWaitsForATrainWhoseRunLeavesBeforeItCanCome() throws {
+        var (world, x, _, w, _, aEast) = try makeWorld(yLeavesAt: 23 * 60, late: 5)
+        XCTAssertEqual(world.clock.now, GameTime(minutes: 5))
+        while world.clock.now < GameTime(minutes: 22) {
+            try world.advance(ticks: 1)
+            XCTAssertFalse(world.train(id: x)?.movement.edges.contains(aEast) ?? false, "X does not go for E1 at \(world.clock.now.minuteOfDay)")
+            XCTAssertEqual(world.stationsStoppedAt(by: x), [w], "X waits at W at \(world.clock.now.minuteOfDay)")
+        }
+    }
+
+    /// As late, past a train whose run leaves after that (00:40), X takes
+    /// the free berth as it does on time.
+    func testALateServiceTakesAFreeBerthPastATrainWhoseRunLeavesAfterItComes() throws {
+        var (world, x, _, _, e, aEast) = try makeWorld(yLeavesAt: 40 * 60, late: 5)
+        var arrived = false
+        for _ in 0..<30 {
+            try world.advance(ticks: 1)
+            if world.stationsStoppedAt(by: x) == [e] { arrived = true }
+        }
+        XCTAssertTrue(arrived, "X reached E; it waits for \(String(describing: world.trainHoldingRoute(of: x)))")
+        guard case .onEdge(let standing, _)? = world.train(id: x)?.position else { return XCTFail("X placed") }
+        XCTAssertEqual(standing.edge, aEast, "X stands at E1")
+    }
+
+    /// The rule for any terminus without a depot, whatever the map: for
+    /// X leaving 0 to 12 minutes late, a train whose run leaves before X
+    /// can come is never taken for one standing for the night (X waits
+    /// for its berth), and one whose run leaves well after is passed.
+    func testHoweverLateATrainAboutToLeaveIsNotTakenForOneStandingForTheNight() throws {
+        for late in [0, 1, 2, 3, 5, 8, 12] {
+            // X is `late` - 1 minutes behind when its service starts, so
+            // it is due at E at 00:19 + late or later.
+            let soon = Int64(18 + late)
+            var (world, x, _, w, _, aEast) = try makeWorld(yLeavesAt: soon * 60, late: late)
+            while world.clock.now < GameTime(minutes: soon - 1) {
+                try world.advance(ticks: 1)
+                XCTAssertFalse(world.train(id: x)?.movement.edges.contains(aEast) ?? false, "\(late) min late: X does not go for E1 at \(world.clock.now.minuteOfDay)")
+                XCTAssertEqual(world.stationsStoppedAt(by: x), [w], "\(late) min late: X waits at W at \(world.clock.now.minuteOfDay)")
+            }
+
+            var (later, x2, _, _, e, _) = try makeWorld(yLeavesAt: Int64(60 + late) * 60, late: late)
+            var arrived = false
+            for _ in 0..<30 {
+                try later.advance(ticks: 1)
+                if later.stationsStoppedAt(by: x2) == [e] { arrived = true }
+            }
+            XCTAssertTrue(arrived, "\(late) min late: X takes the free berth past a train whose run is an hour off")
         }
     }
 }

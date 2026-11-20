@@ -862,11 +862,12 @@ selected_pattern() {
 # Decision 844 (TIMETABLE-CHECKUP, 2026-11-18): the pull request
 # checkup's two classes, new, take their local debug times (63 and 56 s)
 # times about 1.3: TimetableCheckupTests 80, TimetableCheckupTaiwanTests
-# 75. TimetableCheckupFullTests skips without TIMETABLE_CHECKUP (its
+# 75 (TimetableCheckupTests 100 since EAL-LMC-PEAK-GAP added the Lok Ma
+# Chau branch's day, 15 s). TimetableCheckupFullTests skips without TIMETABLE_CHECKUP (its
 # nightly jobs in ci.yml set it), so it weighs the default. They stay in rest
 # (some 700 s after CIOPT-10, so about 855 s in its two parts).
 CLASS_WEIGHTS="HongKongSharedTrackBuyOrderTests:320
-  TimetableCheckupTests:80 TimetableCheckupTaiwanTests:75
+  TimetableCheckupTests:100 TimetableCheckupTaiwanTests:75
   HongKongDepotTests:110 RovaniemiRailwaysTests:30
   HongKongBuildingsTests:28 LandCoverGridTests:26
   Map3DChristmasLiveryTests:23 Map3DWinterLightsTests:22
