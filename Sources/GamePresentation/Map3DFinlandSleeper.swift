@@ -47,7 +47,9 @@ extension Map3DFinlandSleeper {
         sets: [Map3DTrainSet.finlandNight(sr3: false), .finlandNight(sr3: false, far: true),
                .finlandNight(sr3: true), .finlandNight(sr3: true, far: true)],
         showcase: [
-            Map3DShowcase.Entry(key, "Finnish night train, double-deck sleepers", "芬蘭夜車（雙層臥鋪車）", .finland,
+            Map3DShowcase.Entry(key, "Finnish night train, double-deck sleepers (Sr2)", "芬蘭夜車（雙層臥鋪車，Sr2）", .finland,
+                                cars: Map3DFinlandSr2.cars, most: 10, gauge: 1.524),
+            Map3DShowcase.Entry(sr3Key, "Finnish night train, double-deck sleepers (Sr3)", "芬蘭夜車（雙層臥鋪車，Sr3）", .finland,
                                 cars: Map3DFinlandSr2.cars, most: 10, gauge: 1.524),
         ],
         triangles: 2_200...11_700, length: 19.0...26.45)
