@@ -85,8 +85,8 @@ public enum HelpGuide {
             "firstLine", .building,
             question: ("How do I build my first line?", "如何建造第一條路線？"),
             answer: (
-                "Tap Build, the hammer at the bottom left: the track tools open with Network chosen. Tap the track's start on the map, then its end, then ✓. Choose Station and tap the track to add a station: a line needs two. Then tap Done, open Lines, tap Pick on Map and tap your two stations, then give the line a train. Until then the Lines panel says at its top what is missing, with a button that takes you there. The station master tells you the next step, and the Tutorial in the game menu walks you through it.",
-                "點左下的鐵鎚「建設」，地圖左邊會出現建設工具，已經選好「路網」。在地圖上點軌道的起點，再點終點，按 ✓。選「車站」再點軌道，蓋一座車站：一條路線至少兩站。接著點「完成」，打開「路線」，按「在地圖上選站」再點你的兩座車站，然後幫路線配一列車。還沒有路線時，「路線」最上面會寫還缺什麼，按它的按鈕就會帶你過去。站長會告訴你下一步；遊戲選單裡的「教學」會一步步帶你做。"
+                "Tap Build, the hammer: the track tools open with Network chosen. Tap the track's start on the map, then its end, then ✓. Choose Station and tap the track to add a station: a line needs two. Then tap Done, open Lines, tap Pick on Map and tap your two stations, then give the line a train. Until then the Lines panel says at its top what is missing, with a button that takes you there. The station master tells you the next step, and the Tutorial in the game menu walks you through it.",
+                "點鐵鎚「建設」，建設工具會出現，已經選好「路網」。在地圖上點軌道的起點，再點終點，按 ✓。選「車站」再點軌道，蓋一座車站：一條路線至少兩站。接著點「完成」，打開「路線」，按「在地圖上選站」再點你的兩座車站，然後幫路線配一列車。還沒有路線時，「路線」最上面會寫還缺什麼，按它的按鈕就會帶你過去。站長會告訴你下一步；遊戲選單裡的「教學」會一步步帶你做。"
             ),
             keywords: "create line track station 第一條 建立 開始 新手"
         ),

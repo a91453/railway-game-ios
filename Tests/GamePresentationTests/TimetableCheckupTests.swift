@@ -93,6 +93,20 @@ final class TimetableCheckupTests: XCTestCase {
             budget: .init(notSent: 1, late: 118, lateOutOfDepot: 6, peakGapMinutes: 19)
         )
     }
+
+    /// EAL-LMC-PEAK-GAP (decision 881, later): the East Rail Line's Lok
+    /// Ma Chau branch, its whole second day against the nightly budget,
+    /// some 15 s. A change to how a train takes another berth of a
+    /// terminus moved its evening peak, and only the nightly run played
+    /// the line: one stretch of 7 km with a throat at each end and no
+    /// depot, it shows first what a line with a depot hides.
+    func testTheLokMaChauBranchDay() throws {
+        let name = "hk EAL_LMC simple"
+        try TimetableCheckupWorlds.check(
+            name, TimetableCheckupWorlds.hongKong(["EAL_LMC"], rules: .simple), day: 1,
+            budget: XCTUnwrap(TimetableCheckupFullTests.budgets[name])
+        )
+    }
 }
 
 /// Decision 844: the pull request checkup, Taiwan's part (a class of its
@@ -213,10 +227,12 @@ final class TimetableCheckupFullTests: XCTestCase {
     /// Blue Coast Line's timetable for when the Green Mountain Line is
     /// already bought, `ntdlrt:VB after ntdlrt:V`, is not a line on sale
     /// of its own; `DanhaiBothLinesDayTests` plays the two.)
+    /// Fukuoka's lines are not Taiwan's: they are played on their own
+    /// map, bought together (`TimetableCheckupAllBoughtTests.testFukuokaLines`).
     func testTaiwanMetroLines() throws {
         try full()
         let ids = try BundledRealData.railways().metroRuns.keys.filter {
-            !$0.hasPrefix("hkmtr:") && !$0.hasPrefix("vr:") && !$0.contains(" after ")
+            !$0.hasPrefix("hkmtr:") && !$0.hasPrefix("vr:") && !$0.hasPrefix("fksubway:") && !$0.contains(" after ")
         }.sorted()
         for id in ids {
             for (label, rules) in Self.rules { try check("\(id) \(label)", TimetableCheckupWorlds.taiwan(id, rules: rules)) }

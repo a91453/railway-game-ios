@@ -111,7 +111,10 @@ extension GameWorld {
     /// turning back or ending at the stop, on a line whose runs all run
     /// its whole length and call at every stop: at a through station, or
     /// on a line with expresses or short runs (the Taoyuan Airport MRT),
-    /// trains queued worse with it. On Hong Kong's
+    /// trains queued worse with it. Decision 890: or on a line whose
+    /// runs not running its whole length only take trains out of or into
+    /// stations between at the day's edges (``ServiceLine/shortRunsOnlyAtDayEdges``),
+    /// at its ends. On Hong Kong's
     /// South Island Line a train leaving Ocean Park held Admiralty's
     /// crossovers for the four minutes it took to get there, and the
     /// trains due out of Admiralty waited behind it; a real railway sets
@@ -124,7 +127,9 @@ extension GameWorld {
         let length = envelopes.length
         guard length > Self.homeReach + RailwayNetwork.junctionZone, !train.isDeadheading, case .travellingToStop(let stop, let cycle)? = train.execution,
               train.timetable[stop].reverses || train.call(after: stop, cycle: cycle) == nil,
-              let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) }), line.runs.allSatisfy({ $0.passes.isEmpty && min($0.from, $0.to) == 0 && max($0.from, $0.to) == line.stops.count - 1 })
+              let line = lines.first(where: { $0.hasRuns && $0.trains.contains(train.id) }), line.runs.allSatisfy({ $0.passes.isEmpty }),
+              line.runs.allSatisfy({ $0.isWhole(of: line) })
+                  || (line.stops.first == train.timetable[stop].station || line.stops.last == train.timetable[stop].station) && line.shortRunsOnlyAtDayEdges
         else { return nil }
         let window = length - Self.throatReach
         guard let first = envelopes.ends.firstIndex(where: { $0 > window }) else { return nil }
@@ -190,5 +195,49 @@ extension GameWorld {
     func claimCover(of train: Train, _ authority: (left: Int64, envelopes: AuthorityEnvelopes), whole: () -> TrackCover) -> TrackCover? {
         guard let limit = approachLimit(of: train, holding: authority.left, authority.envelopes) else { return whole() }
         return cover(of: approachStretches(of: train, authority.envelopes, to: limit) + bodyStretches(of: arrived(train)))
+    }
+}
+
+extension LineRun {
+    /// Decision 849: whether it runs the whole of `line`, end to end.
+    func isWhole(of line: ServiceLine) -> Bool {
+        way == nil && min(from, to) == 0 && max(from, to) == line.stops.count - 1
+    }
+}
+
+extension ServiceLine {
+    /// Decision 890 (FUKUOKA-LATE): whether every run of it that does not
+    /// run its whole length (none on a ring) only takes a train out of a
+    /// station between its ends before the first whole run the same way
+    /// calls there, or into one after the last: a train standing there
+    /// overnight sent out in the morning, or brought in at night (the
+    /// positioning runs of a line with no depot, Fukuoka's Kuko and
+    /// Nanakuma Lines), never a short run turning back there in the day
+    /// (the Taoyuan Airport MRT's, whose trains queued worse under the
+    /// home signal, decision 849). Each way's first and last whole run
+    /// stand for all: its runs call at every stop (the caller asks that
+    /// first), so none overtakes another.
+    var shortRunsOnlyAtDayEdges: Bool {
+        let last = stops.count - 1
+        guard last >= 2 else { return false }
+        // The first and last whole run each way: `true` up the line.
+        var first: [Bool: LineRun] = [:], final: [Bool: LineRun] = [:]
+        for run in runs where run.way == nil && run.isWhole(of: self) && run.times.count == stops.count {
+            let up = run.from < run.to
+            if first[up].map({ run.times[0].departure < $0.times[0].departure }) ?? true { first[up] = run }
+            if final[up].map({ run.times[0].departure > $0.times[0].departure }) ?? true { final[up] = run }
+        }
+        // When `run`, whole, calls at stop `stop`.
+        func call(_ run: LineRun, at stop: Int) -> LineRunTime {
+            run.times[run.from < run.to ? stop : last - stop]
+        }
+        return runs.allSatisfy { run in
+            guard !run.isWhole(of: self) else { return true }
+            guard run.way == nil, run.from != run.to, let earliest = first[run.from < run.to], let latest = final[run.from < run.to],
+                  let leaving = run.times.first, let arriving = run.times.last else { return false }
+            let outOk = run.from == 0 || run.from == last || leaving.departure <= call(earliest, at: run.from).departure
+            let inOk = run.to == 0 || run.to == last || arriving.arrival >= call(latest, at: run.to).arrival
+            return outOk && inOk
+        }
     }
 }
