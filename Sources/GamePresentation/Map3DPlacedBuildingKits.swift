@@ -72,11 +72,13 @@ extension Map3DScene.Builder {
             }
             target = .base
             return true
-        case .house, .hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket:
+        case .house, .hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket, .shop, .office:
             // Decision 896: a house one of the residential kit's ways by its number.
-            let layout = building.kind == .house
+            // Decision 902: a shop or an office block the studio's model, the
+            // yellow box if it does not decode.
+            guard let layout = building.kind == .house
                 ? Self.placedHouseLayouts[building.id.rawValue % Self.placedHouseLayouts.count]
-                : Self.placedKitLayouts[building.kind]![building.look]
+                : Self.placedKitLayouts[building.kind]?[building.look] else { return false }
             let facing = building.kind.standsOnShore ? seaward(of: building) : facing
             let right = facing.cross(.up)
             var model = layout.mesh
@@ -108,8 +110,6 @@ extension Map3DScene.Builder {
             }
             target = .base
             return true
-        default:
-            return false
         }
     }
 
@@ -291,7 +291,14 @@ extension Map3DScene.Builder {
                              civic(.lanternString, -2, -7)],
                             pad: Map3DPalette.plaza, recolours: false),
         ]
-        return [.hotel: hotels, .departmentStore: stores, .amusementPark: [park], .wharf: [wharf], .marina: [marina],
-                .school: schools, .hospital: hospitals, .nightMarket: markets]
+        var layouts: [PlacedBuildingKind: [PlacedKitLayout]] = [.hotel: hotels, .departmentStore: stores, .amusementPark: [park], .wharf: [wharf],
+                                                                 .marina: [marina], .school: schools, .hospital: hospitals, .nightMarket: markets]
+        // Decision 902: the studio's shop and office block, their fronts
+        // (−y) turned to the layout's, on the plot as they are.
+        for (kind, name) in [(PlacedBuildingKind.shop, Map3DPlayerShopOffice.shopName), (.office, Map3DPlayerShopOffice.officeName)] {
+            guard let model = Map3DPlayerShopOffice.model(name) else { continue }
+            layouts[kind] = [PlacedKitLayout([(model, 0, 0, 0, Map3DPlayerShopOffice.frontTurn)], pad: nil, recolours: false)]
+        }
+        return layouts
     }()
 }
