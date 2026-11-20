@@ -3038,7 +3038,7 @@
       "triangles" : 4836
     },
     "set-puyuma-head" : {
-      "hash" : "e7427a029f985b7d",
+      "hash" : "2e7db9a4f703eb40",
       "triangles" : 8182
     },
     "set-puyuma-panto" : {
@@ -3050,7 +3050,7 @@
       "triangles" : 5056
     },
     "set-puyuma-tail" : {
-      "hash" : "442fc8d81071a9a8",
+      "hash" : "53a02d7457ed7b84",
       "triangles" : 8182
     },
     "set-puyumaFar-car" : {
@@ -3062,7 +3062,7 @@
       "triangles" : 2356
     },
     "set-puyumaFar-head" : {
-      "hash" : "f3ccfc6935fd725b",
+      "hash" : "e8adc8e42cde2924",
       "triangles" : 3664
     },
     "set-puyumaFar-panto" : {
@@ -3074,7 +3074,7 @@
       "triangles" : 2512
     },
     "set-puyumaFar-tail" : {
-      "hash" : "460aa145809a76ef",
+      "hash" : "dc11e6a866c6cbb5",
       "triangles" : 3664
     },
     "set-R100CK-car" : {
@@ -3394,15 +3394,15 @@
       "triangles" : 5240
     },
     "temu2000-formation" : {
-      "hash" : "a1db3641f22ec72b",
+      "hash" : "bdc850c00e94e8d5",
       "triangles" : 45820
     },
     "temu2000-leading" : {
-      "hash" : "5582364ebc64caba",
+      "hash" : "a9dc70a0f464b3f",
       "triangles" : 8182
     },
     "temu2000-leading-far" : {
-      "hash" : "725d4e929f438be0",
+      "hash" : "3039d4352d64642b",
       "triangles" : 3664
     },
     "temu2000-tema" : {
@@ -3430,11 +3430,11 @@
       "triangles" : 2512
     },
     "temu2000-trailing" : {
-      "hash" : "bcb9743fc6200e91",
+      "hash" : "df5b41e12659bc15",
       "triangles" : 8182
     },
     "temu2000-trailing-far" : {
-      "hash" : "a44462298bfa3cc3",
+      "hash" : "c6ecce2cc6adca0d",
       "triangles" : 3664
     },
     "urban-three-formation" : {
