@@ -144,4 +144,108 @@ final class FukuokaRailwaysTests: XCTestCase {
             XCTAssertGreaterThan(zip(after.runs, after.runDays).filter { $0.1 != nil }.count, 0, id)
         }
     }
+
+    /// Decision 898: the Nanakuma Line is bought with the Hashimoto depot,
+    /// past Hashimoto, its end, alone or with the other two: the trains
+    /// Hashimoto's own tracks have no room for overnight start in it, as
+    /// many as it has sidings. The line has the 23 trains its peak needs
+    /// at the game's dwell, with three minutes at Hashimoto to make a
+    /// delay good (20 before, and some 127 runs a day late), and every
+    /// run goes the whole way, so its ends take the home signal
+    /// (decisions 849 and 890).
+    func testTheNanakumaLineIsBoughtWithTheHashimotoDepot() throws {
+        let id = "fksubway:N"
+        let runs = try XCTUnwrap(try Self.railways().metroRuns[id])
+        let ends = [try XCTUnwrap(runs.stops.first), try XCTUnwrap(runs.stops.last)]
+        // The whole day is laid out from the depot's end: no train stands
+        // at Hakata overnight, 13.5 km from the depot, where the game would
+        // take it in for the night and send it back empty at dawn, in the
+        // first trains' way.
+        XCTAssertEqual(runs.overnight, [ends[0]: 23])
+        let inDepot = 23 - (try XCTUnwrap(runs.tracks[ends[0]]) - 1)
+        XCTAssertEqual(inDepot, RealLineDepotSite.hashimoto.sidings)
+        XCTAssertEqual(RealLineDepotSite.hashimoto.beyond, ends[0])
+        XCTAssertTrue(runs.runs.allSatisfy { !($0.positioning || $0.train == "回送") })
+        let real = runs.runs
+        XCTAssertEqual(real.count, 514)
+        XCTAssertTrue(real.allSatisfy { $0.calls.count == runs.stops.count }, "every run goes the whole way")
+
+        for together in [false, true] {
+            let session = try Self.fukuoka()
+            if together {
+                try TimetableCheckupAllBoughtTests.buyTogether(["fksubway:K", "fksubway:H", "fksubway:N"], in: session)
+            } else {
+                let offer = session.realLineOffer(for: try XCTUnwrap(session.buyableRealLines.first { $0.id == id }))
+                let acquisition = try XCTUnwrap(offer.acquisition, offer.problem ?? "")
+                let depot = try XCTUnwrap(acquisition.depot, "bought with its depot")
+                XCTAssertEqual(depot.name, "橋本車輛基地")
+                XCTAssertEqual(depot.platforms.count, RealLineDepotSite.hashimoto.sidings)
+                XCTAssertNil(acquisition.moreDepots)
+                XCTAssertEqual(acquisition.trains.count, 23)
+                XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
+            }
+            let world = session.world
+            let line = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: id)?.line)))
+            XCTAssertEqual(line.runs.count, real.count, "together: \(together)")
+            XCTAssertEqual(line.trains.count, 23, "together: \(together)")
+            let station = try XCTUnwrap(line.depots.first.flatMap { world.station(id: $0) })
+            XCTAssertEqual(line.depots.count, 1, "together: \(together)")
+            XCTAssertEqual(station.name, "橋本車輛基地")
+            XCTAssertTrue(station.isDepot)
+            XCTAssertEqual(world.trains.count { world.stationsStoppedAt(by: $0.id).contains(station.id) }, inDepot)
+            // Past the line's end, north-west of Hashimoto, on its side
+            // of the Muromi River.
+            let frame = try XCTUnwrap(RealWorldFrame(world: world))
+            let middle = frame.worldPosition(latitude: 33.5572, longitude: 130.3174)
+            let (dx, dy) = (Double(station.location.x) - middle.x, Double(station.location.y) - middle.y)
+            XCTAssertLessThan((dx * dx + dy * dy).squareRoot() / Double(WorldCoordinate.unitsPerMetre), 300)
+            // The other two lines have no depot.
+            if together {
+                for other in ["fksubway:K", "fksubway:H"] {
+                    XCTAssertEqual(try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: other)?.line))).depots, [], other)
+                }
+            }
+        }
+    }
+}
+
+/// Decision 898: run only with `HASHIMOTO_DEPOT_DUMP=<file.json>`: the
+/// three lines bought together, the track round the Hashimoto depot, for
+/// `tools/rail-depots/plot_depots.py` (`PLOT_SITES=hashimoto`), drawn over
+/// OpenStreetMap's real yard.
+@MainActor
+final class HashimotoDepotDumpTests: XCTestCase {
+    func testDumpTheDepotTrack() throws {
+        guard let path = ProcessInfo.processInfo.environment["HASHIMOTO_DEPOT_DUMP"] else {
+            throw XCTSkip("HASHIMOTO_DEPOT_DUMP=<file.json> writes the depot's track")
+        }
+        let session = try TimetableCheckupAllBoughtTests.fukuoka(rules: .simple)
+        try TimetableCheckupAllBoughtTests.buyTogether(["fksubway:K", "fksubway:H", "fksubway:N"], in: session)
+        let world = session.world
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let perMetre = frame.mapPointsPerMetre, units = Double(WorldCoordinate.unitsPerMetre)
+        func geo(_ point: WorldCoordinate) -> [Double] {
+            let east = (Double(point.x) - frame.middleX) / units, south = (Double(point.y) - frame.middleY) / units
+            let longitude = (RealWorldFrame.mercatorX(frame.anchor.longitudeDegrees) + east * perMetre) / RealWorldFrame.worldPoints * 360 - 180
+            let y = RealWorldFrame.mercatorY(frame.anchor.latitudeDegrees) + south * perMetre
+            let latitude = atan(sinh(Double.pi * (1 - 2 * y / RealWorldFrame.worldPoints))) * 180 / .pi
+            return [latitude, longitude, Double(point.z) / units]
+        }
+        let middle = frame.worldPosition(latitude: 33.5560, longitude: 130.3195)
+        var edges: [[[Double]]] = []
+        for edge in world.network.edges {
+            guard let geometry = world.network.geometry(of: edge.id) else { continue }
+            let close = geometry.points.contains { point in
+                let (dx, dy) = (Double(point.x) - middle.x, Double(point.y) - middle.y)
+                return (dx * dx + dy * dy).squareRoot() / units < 900
+            }
+            if close { edges.append(geometry.points.map(geo)) }
+        }
+        let station = world.stations.first(where: \.isDepot)
+        let data = try JSONSerialization.data(withJSONObject: ["sites": [[
+            "name": RealLineDepotSite.hashimoto.english, "edges": edges,
+            "station": station.map { geo(WorldCoordinate(x: $0.location.x, y: $0.location.y, z: 0)) } ?? [],
+        ] as [String: Any]]])
+        try data.write(to: URL(fileURLWithPath: path))
+    }
 }
