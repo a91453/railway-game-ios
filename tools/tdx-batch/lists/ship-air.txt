@@ -1,0 +1,13 @@
+Ship_Port	/api/basic/v3/Ship/Port?$format=JSON
+Ship_Operator	/api/basic/v3/Ship/Operator?$format=JSON
+Ship_Route	/api/basic/v3/Ship/Route?$format=JSON
+Ship_StopOfRoute	/api/basic/v3/Ship/StopOfRoute?$format=JSON
+Ship_Shape	/api/basic/v3/Ship/Shape?$format=JSON
+Ship_GeneralSchedule	/api/basic/v3/Ship/GeneralSchedule?$format=JSON
+Ship_RouteFare	/api/basic/v3/Ship/RouteFare?$format=JSON
+Ship_News	/api/basic/v3/Ship/News?$format=JSON
+Air_Airport	/api/basic/v2/Air/Airport?$format=JSON
+Air_Airline	/api/basic/v2/Air/Airline?$format=JSON
+Air_GeneralSchedule_Domestic	/api/basic/v2/Air/GeneralSchedule/Domestic?$format=JSON
+Air_GeneralSchedule_International	/api/basic/v2/Air/GeneralSchedule/International?$format=JSON
+Air_Fare_Domestic	/api/basic/v2/Air/Fare/Domestic?$format=JSON
