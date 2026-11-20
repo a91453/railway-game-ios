@@ -204,6 +204,44 @@ extension Map3DPlatformProps {
         let colour: UInt32
     }
 
+    /// LONG-NAMES: a line of text a board writes: its wanted cell (its
+    /// glyphs' height over the grid), the cell it got across and down, and
+    /// its width against the room it had, metres.
+    public struct BoardLine: Equatable, Sendable {
+        public let text: String
+        public let wanted: Float
+        public let cellWidth: Float
+        public let cellHeight: Float
+        public let width: Float
+        public let span: Float
+    }
+
+    /// LONG-NAMES: how narrow a line's letters may be set (a share of
+    /// their width) before they are made smaller.
+    public static let nameBoardNarrowest: Float = 0.6
+    /// A wrapped English name's line, a share of the one line's height.
+    static let nameBoardWrappedLine: Float = 0.5
+
+    /// LONG-NAMES: the cell, across and down, of a line `width` cells long
+    /// set `height` tall in `span` metres: as tall as asked when narrowing
+    /// it to ``nameBoardNarrowest`` fits it, else smaller.
+    static func boardCells(width: Int, height: Float, span: Float) -> (x: Float, y: Float) {
+        let wanted = height / Float(Map3DBoardGlyphs.grid)
+        guard width > 0 else { return (wanted, wanted) }
+        let fit = span / Float(width)
+        let y = min(wanted, fit / nameBoardNarrowest)
+        return (min(y, fit), y)
+    }
+
+    /// LONG-NAMES: `text` broken at the space nearest its middle, or `nil`
+    /// for one with no space.
+    static func boardBreak(_ text: String) -> (String, String)? {
+        let characters = Array(text)
+        let spaces = characters.indices.filter { characters[$0] == " " }
+        guard let at = spaces.min(by: { abs($0 * 2 - characters.count) < abs($1 * 2 - characters.count) }) else { return nil }
+        return (String(characters[..<at]), String(characters[(at + 1)...]))
+    }
+
     /// A metro board's band along its face's bottom (a share of its height).
     static let metroBand: Float = 0.16
 }
@@ -402,10 +440,11 @@ extension Map3DScene.Builder {
     /// version's: a white face in a grey frame, a green band across it,
     /// `name` in navy over the band; its face lit at night
     /// (`underground`: always).
+    @discardableResult
     static func addNameBoard(_ mesh: inout Map3DMesh, foot: Map3DPoint, out: Map3DPoint, name: String, second: String? = nil,
-                             styled: Map3DPlatformProps.StyledBoard? = nil, underground: Bool) {
+                             styled: Map3DPlatformProps.StyledBoard? = nil, underground: Bool) -> [Map3DPlatformProps.BoardLine] {
         typealias Props = Map3DPlatformProps
-        guard let out = Map3DPoint(out.x, 0, out.z).normalized else { return }
+        guard let out = Map3DPoint(out.x, 0, out.z).normalized else { return [] }
         let along = Map3DPoint(-out.z, 0, out.x)
         let length = Props.nameBoardLength, height = Props.nameBoardHeight, depth = Props.nameBoardDepth
         let frame = Props.nameBoardFrame
@@ -433,17 +472,40 @@ extension Map3DScene.Builder {
         if underground { mesh.makeGlowing(from: first) } else { mesh.makeNightLit(from: first) }
         let grid = Float(Map3DBoardGlyphs.grid)
         // NAME-BOARD-STYLES: Finland's, its name alone in white on blue.
-        if finnish {
-            let text = Map3DBoardGlyphs.layout(name)
-            guard text.width > 0 else { return }
-            let cell = min(faceHeight * 0.62 / grid, (faceLength - 0.3) / Float(text.width))
-            let left = -Float(text.width) * cell / 2, top = faceHeight / 2 + grid * cell / 2
-            for r in text.rectangles {
-                let x0 = left + Float(r.x) * cell, x1 = x0 + Float(r.width) * cell
-                let y1 = top - Float(r.y) * cell, y0 = y1 - Float(r.height) * cell
-                quad(x0, y0, x1, y1, 0.008, Map3DPalette.sidewalk)
+        var lines: [Props.BoardLine] = []
+        // LONG-NAMES: a line of `text` as large as `height` allows and as
+        // wide as `span`: narrowed to ``Map3DPlatformProps/nameBoardNarrowest``
+        // of its width before it is made smaller, as the railways' boards
+        // set a long name; `wraps`, an English name broken in two where
+        // that keeps its letters larger.
+        func write(_ text: String, height: Float, middle: Float, centre: Float = 0, span: Float = faceLength - 0.2,
+                   ink: UInt32 = Map3DPalette.playerRim, lift: Float = 0.008, wraps: Bool = false) {
+            let set = Map3DBoardGlyphs.layout(text)
+            guard set.width > 0 else { return }
+            let cells = Props.boardCells(width: set.width, height: height, span: span)
+            if wraps, cells.y < height / grid, let (first, last) = Props.boardBreak(text) {
+                let half = height * Props.nameBoardWrappedLine
+                let top = Map3DBoardGlyphs.layout(first), bottom = Map3DBoardGlyphs.layout(last)
+                let wrapped = min(Props.boardCells(width: top.width, height: half, span: span).y,
+                                  Props.boardCells(width: bottom.width, height: half, span: span).y)
+                if wrapped > cells.y {
+                    write(first, height: half, middle: middle + height / 4, centre: centre, span: span, ink: ink, lift: lift)
+                    write(last, height: half, middle: middle - height / 4, centre: centre, span: span, ink: ink, lift: lift)
+                    return
+                }
             }
-            return
+            let left = centre - Float(set.width) * cells.x / 2, top = middle + grid * cells.y / 2
+            for r in set.rectangles {
+                let x0 = left + Float(r.x) * cells.x, x1 = x0 + Float(r.width) * cells.x
+                let y1 = top - Float(r.y) * cells.y, y0 = y1 - Float(r.height) * cells.y
+                quad(x0, y0, x1, y1, lift, ink)
+            }
+            lines.append(Props.BoardLine(text: text, wanted: height / grid, cellWidth: cells.x, cellHeight: cells.y,
+                                         width: Float(set.width) * cells.x, span: span))
+        }
+        if finnish {
+            write(name, height: faceHeight * 0.62, middle: faceHeight / 2, span: faceLength - 0.3, ink: Map3DPalette.sidewalk)
+            return lines
         }
         let band = styled == nil ? Props.nameBoardBand : 0...Props.metroBand
         quad(-faceLength / 2, faceHeight * band.lowerBound, faceLength / 2, faceHeight * band.upperBound, 0.004, styled?.colour ?? Props.nameBoardGreen)
@@ -462,17 +524,6 @@ extension Map3DScene.Builder {
         // The name over the band, as large as fits, its second name small
         // under it when it has one.
         let room = faceHeight * (1 - band.upperBound)
-        func write(_ text: (width: Int, rectangles: [Map3DBoardGlyphs.Rectangle]), height: Float, middle: Float,
-                   centre: Float = 0, span: Float = faceLength - 0.2, ink: UInt32 = Map3DPalette.playerRim, lift: Float = 0.008) {
-            guard text.width > 0 else { return }
-            let cell = min(height / grid, span / Float(text.width))
-            let left = centre - Float(text.width) * cell / 2, top = middle + grid * cell / 2
-            for r in text.rectangles {
-                let x0 = left + Float(r.x) * cell, x1 = x0 + Float(r.width) * cell
-                let y1 = top - Float(r.y) * cell, y0 = y1 - Float(r.height) * cell
-                quad(x0, y0, x1, y1, lift, ink)
-            }
-        }
         if let styled {
             // NAME-BOARD-STYLES: a metro's: the station's number in its
             // line's colour at the left, its letters over its figures in
@@ -487,9 +538,9 @@ extension Map3DScene.Builder {
                     quad(x - side / 2, y - side / 2, x + side / 2, y + side / 2, 0.006, colour)
                     let letters = Map3DJapaneseNameBoards.line(ofNumber: number)
                     let figures = String(number.dropFirst(letters.count))
-                    write(Map3DBoardGlyphs.layout(letters), height: side * 0.36, middle: y + side * 0.2, centre: x,
+                    write(letters, height: side * 0.36, middle: y + side * 0.2, centre: x,
                           span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
-                    write(Map3DBoardGlyphs.layout(figures), height: side * 0.42, middle: y - side * 0.17, centre: x,
+                    write(figures, height: side * 0.42, middle: y - side * 0.17, centre: x,
                           span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
                 }
                 badge(number, colour: styled.colour, x: textLeft + side / 2, y: middle, side: side)
@@ -508,30 +559,30 @@ extension Map3DScene.Builder {
             }
             let textRight = faceLength / 2 - 0.1
             let centre = (textLeft + textRight) / 2, span = textRight - textLeft
-            let shownName = Map3DBoardGlyphs.layout(Self.boardText(name))
+            let shownName = Self.boardText(name)
             if let reading = styled.reading {
-                write(Map3DBoardGlyphs.layout(reading), height: room * 0.19, middle: bandHigh + room * 0.86, centre: centre, span: span)
+                write(reading, height: room * 0.19, middle: bandHigh + room * 0.86, centre: centre, span: span)
                 write(shownName, height: room * 0.5, middle: bandHigh + room * 0.52, centre: centre, span: span)
                 if let second {
-                    write(Map3DBoardGlyphs.layout(second), height: room * 0.17, middle: bandHigh + room * 0.14, centre: centre, span: span)
+                    write(second, height: room * 0.17, middle: bandHigh + room * 0.14, centre: centre, span: span, wraps: true)
                 }
             } else if let second {
                 write(shownName, height: room * 0.6, middle: bandHigh + room * 0.62, centre: centre, span: span)
-                write(Map3DBoardGlyphs.layout(second), height: room * 0.24, middle: bandHigh + room * 0.18, centre: centre, span: span)
+                write(second, height: room * 0.24, middle: bandHigh + room * 0.18, centre: centre, span: span, wraps: true)
             } else {
                 write(shownName, height: room * 0.8, middle: bandHigh + room / 2, centre: centre, span: span)
             }
-            return
+            return lines
         }
         // 臺 is written 台 (as on many of the railway's own boards): its
         // strokes run together on the glyphs' grid.
-        let main = Map3DBoardGlyphs.layout(Self.boardText(name))
-        let other = second.map(Map3DBoardGlyphs.layout) ?? (width: 0, rectangles: [])
-        if other.width > 0 {
+        let main = Self.boardText(name)
+        if let second, !second.isEmpty {
             write(main, height: room * 0.66, middle: bandHigh + room * 0.62)
-            write(other, height: room * 0.3, middle: bandHigh + room * 0.17)
+            write(second, height: room * 0.3, middle: bandHigh + room * 0.17, wraps: true)
         } else {
             write(main, height: room * 0.92, middle: bandHigh + room / 2)
         }
+        return lines
     }
 }
