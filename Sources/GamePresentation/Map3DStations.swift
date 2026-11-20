@@ -117,7 +117,9 @@ extension Map3DStationKit {
         case .coastTimber: (Map3DPalette.schoolWalls, Map3DPalette.arcade)
         case .baoan: (Map3DPalette.tileWhite, Map3DPalette.arcade)
         case .jiji: (Map3DPalette.schoolWalls, Map3DPalette.tinRoofs[2])
-        case .regional, .halt, .taitung: (Map3DPalette.schoolWalls, Map3DPalette.gymGreen)
+        // Decision 899: the generic stations' white tiles and concrete roofs.
+        case .regional, .halt: (Map3DPalette.tileWhite, Map3DPalette.concrete)
+        case .taitung: (Map3DPalette.schoolWalls, Map3DPalette.gymGreen)
         default: (Map3DPalette.tileWhite, Map3DPalette.tileWhite)
         }
     }
@@ -176,21 +178,15 @@ extension StationKitBuilder {
         case .zuoying, .hsrTaichung, .hsrTaoyuan, .hsrHsinchu, .hsrTainan, .highSpeed:
             highSpeed(profile: p, variant: v)
         case .regional, .halt:
-            let small = p == .halt
-            let width: Float = small ? 10 + Float(v) : 22 + Float(4 - station.tier) * 5 + Float(v)
-            facade(13, 0.25, 0, 12, width, small ? 4.2 : 6.2, Map3DPalette.schoolWalls, bays: small ? 3 : 7)
-            if v % 2 == 0 {
-                gable(13, small ? 4.45 : 6.45, 0, 13, width + 1, small ? 1.6 : 2.4, Map3DPalette.gymGreen)
-            } else {
-                box(13, small ? 4.45 : 6.45, 0, 13, width + 1, 0.25, Map3DPalette.tinRoofs[v % 5])
-            }
-            box(20, 2.8, 0, 3, width + 2, 0.20, Map3DPalette.canopy)
-            for z: Float in [-width * 0.43, width * 0.43] { box(21.2, 0.25, z, 0.24, 0.24, 2.55, Self.steel) }
+            // Decision 899: the local studio's generic stations, their
+            // wings and front canopy with them.
+            genericHouse(station, expansion: expansion)
         case .formosa, .centralPark, .underground, .elevated, .lightRail:
             return
         }
-        // Decision 506, later: an expanded station's wings.
-        if let expansion { expansionWings(expansion) }
+        // Decision 506, later: an expanded station's wings (decision 899:
+        // the generic stations' own, drawn with them).
+        if let expansion, p != .regional, p != .halt { expansionWings(expansion) }
         // A forecourt from its back to six metres before it.
         guard let bounds = mesh.bounds, bounds.min.x < bounds.max.x else { return }
         let length = bounds.max.x - bounds.min.x + 6, width = bounds.max.z - bounds.min.z + 8
@@ -573,9 +569,18 @@ extension Map3DScene.Builder {
         // here and added after the chunk's, as the exterior studies are.
         var near = Map3DMesh(), far = Map3DMesh()
         near.append(moved, at: foot, forward: forward)
-        let colours = Map3DStationKit.farColours(station.profile)
-        far.addBox(base: centre, forward: forward, length: depth, width: wide, height: max(bounds.max.y * 0.8, 1),
-                   top: colours.roof, side: colours.wall)
+        if station.profile == .regional || station.profile == .halt {
+            // Decision 899: the studio's far versions, placed as the near.
+            var farKit = StationKitBuilder()
+            farKit.genericHouse(station, expansion: world.station(id: id)?.expansion, far: true)
+            var farMoved = Map3DMesh()
+            farMoved.append(farKit.mesh, at: shift, forward: Map3DPoint(1, 0, 0))
+            far.append(farMoved, at: foot, forward: forward)
+        } else {
+            let colours = Map3DStationKit.farColours(station.profile)
+            far.addBox(base: centre, forward: forward, length: depth, width: wide, height: max(bounds.max.y * 0.8, 1),
+                       top: colours.roof, side: colours.wall)
+        }
         Map3DLook.restyle(&near, keeping: keptColours, strength: Map3DStationKit.houseLook)
         Map3DLook.restyle(&far, keeping: keptColours, strength: Map3DStationKit.houseLook)
         let key = key(of: centre)
