@@ -172,6 +172,16 @@ public enum SoundCue: Hashable, Sendable {
         return .arrival(watched: true, chime: chime, motif: speed.tenthsPerTick >= GameSpeed.normal.tenthsPerTick)
     }
 
+    /// Decision 883 (later): how long a sound the player asked to hear
+    /// is given to ring out before the game's own sounds come back: the
+    /// melodies' 7.8 s and the longest bell's 2.4 s, and a little more.
+    public var previewSeconds: Double {
+        switch self {
+        case .departure, .playerDeparture: 8.2
+        default: 2.8
+        }
+    }
+
     /// The file the app plays for the cue, in its bundle's `Audio`
     /// resources (made by `tools/audio/make_game_audio.py`, listed in
     /// `tools/audio/manifest.json`).
