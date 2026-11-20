@@ -1110,6 +1110,11 @@ public final class GameSession {
     /// The app's player, set by the launcher; `nil` plays nothing. Never
     /// saved.
     @ObservationIgnored public var playSound: (@MainActor (SoundCue) -> Void)?
+    /// Decision 883 (later): plays a sound the player asked to hear (a station's
+    /// bell or melody tried from its panel, the workshop's play button):
+    /// the app's player plays it with the sounds switched off and however
+    /// lately the same one played. `nil` hands it to ``playSound``.
+    @ObservationIgnored public var previewSound: (@MainActor (SoundCue) -> Void)?
     /// Decision 219, stage 2: the factor on the music while the followed
     /// train runs into an interchange (``MusicDuck``), and while a quiet
     /// night is skipped (decision 372), told to the app when it changes;

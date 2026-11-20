@@ -333,6 +333,48 @@ final class Map3DChristmasLiveryTests: XCTestCase {
         XCTAssertEqual(reopened.entries.count, 1, "no save of the player's was made")
     }
 
+    /// Decision 795 (later): one change puts it on every passenger line or
+    /// takes it off them all, the device is told once, and not outside the
+    /// event.
+    @MainActor
+    func testEveryPassengerLineAtOnce() throws {
+        // NewGameCampaignTests' two lines: a second beside the first.
+        let bounds = GameWorld.newGameBounds, towns = Land.townCentres(seed: 1, in: bounds)
+        let first = towns[0], second = towns[1]
+        let edgeX = second.x > first.x ? 40_000 : bounds.width - 40_000
+        let edge = PlanPoint(x: edgeX, y: first.y + (first.y - second.y) * (edgeX - first.x) / (first.x - second.x))
+        var world = try newGameLine(through: [first, second])
+        world = try newGameLine(through: [PlanPoint(x: first.x, y: first.y + 6_144), PlanPoint(x: edge.x, y: edge.y + 6_144)], in: world)
+        let lines = Set(world.lines.filter { !$0.isFreight }.map(\.id))
+        XCTAssertEqual(lines.count, 2)
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        let session = GameSession(world: world, language: .traditionalChinese)
+
+        launcher.attachChristmasLivery(to: session, row: "row-1", at: date(2026, 11, 20), calendar: calendar)
+        session.setChristmasLiveryOnAllPassengerLines(true)
+        XCTAssertEqual(session.christmasLiveryChosen, [], "not before the event")
+        XCTAssertFalse(session.allPassengerLinesWearChristmasLivery)
+
+        launcher.attachChristmasLivery(to: session, row: "row-1", at: date(2026, 12, 23), calendar: calendar)
+        var told = 0
+        let keep = session.christmasLiveryChanged
+        session.christmasLiveryChanged = { told += 1; keep?($0) }
+        session.setChristmasLivery(true, for: try XCTUnwrap(lines.first))
+        XCTAssertFalse(session.allPassengerLinesWearChristmasLivery, "one of two")
+        told = 0
+        session.setChristmasLiveryOnAllPassengerLines(true)
+        XCTAssertEqual(session.christmasLiveryLines, lines)
+        XCTAssertTrue(session.allPassengerLinesWearChristmasLivery)
+        XCTAssertEqual(told, 1)
+        session.setChristmasLiveryOnAllPassengerLines(true)
+        XCTAssertEqual(told, 1, "nothing changed, nothing told")
+
+        session.setChristmasLiveryOnAllPassengerLines(false)
+        XCTAssertEqual(session.christmasLiveryLines, [])
+        XCTAssertFalse(session.allPassengerLinesWearChristmasLivery)
+        XCTAssertEqual(told, 2)
+    }
+
     /// Without the badge, after the event: not chosen, not drawn.
     @MainActor
     func testAfterTheEventWithoutTheBadgeNothingWearsIt() throws {
