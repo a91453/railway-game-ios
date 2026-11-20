@@ -1,0 +1,73 @@
+name: Lessons link
+
+# A pull request that brings a model into the game names where its lessons
+# are written (owner, 2026-11-20: 「之後寫經驗 要怎樣才能防範沒更新md skill」).
+# The lessons live in the private assets repository,
+# a91453/railway-assets-private-2 `docs/studio/lessons/<model>.md`, whose
+# guard (its AGENTS.md rule 10) checks that each delivered model has one and
+# that it says whether it went into a skill. This repository cannot read that
+# private file, so here the pull request's description only has to point to
+# it: a path `docs/studio/lessons/<name>.md`, or a line
+# `經驗：<reason>` when the change brings no model (a fix, a rename).
+#
+# A model is brought in when the pull request adds or changes a file under
+# RailwayGameApp/Resources/Models/ or adds a Map3D*.swift under
+# Sources/GamePresentation/. It reads the pull request through the API and
+# writes nothing; editing the description runs it again.
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: lessons-link-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Model pull requests name their lessons
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Check the description against the changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$REPO/pulls/$PR/files?per_page=100" \
+            --jq '.[] | "\(.status)\t\(.filename)"' > "$RUNNER_TEMP/files.tsv"
+          python3 -I - "$RUNNER_TEMP/files.tsv" <<'PY'
+          import os, re, sys
+          models = []
+          for line in open(sys.argv[1], encoding="utf-8"):
+              status, path = line.rstrip("\n").split("\t", 1)
+              if status == "removed":
+                  continue
+              if path.startswith("RailwayGameApp/Resources/Models/"):
+                  models.append(path)
+              elif (status == "added" and path.startswith("Sources/GamePresentation/")
+                    and re.match(r"Map3D\w*\.swift$", os.path.basename(path))):
+                  models.append(path)
+          if not models:
+              print("這個 PR 沒有接回模型，不用寫經驗。")
+              sys.exit(0)
+          body = os.environ.get("BODY") or ""
+          link = re.search(r"docs/studio/lessons/[\w.-]+\.md", body)
+          reason = re.search(r"^\s*[-*]?\s*經驗[：:]\s*\S.{3,}", body, re.M)
+          print("接回模型的檔：\n  " + "\n  ".join(models))
+          if link or reason:
+              print("描述寫了經驗：" + (link or reason).group(0).strip())
+              sys.exit(0)
+          print("::error title=沒寫經驗在哪::這個 PR 接回了模型，描述要寫它的經驗檔："
+                "私有 a91453/railway-assets-private-2 的 docs/studio/lessons/<模型>.md"
+                "（同時在那邊開 PR 寫進去或補「接回遊戲」一節），"
+                "或一行「經驗：<理由>」說明為什麼沒有（例如只是修正、改名）。改完描述會自動重跑。")
+          sys.exit(1)
+          PY
