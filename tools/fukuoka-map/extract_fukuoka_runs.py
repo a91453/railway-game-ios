@@ -31,6 +31,13 @@ def main(folder):
     # Decision 712 (Hong Kong's, kept): a train standing overnight at a station between the
     # ends leaves before the morning's first train the same way reaches it.
     tool.OUT_BEFORE_FIRST = True
+    # Decision 897: the Nanakuma Line is bought with a depot past
+    # Hashimoto, its end (`RealLineDepotSite.hashimoto`), counts its trains
+    # by the game's dwell, and has three minutes at Hashimoto to make a
+    # delay good (`extract_branch_runs.RECOVERY`): 23 trains, not 20.
+    tool.DEPOT_ENDS = dict(tool.DEPOT_ENDS, **{f"{SYSTEM}:N": ("橋本",)})
+    tool.COUNT_GAME_DWELL = True
+    tool.RECOVERY = {"橋本": 180}
     out = os.path.join(folder, "metro_runs.json")
     tool.main(folder, out)
     with open(out, encoding="utf-8") as f:

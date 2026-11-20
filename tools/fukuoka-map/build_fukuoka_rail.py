@@ -114,8 +114,26 @@ STATIONS = {
 SERVICE = {
     "K": {"peakHeadwaySec": 200, "offpeakHeadwaySec": 300},
     "H": {"peakHeadwaySec": 300, "offpeakHeadwaySec": 480},
-    "N": {"peakHeadwaySec": 195, "offpeakHeadwaySec": 300},
+    "N": {"peakHeadwaySec": 195, "offpeakHeadwaySec": 300, "depotEnd": "橋本"},
 }
+# Decision 897: a line whose depot is at one end (`depotEnd`, the Nanakuma
+# Line's at Hashimoto) has all its trains there overnight, so its day is
+# laid out from that end: every trip from the far end is a train from the
+# depot's end come in and turned round, leaving `FAR_TURN` after it
+# arrives (a turnaround of three minutes and three more, as the game's
+# trains stand longer at each station than the times here give them). The
+# far end's first and last trains are at `FIRST_TRAIN` and `LAST_TRAIN`;
+# the depot end's are a trip and `FAR_TURN` earlier, and its peaks begin
+# and end at `PEAKS`. So the far end never stands more trains than turn
+# round there, the peak's extra trains come out of the depot in service
+# and go back in service, and no train stands at the far end overnight.
+#
+# With both ends starting their day and their peaks at once, the far end
+# needed its trains there before any had come in: run 13.5 km empty from
+# Hashimoto, each held the far end's way out for the whole of its run and
+# the trains there left a quarter of an hour late; left standing there
+# overnight, the game took some of them into the depot (decision 221).
+FAR_TURN = 360
 FIRST_TRAIN, LAST_TRAIN = 5 * 3600 + 30 * 60, 24 * 3600 + 15 * 60
 PEAKS = [[7 * 3600, 9 * 3600 + 30 * 60], [17 * 3600, 19 * 3600 + 30 * 60]]
 DWELL = 30
@@ -377,17 +395,38 @@ def trips(line):
     runs = [run_seconds(b["d"] - a["d"]) + DWELL for a, b in zip(stations, stations[1:])]
     count = len(stations)
     out = []
-    for order in (list(range(count)), list(range(count - 1, -1, -1))):
-        leave = FIRST_TRAIN
-        while leave <= LAST_TRAIN:
-            t, trip = leave, []
-            for n, index in enumerate(order):
-                if n:
-                    t += runs[min(index, order[n - 1])]
-                trip += [index, t]
-            out.append(trip)
+
+    def trip_at(order, leave):
+        t, trip = leave, []
+        for n, index in enumerate(order):
+            if n:
+                t += runs[min(index, order[n - 1])]
+            trip += [index, t]
+        return trip
+
+    def leaves(first=FIRST_TRAIN, last=LAST_TRAIN):
+        leave, times = first, []
+        while leave <= last:
+            times.append(leave)
             peak = any(a <= leave < b for a, b in PEAKS)
             leave += service["peakHeadwaySec"] if peak else service["offpeakHeadwaySec"]
+        return times
+
+    orders = (list(range(count)), list(range(count - 1, -1, -1)))
+    depot_end = service.get("depotEnd")
+    if depot_end is None:
+        for order in orders:
+            out += [trip_at(order, leave) for leave in leaves()]
+        return out
+    # Decision 897: from the depot's end as any line's; from the far end,
+    # those trains turned round.
+    near, far = orders if stations[0]["name"] == depot_end else orders[::-1]
+    if stations[near[0]]["name"] != depot_end:
+        sys.exit(f"{line['id']}: its depot's end {depot_end} is not an end of the line")
+    lag = sum(runs) + FAR_TURN
+    for leave in leaves(FIRST_TRAIN - lag, LAST_TRAIN - lag):
+        out.append(trip_at(near, leave))
+        out.append(trip_at(far, leave + lag))
     return out
 
 
@@ -453,6 +492,28 @@ def write_manifest(folder):
     })
 
 
+def write_times(out, lines):
+    write(out, "fksubway_times.json", {
+        "system": "FKSUBWAY", "estimated": True,
+        "source_notes": "No published timetable: each day's trips are laid out from headways, first and last trains this "
+                        "project estimated (peak headways from the City of Fukuoka's timetable-change notices) and times "
+                        "between stations worked out from the distance; not the operator's timetable.",
+        "lines": {line["id"]: {"days": ["每日"] * 7, "holiday": "每日", "sets": {"每日": trips(line)}} for line in lines},
+    })
+
+
+def times_again(out):
+    """Decision 897: `fksubway_times.json` again from the pack's own
+    `fksubway.json` (its stations and how far along the line each is), when
+    only the estimated service changed: no N02 or OpenStreetMap file read."""
+    with open(os.path.join(out, "fksubway.json"), encoding="utf-8") as f:
+        lines = json.load(f)["lines"]
+    write_times(out, lines)
+    write_manifest(out)
+    for line in lines:
+        print(f"{line['id']}: {len(trips(line))} trips a day")
+
+
 def main(n02_path, extract, out):
     os.makedirs(out, exist_ok=True)
     n02 = n02_stations(n02_path)
@@ -479,13 +540,7 @@ def main(n02_path, extract, out):
             "dwellSec": [DWELL] * len(line["stations"]),
         } for line in lines],
     })
-    write(out, "fksubway_times.json", {
-        "system": "FKSUBWAY", "estimated": True,
-        "source_notes": "No published timetable: each day's trips are laid out from headways, first and last trains this "
-                        "project estimated (peak headways from the City of Fukuoka's timetable-change notices) and times "
-                        "between stations worked out from the distance; not the operator's timetable.",
-        "lines": {line["id"]: {"days": ["每日"] * 7, "holiday": "每日", "sets": {"每日": trips(line)}} for line in lines},
-    })
+    write_times(out, lines)
     write(out, "track_lines.geojson", {
         "type": "FeatureCollection", "source": note, "osm": osm,
         "features": [{"type": "Feature",
@@ -542,4 +597,7 @@ def main(n02_path, extract, out):
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    if sys.argv[1:2] == ["times"]:
+        times_again(*sys.argv[2:])
+    else:
+        main(*sys.argv[1:])

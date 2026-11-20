@@ -306,12 +306,34 @@ struct RealLineDepotSite: Sendable {
         sidings: 12, beyond: nil, compact: true
     )
 
+    /// Decision 897: the Hashimoto depot (橋本車両基地, way 965734835) of
+    /// Fukuoka's Nanakuma Line, laid past Hashimoto, the line's end, on
+    /// from its track there. The real yard lies some 400 m south of the
+    /// station, its leads (ways 826154325, 707246450 and 826154326, in
+    /// tunnel) leaving the line some 90 m east of the platforms, within
+    /// the end station's own turnouts, where the game's wye and its
+    /// crossovers (400 m of line) do not fit; a wye east of the station,
+    /// where they do, is across the Muromi River from the yard, and its
+    /// lead would climb to the yard through the river's bed
+    /// (`tools/rail-depots/fukuoka_depot_site.py`, osmtoday's whole
+    /// extract of Kyushu, 2026-11-20). So ``junction`` and ``yard`` are
+    /// the game's own, straight on north-west of the station. The Fukuoka
+    /// City Subway publishes no stabling plan; its sidings hold the
+    /// trains Hashimoto's own tracks have no room for overnight, one
+    /// each.
+    static let hashimoto = RealLineDepotSite(
+        line: "fksubway:N", english: "Hashimoto Depot", chinese: "橋本車輛基地",
+        junction: (33.556400, 130.318700),
+        yard: ((33.556720, 130.318180), (33.557800, 130.316400)),
+        sidings: 19, beyond: "橋本", compact: true
+    )
+
     /// The real depots line `line` is bought with (decision 535: the
     /// Wenhu Line has one past each end; its continuation, the Ankeng LRT
     /// one past Shuangcheng; decision 556, the Taoyuan Airport MRT two
     /// beside the line).
     static func sites(of line: String) -> [RealLineDepotSite] {
-        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan].filter { $0.line == line }
+        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan, hashimoto].filter { $0.line == line }
     }
 
     /// Decision 556: whether its sidings fan out away from the line, not

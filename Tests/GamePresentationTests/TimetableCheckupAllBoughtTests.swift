@@ -78,9 +78,14 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// the Kuko Line's longest peak gap is 7.4 minutes, 24 s more (+5
     /// for +4), its worst run 2.0 minutes late for 3.7, the runs late as
     /// they were: fewer of the day's moves into the other berth of an end.
+    /// Decision 897 (FUKUOKA-NANAKUMA-FLEET): the Nanakuma Line bought
+    /// with its depot past Hashimoto and 23 trains, its day laid out from
+    /// that end: no run late under either rules (were 127 and 126), its
+    /// worst 3.5 minutes, its longest peak gap 6.5 minutes against 3.2;
+    /// the Kuko Line's 7.0 against 3.3 (+3.7) and 6.0 (+2.7).
     static let budgets: [String: TimetableCheckup.Budget] = [
-        "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 127, lateOutOfDepot: 0, peakGapMinutes: 5),
-        "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 126, lateOutOfDepot: 0, peakGapMinutes: 4),
+        "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 4),
+        "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 4),
         "taiwan ntdlrt:V+ntdlrt:VB simple": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 7),
         "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
         "taiwan tra:NEIWAN+tra:LIUJIA realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),

@@ -5,7 +5,7 @@ import XCTest
 
 /// Decision 535 (PR W): how the lines with runs and depots fare, run only
 /// when asked (`DEPOT_RETURN_REPORT=1`, some minutes in a release build;
-/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, tymc, tymc-old, tymc-rebuilt, danhai, ankeng, ankeng-added, sanying,
+/// `DEPOT_RETURN_ONLY=<name>` for one (wenhu, tymc, tymc-old, tymc-rebuilt, danhai, ankeng, ankeng-added, sanying, fukuoka,
 /// tra, hsr), `DEPOT_RETURN_SIMPLE=1` with traffic control off,
 /// and `DEPOT_RETURN_CONTROLLED=1` as well to keep it on). Each is played from where it opens or is bought
 /// for 51 hours, minute by minute (HEALTH-110: `DEPOT_RETURN_FAST=1` at the
@@ -174,6 +174,20 @@ final class DepotReturnReportTests: XCTestCase {
         let name = environment["DEPOT_RETURN_ONLY"] ?? "hk-sil-tcl"
         guard let lines = worlds[name] else { throw XCTSkip("Only \(name).") }
         try report(name, Self.resumed() ?? Self.hongKongBought(lines))
+    }
+
+    /// Decision 897: Fukuoka's three lines, sold together, the Nanakuma
+    /// Line with its depot at Hashimoto (`fukuoka`; only when named).
+    func testFukuoka() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["DEPOT_RETURN_REPORT"] != nil, environment["DEPOT_RETURN_ONLY"] == "fukuoka" else {
+            throw XCTSkip("Set DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=fukuoka to measure Fukuoka's depot (decision 897).")
+        }
+        try report("fukuoka", Self.resumed() ?? {
+            let session = try TimetableCheckupAllBoughtTests.fukuoka(rules: environment["DEPOT_RETURN_SIMPLE"] != nil ? .simple : .realistic)
+            try TimetableCheckupAllBoughtTests.buyTogether(["fksubway:K", "fksubway:H", "fksubway:N"], in: session)
+            return session.world
+        }())
     }
 
     static func hongKongBought(_ ids: [String], rules: NewGameRules? = nil) throws -> GameWorld {

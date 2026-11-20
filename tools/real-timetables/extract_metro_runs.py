@@ -118,6 +118,21 @@ DEPOT_ENDS = {"ntdlrt:V": ("崁頂",), "trtc:BR": ("動物園", "南港展覽館
 # between): what the timetable would stand there beyond that waits or
 # is not run in the game (the decision measures how many).
 MID_DEPOTS = {"tymc:A"}
+# Decision 897: the game's least dwell at a station (`ServiceDwell.minimum`),
+# in seconds, and whether a line bought with a depot counts its trains by
+# it. A timetable's call is `DWELL` long, so the game's train comes in
+# `GAME_DWELL - DWELL` later at each station between a run's ends, and is
+# ready for its next run that much later (`extract_branch_runs.LATE_PER_CALL`):
+# Fukuoka's Nanakuma Line, a train every 3 min 15 s over 16 stations
+# between, then needs 22 trains, not 20, and with 20 some 127 of its runs
+# a day ran late. Only a line with a depot: the trains it adds stand there,
+# where an end has no track for them. Set by
+# `tools/fukuoka-map/extract_fukuoka_runs.py`; off for Taiwan's and Hong
+# Kong's lines, whose files stay as they are.
+GAME_DWELL = 36
+COUNT_GAME_DWELL = False
+# Decision 897: `extract_branch_runs.RECOVERY`, for those lines too.
+RECOVERY = {}
 # Decision 605: the lines whose trips pass the stations they skip, as the
 # Taoyuan Airport MRT's express trains pass every station but Taipei Main,
 # New Taipei Industrial Park, Chang Gung Memorial Hospital and the two
@@ -389,20 +404,24 @@ def depot_tracks(tool, found, start, stops, depots):
         idle = collections.defaultdict(list)
         for station, count in start.items():
             if station not in depots:
-                idle[station] += [0] * count
+                idle[station] += [(0, 0)] * count
         spans = collections.defaultdict(list)
         for run in tool.day_of(found, day):
             origin, leaves = run["calls"][0][0], run["calls"][0][2]
-            ready = [t for t in idle[origin] if t + tool.TURNAROUND <= leaves or t == 0]
+            # Each as (when it can turn round from, when it came in): with
+            # decision 897's later arrivals a train is ready later than it
+            # came in, and stands on its track from when it came.
+            ready = [t for t in idle[origin] if t[0] + tool.TURNAROUND <= leaves or t[0] == 0]
             if ready:
-                came = min(ready)
-                idle[origin].remove(came)
+                taken = min(ready)
+                idle[origin].remove(taken)
+                came = taken[1]
             else:
                 came = leaves  # out of the depot, as it leaves
             spans[origin].append((max(came, leaves - LOOKAHEAD), leaves))
             for name, arrival, departure in run["calls"][1:-1]:
                 spans[name].append((arrival, departure))
-            idle[run["calls"][-1][0]].append(run["calls"][-1][1])
+            idle[run["calls"][-1][0]].append((tool.ready_after(run) - tool.TURNAROUND, run["calls"][-1][1]))
         for station, times in spans.items():
             standing = peak = 0
             for _, leaving in sorted([(a, 0) for a, _ in times] + [(b, 1) for _, b in times]):
@@ -450,9 +469,14 @@ def main(folder, out):
         turnaround = tool.TURNAROUND
         if single:
             tool.TURNAROUND = SINGLE_TURNAROUND
+        depots = DEPOT_ENDS.get(game_id)
+        # Decision 897: a line with a depot counts its trains by the game's
+        # dwell, and with time to make a delay good.
+        if COUNT_GAME_DWELL and (depots or game_id in MID_DEPOTS):
+            tool.LATE_PER_CALL = max(0, GAME_DWELL - DWELL)
+            tool.RECOVERY = RECOVERY
         line, problem = tool.line_runs({"trains": found}, days, stops)
         tool.TURNAROUND = turnaround
-        depots = DEPOT_ENDS.get(game_id)
         if single and not problem:
             if sum(line["overnight"].values()) != 1 or any(n != 1 for n in line["tracks"].values()):
                 problem = f"a single track needs one train and one track a station: {line['overnight']}, {line['tracks']}"
@@ -488,6 +512,7 @@ def main(folder, out):
                 print(f"{label}: laid with fewer tracks than the timetable would stand at once: {capped}")
         elif not problem:
             line, problem = parked(tool, found, days, stops, line, "spare" if metro else True)
+        tool.LATE_PER_CALL, tool.RECOVERY = 0, {}
         if problem:
             print(f"{label}: left out: {problem}")
             continue
