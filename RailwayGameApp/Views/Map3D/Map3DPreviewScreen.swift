@@ -1659,6 +1659,11 @@ final class Map3DTrainFeed {
         }
         // Decision 840: and the Santa Claus village's reindeer, all year.
         if let models { scene.reindeerHerd.add(to: &frame, pack: models, eye: eye, reach: reach.farModel) }
+        // Decision 889: and now and then by day the station master's yellow
+        // tit, landing on the platform the camera looks at.
+        if let models, let tit = yellowTit(in: scene, eye: eye, target: target ?? eye, daytime: !lit, at: now) {
+            Map3DYellowTit.add(tit, to: &frame, pack: models)
+        }
         return frame
     }
 
@@ -1713,6 +1718,19 @@ final class Map3DTrainFeed {
     /// on in the settings (Santa flies only with them).
     private static var festive: Bool {
         UserDefaults.standard.object(forKey: WinterEvent.decorationsKey) as? Bool ?? true
+    }
+
+    /// Decision 889: the yellow tit now, on the platform nearest `target`;
+    /// none at night, underground or with Reduce Motion on.
+    private func yellowTit(in scene: Map3DScene, eye: Map3DPoint, target: Map3DPoint, daytime: Bool, at now: TimeInterval) -> Map3DYellowTit.Drawn? {
+        guard daytime, Map3DYellowTit.isVisiting(at: now) else { return nil }
+        let platforms = scene.streetLife.spots.compactMap { $0.kind == .platform ? $0.path : nil }
+        let world = busWorld
+        return Map3DYellowTit.drawn(at: now, platforms: platforms, target: target, eye: eye, daytime: daytime,
+                                    still: UIAccessibility.isReduceMotionEnabled) { point in
+            guard let world else { return false }
+            return point.y < scene.drawnGround.height(x: point.x, z: point.z, world: world) - 2
+        }
     }
 
     /// Decision 831: Santa's sleigh now, on a real-world map on Christmas
