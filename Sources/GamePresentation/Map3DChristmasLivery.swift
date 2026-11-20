@@ -549,4 +549,23 @@ extension GameSession {
         christmasLiveryChosen = chosen
         christmasLiveryChanged?(chosen)
     }
+
+    /// Decision 795 (later): whether every passenger line wears the
+    /// Christmas livery; false with none to wear it.
+    public var allPassengerLinesWearChristmasLivery: Bool {
+        let passenger = world.lines.filter { !$0.isFreight }
+        return !passenger.isEmpty && christmasLiveryLines.count == passenger.count
+    }
+
+    /// Decision 795 (later): puts the Christmas livery on every passenger
+    /// line the company has now, or takes it off them all, in one change;
+    /// nothing while it cannot be chosen. A line opened afterwards is
+    /// chosen on its own.
+    public func setChristmasLiveryOnAllPassengerLines(_ on: Bool) {
+        guard christmasLiveryAvailable else { return }
+        let chosen = on ? Set(world.lines.filter { !$0.isFreight }.map(\.id)) : []
+        guard chosen != christmasLiveryChosen else { return }
+        christmasLiveryChosen = chosen
+        christmasLiveryChanged?(chosen)
+    }
 }
