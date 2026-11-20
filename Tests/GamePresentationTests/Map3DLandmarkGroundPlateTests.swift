@@ -5,7 +5,7 @@ import XCTest
 /// The earlier version's buildings often bring their own lot (Fukuoka
 /// Tower's file begins with a 40 m square of plaza); the map draws its
 /// own ground, so a model leaves it out. The same rule as
-/// `tools/hk-landmarks/ground_plate.py`, which stops a conversion.
+/// `tools/landmarks/ground_plate.py`, which stops a conversion.
 final class Map3DLandmarkGroundPlateTests: XCTestCase {
     /// Square metres of level faces looking up on the model's lowest
     /// level that reach beyond its body (the box round everything more
@@ -43,6 +43,12 @@ final class Map3DLandmarkGroundPlateTests: XCTestCase {
         for landmark in Map3DHongKongLandmark.allCases {
             for full in [true, false] {
                 XCTAssertLessThanOrEqual(Self.plateArea(landmark.model(full: full)), Self.limit, "\(landmark) full \(full)")
+            }
+        }
+        // Decision 895: the registered ones too.
+        for landmark in Map3DLandmarkRegistry.landmarks {
+            for full in [true, false] {
+                XCTAssertLessThanOrEqual(Self.plateArea(landmark.model(full: full)), Self.limit, "\(landmark.id) full \(full)")
             }
         }
         // The pier's deck is the model itself, and stands on the water.

@@ -102,8 +102,9 @@ final class Map3DPaletteGuardTests: XCTestCase {
         check(Map3DSunMoonLandmark.materialColours, "Sun Moon Lake landmarks")
         check(Map3DOldIslandModule.parts.map(\.colour), "old island module and platform furniture")
         check([Map3DPlatformProps.nameBoardGreen], "platform name board")
-        // Fukuoka Tower is drawn in the landmarks' materials.
-        check(Map3DHongKongLandmark.materialColours, "landmark materials (Fukuoka Tower)")
+        check(Map3DHongKongLandmark.materialColours, "Hong Kong landmark materials")
+        // Decision 895: Fukuoka Tower, and every registered landmark.
+        check(Map3DLandmarkRegistry.landmarks.flatMap(\.palette), "registered landmarks")
         typealias Prop = Map3DSceneryProp
         check([Prop.bunkerBrick, Prop.bunkerStone, Prop.bunkerSteel, Prop.bunkerCoal, Prop.bunkerWood], "coal bunker")
     }
