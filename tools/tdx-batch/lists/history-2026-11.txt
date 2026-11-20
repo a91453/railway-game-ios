@@ -1,0 +1,16 @@
+# 2026-11-20 精選歷史紀錄（作者選約 20 點）：北高公車到離站（A2）平日與假日各一天，捷運看板。$top 封頂控量。
+Bus_Taipei_A2_2026-11-18	/api/historical/v2/Historical/Bus/RealTimeNearStop/City/Taipei?Dates=2026-11-18&$format=JSONL&$top=1200000
+Bus_Taipei_A2_2026-11-14	/api/historical/v2/Historical/Bus/RealTimeNearStop/City/Taipei?Dates=2026-11-14&$format=JSONL&$top=1200000
+Bus_Kaohsiung_A2_2026-11-11	/api/historical/v2/Historical/Bus/RealTimeNearStop/City/Kaohsiung?Dates=2026-11-11&$format=JSONL&$top=1200000
+Bus_Kaohsiung_A2_2026-11-15	/api/historical/v2/Historical/Bus/RealTimeNearStop/City/Kaohsiung?Dates=2026-11-15&$format=JSONL&$top=1200000
+Metro_KRTC_LiveBoard_2026-11-11	/api/historical/v2/Historical/Rail/Metro/LiveBoard/KRTC?Dates=2026-11-11&$format=JSONL&$top=1000000
+Metro_KRTC_LiveBoard_2026-11-12	/api/historical/v2/Historical/Rail/Metro/LiveBoard/KRTC?Dates=2026-11-12&$format=JSONL&$top=1000000
+Metro_KRTC_LiveBoard_2026-11-13	/api/historical/v2/Historical/Rail/Metro/LiveBoard/KRTC?Dates=2026-11-13&$format=JSONL&$top=1000000
+Metro_KRTC_LiveBoard_2026-11-14	/api/historical/v2/Historical/Rail/Metro/LiveBoard/KRTC?Dates=2026-11-14&$format=JSONL&$top=1000000
+Metro_KRTC_LiveBoard_2026-11-15	/api/historical/v2/Historical/Rail/Metro/LiveBoard/KRTC?Dates=2026-11-15&$format=JSONL&$top=1000000
+Metro_KRTC_LiveBoard_2026-11-16	/api/historical/v2/Historical/Rail/Metro/LiveBoard/KRTC?Dates=2026-11-16&$format=JSONL&$top=1000000
+Metro_KRTC_LiveBoard_2026-11-17	/api/historical/v2/Historical/Rail/Metro/LiveBoard/KRTC?Dates=2026-11-17&$format=JSONL&$top=1000000
+Metro_KLRT_LiveBoard_2026-11-11	/api/historical/v2/Historical/Rail/Metro/LiveBoard/KLRT?Dates=2026-11-11&$format=JSONL&$top=1000000
+Metro_KLRT_LiveBoard_2026-11-15	/api/historical/v2/Historical/Rail/Metro/LiveBoard/KLRT?Dates=2026-11-15&$format=JSONL&$top=1000000
+Metro_TYMC_LiveBoard_2026-11-11	/api/historical/v2/Historical/Rail/Metro/LiveBoard/TYMC?Dates=2026-11-11&$format=JSONL&$top=1000000
+Metro_TYMC_LiveBoard_2026-11-15	/api/historical/v2/Historical/Rail/Metro/LiveBoard/TYMC?Dates=2026-11-15&$format=JSONL&$top=1000000

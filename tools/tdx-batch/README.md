@@ -22,3 +22,10 @@ big it is before it is run.
 - `lists/tra-delay-2026-11.txt`: Taiwan Railway delay reports of 2026-10-27 to
   11-19, one day a path (JSON Lines, about 14 MB a day, so about 2 points), after
   the 341 days already in the reference repository's `tdx-snapshot-2026-10/`.
+- `lists/history-2026-11.txt`: the owner chose about 20 points of history
+  (2026-11-20): Taipei and Kaohsiung city bus stop events (A2) of one weekday
+  and one rest day each, capped at 1,200,000 lines (about 0.75 GB a day at
+  most), and the metro station boards the platform keeps (KRTC a week, KLRT and
+  TYMC two days). The Taipei metro board is not kept by the platform (400).
+- `lists/metro-basic.txt`: the basic datasets of the seven other metro and
+  light-rail operators, TRA train types and lines, THSR stations: small.
