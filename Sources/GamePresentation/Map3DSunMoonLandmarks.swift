@@ -109,7 +109,7 @@ struct Map3DSunMoonLandmark: Sendable, Equatable {
         Map3DPalette.timber, // wood: the pier's deck and posts, beams
         Map3DPalette.templeRoof, // tile: the temple's and pavilion's roofs
         Map3DPalette.templeWall, // red: the temple's columns
-        Map3DHongKongLandmark.materialColours[5], // gold: the temple's ridge ornaments
+        Map3DPalette.gold, // gold: the temple's ridge ornaments
         Map3DPalette.terrazzo, // plaster: the temple's walls
         Map3DPalette.steel, // metal: bollards and rails
         Map3DPalette.dark, // rubber: fenders

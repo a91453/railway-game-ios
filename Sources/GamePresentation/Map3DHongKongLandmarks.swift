@@ -110,7 +110,7 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
         0x2B2F36, // glassDark: Map3DPalette.dark
         0xDAE2E6, // mullionWhite: cityOfficeWalls[4]
         0x8A9099, // steelGrey: Map3DPalette.steel
-        0xC8A24E, // goldBand: Central Plaza's gold
+        0xC8A24E, // goldBand: Map3DPalette.gold (Central Plaza's gold)
         0xD9D4C8, // podiumStone: cityOfficeWalls[3]
         0x6C7279, // roofGrey: cityRoofs[1]
         0xB0624A, // brickRed: hallWalls[3]
