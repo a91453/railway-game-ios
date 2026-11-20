@@ -62,3 +62,16 @@ python3 -I tools/rail-depots/tymc_yard_tracks.py taiwan.pbf
 ```
 
 2026-11-17 的整包檔（sha256 `2eca488d858f7c5270ec7384cc4d728a6a72bf3a84b73340f98ffee31f275384`）：蘆竹 23 股（17 股約 119 m、6 股約 152 m，way 1576463688 到 1576463746 之間），青埔 15 股（228 m 以上，way 499824857 到 499824866 與 499831993 到 499832001）。桃園捷運公司沒有公開兩座機廠可停幾列。遊戲鋪幾股、為什麼不是照這兩個數，見決策 829。
+
+福岡七隈線的橋本車輛基地（`RealLineDepotSite.hashimoto`，決策 898）：`fukuoka_depot_site.py` 讀 osmtoday.com 的九州整包檔（`asia/japan/kyushu.pbf`；2026-11-20 下載的那一份 sha256 `dbc73f8170eae8bdf8dafd1db57991927c8fd660d0aeb2c95062fbfc543bf5e1`）：
+
+```sh
+curl -LO https://osmtoday.com/asia/japan/kyushu.pbf
+python3 -I tools/rail-depots/fukuoka_depot_site.py kyushu.pbf
+```
+
+- 車輛基地（way 965734835，橋本車両基地）在橋本站南邊。OSM 畫了 39 條停車股道，其中 21 條 132 m 以上（七隈線一列四節約 66 m）；最長的兩條是 way 168923179（713 m）與 168923190（654 m），南端在 (33.54695, 130.3222)。
+- 真實的入出庫線（way 826154325、707246450、826154326，在隧道裡）在橋本站月台東邊約 90 m 離開正線、往南彎進基地。那裡在終點站自己的道岔範圍內，遊戲線中間機廠的三角線與前後兩組渡線（正線上 400 m）放不下；放得下的地方在站東邊約 515 m，已經過了室見川，走行線要從隧道爬回河西的地面基地，會從河床穿過去（試過：第一次買看不出來，賣掉再買回時 GameCore 以「軌道過水」拒絕，機廠就沒鋪回去）。所以遊戲的機廠接在**橋本站的線尾**（`beyond: "橋本"`，和淡海的崁頂、文湖的動物園同一種），往西北直直延伸，離真實的基地約 700 m；`junction` 與 `yard` 是遊戲自己的點，不是 OSM 的。
+- 福岡市交通局沒有公開基地可停幾列。遊戲的股數是橋本站內放不下的列車數（23 組扣掉站內 4 組，19 股），一股停一列，和其他機廠的算法一樣。
+
+俯視圖：`HASHIMOTO_DEPOT_DUMP=$PWD/hashimoto.json swift test --skip-build --filter HashimotoDepotDumpTests`，再 `PLOT_SITES=hashimoto python3 -I tools/rail-depots/plot_depots.py kyushu.pbf out.png hashimoto.json`。
