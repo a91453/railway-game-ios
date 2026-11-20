@@ -1,7 +1,7 @@
 # FUKUOKA-NANAKUMA-FLEET：七隈線車隊與橋本機廠
 
 - 派工：協調者（工作串「補足七隈線車隊並用橋本機廠」），2026-11-20，雲端 thread session，分支 `claude/project-thread-no5552`。
-- 決策 897（`docs/decisions/897.md`）。存檔版本、golden schema 不動；GameCore 沒有改。
+- 決策 898（`docs/decisions/897.md`）。存檔版本、golden schema 不動；GameCore 沒有改。
 
 ## 做了
 
@@ -11,6 +11,6 @@
 
 ## 還留下的
 
-1. **DEPOT-PULLOUT-HOME**（私有庫 `docs/priorities/DEPOT-PULLOUT-HOME.md`）：線中間、離終點不到 1 km 的機廠，出庫空車訂住站前咽喉約 3 分鐘（決策 897 §5）。第一個指令：`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=fukuoka DEPOT_RETURN_WATCH=111600-113700 DEPOT_RETURN_WATCH_AT=橋本 swift test --skip-build --filter DepotReturnReportTests/testFukuoka`（要先把 `hashimoto` 換回線中間的那一版才看得到；座標在決策 897 §5 與這張 PR 的歷史）。
-2. 機廠不在真實位置（差約 700 m）、22 組沒量、收購價前後沒量、已買的存檔不補：決策 897 §4。
+1. **DEPOT-PULLOUT-HOME**（私有庫 `docs/priorities/DEPOT-PULLOUT-HOME.md`）：線中間、離終點不到 1 km 的機廠，出庫空車訂住站前咽喉約 3 分鐘（決策 898 §5）。第一個指令：`DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=fukuoka DEPOT_RETURN_WATCH=111600-113700 DEPOT_RETURN_WATCH_AT=橋本 swift test --skip-build --filter DepotReturnReportTests/testFukuoka`（要先把 `hashimoto` 換回線中間的那一版才看得到；座標在決策 898 §5 與這張 PR 的歷史）。
+2. 機廠不在真實位置（差約 700 m）、22 組沒量、收購價前後沒量、已買的存檔不補：決策 898 §4。
 3. UNVERIFIED：沒在手機上看過（七隈線尖峰、橋本機廠在 3D 地圖的樣子）。

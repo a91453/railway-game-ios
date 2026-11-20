@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Decision 897: where the Fukuoka City Subway's Hashimoto depot (橋本車両基地)
+"""Decision 898: where the Fukuoka City Subway's Hashimoto depot (橋本車両基地)
 is, from OpenStreetMap, for `RealLineDepotSite.hashimoto`
 (Sources/GamePresentation/RealLineDepot.swift).
 

@@ -34,7 +34,7 @@ SITES = [
 # middle of its real yard; dashed: the workshop (way 445644637).
 if os.environ.get("PLOT_SITES") == "klrt":
     SITES = [("輕軌機廠", (22.6090, 120.3255), 450, 445644637)]
-# Decision 897: PLOT_SITES=hashimoto draws the Nanakuma Line's Hashimoto
+# Decision 898: PLOT_SITES=hashimoto draws the Nanakuma Line's Hashimoto
 # depot (HashimotoDepotDumpTests, HASHIMOTO_DEPOT_DUMP; the Kyushu extract),
 # dashed: its land (way 965734835).
 if os.environ.get("PLOT_SITES") == "hashimoto":

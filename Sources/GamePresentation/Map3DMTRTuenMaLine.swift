@@ -61,7 +61,7 @@ extension Map3DMTRTuenMaLine {
         id: "mtrTuenMaLine",
         sets: [Map3DTrainSet.mtrTuenMaLine(), .mtrTuenMaLine(far: true)],
         showcase: [
-            Map3DShowcase.Entry(key, "Hong Kong Tuen Ma line train", "香港屯馬綫列車", .metro, cars: 8, fixed: true),
+            Map3DShowcase.Entry(key, "Hong Kong Tuen Ma line train", "香港屯馬綫列車", .hongKong, cars: 8, fixed: true),
         ],
         triangles: 1_500...6_300, length: 24.1...25.3)
 }

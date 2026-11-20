@@ -116,7 +116,7 @@ SERVICE = {
     "H": {"peakHeadwaySec": 300, "offpeakHeadwaySec": 480},
     "N": {"peakHeadwaySec": 195, "offpeakHeadwaySec": 300, "depotEnd": "橋本"},
 }
-# Decision 897: a line whose depot is at one end (`depotEnd`, the Nanakuma
+# Decision 898: a line whose depot is at one end (`depotEnd`, the Nanakuma
 # Line's at Hashimoto) has all its trains there overnight, so its day is
 # laid out from that end: every trip from the far end is a train from the
 # depot's end come in and turned round, leaving `FAR_TURN` after it
@@ -418,7 +418,7 @@ def trips(line):
         for order in orders:
             out += [trip_at(order, leave) for leave in leaves()]
         return out
-    # Decision 897: from the depot's end as any line's; from the far end,
+    # Decision 898: from the depot's end as any line's; from the far end,
     # those trains turned round.
     near, far = orders if stations[0]["name"] == depot_end else orders[::-1]
     if stations[near[0]]["name"] != depot_end:
@@ -503,7 +503,7 @@ def write_times(out, lines):
 
 
 def times_again(out):
-    """Decision 897: `fksubway_times.json` again from the pack's own
+    """Decision 898: `fksubway_times.json` again from the pack's own
     `fksubway.json` (its stations and how far along the line each is), when
     only the estimated service changed: no N02 or OpenStreetMap file read."""
     with open(os.path.join(out, "fksubway.json"), encoding="utf-8") as f:

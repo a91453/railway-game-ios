@@ -306,7 +306,7 @@ struct RealLineDepotSite: Sendable {
         sidings: 12, beyond: nil, compact: true
     )
 
-    /// Decision 897: the Hashimoto depot (橋本車両基地, way 965734835) of
+    /// Decision 898: the Hashimoto depot (橋本車両基地, way 965734835) of
     /// Fukuoka's Nanakuma Line, laid past Hashimoto, the line's end, on
     /// from its track there. The real yard lies some 400 m south of the
     /// station, its leads (ways 826154325, 707246450 and 826154326, in

@@ -31,7 +31,7 @@ def main(folder):
     # Decision 712 (Hong Kong's, kept): a train standing overnight at a station between the
     # ends leaves before the morning's first train the same way reaches it.
     tool.OUT_BEFORE_FIRST = True
-    # Decision 897: the Nanakuma Line is bought with a depot past
+    # Decision 898: the Nanakuma Line is bought with a depot past
     # Hashimoto, its end (`RealLineDepotSite.hashimoto`), counts its trains
     # by the game's dwell, and has three minutes at Hashimoto to make a
     # delay good (`extract_branch_runs.RECOVERY`): 23 trains, not 20.

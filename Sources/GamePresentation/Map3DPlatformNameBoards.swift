@@ -69,6 +69,243 @@ public enum Map3DBoardGlyphs {
     }
 }
 
+/// FUKUOKA-NAME-BOARDS (decision 882's later note): the boards of a
+/// railway in Japan, as its own: the station's Japanese name large, its
+/// reading in kana over it and its English name under it, its station
+/// number in the line's colour at the left, the line's colour along the
+/// bottom. A system listed in ``systems`` has these boards on every map
+/// it is on; a new map in Japan lists its stations here.
+public enum Map3DJapaneseNameBoards {
+    /// A station's board: its Japanese name, its reading and its numbers
+    /// (one for each line calling, `K11`), keyed by the station's name in
+    /// the game's data.
+    public struct Station: Equatable, Sendable {
+        public let japanese: String
+        public let kana: String
+        public let numbers: [String]
+    }
+
+    /// The Fukuoka City Subway's 36 stations: the Japanese names of its
+    /// map pack's `station_names.json` (MLIT's railway data, CC BY 4.0),
+    /// the numbers of its `track_stations.geojson` (OpenStreetMap's, the
+    /// operator's own numbering), and their readings, from the operator's
+    /// station list.
+    public static let systems: [String: [String: Station]] = [
+        "fksubway": [
+            "姪濱": Station(japanese: "姪浜", kana: "めいのはま", numbers: ["K01"]),
+            "室見": Station(japanese: "室見", kana: "むろみ", numbers: ["K02"]),
+            "藤崎": Station(japanese: "藤崎", kana: "ふじさき", numbers: ["K03"]),
+            "西新": Station(japanese: "西新", kana: "にしじん", numbers: ["K04"]),
+            "唐人町": Station(japanese: "唐人町", kana: "とうじんまち", numbers: ["K05"]),
+            "大濠公園": Station(japanese: "大濠公園", kana: "おおほりこうえん", numbers: ["K06"]),
+            "赤坂": Station(japanese: "赤坂", kana: "あかさか", numbers: ["K07"]),
+            "天神": Station(japanese: "天神", kana: "てんじん", numbers: ["K08"]),
+            "中洲川端": Station(japanese: "中洲川端", kana: "なかすかわばた", numbers: ["K09", "H01"]),
+            "祇園": Station(japanese: "祇園", kana: "ぎおん", numbers: ["K10"]),
+            "博多": Station(japanese: "博多", kana: "はかた", numbers: ["K11", "N18"]),
+            "東比惠": Station(japanese: "東比恵", kana: "ひがしひえ", numbers: ["K12"]),
+            "福岡機場": Station(japanese: "福岡空港", kana: "ふくおかくうこう", numbers: ["K13"]),
+            "吳服町": Station(japanese: "呉服町", kana: "ごふくまち", numbers: ["H02"]),
+            "千代縣廳口": Station(japanese: "千代県庁口", kana: "ちよけんちょうぐち", numbers: ["H03"]),
+            "馬出九大病院前": Station(japanese: "馬出九大病院前", kana: "まいだしきゅうだいびょういんまえ", numbers: ["H04"]),
+            "箱崎宮前": Station(japanese: "箱崎宮前", kana: "はこざきみやまえ", numbers: ["H05"]),
+            "箱崎九大前": Station(japanese: "箱崎九大前", kana: "はこざききゅうだいまえ", numbers: ["H06"]),
+            "貝塚": Station(japanese: "貝塚", kana: "かいづか", numbers: ["H07"]),
+            "橋本": Station(japanese: "橋本", kana: "はしもと", numbers: ["N01"]),
+            "次郎丸": Station(japanese: "次郎丸", kana: "じろうまる", numbers: ["N02"]),
+            "賀茂": Station(japanese: "賀茂", kana: "かも", numbers: ["N03"]),
+            "野芥": Station(japanese: "野芥", kana: "のけ", numbers: ["N04"]),
+            "梅林": Station(japanese: "梅林", kana: "うめばやし", numbers: ["N05"]),
+            "福大前": Station(japanese: "福大前", kana: "ふくだいまえ", numbers: ["N06"]),
+            "七隈": Station(japanese: "七隈", kana: "ななくま", numbers: ["N07"]),
+            "金山": Station(japanese: "金山", kana: "かなやま", numbers: ["N08"]),
+            "茶山": Station(japanese: "茶山", kana: "ちゃやま", numbers: ["N09"]),
+            "別府": Station(japanese: "別府", kana: "べふ", numbers: ["N10"]),
+            "六本松": Station(japanese: "六本松", kana: "ろっぽんまつ", numbers: ["N11"]),
+            "櫻坂": Station(japanese: "桜坂", kana: "さくらざか", numbers: ["N12"]),
+            "藥院大通": Station(japanese: "薬院大通", kana: "やくいんおおどおり", numbers: ["N13"]),
+            "藥院": Station(japanese: "薬院", kana: "やくいん", numbers: ["N14"]),
+            "渡邊通": Station(japanese: "渡辺通", kana: "わたなべどおり", numbers: ["N15"]),
+            "天神南": Station(japanese: "天神南", kana: "てんじんみなみ", numbers: ["N16"]),
+            "櫛田神社前": Station(japanese: "櫛田神社前", kana: "くしだじんじゃまえ", numbers: ["N17"]),
+        ],
+    ]
+
+    /// The line a number is on: its letters (`K` of `K11`).
+    static func line(ofNumber number: String) -> String { String(number.prefix { $0.isLetter }) }
+
+    /// The line of a real line's key (`fksubway|K`, `fksubway:K`): what
+    /// follows its system.
+    static func line(ofRealLine key: String) -> String {
+        String(key.split(whereSeparator: { $0 == "|" || $0 == ":" }).last ?? Substring(key))
+    }
+}
+
+extension Map3DJapaneseNameBoards {
+    /// Whether station number `number` (`K11`, `BL12`, `R10`) is on the
+    /// line a real line's key names (`K`, `BL`, `R_XBT`, Kaohsiung's
+    /// `KR`, Taichung's `TG`): its letters are the line's, a branch's
+    /// suffix (`_XBT`) aside, or the line's but its first letter.
+    static func number(_ number: String, isOn line: String, exactly: Bool = false) -> Bool {
+        let letters = Self.line(ofNumber: number)
+        let base = String(line.split(separator: "_").first ?? Substring(line))
+        return letters == base || (!exactly && base.count > 1 && letters == String(base.dropFirst()))
+    }
+
+    /// The first of `candidates` that `number` is on (``number(_:isOn:exactly:)``):
+    /// one whose letters are exactly its line's before one by the looser rule
+    /// (Da'an's R05 is on the Red Line `R`, not the Brown Line `BR`).
+    static func first<Value>(_ candidates: [Value], on number: String, line: (Value) -> String) -> Value? {
+        candidates.first { Self.number(number, isOn: line($0), exactly: true) } ?? candidates.first { Self.number(number, isOn: line($0)) }
+    }
+}
+
+extension Map3DPlatformProps {
+    /// NAME-BOARD-STYLES (decision 882's later note): the boards of a
+    /// system that are not decision 882's (Taiwan Railway's, which the
+    /// railway, the High Speed Rail and the Alishan line keep).
+    public enum BoardStyle: Equatable, Sendable {
+        /// A metro's: white, the line's colour along its bottom, the
+        /// station's number (where it has one) in the line's colour at
+        /// its left, the name large with its other name under it (a
+        /// Japanese station's reading over it).
+        case metro
+        /// Finland's: white letters on blue, the name in Finnish alone.
+        case finnish
+    }
+
+    /// Each system's boards, by its id; one not here has decision 882's.
+    public static let boardStyles: [String: BoardStyle] = [
+        "mrt": .metro, "tymc": .metro, "ntdlrt": .metro, "ntalrt": .metro, "sanying": .metro, "krtc": .metro, "tmrt": .metro,
+        "hkmtr": .metro, "fksubway": .metro, "vr": .finnish,
+    ]
+
+    /// The systems of `station_transfers.json` (TDX's station IDs, the
+    /// operators' station numbers) whose numbers a system's stations carry.
+    static let boardNumberSystems: [String: [String]] = [
+        "mrt": ["TRTC", "NTMC"], "tymc": ["TYMC"], "ntdlrt": ["NTDLRT"], "ntalrt": ["NTALRT"], "sanying": ["SANYING"],
+        "krtc": ["KRTC", "KLRT"], "tmrt": ["TMRT"],
+    ]
+
+    /// A board in a system's style: its reading (a Japanese name's kana),
+    /// its station number and its line's colour.
+    struct StyledBoard: Equatable {
+        let style: BoardStyle
+        let reading: String?
+        let number: String?
+        let colour: UInt32
+        /// TRANSFER-BADGES: an interchange's other lines' numbers and
+        /// colours, small beside its own, as the metros' boards show them.
+        var transfers: [Badge] = []
+    }
+
+    struct Badge: Equatable {
+        let number: String
+        let colour: UInt32
+    }
+
+    /// LONG-NAMES: a line of text a board writes: its wanted cell (its
+    /// glyphs' height over the grid), the cell it got across and down, and
+    /// its width against the room it had, metres.
+    public struct BoardLine: Equatable, Sendable {
+        public let text: String
+        public let wanted: Float
+        public let cellWidth: Float
+        public let cellHeight: Float
+        public let width: Float
+        public let span: Float
+    }
+
+    /// LONG-NAMES: how narrow a line's letters may be set (a share of
+    /// their width) before they are made smaller.
+    public static let nameBoardNarrowest: Float = 0.6
+    /// A wrapped English name's line, a share of the one line's height.
+    static let nameBoardWrappedLine: Float = 0.5
+
+    /// LONG-NAMES: the cell, across and down, of a line `width` cells long
+    /// set `height` tall in `span` metres: as tall as asked when narrowing
+    /// it to ``nameBoardNarrowest`` fits it, else smaller.
+    static func boardCells(width: Int, height: Float, span: Float) -> (x: Float, y: Float) {
+        let wanted = height / Float(Map3DBoardGlyphs.grid)
+        guard width > 0 else { return (wanted, wanted) }
+        let fit = span / Float(width)
+        let y = min(wanted, fit / nameBoardNarrowest)
+        return (min(y, fit), y)
+    }
+
+    /// LONG-NAMES: `text` broken at the space nearest its middle, or `nil`
+    /// for one with no space.
+    static func boardBreak(_ text: String) -> (String, String)? {
+        let characters = Array(text)
+        let spaces = characters.indices.filter { characters[$0] == " " }
+        guard let at = spaces.min(by: { abs($0 * 2 - characters.count) < abs($1 * 2 - characters.count) }) else { return nil }
+        return (String(characters[..<at]), String(characters[(at + 1)...]))
+    }
+
+    /// A metro board's band along its face's bottom (a share of its height).
+    static let metroBand: Float = 0.16
+}
+
+extension Map3DPalette {
+    /// NAME-BOARD-STYLES: Finland's railway signs' blue (RAL 5017, traffic
+    /// blue), white letters on it.
+    public static let finnishSignBlue = Map3DColor.rgb(0x00538A)
+}
+
+/// NAME-BOARD-STYLES: what a station's boards write in each of its
+/// systems' styles.
+struct Map3DBoardSign: Equatable {
+    struct Board: Equatable {
+        let style: Map3DPlatformProps.BoardStyle
+        let name: String
+        let second: String?
+        let reading: String?
+        let numbers: [String]
+        /// Each of the system's lines' colours, by the line's id (`BL`).
+        let colours: [String: UInt32]
+    }
+
+    /// By system id.
+    var boards: [String: Board] = [:]
+    /// The system a platform with no real line of its own takes: the
+    /// station's first real system, when it has a style.
+    var fallback: String?
+
+    /// The system id of a real line's key (`trtc:BL`, `tra:PINGXI`).
+    static func system(ofRealLine key: String) -> String {
+        let system = String(key.split(whereSeparator: { $0 == "|" || $0 == ":" }).first ?? Substring(key))
+        return system == "trtc" ? "mrt" : system == "tra" ? "tra_sched" : system
+    }
+
+    /// The board on the platform of `realLine` (`nil`: one with none of its
+    /// own): its name, its second name and its style; `nil` for decision
+    /// 882's.
+    func board(realLine: String?) -> (name: String, second: String?, board: Map3DPlatformProps.StyledBoard)? {
+        guard let system = realLine.map(Self.system(ofRealLine:)) ?? fallback, let board = boards[system] else { return nil }
+        let line = realLine.map(Map3DJapaneseNameBoards.line(ofRealLine:))
+        let number: String?
+        if let line {
+            number = board.numbers.first { Map3DJapaneseNameBoards.number($0, isOn: line, exactly: true) }
+                ?? board.numbers.first { Map3DJapaneseNameBoards.number($0, isOn: line) } ?? (board.numbers.count == 1 ? board.numbers[0] : nil)
+        } else {
+            number = board.numbers.first
+        }
+        let lines = board.colours.sorted { $0.key < $1.key }
+        var colour = line.flatMap { board.colours[$0] }
+        if colour == nil, let number { colour = Map3DJapaneseNameBoards.first(lines, on: number) { $0.key }?.value }
+        let shown = colour ?? lines.first?.value ?? Map3DPalette.playerRim
+        // TRANSFER-BADGES: the station's other lines' numbers, each in its
+        // line's colour, at most two.
+        var others: [Map3DPlatformProps.Badge] = []
+        for other in board.numbers where other != number && !others.contains(where: { $0.number == other }) && others.count < 2 {
+            guard let colour = Map3DJapaneseNameBoards.first(lines, on: other, line: { $0.key })?.value else { continue }
+            others.append(Map3DPlatformProps.Badge(number: other, colour: colour))
+        }
+        return (board.name, board.second, Map3DPlatformProps.StyledBoard(style: board.style, reading: board.reading, number: number,
+                                                                          colour: shown, transfers: others))
+    }
+}
+
 extension Map3DPlatformProps {
     /// A name board, the old version's (SwiftRailMac's side platform
     /// modules `45e46be7` and `460efb19`: 4.1 m by 1.77 m, scaled as the
@@ -144,6 +381,56 @@ extension Map3DScene.Builder {
         return names
     }
 
+    /// NAME-BOARD-STYLES: the signs of each of `world`'s stations that is a
+    /// real one of a system with a style of its own (``Map3DPlatformProps/boardStyles``):
+    /// a Japanese station's name and reading (``Map3DJapaneseNameBoards``),
+    /// a Taiwanese metro station's numbers (`station_transfers.json`), a
+    /// Finnish station's Finnish name.
+    static func boardSigns(_ world: GameWorld, _ railways: RealRailways, _ frame: RealWorldFrame) -> [StationID: Map3DBoardSign] {
+        typealias Props = Map3DPlatformProps
+        var signs: [StationID: Map3DBoardSign] = [:]
+        for station in world.stations where !station.isDepot {
+            let at = frame.coordinate(worldX: Double(station.location.x), worldY: Double(station.location.y))
+            let real = railways.stations(named: station.name, near: RealRailways.Coordinate(latitude: at.latitude, longitude: at.longitude))
+            var sign = Map3DBoardSign()
+            for found in real {
+                let system = found.system.id
+                guard let style = Props.boardStyles[system], sign.boards[system] == nil else { continue }
+                let key = RealRailways.stationKey(station.name)
+                let english = found.english.map(RealRailways.Station.shown)
+                var name = station.name, reading: String?, numbers: [String] = []
+                var second = english.map { RealRailways.stationKey($0) == key } ?? false ? found.chinese : english
+                if let japanese = Map3DJapaneseNameBoards.systems[system]?[found.chinese] {
+                    name = japanese.japanese
+                    reading = japanese.kana
+                    numbers = japanese.numbers
+                    second = english
+                }
+                if style == .finnish {
+                    name = english ?? station.name
+                    second = nil
+                }
+                if let transfers = railways.transfers {
+                    for numbered in Props.boardNumberSystems[system] ?? [] {
+                        numbers += transfers.stations(inSystem: numbered, named: found.chinese, near: found.coordinate).map(\.stationId)
+                    }
+                }
+                if let shown = second, RealRailways.stationKey(shown) == RealRailways.stationKey(name) { second = nil }
+                var colours: [String: UInt32] = [:]
+                for (lineKey, rgb) in found.system.lineColors where lineKey.hasPrefix("\(system)|") {
+                    colours[String(lineKey.dropFirst(system.count + 1))] =
+                        Map3DColor.rgb(UInt32(rgb.red) << 16 | UInt32(rgb.green) << 8 | UInt32(rgb.blue))
+                }
+                sign.boards[system] = Map3DBoardSign.Board(style: style, name: name, second: second, reading: reading, numbers: numbers,
+                                                           colours: colours)
+            }
+            guard !sign.boards.isEmpty else { continue }
+            sign.fallback = real.first.map(\.system.id).flatMap { sign.boards[$0] != nil ? $0 : nil }
+            signs[station.id] = sign
+        }
+        return signs
+    }
+
     /// Decision 882: a name as its board writes it: 臺 as 台, whose fewer
     /// strokes stay clear on the glyphs' 16-cell grid.
     static func boardText(_ name: String) -> String { name.replacingOccurrences(of: "臺", with: "台") }
@@ -153,10 +440,11 @@ extension Map3DScene.Builder {
     /// version's: a white face in a grey frame, a green band across it,
     /// `name` in navy over the band; its face lit at night
     /// (`underground`: always).
+    @discardableResult
     static func addNameBoard(_ mesh: inout Map3DMesh, foot: Map3DPoint, out: Map3DPoint, name: String, second: String? = nil,
-                             underground: Bool) {
+                             styled: Map3DPlatformProps.StyledBoard? = nil, underground: Bool) -> [Map3DPlatformProps.BoardLine] {
         typealias Props = Map3DPlatformProps
-        guard let out = Map3DPoint(out.x, 0, out.z).normalized else { return }
+        guard let out = Map3DPoint(out.x, 0, out.z).normalized else { return [] }
         let along = Map3DPoint(-out.z, 0, out.x)
         let length = Props.nameBoardLength, height = Props.nameBoardHeight, depth = Props.nameBoardDepth
         let frame = Props.nameBoardFrame
@@ -179,10 +467,48 @@ extension Map3DScene.Builder {
             mesh.addQuad(corner(x0, y0), corner(x1, y0), corner(x1, y1), corner(x0, y1), color: colour)
         }
         let first = mesh.vertices.count
-        quad(-faceLength / 2, 0, faceLength / 2, faceHeight, 0, Map3DPalette.sidewalk)
+        let finnish = styled?.style == .finnish
+        quad(-faceLength / 2, 0, faceLength / 2, faceHeight, 0, finnish ? Map3DPalette.finnishSignBlue : Map3DPalette.sidewalk)
         if underground { mesh.makeGlowing(from: first) } else { mesh.makeNightLit(from: first) }
-        let band = Props.nameBoardBand
-        quad(-faceLength / 2, faceHeight * band.lowerBound, faceLength / 2, faceHeight * band.upperBound, 0.004, Props.nameBoardGreen)
+        let grid = Float(Map3DBoardGlyphs.grid)
+        // NAME-BOARD-STYLES: Finland's, its name alone in white on blue.
+        var lines: [Props.BoardLine] = []
+        // LONG-NAMES: a line of `text` as large as `height` allows and as
+        // wide as `span`: narrowed to ``Map3DPlatformProps/nameBoardNarrowest``
+        // of its width before it is made smaller, as the railways' boards
+        // set a long name; `wraps`, an English name broken in two where
+        // that keeps its letters larger.
+        func write(_ text: String, height: Float, middle: Float, centre: Float = 0, span: Float = faceLength - 0.2,
+                   ink: UInt32 = Map3DPalette.playerRim, lift: Float = 0.008, wraps: Bool = false) {
+            let set = Map3DBoardGlyphs.layout(text)
+            guard set.width > 0 else { return }
+            let cells = Props.boardCells(width: set.width, height: height, span: span)
+            if wraps, cells.y < height / grid, let (first, last) = Props.boardBreak(text) {
+                let half = height * Props.nameBoardWrappedLine
+                let top = Map3DBoardGlyphs.layout(first), bottom = Map3DBoardGlyphs.layout(last)
+                let wrapped = min(Props.boardCells(width: top.width, height: half, span: span).y,
+                                  Props.boardCells(width: bottom.width, height: half, span: span).y)
+                if wrapped > cells.y {
+                    write(first, height: half, middle: middle + height / 4, centre: centre, span: span, ink: ink, lift: lift)
+                    write(last, height: half, middle: middle - height / 4, centre: centre, span: span, ink: ink, lift: lift)
+                    return
+                }
+            }
+            let left = centre - Float(set.width) * cells.x / 2, top = middle + grid * cells.y / 2
+            for r in set.rectangles {
+                let x0 = left + Float(r.x) * cells.x, x1 = x0 + Float(r.width) * cells.x
+                let y1 = top - Float(r.y) * cells.y, y0 = y1 - Float(r.height) * cells.y
+                quad(x0, y0, x1, y1, lift, ink)
+            }
+            lines.append(Props.BoardLine(text: text, wanted: height / grid, cellWidth: cells.x, cellHeight: cells.y,
+                                         width: Float(set.width) * cells.x, span: span))
+        }
+        if finnish {
+            write(name, height: faceHeight * 0.62, middle: faceHeight / 2, span: faceLength - 0.3, ink: Map3DPalette.sidewalk)
+            return lines
+        }
+        let band = styled == nil ? Props.nameBoardBand : 0...Props.metroBand
+        quad(-faceLength / 2, faceHeight * band.lowerBound, faceLength / 2, faceHeight * band.upperBound, 0.004, styled?.colour ?? Props.nameBoardGreen)
         // An arrow at each end of the band, pointing out, as on the
         // railway's boards.
         let bandLow = faceHeight * band.lowerBound, bandHigh = faceHeight * band.upperBound, mid = (bandLow + bandHigh) / 2
@@ -197,27 +523,66 @@ extension Map3DScene.Builder {
         }
         // The name over the band, as large as fits, its second name small
         // under it when it has one.
-        let grid = Float(Map3DBoardGlyphs.grid)
         let room = faceHeight * (1 - band.upperBound)
-        func write(_ text: (width: Int, rectangles: [Map3DBoardGlyphs.Rectangle]), height: Float, middle: Float) {
-            guard text.width > 0 else { return }
-            let cell = min(height / grid, (faceLength - 0.2) / Float(text.width))
-            let left = -Float(text.width) * cell / 2, top = middle + grid * cell / 2
-            for r in text.rectangles {
-                let x0 = left + Float(r.x) * cell, x1 = x0 + Float(r.width) * cell
-                let y1 = top - Float(r.y) * cell, y0 = y1 - Float(r.height) * cell
-                quad(x0, y0, x1, y1, 0.008, Map3DPalette.playerRim)
+        if let styled {
+            // NAME-BOARD-STYLES: a metro's: the station's number in its
+            // line's colour at the left, its letters over its figures in
+            // white; the reading (a Japanese name's) over the name, the
+            // other name under it.
+            var textLeft = -faceLength / 2 + 0.1
+            if let number = styled.number {
+                let side = min(room * 0.78, 0.6), middle = bandHigh + room / 2
+                // A number in its line's colour, its letters over its
+                // figures in white, `side` square with its middle at `x`, `y`.
+                func badge(_ number: String, colour: UInt32, x: Float, y: Float, side: Float) {
+                    quad(x - side / 2, y - side / 2, x + side / 2, y + side / 2, 0.006, colour)
+                    let letters = Map3DJapaneseNameBoards.line(ofNumber: number)
+                    let figures = String(number.dropFirst(letters.count))
+                    write(letters, height: side * 0.36, middle: y + side * 0.2, centre: x,
+                          span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
+                    write(figures, height: side * 0.42, middle: y - side * 0.17, centre: x,
+                          span: side * 0.8, ink: Map3DPalette.sidewalk, lift: 0.01)
+                }
+                badge(number, colour: styled.colour, x: textLeft + side / 2, y: middle, side: side)
+                textLeft += side + 0.08
+                // TRANSFER-BADGES: the other lines' numbers, smaller, in a
+                // column beside it (two at most), as on the metros'
+                // boards at an interchange.
+                if !styled.transfers.isEmpty {
+                    let small = side * 0.46, gap = side - 2 * small
+                    let top = styled.transfers.count == 1 ? middle : middle + (small + gap) / 2
+                    for (index, other) in styled.transfers.enumerated() {
+                        badge(other.number, colour: other.colour, x: textLeft + small / 2, y: top - Float(index) * (small + gap), side: small)
+                    }
+                    textLeft += small + 0.08
+                }
             }
+            let textRight = faceLength / 2 - 0.1
+            let centre = (textLeft + textRight) / 2, span = textRight - textLeft
+            let shownName = Self.boardText(name)
+            if let reading = styled.reading {
+                write(reading, height: room * 0.19, middle: bandHigh + room * 0.86, centre: centre, span: span)
+                write(shownName, height: room * 0.5, middle: bandHigh + room * 0.52, centre: centre, span: span)
+                if let second {
+                    write(second, height: room * 0.17, middle: bandHigh + room * 0.14, centre: centre, span: span, wraps: true)
+                }
+            } else if let second {
+                write(shownName, height: room * 0.6, middle: bandHigh + room * 0.62, centre: centre, span: span)
+                write(second, height: room * 0.24, middle: bandHigh + room * 0.18, centre: centre, span: span, wraps: true)
+            } else {
+                write(shownName, height: room * 0.8, middle: bandHigh + room / 2, centre: centre, span: span)
+            }
+            return lines
         }
         // 臺 is written 台 (as on many of the railway's own boards): its
         // strokes run together on the glyphs' grid.
-        let main = Map3DBoardGlyphs.layout(Self.boardText(name))
-        let other = second.map(Map3DBoardGlyphs.layout) ?? (width: 0, rectangles: [])
-        if other.width > 0 {
+        let main = Self.boardText(name)
+        if let second, !second.isEmpty {
             write(main, height: room * 0.66, middle: bandHigh + room * 0.62)
-            write(other, height: room * 0.3, middle: bandHigh + room * 0.17)
+            write(second, height: room * 0.3, middle: bandHigh + room * 0.17, wraps: true)
         } else {
             write(main, height: room * 0.92, middle: bandHigh + room / 2)
         }
+        return lines
     }
 }

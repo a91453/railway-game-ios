@@ -76,7 +76,7 @@ DAY = 86400
 # held every train behind them from 06:20, and 22 of the day's 282 runs
 # found no train. Off for Taiwan's lines, whose files stay as they are.
 OUT_BEFORE_FIRST = False
-# Decision 897: how much longer than its timetable says the game's train
+# Decision 898: how much longer than its timetable says the game's train
 # stands at each station a run calls at between its ends, in seconds. A
 # timetable whose calls are shorter than the game's least dwell
 # (`ServiceDwell.minimum`, 36 s) brings a train in that much later at each,
@@ -87,7 +87,7 @@ OUT_BEFORE_FIRST = False
 LATE_PER_CALL = 0
 
 
-# Decision 897: seconds more a train stands at a station it ends a run at
+# Decision 898: seconds more a train stands at a station it ends a run at
 # before it counts as ready for its next, by the station's name: the time a
 # line has to make a delay good. With every train turned round as soon as
 # the game can, one held a few minutes (behind a train out of the depot,
@@ -205,7 +205,7 @@ def rescue(found, day, start):
             if probe is None:
                 continue
             took = probe[-1][1] - probe[0][2]
-            # Decision 897: and what the game's train loses on the way.
+            # Decision 898: and what the game's train loses on the way.
             sets_off = leaves - TURNAROUND - took - LATE_PER_CALL * (len(probe) - 2)
             free = min(times)
             # The train free soonest, the nearest of those free alike (the

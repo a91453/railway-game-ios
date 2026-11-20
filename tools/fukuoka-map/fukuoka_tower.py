@@ -15,9 +15,11 @@ What it changes, and only this (decision 854's later note FUKUOKA-LANDMARKS):
 - the old textures become the landmarks' palette colours (one material,
   one colour, `MATERIALS` below): the walls mirror glass, the mast steel,
   as photographs of the real one (FUKUOKA-TOWER-COLOUR);
-- the body stays as it was (128 m, as tall as the real one's glass up to
-  its slope); the mast above 128 m is stretched to the real 234 m (the
-  earlier version's stopped at 172 m);
+- the body (128 m in the earlier version) is stretched to the real one's
+  about 150 m, and the mast above it to the real 234 m (the earlier
+  version's stopped at 172 m); the north face's middle is the white
+  column of the lift shaft, and each southern face has its pale slit with a dark notch on top
+  (FUKUOKA-TOWER-GLASS);
 - it is turned 8.0° anticlockwise so its triangle lies as OpenStreetMap's
   outline of the real tower (way of Q847033), and its footprint's middle
   put at the origin (the tool prints where that middle stands);
@@ -30,6 +32,9 @@ import os
 import struct
 import sys
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "hk-landmarks"))
+import ground_plate  # noqa: E402
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'hk-landmarks'))
 from glb_to_swift import MATERIALS, accessor, read_glb  # noqa: E402
 
@@ -37,9 +42,20 @@ SHA256 = 'f15957a0bb4bd04f84bba2e675791983d845a1512f3406b4410733b82014b1d3'
 # The old materials (by index) onto the landmarks' materials; None: left out.
 # FUKUOKA-TOWER-COLOUR: the walls (and the old dark band under the
 # top, which the real tower does not have) one mirror glass, the mast
-# the steel of the photographs.
-PAINT = {0: None, 1: 'glassSky', 2: 'steelGrey', 3: 'steelGrey', 4: 'glassSky'}
-BODY_TOP, OLD_TOP, REAL_TOP = 128.0, 172.0, 234.0
+# the steel of the photographs. FUKUOKA-TOWER-GLASS: the sloping top is
+# glass too; the old material 3 is painted by where it is (`paint_of`).
+PAINT = {0: None, 1: 'glassSky', 2: 'glassSky', 3: 'steelGrey', 4: 'glassSky'}
+# FUKUOKA-TOWER-GLASS: the glass body reaches about 150 m on the real
+# tower (measured on photographs from the ground, with the lines of the
+# body's edges giving the camera's tilt: 152 to 163 m; the top viewing
+# floor is at 123 m), not the earlier version's 128 m; the mast above it
+# to 234 m.
+OLD_BODY_TOP, BODY_TOP, OLD_TOP, REAL_TOP = 128.0, 150.0, 172.0, 234.0
+# The two dark slits of the southern faces, one each side of the south
+# edge: metres from that edge, their width, how far up the body, and how
+# far they stand off the glass.
+SLIT_FROM_EDGE, SLIT_WIDTH, SLIT_SHARE, SLIT_OFF = 3.0, 1.5, 0.62, 0.06
+SLIT_CAP = 3.0
 TURN = math.radians(8.0)
 # OpenStreetMap's outline's middle (the triangle's centroid, 33.593313, 130.351483).
 LATITUDE, LONGITUDE = 33.5933128, 130.3514835
@@ -47,12 +63,52 @@ LATITUDE, LONGITUDE = 33.5933128, 130.3514835
 
 def place(x, y, z):
     """glTF (+x east, +y up, +z south) onto (+x east, +y north, +z up),
-    the mast stretched and the whole turned."""
+    the body and the mast stretched and the whole turned."""
     east, north, up = x, -z, y
-    if up > BODY_TOP:
-        up = BODY_TOP + (up - BODY_TOP) * (REAL_TOP - BODY_TOP) / (OLD_TOP - BODY_TOP)
+    if up > OLD_BODY_TOP:
+        up = BODY_TOP + (up - OLD_BODY_TOP) * (REAL_TOP - BODY_TOP) / (OLD_TOP - OLD_BODY_TOP)
+    else:
+        up = up * BODY_TOP / OLD_BODY_TOP
     c, s = math.cos(TURN), math.sin(TURN)
     return east * c - north * s, east * s + north * c, up
+
+
+def paint_of(material, corners):
+    """The old material 3 is the mast, and on the north face the lift
+    shaft's column up its middle (white on the real tower) between two
+    strips of the wall's glass."""
+    paint = PAINT[material]
+    if material != 3 or max(p[1] for p in corners) > OLD_BODY_TOP:
+        return paint
+    return 'glassSky' if all(abs(p[0]) >= 1.99 for p in corners) else 'mullionWhite'
+
+
+def slits():
+    """The southern faces' slits as thin pale panels just off the glass,
+    each ending in a dark notch (glTF coordinates, before `place`)."""
+    out = []
+    apex = (0.0, 12.0)
+    for corner in ((-10.0, -6.0), (10.0, -6.0)):
+        dx, dz = corner[0] - apex[0], corner[1] - apex[1]
+        length = math.hypot(dx, dz)
+        ux, uz = dx / length, dz / length
+        # Outward: away from the triangle's middle (0, 0).
+        nx, nz = -uz, ux
+        if nx * apex[0] + nz * apex[1] < 0:
+            nx, nz = -nx, -nz
+        a = [apex[0] + ux * d + nx * SLIT_OFF for d in (SLIT_FROM_EDGE, SLIT_FROM_EDGE + SLIT_WIDTH)]
+        b = [apex[1] + uz * d + nz * SLIT_OFF for d in (SLIT_FROM_EDGE, SLIT_FROM_EDGE + SLIT_WIDTH)]
+        top = OLD_BODY_TOP * SLIT_SHARE
+        for low, high, paint in ((0.0, top - SLIT_CAP, 'mullionWhite'), (top - SLIT_CAP, top, 'bandDark')):
+            quad = [(a[0], low, b[0]), (a[1], low, b[1]), (a[1], high, b[1]), (a[0], high, b[0])]
+            # Anticlockwise seen from outside.
+            e1 = [quad[1][i] - quad[0][i] for i in range(3)]
+            e2 = [quad[2][i] - quad[0][i] for i in range(3)]
+            facing = (e1[1] * e2[2] - e1[2] * e2[1]) * nx + (e1[0] * e2[1] - e1[1] * e2[0]) * nz
+            if facing < 0:
+                quad = [quad[1], quad[0], quad[3], quad[2]]
+            out += [(quad[0], quad[1], quad[2], paint), (quad[0], quad[2], quad[3], paint)]
+    return out
 
 
 def encode(points, triangles):
@@ -74,13 +130,17 @@ def main(glb, swift):
     raw = []  # (a, b, c, paint) with float points
     for mesh in gltf['meshes']:
         for prim in mesh['primitives']:
-            paint = PAINT[prim['material']]
-            if paint is None:
+            if PAINT[prim['material']] is None:
                 continue
-            pos = [place(*p) for p in accessor(gltf, blob, prim['attributes']['POSITION'])]
+            old = accessor(gltf, blob, prim['attributes']['POSITION'])
+            pos = [place(*p) for p in old]
             idx = accessor(gltf, blob, prim['indices'])
             for k in range(0, len(idx), 3):
+                paint = paint_of(prim['material'], [old[i] for i in idx[k:k + 3]])
                 raw.append((pos[idx[k]], pos[idx[k + 1]], pos[idx[k + 2]], MATERIALS.index(paint), paint))
+    for corners in slits():
+        a, b, c = (place(*p) for p in corners[:3])
+        raw.append((a, b, c, MATERIALS.index(corners[3]), corners[3]))
     xs = [p[0] for t in raw for p in t[:3]]
     ys = [p[1] for t in raw for p in t[:3]]
     mid = ((max(xs) + min(xs)) / 2, (max(ys) + min(ys)) / 2)
@@ -98,6 +158,8 @@ def main(glb, swift):
         if len({ka, kb, kc}) == 3:
             triangles.append((ka, kb, kc, paint))
     near = encode(points, triangles)
+    # OLD-PORT-AUDIT: the old plaza (material 0) must stay out.
+    ground_plate.check(near, "fukuoka-tower")
 
     # The far model: the outline of everything up to 128 m, and of the
     # mast above it, each a prism.

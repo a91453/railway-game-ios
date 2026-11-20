@@ -55,7 +55,8 @@ public enum Map3DCableCar {
     /// Decision 575 續 (CABLEMAP): what the 3D map draws, in
     /// ``Map3DModelPack/standard`` (last, so no model before them moves):
     /// the two cabins, the tower and the three halls, near and far, and a
-    /// rope's metre (``rope``); decision 615: then the Sun Moon Lake cabins.
+    /// rope's metre (``rope``); decision 615: then the Sun Moon Lake cabins;
+    /// decision 897: then the Ngong Ping cabins.
     public static var drawn: [Map3DModelPack.Model] {
         var made: [Map3DModelPack.Model] = []
         for far in [false, true] {
@@ -67,6 +68,12 @@ public enum Map3DCableCar {
         // Decision 615: the Sun Moon Lake cabins, near and far, last.
         for far in [false, true] {
             for cabin in SunMoonCabin.allCases { made.append(model(cabin, far: far)) }
+        }
+        // Decision 897: the Ngong Ping cabins, near and far, after them.
+        for far in [false, true] {
+            for kind in Map3DNgongPingCabin.Kind.allCases {
+                if let cabin = Map3DNgongPingCabin.model(kind, far: far) { made.append(cabin) }
+            }
         }
         return made
     }
@@ -339,7 +346,12 @@ private struct CableStationRecipe {
         for side: Float in [-1, 1] {
             let v = side * (width / 2 - t / 2)
             m.rbox(p, c, v, 0.30, length, t, 1.0, yaw: yaw, color: CableColor.white)
+            // Decision 897: the glass band lit from within after dark, the
+            // hall's lamps seen through it (the platform, gate and kiosk
+            // inside are the studies' own).
+            let lit = m.kit.mesh.vertices.count
             m.rbox(p, c, v, 1.30, length - 0.4, t * 0.6, wall - 0.9 - 1.30, yaw: yaw, color: CableColor.glass)
+            m.kit.mesh.makeGlowing(from: lit)
             m.rbox(p, c, v, wall - 0.9, length, t, 0.9, yaw: yaw, color: CableColor.white)
             m.rbox(p, c, v, wall - 1.0, length + 0.02, t + 0.02, 0.12, yaw: yaw, color: CableColor.teal)
             if !far {

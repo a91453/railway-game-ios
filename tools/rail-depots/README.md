@@ -63,7 +63,7 @@ python3 -I tools/rail-depots/tymc_yard_tracks.py taiwan.pbf
 
 2026-11-17 的整包檔（sha256 `2eca488d858f7c5270ec7384cc4d728a6a72bf3a84b73340f98ffee31f275384`）：蘆竹 23 股（17 股約 119 m、6 股約 152 m，way 1576463688 到 1576463746 之間），青埔 15 股（228 m 以上，way 499824857 到 499824866 與 499831993 到 499832001）。桃園捷運公司沒有公開兩座機廠可停幾列。遊戲鋪幾股、為什麼不是照這兩個數，見決策 829。
 
-福岡七隈線的橋本車輛基地（`RealLineDepotSite.hashimoto`，決策 897）：`fukuoka_depot_site.py` 讀 osmtoday.com 的九州整包檔（`asia/japan/kyushu.pbf`；2026-11-20 下載的那一份 sha256 `dbc73f8170eae8bdf8dafd1db57991927c8fd660d0aeb2c95062fbfc543bf5e1`）：
+福岡七隈線的橋本車輛基地（`RealLineDepotSite.hashimoto`，決策 898）：`fukuoka_depot_site.py` 讀 osmtoday.com 的九州整包檔（`asia/japan/kyushu.pbf`；2026-11-20 下載的那一份 sha256 `dbc73f8170eae8bdf8dafd1db57991927c8fd660d0aeb2c95062fbfc543bf5e1`）：
 
 ```sh
 curl -LO https://osmtoday.com/asia/japan/kyushu.pbf

@@ -176,12 +176,12 @@ final class DepotReturnReportTests: XCTestCase {
         try report(name, Self.resumed() ?? Self.hongKongBought(lines))
     }
 
-    /// Decision 897: Fukuoka's three lines, sold together, the Nanakuma
+    /// Decision 898: Fukuoka's three lines, sold together, the Nanakuma
     /// Line with its depot at Hashimoto (`fukuoka`; only when named).
     func testFukuoka() throws {
         let environment = ProcessInfo.processInfo.environment
         guard environment["DEPOT_RETURN_REPORT"] != nil, environment["DEPOT_RETURN_ONLY"] == "fukuoka" else {
-            throw XCTSkip("Set DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=fukuoka to measure Fukuoka's depot (decision 897).")
+            throw XCTSkip("Set DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=fukuoka to measure Fukuoka's depot (decision 898).")
         }
         try report("fukuoka", Self.resumed() ?? {
             let session = try TimetableCheckupAllBoughtTests.fukuoka(rules: environment["DEPOT_RETURN_SIMPLE"] != nil ? .simple : .realistic)

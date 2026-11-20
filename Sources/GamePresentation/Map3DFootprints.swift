@@ -287,7 +287,7 @@ extension Map3DScene.Builder {
             // Cleared for a building of the player's: its cells still keep
             // no city lot.
             // Decision 791: nor on a landmark's ground (it draws the building).
-            let drawn = !onPlacedGround(rings[0]) && !underLandmark(point(x: middle.x, y: middle.y, height: 0))
+            let drawn = !onPlacedGround(rings[0]) && !underLandmark(point(x: middle.x, y: middle.y, height: 0)) && !underLandmark(outline: rings[0])
             // Decision 879: nor where a model stands in its place, though
             // it counts as built.
             let spot = point(x: middle.x, y: middle.y, height: 0)

@@ -14,5 +14,8 @@ extension Map3DTrainRegistry {
         Map3DMTRDisneylandLine.registration,
         Map3DMTREastRailLine.registration,
         Map3DFinlandSr2.registration,
+        Map3DFukuokaAirportLine.registration,
+        Map3DFukuokaKaizukaLine.registration,
+        Map3DFukuokaNanakumaLine.registration,
     ]
 }

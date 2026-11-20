@@ -88,11 +88,12 @@ extension CableSolids {
         let n = lod ? 8 : 12
         let profile = sunMoonProfile
         m.loft([(-3.86, 1.78, 1.44, 0.28), (-3.72, 1.94, 1.60, 0.32)], accent, far: lod, hollow: true, thickness: 0.045, nearSegments: 6)
-        m.loft(profile, C.glass, far: lod, hollow: true, glass: true, thickness: 0.012, nearSegments: 6)
+        // Decision 897: the glazing lit from within after dark.
+        m.loft(profile, C.glass, far: lod, hollow: true, glow: true, glass: true, thickness: 0.012, nearSegments: 6)
         m.loft([(-1.78, 1.78, 1.50, 0.19), (-1.72, 1.86, 1.56, 0.20), (-1.66, 1.78, 1.50, 0.23)], accent, far: lod, nearSegments: 6)
         if crystal {
             m.loft([(-3.86, 1.78, 1.44, 0.28), (-3.78, 1.90, 1.56, 0.30)], C.steel, far: lod, hollow: true, thickness: 0.13, nearSegments: 6)
-            m.box(0, 0, floor - 0.040, 1.64, 1.30, 0.040, C.glass, glass: true)
+            m.box(0, 0, floor - 0.040, 1.64, 1.30, 0.040, C.glass, glow: true, glass: true)
         } else {
             m.loft([(-3.86, 1.78, 1.44, 0.28), (-3.78, 1.90, 1.56, 0.30)], C.deck, far: lod, nearSegments: 6)
         }
@@ -111,8 +112,9 @@ extension CableSolids {
         // Two benches facing each other, folded down.
         for sign: Float in [-1, 1] {
             for y: Float in [-0.45, 0.45] { m.box(sign * 0.86, y, floor, 0.08, 0.10, 0.44, C.steel) }
-            m.box(sign * 0.70, 0, floor + 0.44, 0.40, 1.24, 0.08, C.blue)
-            m.box(sign * 0.87, 0, floor + 0.52, 0.06, 1.24, 0.42, C.blue)
+            // Decision 897: the seat and back in the roof lamp's light.
+            m.box(sign * 0.70, 0, floor + 0.44, 0.40, 1.24, 0.08, C.blue, glow: true)
+            m.box(sign * 0.87, 0, floor + 0.52, 0.06, 1.24, 0.42, C.blue, glow: true)
             m.cylinder(P(sign * 0.86, -0.61, floor + 0.46), P(sign * 0.86, 0.61, floor + 0.46), 0.025, C.steel, sides: n)
             if !lod { for y: Float in [-0.31, 0, 0.31] { m.box(sign * 0.70, y, floor + 0.52, 0.36, 0.009, 0.005, C.steel) } }
         }

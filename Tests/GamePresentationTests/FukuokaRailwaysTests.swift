@@ -145,7 +145,7 @@ final class FukuokaRailwaysTests: XCTestCase {
         }
     }
 
-    /// Decision 897: the Nanakuma Line is bought with the Hashimoto depot,
+    /// Decision 898: the Nanakuma Line is bought with the Hashimoto depot,
     /// past Hashimoto, its end, alone or with the other two: the trains
     /// Hashimoto's own tracks have no room for overnight start in it, as
     /// many as it has sidings. The line has the 23 trains its peak needs
@@ -209,7 +209,7 @@ final class FukuokaRailwaysTests: XCTestCase {
     }
 }
 
-/// Decision 897: run only with `HASHIMOTO_DEPOT_DUMP=<file.json>`: the
+/// Decision 898: run only with `HASHIMOTO_DEPOT_DUMP=<file.json>`: the
 /// three lines bought together, the track round the Hashimoto depot, for
 /// `tools/rail-depots/plot_depots.py` (`PLOT_SITES=hashimoto`), drawn over
 /// OpenStreetMap's real yard.

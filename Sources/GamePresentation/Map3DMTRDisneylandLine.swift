@@ -66,7 +66,7 @@ extension Map3DMTRDisneylandLine {
         id: "mtrDisneylandLine",
         sets: [Map3DTrainSet.mtrDisneylandLine(), .mtrDisneylandLine(far: true)],
         showcase: [
-            Map3DShowcase.Entry(key, "Hong Kong Disneyland Resort line train", "香港迪士尼綫列車", .metro, cars: 4, fixed: true),
+            Map3DShowcase.Entry(key, "Hong Kong Disneyland Resort line train", "香港迪士尼綫列車", .hongKong, cars: 4, fixed: true),
         ],
         triangles: 3_400...11_900, length: 21.9...22.9)
 }

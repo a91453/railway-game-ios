@@ -118,7 +118,7 @@ DEPOT_ENDS = {"ntdlrt:V": ("崁頂",), "trtc:BR": ("動物園", "南港展覽館
 # between): what the timetable would stand there beyond that waits or
 # is not run in the game (the decision measures how many).
 MID_DEPOTS = {"tymc:A"}
-# Decision 897: the game's least dwell at a station (`ServiceDwell.minimum`),
+# Decision 898: the game's least dwell at a station (`ServiceDwell.minimum`),
 # in seconds, and whether a line bought with a depot counts its trains by
 # it. A timetable's call is `DWELL` long, so the game's train comes in
 # `GAME_DWELL - DWELL` later at each station between a run's ends, and is
@@ -131,7 +131,7 @@ MID_DEPOTS = {"tymc:A"}
 # Kong's lines, whose files stay as they are.
 GAME_DWELL = 36
 COUNT_GAME_DWELL = False
-# Decision 897: `extract_branch_runs.RECOVERY`, for those lines too.
+# Decision 898: `extract_branch_runs.RECOVERY`, for those lines too.
 RECOVERY = {}
 # Decision 605: the lines whose trips pass the stations they skip, as the
 # Taoyuan Airport MRT's express trains pass every station but Taipei Main,
@@ -409,7 +409,7 @@ def depot_tracks(tool, found, start, stops, depots):
         for run in tool.day_of(found, day):
             origin, leaves = run["calls"][0][0], run["calls"][0][2]
             # Each as (when it can turn round from, when it came in): with
-            # decision 897's later arrivals a train is ready later than it
+            # decision 898's later arrivals a train is ready later than it
             # came in, and stands on its track from when it came.
             ready = [t for t in idle[origin] if t[0] + tool.TURNAROUND <= leaves or t[0] == 0]
             if ready:
@@ -470,7 +470,7 @@ def main(folder, out):
         if single:
             tool.TURNAROUND = SINGLE_TURNAROUND
         depots = DEPOT_ENDS.get(game_id)
-        # Decision 897: a line with a depot counts its trains by the game's
+        # Decision 898: a line with a depot counts its trains by the game's
         # dwell, and with time to make a delay good.
         if COUNT_GAME_DWELL and (depots or game_id in MID_DEPOTS):
             tool.LATE_PER_CALL = max(0, GAME_DWELL - DWELL)

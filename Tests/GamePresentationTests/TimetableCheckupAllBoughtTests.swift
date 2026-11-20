@@ -78,7 +78,7 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// the Kuko Line's longest peak gap is 7.4 minutes, 24 s more (+5
     /// for +4), its worst run 2.0 minutes late for 3.7, the runs late as
     /// they were: fewer of the day's moves into the other berth of an end.
-    /// Decision 897 (FUKUOKA-NANAKUMA-FLEET): the Nanakuma Line bought
+    /// Decision 898 (FUKUOKA-NANAKUMA-FLEET): the Nanakuma Line bought
     /// with its depot past Hashimoto and 23 trains, its day laid out from
     /// that end: no run late under either rules (were 127 and 126), its
     /// worst 3.5 minutes, its longest peak gap 6.5 minutes against 3.2;

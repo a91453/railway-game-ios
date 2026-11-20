@@ -72,14 +72,24 @@ extension Map3DScene.Builder {
             }
             target = .base
             return true
-        case .hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket:
-            let layout = Self.placedKitLayouts[building.kind]![building.look]
+        case .house, .hotel, .departmentStore, .amusementPark, .wharf, .marina, .school, .hospital, .nightMarket:
+            // Decision 896: a house one of the residential kit's ways by its number.
+            let layout = building.kind == .house
+                ? Self.placedHouseLayouts[building.id.rawValue % Self.placedHouseLayouts.count]
+                : Self.placedKitLayouts[building.kind]![building.look]
             let facing = building.kind.standsOnShore ? seaward(of: building) : facing
             let right = facing.cross(.up)
             var model = layout.mesh
             let roof = layout.recolours ? Self.placedRoofs[building.id.rawValue % Self.placedRoofs.count] : Map3DPalette.playerRoof
             if roof != Map3DPalette.playerRoof {
                 model.restyleVertices { $0.color = Self.placedRoof($0.color, as: roof) }
+            }
+            if building.kind == .house {
+                // Decision 896: the rooftop shed's tin in one of four colours by the house's number.
+                let tin = Self.placedShedRoofs[building.id.rawValue / Self.placedHouseLayouts.count % Self.placedShedRoofs.count]
+                if tin != Self.shedTin {
+                    model.restyleVertices { $0.color = Self.placedRoof($0.color, from: Self.shedTin, as: tin) }
+                }
             }
             if let pad = layout.pad {
                 mesh(at: base) { $0.addBox(base: base, length: side, width: side, height: 0.1, top: pad, side: pad) }
@@ -166,8 +176,8 @@ extension Map3DScene.Builder {
     /// `colour` in `roof` if it is ``Map3DPalette/playerRoof`` or a shade
     /// of it (a slope the roof builders darken), in the same shade; any
     /// other colour as it is.
-    static func placedRoof(_ colour: UInt32, as roof: UInt32) -> UInt32 {
-        let cream = Map3DPalette.playerRoof
+    /// Decision 896: or a shade of `cream`, any colour given.
+    static func placedRoof(_ colour: UInt32, from cream: UInt32 = Map3DPalette.playerRoof, as roof: UInt32) -> UInt32 {
         func channel(_ value: UInt32, _ shift: UInt32) -> Float { Float((value >> shift) & 0xFF) }
         let shade = channel(colour, 0) / channel(cream, 0)
         guard colour & 0xFF00_0000 == cream & 0xFF00_0000, shade > 0,

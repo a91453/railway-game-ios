@@ -643,7 +643,10 @@ public struct Map3DScene: Sendable {
         builder.mark("overhead line")
         // Decision 436: the platforms' small things, close up.
         // Decision 882: the second names on the platforms' name boards.
-        if let railways, let frame = RealWorldFrame(world: world) { builder.boardSecondNames = Builder.boardSecondNames(world, railways, frame) }
+        if let railways, let frame = RealWorldFrame(world: world) {
+            builder.boardSecondNames = Builder.boardSecondNames(world, railways, frame)
+            builder.boardSigns = Builder.boardSigns(world, railways, frame)
+        }
         builder.addPlatformProps()
         // Decision 244: no street furniture where the track runs (nor
         // where a station's building or a landmark stands).
@@ -895,6 +898,11 @@ public enum Map3DPalette {
     /// Kong landmarks' brief added (decision 854) and the palette had not
     /// listed.
     public static let gold = Map3DColor.rgb(0xC8A24E)
+    /// Decision 897: the Ngong Ping cable car's gold slats, the six bands
+    /// on a standard cabin's lower half (the studio's sample of the real
+    /// cabin's sunlit slats #A58548, #9C7F3E; agreed 2026-11-20), deeper
+    /// than ``gold`` so they read apart from the steel corner posts.
+    public static let slatGold = Map3DColor.rgb(0xA8904A)
     public static let tankBlue = Map3DColor.rgb(0x3B7DD8)
     public static let tankSteel = Map3DColor.rgb(0xC8CDD2)
     public static let trunk = Map3DColor.rgb(0x8A6A4F)
@@ -1229,6 +1237,9 @@ extension Map3DScene {
         /// Decision 882: each real station's other name (its English one
         /// under a Chinese name), for its platforms' name boards.
         var boardSecondNames: [StationID: String] = [:]
+        /// NAME-BOARD-STYLES: the boards of the stations of systems with
+        /// a style of their own.
+        var boardSigns: [StationID: Map3DBoardSign] = [:]
         /// Decision 874: the stations under a shell of their own
         /// (decision 827), with no kit canopy a sign could hang from.
         var shellRoofed: Set<StationID> = []
@@ -1325,6 +1336,9 @@ extension Map3DScene {
         /// Decision 791: the ground Hong Kong's landmarks stand on, where
         /// no footprint is drawn.
         var landmarkPlots: [PlacedSquare] = []
+        /// OLD-PORT-AUDIT: the ground each of the cities' landmarks
+        /// covers (``LandmarkPlan``), where no footprint is drawn.
+        var landmarkPlans: [LandmarkPlan] = []
         /// Decision 879: the squares a model stands on in the place of one
         /// real building (the Wenwu temple's middle hall): the footprint
         /// whose middle is within one is not drawn again, but counts as
