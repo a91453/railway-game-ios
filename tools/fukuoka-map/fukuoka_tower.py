@@ -13,7 +13,8 @@ What it changes, and only this (decision 854's later note FUKUOKA-LANDMARKS):
 - the 40 m square of plaza under the tower is left out (the map draws
   its own ground and roads);
 - the old textures become the landmarks' palette colours (one material,
-  one colour, `MATERIALS` below);
+  one colour, `MATERIALS` below): the walls mirror glass, the mast steel,
+  as photographs of the real one (FUKUOKA-TOWER-COLOUR);
 - the body stays as it was (128 m, as tall as the real one's glass up to
   its slope); the mast above 128 m is stretched to the real 234 m (the
   earlier version's stopped at 172 m);
@@ -34,7 +35,10 @@ from glb_to_swift import MATERIALS, accessor, read_glb  # noqa: E402
 
 SHA256 = 'f15957a0bb4bd04f84bba2e675791983d845a1512f3406b4410733b82014b1d3'
 # The old materials (by index) onto the landmarks' materials; None: left out.
-PAINT = {0: None, 1: 'glassBlueGrey', 2: 'steelGrey', 3: 'mast', 4: 'glassDark'}
+# FUKUOKA-TOWER-COLOUR: the walls (and the old dark band under the
+# top, which the real tower does not have) one mirror glass, the mast
+# the steel of the photographs.
+PAINT = {0: None, 1: 'glassSky', 2: 'steelGrey', 3: 'steelGrey', 4: 'glassSky'}
 BODY_TOP, OLD_TOP, REAL_TOP = 128.0, 172.0, 234.0
 TURN = math.radians(8.0)
 # OpenStreetMap's outline's middle (the triangle's centroid, 33.593313, 130.351483).
@@ -119,8 +123,8 @@ def main(glb, swift):
 
     body = ring(0, BODY_TOP)
     mast = ring(BODY_TOP + 0.01, REAL_TOP)
-    prism(body, BODY_TOP, MATERIALS.index('glassBlueGrey'), MATERIALS.index('steelGrey'))
-    prism(mast, REAL_TOP, MATERIALS.index('mast'), MATERIALS.index('mast'))
+    prism(body, BODY_TOP, MATERIALS.index('glassSky'), MATERIALS.index('steelGrey'))
+    prism(mast, REAL_TOP, MATERIALS.index('steelGrey'), MATERIALS.index('steelGrey'))
     far = encode(far_points, far_triangles)
 
     # Where the footprint's middle stands.
