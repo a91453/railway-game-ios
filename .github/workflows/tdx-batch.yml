@@ -1,0 +1,47 @@
+name: Fetch TDX batch
+
+# Fetches every path of one list in tools/tdx-batch/lists/ with the owner's
+# TDX key (repository secrets TDX_CLIENT_ID, TDX_CLIENT_SECRET) and keeps the
+# gzipped answers as the artifact `tdx-batch` for a week. The log shows each
+# path's status and size, never the key or the token. By hand only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      list:
+        description: "A list file name in tools/tdx-batch/lists/ (e.g. bus.txt)"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tdx-batch-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Fetch
+        env:
+          TDX_CLIENT_ID: ${{ secrets.TDX_CLIENT_ID }}
+          TDX_CLIENT_SECRET: ${{ secrets.TDX_CLIENT_SECRET }}
+          LIST: ${{ inputs.list }}
+        run: |
+          case "$LIST" in
+            *[!A-Za-z0-9._-]*|.*|"") echo "The list must be a plain file name in tools/tdx-batch/lists/"; exit 1;;
+          esac
+          python3 -I tools/tdx-batch/fetch.py "tools/tdx-batch/lists/$LIST" out
+      - name: Keep the answers
+        uses: actions/upload-artifact@v7
+        with:
+          name: tdx-batch
+          path: out/
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
