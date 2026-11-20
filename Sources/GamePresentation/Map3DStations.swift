@@ -323,6 +323,9 @@ extension Map3DScene.Builder {
         for platform in laidPlatforms { laid[platform.station, default: []].append(platform) }
         for platform in tunnels { under[platform.platform.station, default: []].append(platform.points.map { point($0) + Self.lifted }) }
         var cells = Set<Map3DScene.ChunkKey>()
+        // MRT-SHELL-CLEAR-OUTLINE: the cells of the buildings with an
+        // outline of their own (``outlining(_:)``).
+        var outlined = Set<Map3DScene.ChunkKey>()
         typealias Found = (id: StationID, station: Map3DStationKit.Station, open: [LaidPlatform], longest: Map3DStreetLife.Path,
                            middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint))
         var found: [Found] = []
@@ -390,18 +393,18 @@ extension Map3DScene.Builder {
             if self.world.station(id: id)?.isDepot == true {
                 // Decision 441: a depot's maintenance shed, not a station's
                 // building; none by sidings under ground.
-                if !open.isEmpty { cells.formUnion(addDepotShed(id, platforms: open, path: longest, middle: middle)) }
+                if !open.isEmpty { outlined.formUnion(outlining { $0.addDepotShed(id, platforms: open, path: longest, middle: middle) }) }
             } else if drawnElsewhere.contains(station.profile) {
                 continue
             } else if let shell = shells[id] {
-                cells.formUnion(addTaipeiMRTShell(shell.station, at: shell.placement))
+                outlined.formUnion(outlining { $0.addTaipeiMRTShell(shell.station, at: shell.placement) })
             } else if let study = exterior(for: id, profile: station.profile, at: anchors[id] ?? middle.point) {
                 // Decision 625: the real building stands for it.
                 if let expansion = self.world.station(id: id)?.expansion, let frame {
                     cells.formUnion(addExpansionWings(expansion, beside: study, frame: frame, snapshot: snapshot))
                 }
             } else if Map3DStationKit.hasHouse(station.profile) {
-                cells.formUnion(addHouse(station, id: id, platforms: open, middle: middle))
+                outlined.formUnion(outlining { $0.addHouse(station, id: id, platforms: open, middle: middle) })
             } else {
                 addEntrances(station, id: id, platforms: open, path: longest, middle: middle)
             }
@@ -414,7 +417,93 @@ extension Map3DScene.Builder {
             }
         }
         if shops { addShopStreets() }
-        return cells
+        outlineOnlyCells.formUnion(outlined.subtracting(cells))
+        return cells.union(outlined)
+    }
+
+    /// MRT-SHELL-CLEAR-OUTLINE: the cells `build` returns, its station
+    /// building's outline (the footprint it adds to ``houseFootprints``)
+    /// kept in ``stationOutlines``, so the real buildings round it are
+    /// judged by that outline, not by the whole 64 m cells it touches.
+    private mutating func outlining(_ build: (inout Self) -> Set<Map3DScene.ChunkKey>) -> Set<Map3DScene.ChunkKey> {
+        let before = houseFootprints.count
+        let taken = build(&self)
+        stationOutlines.append(contentsOf: houseFootprints[before...].map { StationOutline($0, margin: Self.stationOutlineMargin) })
+        return taken
+    }
+
+    /// MRT-SHELL-CLEAR-OUTLINE: how far past a station building's outline
+    /// a real building is still left out (its eaves, the gap a viaduct's
+    /// shell needs; the audit's trial).
+    static let stationOutlineMargin: Float = 2.8
+
+    /// MRT-SHELL-CLEAR-OUTLINE: how near the track's centre line a real
+    /// building is left out: half a viaduct's deck for one track and a
+    /// little more (each track has its own line).
+    static let trackClearance: Float = 4.5
+
+    /// MRT-SHELL-CLEAR-OUTLINE: ``trackLines`` and ``laidPlatforms`` out
+    /// of tunnels, by the cells their pieces reach: after the platforms
+    /// are laid, before the real buildings.
+    mutating func indexTrackOutline() {
+        trackPieces = [:]
+        func add(_ points: [Map3DPoint], reach: Float) {
+            for (a, b) in zip(points, points.dropFirst()) {
+                let low = chunk(of: Map3DPoint(min(a.x, b.x) - reach, 0, min(a.z, b.z) - reach))
+                let high = chunk(of: Map3DPoint(max(a.x, b.x) + reach, 0, max(a.z, b.z) + reach))
+                for row in low.row...high.row {
+                    for column in low.column...high.column {
+                        trackPieces[Map3DScene.ChunkKey(column: column, row: row), default: []].append((a, b, reach))
+                    }
+                }
+            }
+        }
+        for line in trackLines where line.kind != .tunnel { add(line.points, reach: Self.trackClearance) }
+        // A platform beside its track's line, as wide as it is, and a
+        // metre more.
+        for platform in laidPlatforms where platform.structure != .tunnel {
+            add(platform.line, reach: max(Self.trackClearance, abs(platform.offset) + platform.width / 2 + 1))
+        }
+    }
+
+    /// MRT-SHELL-CLEAR-OUTLINE: whether the track or a platform (out of
+    /// tunnels) comes within its reach of the real building `ring` or
+    /// runs through it, so it is not drawn. Before, every one reaching a
+    /// 64 m cell the track ran through was left out: whole blocks beside
+    /// a viaduct.
+    func onTrack(_ ring: [Map3DPoint]) -> Bool {
+        guard !trackPieces.isEmpty, ring.count >= 3 else { return false }
+        let low = chunk(of: Map3DPoint(ring.map(\.x).min() ?? 0, 0, ring.map(\.z).min() ?? 0))
+        let high = chunk(of: Map3DPoint(ring.map(\.x).max() ?? 0, 0, ring.map(\.z).max() ?? 0))
+        for row in low.row...high.row {
+            for column in low.column...high.column {
+                for piece in trackPieces[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
+                    let (a, b, reach) = piece
+                    if Self.inside(a, [ring]) { return true }
+                    for (at, c) in ring.enumerated() {
+                        let d = ring[(at + 1) % ring.count]
+                        if StationOutline.cross(a, b, c, d) || Self.distance(c, a, b) < reach || Self.distance(a, c, d) < reach { return true }
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    /// The distance across the ground from `p` to the piece `a`–`b`.
+    static func distance(_ p: Map3DPoint, _ a: Map3DPoint, _ b: Map3DPoint) -> Float {
+        let ab = (x: b.x - a.x, z: b.z - a.z), ap = (x: p.x - a.x, z: p.z - a.z)
+        let length = ab.x * ab.x + ab.z * ab.z
+        let t = length > 0 ? max(0, min(1, (ap.x * ab.x + ap.z * ab.z) / length)) : 0
+        return hypot(ap.x - ab.x * t, ap.z - ab.z * t)
+    }
+
+    /// MRT-SHELL-CLEAR-OUTLINE: whether the real building `ring` overlaps
+    /// a station building's outline or the track runs by it, so it is not
+    /// drawn.
+    func underRailway(_ ring: [Map3DPoint]) -> Bool {
+        guard ring.count >= 3 else { return false }
+        return stationOutlines.contains { $0.overlaps(ring) } || onTrack(ring)
     }
 
     /// Decision 322: the shop streets of the stations' buildings laid so
@@ -648,5 +737,47 @@ extension Map3DScene.Builder {
                 exitLights.append((foot + along * string.x + right * string.z + Map3DPoint(0, string.y, 0), along))
             }
         }
+    }
+}
+
+/// MRT-SHELL-CLEAR-OUTLINE: a station building's outline seen from above,
+/// a convex quadrilateral (a shell's, a kit house's, a depot shed's
+/// corners) pushed `margin` metres out at each side.
+struct StationOutline: Sendable, Equatable {
+    let corners: [Map3DPoint]
+    let minX: Float, minZ: Float, maxX: Float, maxZ: Float
+
+    init(_ footprint: [Map3DPoint], margin: Float) {
+        let count = footprint.count
+        corners = footprint.indices.map { at in
+            let corner = footprint[at], before = footprint[(at + count - 1) % count], after = footprint[(at + 1) % count]
+            let out = ((corner - before).normalized ?? .zero) + ((corner - after).normalized ?? .zero)
+            return Map3DPoint(corner.x + out.x * margin, 0, corner.z + out.z * margin)
+        }
+        minX = corners.map(\.x).min() ?? 0
+        minZ = corners.map(\.z).min() ?? 0
+        maxX = corners.map(\.x).max() ?? 0
+        maxZ = corners.map(\.z).max() ?? 0
+    }
+
+    /// Whether `ring` (any simple outline) and this one overlap: a corner
+    /// of either inside the other, or two of their sides crossing.
+    func overlaps(_ ring: [Map3DPoint]) -> Bool {
+        guard ring.contains(where: { $0.x >= minX }), ring.contains(where: { $0.x <= maxX }),
+              ring.contains(where: { $0.z >= minZ }), ring.contains(where: { $0.z <= maxZ }) else { return false }
+        if ring.contains(where: { Map3DScene.Builder.inside($0, [corners]) }) { return true }
+        if corners.contains(where: { Map3DScene.Builder.inside($0, [ring]) }) { return true }
+        for (i, a) in ring.enumerated() {
+            let b = ring[(i + 1) % ring.count]
+            for (j, c) in corners.enumerated() where Self.cross(a, b, c, corners[(j + 1) % corners.count]) { return true }
+        }
+        return false
+    }
+
+    /// Whether the sides `a`–`b` and `c`–`d` cross, across the ground.
+    static func cross(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint, _ d: Map3DPoint) -> Bool {
+        func side(_ p: Map3DPoint, _ q: Map3DPoint, _ r: Map3DPoint) -> Float { (q.x - p.x) * (r.z - p.z) - (q.z - p.z) * (r.x - p.x) }
+        let d1 = side(c, d, a), d2 = side(c, d, b), d3 = side(a, b, c), d4 = side(a, b, d)
+        return (d1 > 0) != (d2 > 0) && (d3 > 0) != (d4 > 0)
     }
 }
