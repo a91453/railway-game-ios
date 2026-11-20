@@ -75,6 +75,10 @@ const recipes = [
     },
   },
   {
+    // Decision 908: the app's garbage-truck and recycling-truck files now
+    // come from the local studio's rebuild (tw-garbage-trucks-2026-11),
+    // converted by tools/glb-to-m3dmodel/convert.mjs; these two recipes
+    // only rebuild the earlier Meshy-only versions.
     // Decision 437's evening garbage truck, from the retextured
     // high-quality model rather than Meshy's remesh to 1,374 triangles,
     // whose faces folded into spikes, turned some faces inside out and

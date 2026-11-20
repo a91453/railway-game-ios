@@ -232,9 +232,13 @@ public enum Map3DGarbageTruck {
 extension Map3DGarbageTruck {
     // MARK: The models
 
-    /// The models' files in the app's resources: the owner's Meshy models
-    /// (`Railway/meshy-batch-2026-10/`, converted by
-    /// `tools/glb-to-m3dmodel/`).
+    /// The models' files in the app's resources. Decision 908: the local
+    /// studio's rebuild of the owner's Meshy models
+    /// (`a91453/railway-assets-private-2`
+    /// `game-art-previews/docs/art/tw-garbage-trucks-2026-11/revision-3`,
+    /// #229; lessons in `docs/studio/lessons/tw-garbage-trucks.md`),
+    /// converted by `tools/glb-to-m3dmodel/convert.mjs` (`front` `+x`,
+    /// 6.5 m, glTF's linear colours) with the Meshy batch's record kept.
     public static let fileNames: [Map3DStreetModel: String] = [.garbageTruck: "garbage-truck", .recyclingTruck: "recycling-truck"]
     public static let fileExtension = "m3dmodel"
 
@@ -288,11 +292,23 @@ extension Map3DGarbageTruck {
     static let green = Map3DColor.rgb(0x8DC27A)
     static let beacon = Map3DColor.rgb(0xF0A93C)
 
-    /// A generated colour as the game draws it, by what it is (its hue and
+    /// Decision 908: the studio's six materials, each one of the game's
+    /// colours (its brief's §5), kept one for one: the garbage truck's
+    /// yellow, the recycling truck's white cab, its rails, the steel bed,
+    /// the dark chassis and the windows.
+    static let studioColours: Set<UInt32> = [
+        Map3DPalette.platformEdge, Map3DPalette.sidewalk, Map3DPalette.tankSteel, Map3DPalette.steel, Map3DPalette.dark,
+        Map3DPalette.glazing,
+    ]
+
+    /// A file's colour as the game draws it: one of ``studioColours`` as it
+    /// is; any other (a generated model's) by what it is (its hue and
     /// lightness): the tyres and the chassis dark, a grey bed or trim the
     /// game's steel or trim, the windows the vehicles' glass, the body
     /// the truck's own colour.
     static func colour(_ color: UInt32, of model: Map3DStreetModel) -> UInt32 {
+        let opaque = color | 0xFF00_0000
+        if studioColours.contains(opaque) { return opaque }
         let r = Float(color & 0xFF) / 255, g = Float((color >> 8) & 0xFF) / 255, b = Float((color >> 16) & 0xFF) / 255
         let high = max(r, g, b), low = min(r, g, b), lightness = (high + low) / 2
         let chroma = high - low
