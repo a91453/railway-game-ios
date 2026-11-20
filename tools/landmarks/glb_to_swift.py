@@ -41,7 +41,9 @@ tool
   centimetres (UInt16, up to 655 m; Int16 for the legacy Sun Moon Lake and
   MRT files), the triangle count (UInt16), each triangle's three vertex
   indices (UInt16) and material index (UInt8), little-endian
-  (``Map3DLandmarkRegistration`` reads it).
+  (``Map3DLandmarkRegistration`` reads it);
+- stops when a model brings its own ground plate (`ground_plate.py`,
+  OLD-PORT-AUDIT), unless `--allow-ground-plate` says it belongs.
 """
 
 import argparse
@@ -49,6 +51,10 @@ import base64
 import json
 import os
 import struct
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import ground_plate  # noqa: E402
 
 # The legacy files' material tables (their Swift enums' `materialColours`
 # hold the colours in the same order).
@@ -254,6 +260,7 @@ def main():
     parser.add_argument("--centre", action="store_true", help="move the footprint's middle to the origin")
     parser.add_argument("--legacy", choices=sorted(LEGACY), help="write a landmark file made before the registry")
     parser.add_argument("--assets", help="--legacy sunmoon: the folder of the Sun Moon Lake GLBs")
+    parser.add_argument("--allow-ground-plate", action="store_true", help="a level plate beyond the body belongs to the model")
     parser.add_argument("glbs", nargs="*")
     a = parser.parse_args()
     if a.legacy:
@@ -269,6 +276,7 @@ def main():
         for name, path, scale in jobs:
             data, v, t, low, high = encode(path, preset["materials"], preset["aliases"], preset["axes"], preset["nodes"],
                                            scale, preset["unsigned_z"], a.centre)
+            ground_plate.check(data, name, signed_z=not preset["unsigned_z"], allow=a.allow_ground_plate)
             print(f"{name}: {v} vertices, {t} triangles, {len(data)} bytes")
             entries.append((name, data, v, t, low, high))
         open(a.out, "w").write(legacy_file(preset, entries))
@@ -280,6 +288,7 @@ def main():
     for path in a.glbs:
         data, v, t, _, _ = encode(path, materials, centre=a.centre)
         name = os.path.splitext(os.path.basename(path))[0]
+        ground_plate.check(data, name, allow=a.allow_ground_plate)
         print(f"{name}: {v} vertices, {t} triangles, {len(data)} bytes")
         models.append((name, data, v, t))
     open(a.out, "w").write(mesh_file(a.enum, materials, a.source, models))

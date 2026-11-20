@@ -1,0 +1,103 @@
+{
+  "comment" : "Decision 782: the models of the registered train fukuokaAirportLine (Map3DFukuokaAirportLine): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 12,
+  "lamps" : "2bfbdbf9546aa6d0",
+  "models" : {
+    "light-set-fukuokaAirportLine-car" : {
+      "hash" : "9ce3b139c9c6fc5",
+      "triangles" : 72
+    },
+    "light-set-fukuokaAirportLine-carBack" : {
+      "hash" : "9a141e0981d657c5",
+      "triangles" : 72
+    },
+    "light-set-fukuokaAirportLine-head" : {
+      "hash" : "ab9b28c521ff3e8e",
+      "triangles" : 64
+    },
+    "light-set-fukuokaAirportLine-panto" : {
+      "hash" : "9ce3b139c9c6fc5",
+      "triangles" : 72
+    },
+    "light-set-fukuokaAirportLine-pantoBack" : {
+      "hash" : "9a141e0981d657c5",
+      "triangles" : 72
+    },
+    "light-set-fukuokaAirportLine-tail" : {
+      "hash" : "2aa3fc1b118cce8e",
+      "triangles" : 64
+    },
+    "light-set-fukuokaAirportLineFar-car" : {
+      "hash" : "d5e57005a290efe5",
+      "triangles" : 52
+    },
+    "light-set-fukuokaAirportLineFar-carBack" : {
+      "hash" : "6eac0a25e3b255e5",
+      "triangles" : 52
+    },
+    "light-set-fukuokaAirportLineFar-head" : {
+      "hash" : "f3b79523d345eecf",
+      "triangles" : 46
+    },
+    "light-set-fukuokaAirportLineFar-panto" : {
+      "hash" : "d5e57005a290efe5",
+      "triangles" : 52
+    },
+    "light-set-fukuokaAirportLineFar-pantoBack" : {
+      "hash" : "6eac0a25e3b255e5",
+      "triangles" : 52
+    },
+    "light-set-fukuokaAirportLineFar-tail" : {
+      "hash" : "c3c677a779412acf",
+      "triangles" : 46
+    },
+    "set-fukuokaAirportLine-car" : {
+      "hash" : "ff825e8b3547ce3f",
+      "triangles" : 5582
+    },
+    "set-fukuokaAirportLine-carBack" : {
+      "hash" : "11a653e61b54edb8",
+      "triangles" : 5582
+    },
+    "set-fukuokaAirportLine-head" : {
+      "hash" : "ef88de28b83bd3eb",
+      "triangles" : 7172
+    },
+    "set-fukuokaAirportLine-panto" : {
+      "hash" : "3515ea3a457c4024",
+      "triangles" : 5918
+    },
+    "set-fukuokaAirportLine-pantoBack" : {
+      "hash" : "f9972fc88bec0ab3",
+      "triangles" : 5918
+    },
+    "set-fukuokaAirportLine-tail" : {
+      "hash" : "b2d79a76b1304abe",
+      "triangles" : 7172
+    },
+    "set-fukuokaAirportLineFar-car" : {
+      "hash" : "37e4a1a04375162e",
+      "triangles" : 2400
+    },
+    "set-fukuokaAirportLineFar-carBack" : {
+      "hash" : "a8d9a2563cfa070e",
+      "triangles" : 2400
+    },
+    "set-fukuokaAirportLineFar-head" : {
+      "hash" : "8dc0397877720d2d",
+      "triangles" : 3154
+    },
+    "set-fukuokaAirportLineFar-panto" : {
+      "hash" : "aaf8e2d823186afc",
+      "triangles" : 2664
+    },
+    "set-fukuokaAirportLineFar-pantoBack" : {
+      "hash" : "56985b6783d59554",
+      "triangles" : 2664
+    },
+    "set-fukuokaAirportLineFar-tail" : {
+      "hash" : "394fdfc0c266b61b",
+      "triangles" : 3154
+    }
+  }
+}
