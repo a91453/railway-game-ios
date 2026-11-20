@@ -58,8 +58,8 @@ public struct Map3DCableways: Sendable {
 
     /// Decision 615: the cabins a cable car runs, picked by where it is,
     /// not by the player: the Sun Moon Lake Ropeway's near it, Maokong's
-    /// everywhere else.
-    public enum CabinLook: Sendable { case maokong, sunMoonLake }
+    /// everywhere else; decision 897: the Ngong Ping cable car's near it.
+    public enum CabinLook: Sendable { case maokong, sunMoonLake, ngongPing }
 
     /// Decision 615: within this of either of the Sun Moon Lake Ropeway's
     /// stations (``RealCableway/sunMoonLake``), a stop puts its cable car
@@ -67,6 +67,14 @@ public struct Map3DCableways: Sendable {
     /// most 3,677 m from the nearer station; Puli, the next town, 11,988 m;
     /// Maokong some 130 km.
     public static let sunMoonLakeReach: Double = 5_000
+
+    /// Decision 897: within this of any of the Ngong Ping cable car's
+    /// stations (``RealCableway/ngongPing``), a stop puts its cable car on
+    /// Lantau, as ``sunMoonLakeReach`` does at the lake: Tung Chung's
+    /// station to Ngong Ping's is some 5.7 km in a line, so every stop of a
+    /// line between them is within this of one of its four; Central, on
+    /// Hong Kong Island, is some 25 km away.
+    public static let ngongPingReach: Double = 4_000
 
     /// Decision 615: the cabins `cableway` runs on `world`'s map: Sun Moon
     /// Lake's when any of its stops lies within ``sunMoonLakeReach`` of a
@@ -78,12 +86,15 @@ public struct Map3DCableways: Sendable {
     public static func look(ofStops stops: [CablewayStop], in world: GameWorld) -> CabinLook {
         guard let frame = RealWorldFrame(world: world) else { return .maokong }
         let units = Double(WorldCoordinate.unitsPerMetre)
-        let stations = RealCableway.sunMoonLake.stops.map { frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude) }
-        for stop in stops {
-            let middle = stop.cell.middle
-            for station in stations {
-                let east = (Double(middle.x) - station.x) / units, south = (Double(middle.y) - station.y) / units
-                if (east * east + south * south).squareRoot() <= sunMoonLakeReach { return .sunMoonLake }
+        for (real, reach, look) in [(RealCableway.sunMoonLake, sunMoonLakeReach, CabinLook.sunMoonLake),
+                                    (RealCableway.ngongPing, ngongPingReach, CabinLook.ngongPing)] {
+            let stations = real.stops.map { frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude) }
+            for stop in stops {
+                let middle = stop.cell.middle
+                for station in stations {
+                    let east = (Double(middle.x) - station.x) / units, south = (Double(middle.y) - station.y) / units
+                    if (east * east + south * south).squareRoot() <= reach { return look }
+                }
             }
         }
         return .maokong
@@ -200,6 +211,9 @@ public struct Map3DCableways: Sendable {
         /// Decision 615: the Sun Moon Lake cabins; empty in a pack without
         /// them, which then runs Maokong's there too.
         let sunMoon: [Map3DCableCar.SunMoonCabin: (near: Int, far: Int)]
+        /// Decision 897: the Ngong Ping cabins; empty in a pack without
+        /// them, which then runs Maokong's there.
+        let ngongPing: [Map3DNgongPingCabin.Kind: (near: Int, far: Int)]
 
         init?(_ pack: Map3DModelPack) {
             func pair(_ name: String) -> (near: Int, far: Int)? {
@@ -223,6 +237,12 @@ public struct Map3DCableways: Sendable {
                 sunMoon[kind] = p
             }
             self.sunMoon = sunMoon
+            var ngongPing: [Map3DNgongPingCabin.Kind: (near: Int, far: Int)] = [:]
+            for kind in Map3DNgongPingCabin.Kind.allCases {
+                guard let p = pair("cablecar-cabin-ngongping-" + kind.rawValue) else { ngongPing = [:]; break }
+                ngongPing[kind] = p
+            }
+            self.ngongPing = ngongPing
             self.cabin = cabin
             self.tower = tower
             self.hall = hall
@@ -232,6 +252,7 @@ public struct Map3DCableways: Sendable {
         /// Decision 615: cabin `number`'s models on a line of `look`.
         func cabin(_ number: Int, look: CabinLook) -> (near: Int, far: Int)? {
             if look == .sunMoonLake, let pair = sunMoon[Map3DCableCar.sunMoonCabin(number)] { return pair }
+            if look == .ngongPing, let pair = ngongPing[Map3DNgongPingCabin.kind(number)] { return pair }
             return cabin[CablewayCabins.isCrystal(number) ? .crystal : .standard]
         }
     }
@@ -337,7 +358,8 @@ public struct Map3DCableways: Sendable {
                 }
                 let d = (point - eye).length
                 guard d < far, let pair = models.cabin(cabin.number, look: line.look) else { continue }
-                cabins.append((weight(point), d, point, along, pair, line.look == .sunMoonLake && !models.sunMoon.isEmpty))
+                let heavy = (line.look == .sunMoonLake && !models.sunMoon.isEmpty) || (line.look == .ngongPing && !models.ngongPing.isEmpty)
+                cabins.append((weight(point), d, point, along, pair, heavy))
             }
         }
         cabins.sort { $0.weight < $1.weight }
