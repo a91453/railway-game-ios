@@ -780,8 +780,8 @@ public struct Map3DTrainSet: Sendable {
 
     /// Decision 426: the TEMU2000 units in the operating Puyuma set, in
     /// the static formation's order (TED, TEMA, TEP, TEMB, TEMB, TEP,
-    /// TEMA, TED): the pantographs on cars 3 and 6 (the second TEP turned
-    /// round, ``Map3DTEMU2000/rotations``). Decision 484: the units are
+    /// TEMA, TED): the pantographs on cars 3 and 6, both pointing outward
+    /// (one TEP turned round, ``Map3DTEMU2000/rotations``). Decision 484: the units are
     /// #1456's revision-2 (the old recipe deleted), each cab car's own
     /// lamp lenses lit (``Map3DTEMU2000/model(_:far:lamps:)``) for
     /// decision 449's lights. `far`, the light units drawn car for car
@@ -792,7 +792,7 @@ public struct Map3DTrainSet: Sendable {
             func part(_ unit: Map3DTEMU2000.Unit) -> Map3DModelPack.Model { Map3DTEMU2000.model(unit, far: far) }
             func cab(_ unit: Map3DTEMU2000.Unit) -> Map3DModelPack.Model { Map3DTEMU2000.model(unit, far: far, lamps: true) }
             return Cars(head: cab(.leading), middle: part(.tema), tail: cab(.trailing), single: nil,
-                        pantograph: part(.tep).turned, centre: part(.temb), pantographBack: part(.tep))
+                        pantograph: part(.tep), centre: part(.temb), pantographBack: part(.tep).turned)
         }
     }
 
