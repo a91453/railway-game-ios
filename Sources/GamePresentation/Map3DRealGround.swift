@@ -996,11 +996,15 @@ extension Map3DScene.Builder {
         let lamps = Set([Self.propModels[.lamp], Self.finlandModels[.lamp]].compactMap { $0 })
         // Its fourth later note: and the double one's, one under each arm.
         let double = Self.finlandModels[.lampDouble]
-        guard !lamps.isEmpty || double != nil else { return }
+        // Decision 923: and Japan's utility pole with a light, close by it.
+        let japanese = Self.japanModels[.poleLamp]
+        guard !lamps.isEmpty || double != nil || japanese != nil else { return }
         for key in props.keys.sorted() {
             for instance in props[key] ?? [] {
                 if lamps.contains(instance.model) {
                     addLampPool(instance)
+                } else if instance.model == japanese {
+                    addLampPool(instance, reach: Map3DJapanStreet.lampReach)
                 } else if instance.model == double {
                     addLampPool(instance, reach: Self.doubleLampReach)
                     addLampPool(instance, reach: -Self.doubleLampReach)
@@ -1122,8 +1126,12 @@ extension Map3DScene.Builder {
                             // Decision 846's later note: Finland's own
                             // street light on its streets.
                             let finnish = rule.prop == .lamp && look.streets.hasFinnishFurniture ? Self.finlandModels[.lamp] : nil
+                            // Decision 923: Japan's own utility poles, of
+                            // five kinds, on its streets.
+                            let japanese = rule.prop == .pole && look.streets.hasJapaneseFurniture
+                                ? Self.japanModels[Map3DJapanStreet.pole(map3DRandom(seed.0, seed.1, salt: 74))] : nil
                             guard map3DRandom(seed.0, seed.1, salt: 71) >= (rule.prop == .tree ? 0.18 : 0.08), !nearJunction(x, z),
-                                  let model = finnish ?? Self.propModels[rule.prop] else { continue }
+                                  let model = finnish ?? japanese ?? Self.propModels[rule.prop] else { continue }
                             // Decision 391: none on a bridge or its ramp.
                             guard roadRise(at: Map3DBaseMap.Point(x: centre.x, z: centre.z), along: along, onDeck: road.bridgeLevel > 0).rise < Self.propRise
                             else { continue }

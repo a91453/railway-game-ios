@@ -139,6 +139,10 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// but reaching right from the left kerb.
     var hasJapaneseSignals: Bool { self == .japan }
 
+    /// Decision 923: whether its streets stand Japan's own utility poles
+    /// and pedestrian signals (``Map3DJapanStreet``).
+    var hasJapaneseFurniture: Bool { self == .japan }
+
     /// Decision 846's second later note: whether the roads coming into a
     /// roundabout have the give-way line painted across their incoming
     /// lanes at the ring's edge: Finland's row of white triangles
