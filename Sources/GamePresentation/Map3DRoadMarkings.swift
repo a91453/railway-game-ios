@@ -273,7 +273,10 @@ struct Map3DRoadMarkings {
     /// Decision 732: in `region` (traffic on the left in Hong Kong, the
     /// stop lines, arrows and signals on that side; no scooter boxes, red
     /// kerbs or painted walkways there).
-    init(_ roads: [Map3DBaseMap.Road], origin: Map3DBaseMap.Point = Map3DBaseMap.Point(x: 0, z: 0), region: Map3DStreetRegion = .taiwan) {
+    /// Decision 920: `joining` false marks each point where roads cross
+    /// on its own, as before (for the tests' before and after).
+    init(_ roads: [Map3DBaseMap.Road], origin: Map3DBaseMap.Point = Map3DBaseMap.Point(x: 0, z: 0), region: Map3DStreetRegion = .taiwan,
+         joining: Bool = true) {
         self.region = region
         // Every point of a marked road, by its half metre (as
         // Builder.junctions(of:) keys them).
@@ -323,9 +326,34 @@ struct Map3DRoadMarkings {
                   !roundabouts.contains(where: { Self.distance($0.centre, ring.centre) < Self.ringSame }) else { continue }
             roundabouts.append(ring)
         }
-        for (point, arms) in found {
-            let group = Map3DSignalTiming.group(at: Map3DBaseMap.Point(x: point.x + origin.x, z: point.z + origin.z))
-            add(arms, group: group, layout: Self.layout(at: point, arms: arms, rings: roundabouts))
+        // Decision 920: a crossroads of divided roads is several points
+        // where the carriageways cross; they are one junction, marked
+        // once round its outer edge and clear inside.
+        let layouts = found.map { Self.layout(at: $0.point, arms: $0.arms, rings: roundabouts) }
+        for cluster in joining ? Self.clusters(found, layouts: layouts) : found.indices.map({ [$0] }) {
+            guard cluster.count > 1 else {
+                let (point, arms) = found[cluster[0]]
+                let group = Map3DSignalTiming.group(at: Map3DBaseMap.Point(x: point.x + origin.x, z: point.z + origin.z))
+                add(arms, group: group, layout: layouts[cluster[0]])
+                continue
+            }
+            let members = cluster.map { found[$0].point }
+            var outer: [Arm] = []
+            for index in cluster {
+                for arm in found[index].arms {
+                    // An arm to another of its points is inside: no
+                    // centre line there, nothing painted.
+                    if let reach = Self.link(arm, to: members) {
+                        cuts[arm.road, default: []].append(arm.forward ? arm.at...(arm.at + reach) : (arm.at - reach)...arm.at)
+                    } else {
+                        outer.append(arm)
+                    }
+                }
+            }
+            let centre = Map3DBaseMap.Point(x: members.map(\.x).reduce(0, +) / Double(members.count),
+                                            z: members.map(\.z).reduce(0, +) / Double(members.count))
+            let group = Map3DSignalTiming.group(at: Map3DBaseMap.Point(x: centre.x + origin.x, z: centre.z + origin.z))
+            add(outer, group: group, layout: .signals, merged: true)
         }
         // Decision 447: where any road on the ground (a lane too) meets a
         // kerbed one, its kerb lines stop across the mouth.
@@ -681,9 +709,80 @@ struct Map3DRoadMarkings {
         return distance(p, Map3DBaseMap.Point(x: a.x + dx * t, z: a.z + dz * t))
     }
 
+    /// Decision 920: how far along the road two of a crossroads' points
+    /// may be and still be one junction, metres (OSMnx's
+    /// `consolidate_intersections`, MIT, Copyright (c) 2016–2025 Geoff
+    /// Boeing, merges the points within a tolerance of each other; A/B
+    /// Street, Apache-2.0, merges a junction's short internal roads).
+    /// The carriageways of a divided road in Taipei and Fukuoka are 10–30
+    /// m apart.
+    static let linkReach = 35.0
+
+    /// Decision 920: how far along `arm` it reaches another of `points`
+    /// (within ``linkReach``), or nil.
+    static func link(_ arm: Arm, to points: [Map3DBaseMap.Point]) -> Double? {
+        guard let start = arm.points.first else { return nil }
+        var walked = 0.0
+        for (a, b) in zip(arm.points, arm.points.dropFirst()) {
+            guard walked <= linkReach else { return nil }
+            let length = distance(a, b)
+            for p in points where distance(p, start) > 1 && distance(p, toSegment: a, b) < 1 {
+                let t = length > 1e-9 ? ((p.x - a.x) * (b.x - a.x) + (p.z - a.z) * (b.z - a.z)) / (length * length) : 0
+                let at = walked + max(0, min(1, t)) * length
+                if at <= linkReach { return at }
+            }
+            walked += length
+        }
+        return nil
+    }
+
+    /// Decision 920: the junctions `found` (by index) that are one: two
+    /// with signals joined by a road no longer than ``linkReach`` where
+    /// either has a one-way arm (a divided road's carriageway), each
+    /// group in the order of its first.
+    static func clusters(_ found: [(point: Map3DBaseMap.Point, arms: [Arm])], layouts: [Layout]) -> [[Int]] {
+        var parent = Array(found.indices)
+        func root(_ i: Int) -> Int {
+            var i = i
+            while parent[i] != i { parent[i] = parent[parent[i]]; i = parent[i] }
+            return i
+        }
+        func square(_ p: Map3DBaseMap.Point) -> (Int, Int) { (Int((p.x / linkReach).rounded(.down)), Int((p.z / linkReach).rounded(.down))) }
+        var squares: [Int64: [Int]] = [:]
+        for (index, junction) in found.enumerated() where layouts[index] == .signals {
+            let (column, row) = square(junction.point)
+            squares[Int64(column) << 32 ^ (Int64(row) & 0xFFFF_FFFF), default: []].append(index)
+        }
+        let divided = found.map { $0.arms.contains(where: \.oneway) }
+        for (index, junction) in found.enumerated() where layouts[index] == .signals {
+            let (column, row) = square(junction.point)
+            var near: [Int] = []
+            for c in column - 1...column + 1 {
+                for r in row - 1...row + 1 { near += squares[Int64(c) << 32 ^ (Int64(r) & 0xFFFF_FFFF)] ?? [] }
+            }
+            near.removeAll { $0 == index || !(divided[$0] || divided[index]) }
+            guard !near.isEmpty else { continue }
+            let points = near.map { found[$0].point }
+            for arm in junction.arms {
+                guard Self.link(arm, to: points) != nil, let start = arm.points.first else { continue }
+                // Every point it reaches first (the nearest along it).
+                for (other, p) in zip(near, points) where distance(p, start) > 1 && Self.link(arm, to: [p]) != nil {
+                    parent[root(other)] = root(index)
+                }
+            }
+        }
+        var groups: [Int: [Int]] = [:], order: [Int] = []
+        for index in found.indices {
+            let r = root(index)
+            if groups[r] == nil { order.append(r) }
+            groups[r, default: []].append(index)
+        }
+        return order.map { groups[$0]! }
+    }
+
     /// The marks, signals and crossings of a junction of `arms`, as its
     /// `layout` has them (decision 846).
-    private mutating func add(_ arms: [Arm], group: Int, layout: Layout = .signals) {
+    private mutating func add(_ arms: [Arm], group: Int, layout: Layout = .signals, merged: Bool = false) {
         let outs = arms.map { $0.place(min(6, $0.length))?.out ?? Map3DBaseMap.Point(x: 1, z: 0) }
         if region.hasStreetNameSigns, layout != .bare { addStreetNames(arms, outs: outs) }
         // The main road: the widest arm (the first of the widest), its way
@@ -700,6 +799,9 @@ struct Map3DRoadMarkings {
                 let sine = max(0.5, abs(outs[number].x * outs[other].z - outs[number].z * outs[other].x))
                 // An arm straight on (the same road beyond) is not crossed.
                 if Self.dot(outs[number], outs[other]) < -0.9 { continue }
+                // Decision 920: nor, at a divided road's crossroads, the
+                // other carriageway alongside.
+                if merged && Self.dot(outs[number], outs[other]) > 0.9 { continue }
                 clear = max(clear, crossing.half / sine)
             }
             let crosswalk = clear + Self.kerbGap + Self.crosswalkDepth / 2
@@ -763,12 +865,24 @@ struct Map3DRoadMarkings {
             marks.append(Mark(kind: .crosswalk, centre: zebra.point, along: toward(zebra.out), length: Self.crosswalkDepth, width: 2 * half,
                               onDeck: arm.onDeck))
             let way = toward(line.out)
-            marks.append(Mark(kind: .stopLine, centre: moved(line.point, right(way), half / 2), along: way, length: Self.stopDepth,
-                              width: half - 0.3, onDeck: arm.onDeck))
+            let kerb = half + max(0.5, min(1, Double(Map3DScene.Builder.sidewalk(of: arm.kind)) * 0.3))
+            let road: Map3DSignalTiming.Road = abs(Self.dot(outs[number], outs[main])) >= 0.7 ? .main : .cross
+            // Decision 920: a one-way road's traffic comes in across its
+            // whole width, or none comes in (a divided road's carriageway
+            // leaving the junction): then only the crossing and its
+            // pedestrian signals.
+            let incoming = (start: arm.oneway ? -half : 0, width: arm.oneway ? 2 * half : half)
+            guard !(arm.oneway && arm.forward) else {
+                crossings.append(Crossing(centre: zebra.point, out: zebra.out, half: half, road: road == .main ? .cross : .main, group: group))
+                addWalks(arm, crosswalk: crosswalk, kerb: kerb, road: road, group: group)
+                continue
+            }
+            marks.append(Mark(kind: .stopLine, centre: moved(line.point, right(way), incoming.start + incoming.width / 2), along: way,
+                              length: Self.stopDepth, width: incoming.width - 0.3, onDeck: arm.onDeck))
             // Decision 447: the scooter box, over the incoming half from
             // the centre line to the kerb line: its front line, its two
             // sides back to the stop line.
-            let inner = 0.3, outer = half - Self.kerbInset - Self.kerbWidth / 2 - 0.1
+            let inner = incoming.start + 0.3, outer = half - Self.kerbInset - Self.kerbWidth / 2 - 0.1
             if boxed, let ahead = arm.place(front + Self.scooterBoxFront / 2), let middle = arm.place(front + Self.scooterBoxDepth / 2) {
                 let way = toward(ahead.out)
                 marks.append(Mark(kind: .scooterBox(turn: false), centre: moved(ahead.point, right(way), (inner + outer) / 2), along: way,
@@ -799,31 +913,37 @@ struct Map3DRoadMarkings {
                 // Two lanes each way on a road this wide, the inner one
                 // through and left (decision 732: through and right in
                 // Hong Kong).
-                let lanes = half >= 5 ? 2 : 1, lane = half / Double(lanes)
+                // Decision 920: a one-way road's lanes, one each 3.2 m.
+                let lanes = arm.oneway ? max(1, min(3, Int(incoming.width / 3.2))) : half >= 5 ? 2 : 1, lane = incoming.width / Double(lanes)
                 for index in 0..<lanes {
-                    marks.append(Mark(kind: .arrow(left: lanes > 1 && index == 0, mirrored: region.keepsLeft), centre: moved(place.point, right(way), (Double(index) + 0.5) * lane),
+                    marks.append(Mark(kind: .arrow(left: lanes > 1 && index == 0, mirrored: region.keepsLeft),
+                                      centre: moved(place.point, right(way), incoming.start + (Double(index) + 0.5) * lane),
                                       along: way, length: Self.arrowLength, width: Self.arrowWidth, onDeck: arm.onDeck))
                 }
             }
             // The signal at the kerb by the stop line, on the pavement.
-            let kerb = half + max(0.5, min(1, Double(Map3DScene.Builder.sidewalk(of: arm.kind)) * 0.3))
-            let road: Map3DSignalTiming.Road = abs(Self.dot(outs[number], outs[main])) >= 0.7 ? .main : .cross
             signals.append(Signal(foot: moved(line.point, right(way), kerb), along: way, road: road, group: group))
             // Decision 596: the traffic coming in waits at the stop line; who
             // crosses here waits at the crossing's ends.
             stops.append(Stop(point: line.point, along: way, road: road, group: group))
             crossings.append(Crossing(centre: zebra.point, out: zebra.out, half: half, road: road == .main ? .cross : .main, group: group))
-            // Decision 445: a pedestrian signal at each end of the
-            // crossing, on the pavement just past its outer edge, looking
-            // across at the other end; who crosses this road walks with
-            // the other road's traffic.
-            if let end = arm.place(crosswalk + Self.crosswalkDepth / 2 + Self.walkGap) {
-                let across = right(toward(end.out))
-                for side in [1.0, -1.0] {
-                    walks.append(Walk(foot: moved(end.point, across, side * kerb), facing: Map3DBaseMap.Point(x: -across.x * side, z: -across.z * side),
-                                      road: road == .main ? .cross : .main, group: group))
-                }
-            }
+            addWalks(arm, crosswalk: crosswalk, kerb: kerb, road: road, group: group)
+        }
+    }
+
+    /// Decision 445: a pedestrian signal at each end of `arm`'s crossing
+    /// (its middle `crosswalk` metres out), on the pavement just past its
+    /// outer edge, looking across at the other end; who crosses this road
+    /// walks with the other road's traffic.
+    private mutating func addWalks(_ arm: Arm, crosswalk: Double, kerb: Double, road: Map3DSignalTiming.Road, group: Int) {
+        guard let end = arm.place(crosswalk + Self.crosswalkDepth / 2 + Self.walkGap) else { return }
+        let keep = Double(region.trafficSide)
+        let toward = Map3DBaseMap.Point(x: -end.out.x, z: -end.out.z)
+        let across = Map3DBaseMap.Point(x: -toward.z * keep, z: toward.x * keep)
+        for side in [1.0, -1.0] {
+            walks.append(Walk(foot: Map3DBaseMap.Point(x: end.point.x + across.x * side * kerb, z: end.point.z + across.z * side * kerb),
+                              facing: Map3DBaseMap.Point(x: -across.x * side, z: -across.z * side),
+                              road: road == .main ? .cross : .main, group: group))
         }
     }
 
