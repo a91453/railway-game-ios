@@ -2290,6 +2290,38 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("freight-train", app)
     }
 
+    /// TRAIN-IDENTITY: a train bought and not yet placed, its card with
+    /// one name and its model, then the train types with the 3D models'
+    /// pictures. For the screenshot review of the pull request that made
+    /// them, not the website.
+    func testTrainTypesWithModels() {
+        let app = launch()
+        defer { app.terminate() }
+        app.buttons["start.newGame"].tap()
+        app.chooseBlankMap()
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 60), "The world opens")
+        app.buttons["dock.build"].tap()
+        let trainTool = app.buttons["tool.train"]
+        trainTool.waitUntilSettled()
+        trainTool.tap()
+        let buy = app.buttons.matching(NSPredicate(format: "label ENDSWITH %@", "購買列車")).firstMatch
+        XCTAssertTrue(buy.appears(within: 10), "The buy button shows")
+        buy.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["train.identity"].firstMatch.appears(within: 10), "The card names the train")
+        settle(seconds: 3)
+        keep("train-card-identity", app)
+        let type = app.buttons["train.type"]
+        if !type.isHittable {
+            let panel = app.scrollViews.containing(.button, identifier: "train.type").firstMatch
+            _ = app.dragUntilWhollyOnScreen(type, in: panel)
+        }
+        type.tap()
+        XCTAssertTrue(app.buttons.matching(identifier: "catalog.row").firstMatch.appears(within: 10), "The train types open")
+        settle(seconds: 4)
+        keep("train-types-models", app)
+    }
+
     /// Decision 519: a bubble's station panel says the next step for its
     /// materials, and its platforms how a track of the player's own calls
     /// there. For the screenshot review of the pull request that made

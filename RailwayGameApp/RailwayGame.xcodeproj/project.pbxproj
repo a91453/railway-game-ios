@@ -123,6 +123,7 @@
 		61BC5056DC57D08A79608972 /* tra_overtake_tracks.json in Resources */ = {isa = PBXBuildFile; fileRef = 1EA7B218F095D335A00243D1 /* tra_overtake_tracks.json */; };
 		61F7C598833B74F821B44904 /* AchievementsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F88DCCA78BB699F97926C9A /* AchievementsView.swift */; };
 		622D1DA8B4621C37B231D926 /* NetworkControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 080B5EA4C72E50F138757E75 /* NetworkControls.swift */; };
+		62D8A25792CD70F740391FF7 /* TrainPortraitView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC39230BB68C2493AACF10C2 /* TrainPortraitView.swift */; };
 		6361F5D3D8B97DFA6D29B6F2 /* tra_track_sections.json in Resources */ = {isa = PBXBuildFile; fileRef = 95B22F52AC2B7370C697A499 /* tra_track_sections.json */; };
 		6469EAB1A8C4CFA2DD9C80F2 /* tra-yilan-schedule.json in Resources */ = {isa = PBXBuildFile; fileRef = 6630BFF287E651429AA31CC3 /* tra-yilan-schedule.json */; };
 		647CBFF4717FB3B4384775E6 /* EconomyPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */; };
@@ -682,6 +683,7 @@
 		F9D622682F53E544329A323C /* goal-met.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "goal-met.wav"; sourceTree = "<group>"; };
 		FAA79D875396E732FE48A605 /* tra.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra.json; sourceTree = "<group>"; };
 		FB74245E469669AFD43AC989 /* music-theme.m4a */ = {isa = PBXFileReference; path = "music-theme.m4a"; sourceTree = "<group>"; };
+		FC39230BB68C2493AACF10C2 /* TrainPortraitView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainPortraitView.swift; sourceTree = "<group>"; };
 		FD4B099119C83D89CC72BC1C /* BuiltBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltBrand.swift; sourceTree = "<group>"; };
 		FE2BA4043F7B5F66BB2F4CE3 /* MapPackDownloader.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = MapPackDownloader.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		FE945AAFE65EE7E25CA577DC /* ZoomRowUnderPanelUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZoomRowUnderPanelUITests.swift; sourceTree = "<group>"; };
@@ -917,6 +919,7 @@
 				9A68301E79140AEFC540BBA0 /* TrainControls.swift */,
 				35B383D349E8080CFE435A11 /* TrainDiagramView.swift */,
 				6F0A16C9226467AD2F29C92B /* TrainLoadBar.swift */,
+				FC39230BB68C2493AACF10C2 /* TrainPortraitView.swift */,
 				A19B41254DC18939B0BA2CB0 /* TrainRosterView.swift */,
 				F488A7BFC7F63D86EDB96548 /* TutorialOverlay.swift */,
 				0E01CB29C26C0F92124DEE0C /* TutorialTargets.swift */,
@@ -1622,6 +1625,7 @@
 				1505CF68AD15B9B924150DFB /* TrainControls.swift in Sources */,
 				65B04568A0BB91E5F70C0D7C /* TrainDiagramView.swift in Sources */,
 				991AFFBF0CFA0B43EA636257 /* TrainLoadBar.swift in Sources */,
+				62D8A25792CD70F740391FF7 /* TrainPortraitView.swift in Sources */,
 				D576D7231B44DA908F4690A3 /* TrainRosterView.swift in Sources */,
 				CB57CAEE902DD1D9532F3D85 /* TrainShowcaseScreen.swift in Sources */,
 				543A1EE337FEC2FCA74B2603 /* TutorialOverlay.swift in Sources */,

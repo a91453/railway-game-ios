@@ -293,9 +293,11 @@ struct FleetOverviewSheet: View {
                     .font(.subheadline.weight(.bold))
                     .monospacedDigit()
 
-                Text(verbatim: train.carsText(in: language))
+                // TRAIN-IDENTITY: the one name the card gives it.
+                Text(verbatim: "\(train.identityName(in: language)) · \(train.carsText(in: language))")
                     .font(.caption2)
                     .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
 
                 Spacer()
 
