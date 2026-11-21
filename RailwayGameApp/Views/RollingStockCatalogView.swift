@@ -74,7 +74,7 @@ struct RollingStockCatalogView: View {
                 Divider()
                 // A phone on its side and an iPad: the list beside the
                 // type; a phone upright: the type over the list.
-                if horizontalSizeClass == .regular || verticalSizeClass == .compact {
+                if isWide {
                     HStack(spacing: 0) {
                         listColumn(list, entry: entry, language: language)
                             .frame(width: 300)
@@ -108,17 +108,26 @@ struct RollingStockCatalogView: View {
         .accessibilityIdentifier("catalog")
     }
 
+    /// A phone on its side or an iPad: the list beside the type.
+    private var isWide: Bool {
+        horizontalSizeClass == .regular || verticalSizeClass == .compact
+    }
+
     // MARK: The list
 
-    /// The family, the order and "only affordable", in one row where they
-    /// fit.
+    /// The family, the order and "only affordable", in one row where the
+    /// list stands beside the type. Chosen by the size classes, not a
+    /// `ViewThatFits`, which measures its picker off the main thread
+    /// (CRASH101).
+    @ViewBuilder
     private func filters(_ catalog: RollingStockCatalog, language: DisplayLanguage) -> some View {
-        ViewThatFits(in: .horizontal) {
+        if isWide {
             HStack(spacing: 12) {
                 familyPicker(catalog, language: language)
                 orderMenu(language: language)
                 affordableToggle(language: language)
             }
+        } else {
             VStack(alignment: .leading, spacing: 8) {
                 familyPicker(catalog, language: language)
                 HStack(spacing: 12) {
@@ -191,7 +200,9 @@ struct RollingStockCatalogView: View {
     }
 
     private func rows(_ list: [RollingStockCatalog.Entry], entry: RollingStockCatalog.Entry?, language: DisplayLanguage) -> some View {
-        LazyVStack(spacing: 6) {
+        // Not lazy: some two dozen rows, and a lazy stack builds its
+        // cells off the main thread (CRASHSWEEP-2).
+        VStack(spacing: 6) {
             if case let .train(id) = purpose, session.world.offersStandardCar {
                 standardRow(id, language: language)
             }
