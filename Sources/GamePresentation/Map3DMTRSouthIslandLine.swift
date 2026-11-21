@@ -9,6 +9,11 @@ import Foundation
 /// (`a91453/railway-assets-private`,
 /// `game-art-previews/docs/art/mtr-south-island-line-2026-11/revision-4`),
 /// and written here by `tools/train-models/glb_to_swift.py` (``encoded``).
+/// Decision 917: rebuilt from the photographs in the next assets
+/// repository (`a91453/railway-assets-private-2`, the same path's
+/// `revision-1`): one pantograph on each cab car and none on the middle
+/// car (A B A, 1 0 1), darker doors with a lighter strip behind each, and
+/// a rounded top to the front mask.
 ///
 /// A flatter front than the urban line train's, a black mask edged by a
 /// red U that runs on along the eaves of every car, small round headlamps
@@ -16,8 +21,9 @@ import Foundation
 /// are nearly all dark grey, five pairs of doors a side. No company mark is
 /// drawn.
 public enum Map3DMTRSouthIslandLine {
-    /// The cars the game draws: the cab car (A) and the middle car with a
-    /// pantograph (B).
+    /// The cars the game draws: the cab car (A), with the train's
+    /// pantographs, and the middle car (B), which has none since decision
+    /// 917 (its name kept).
     public enum Unit: String, CaseIterable, Sendable {
         case cab = "mtr-south-island-line-cab"
         case pantograph = "mtr-south-island-line-pantograph"
@@ -59,15 +65,15 @@ public enum Map3DMTRSouthIslandLine {
 
 extension Map3DMTRSouthIslandLine {
     /// Decision 782: its set, near and far, its showcase row (three cars)
-    /// and its cars' triangles (7,890 to 11,456 near and 3,186 to 4,984
-    /// far) and lengths (the cab car 23.0 m).
+    /// and its cars' triangles (decision 917: 4,926 to 8,876 near and
+    /// 1,854 to 3,766 far) and lengths (the cab car 23.0 m).
     static let registration = Map3DTrainRegistration(
         id: "mtrSouthIslandLine",
         sets: [Map3DTrainSet.mtrSouthIslandLine(), .mtrSouthIslandLine(far: true)],
         showcase: [
             Map3DShowcase.Entry(key, "Hong Kong South Island line train", "香港南港島綫列車", .hongKong, cars: 3, fixed: true),
         ],
-        triangles: 3_100...11_500, length: 21.9...23.1)
+        triangles: 1_800...9_000, length: 21.9...23.1)
 }
 
 extension Map3DTrainSet {
