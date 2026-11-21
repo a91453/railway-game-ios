@@ -713,10 +713,7 @@ final class TutorialCardPlacementTests: XCTestCase {
             foldedOffered.append(proposal)
             return wide(proposal)
         }
-        // Offered the bounds, then measured once more at its own width
-        // (where a line may wrap), never narrower than that.
-        let height = Self.screen.height - 2 * HUDMargins.edge
-        XCTAssertEqual(foldedOffered, [Size(width: Self.screen.width - 2 * HUDMargins.edge, height: height), Size(width: 700, height: height)])
+        XCTAssertEqual(foldedOffered, [Size(width: Self.screen.width - 2 * HUDMargins.edge, height: Self.screen.height - 2 * HUDMargins.edge)])
     }
 
     /// No target on screen: the middle.
@@ -747,34 +744,6 @@ final class TutorialCardPlacementTests: XCTestCase {
         XCTAssertEqual(card.minY, map.minY + 12, "card \(card)")
         XCTAssertEqual(card.minX, HUDMargins.edge, "card \(card)")
         XCTAssertFalse(card.intersects(pill), "card \(card) covers the pill")
-    }
-
-    /// Main 6a9e23d's full lane (run 44840574606), a phone on its side,
-    /// step 7 ("Tap ✓ to build the station"), the frames from its trace: the
-    /// folded card measures one line at its natural width but wraps to two
-    /// when laid out at exactly that width. Measured again there, it is
-    /// placed by the height it shows at and leaves the ✓ free.
-    func testACardThatWrapsAtItsOwnWidthIsPlacedByTheHeightItShows() {
-        let confirm = Frame(x: 475.33, y: 190, width: 152, height: 48)
-        let map = Frame(x: 120, y: 60, width: 564, height: 243)
-        let controls = [
-            Frame(x: 668.67, y: 19, width: 38, height: 32), Frame(x: 595.67, y: 352, width: 88.33, height: 30),
-            Frame(x: 10, y: 316, width: 110, height: 56), Frame(x: 463.33, y: 15, width: 117.33, height: 40),
-            Frame(x: 128, y: 184, width: 505.33, height: 60), Frame(x: 130, y: 328, width: 44, height: 44),
-            Frame(x: 14, y: 328, width: 48, height: 40), confirm, Frame(x: 190, y: 21, width: 257.33, height: 28),
-            Frame(x: 688, y: 320, width: 48, height: 48), Frame(x: 24, y: 21, width: 150, height: 28),
-            Frame(x: 688, y: 258, width: 48, height: 48),
-        ]
-        let placement = TutorialCardPlacement(
-            target: confirm, controls: controls, required: [confirm], map: map, maxWidth: 320, maxHeight: 150
-        ).folded
-        // One line only with a little more than its natural width.
-        let natural = 321.67
-        let card = placement.frame(in: Frame(x: 0, y: 0, width: 750, height: 382)) { proposed in
-            proposed.width > natural + 0.5 ? Size(width: natural, height: 44) : Size(width: 287, height: 59)
-        }
-        XCTAssertEqual(card.height, 59, "card \(card)")
-        XCTAssertFalse(card.intersects(confirm), "card \(card) covers the ✓ \(confirm)")
     }
 
     /// What the app shows: the card where it goes, or, where it covers what

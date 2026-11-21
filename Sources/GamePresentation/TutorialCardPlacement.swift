@@ -216,19 +216,9 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     /// than proposed is laid out at the width proposed, so it never runs
     /// past the bounds.
     public func frame(in bounds: Frame, measure: (Size) -> Size) -> Frame {
-        // Measured again at the width it is then laid out at, its own: a
-        // card offered exactly the width it measured can wrap a line there
-        // (a third of a point short on a 3× screen), and laid out taller
-        // than measured it stood over what it was placed clear of. Main
-        // 6a9e23d's full lane (run 44840574606), a phone on its side, step
-        // 7: the folded card measured 321.7 × 44 at 12 points above the ✓,
-        // was laid out 287 × 59 at that width and covered its top.
         func measured(_ proposed: Size) -> Size {
             let size = measure(proposed)
-            let width = min(size.width, proposed.width)
-            guard width < proposed.width else { return Size(width: width, height: size.height) }
-            let own = measure(Size(width: width, height: proposed.height))
-            return Size(width: min(own.width, width), height: max(size.height, own.height))
+            return Size(width: min(size.width, proposed.width), height: size.height)
         }
         let margin = Self.margin
         let available = bounds.insetBy(dx: min(margin, bounds.width / 4), dy: min(margin, bounds.height / 4))

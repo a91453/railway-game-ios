@@ -440,7 +440,13 @@ private struct TutorialCardLayout: Layout {
         guard let card = subviews.first else { return }
         let frame = placement.frame(in: TutorialCardPlacement.Frame(bounds)) { proposed in
             let size = card.sizeThatFits(ProposedViewSize(width: CGFloat(proposed.width), height: CGFloat(proposed.height)))
-            return TutorialCardPlacement.Size(width: Double(size.width), height: Double(size.height))
+            // A point wider than it measures, on a whole point: laid out at
+            // exactly its measured width (321.67 on a 3× screen) the folded
+            // card's title wrapped to a second line inside it, which drew
+            // past its 44 points over the ✓ below (main 6a9e23d's full
+            // lane, run 44840574606, a phone on its side, step 7). The
+            // placement never takes more than it proposes.
+            return TutorialCardPlacement.Size(width: Double(size.width.rounded(.up)) + 1, height: Double(size.height))
         }
         card.place(
             at: CGPoint(x: CGFloat(frame.x), y: CGFloat(frame.y)), anchor: .topLeading,
