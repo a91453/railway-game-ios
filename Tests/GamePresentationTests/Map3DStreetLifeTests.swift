@@ -309,10 +309,41 @@ final class Map3DStreetLifeTests: XCTestCase {
         // less (54 km, 906 people; 49 km, 814 before; decision 474).
         XCTAssertGreaterThan(life.spots.filter { $0.kind == .sidewalk }.count, 90)
         XCTAssertTrue(life.lanes.contains { !$0.scooters }, "the motorway's")
+        // Decision 920's later note: a one-way street's traffic goes its
+        // one way (a bus route's road, so neither a ramp nor the motorway).
+        XCTAssertGreaterThan(life.lanes.filter { !$0.twoWay && $0.buses }.count, 20)
         XCTAssertNil(Map3DScene.Builder.traffic(.service), "no traffic in a yard")
         let frame = life.frame(target: .zero, distance: 400, time: 0, detail: .full, activity: .init())
         XCTAssertGreaterThan(frame.vehicles, 50)
         XCTAssertLessThanOrEqual(frame.vehicles, Map3DStreetDetail.full.vehicles)
         XCTAssertLessThanOrEqual(frame.people, Map3DStreetDetail.full.people)
+    }
+
+    // MARK: - One-way roads
+
+    /// Decision 920's later note: a one-way road's lanes are parted by white
+    /// broken lines, Taiwan's 4 m painted and 6 m left out, Japan's 5 m and
+    /// 5 m, and a road of one lane has none.
+    func testAOneWayRoadsLanesAreBrokenLines() throws {
+        let road = [Map3DBaseMap.Point(x: 0, z: 0), Map3DBaseMap.Point(x: 100, z: 0)]
+        XCTAssertEqual(Map3DRoadMarkings.lanes(oneWayWidth: 3), 1)
+        XCTAssertEqual(Map3DRoadMarkings.lanes(oneWayWidth: 7), 2)
+        XCTAssertEqual(Map3DRoadMarkings.lanes(oneWayWidth: 20), 3)
+        XCTAssertTrue(Map3DRoadMarkings.laneLines(along: road, width: 3).isEmpty)
+        let taiwan = Map3DRoadMarkings.laneLines(along: road, width: 7)
+        XCTAssertEqual(taiwan.count, 10)
+        for dash in taiwan {
+            let first = try XCTUnwrap(dash.first), last = try XCTUnwrap(dash.last)
+            XCTAssertEqual(last.x - first.x, 4, accuracy: 1e-9)
+            XCTAssertEqual(first.z, 0, accuracy: 1e-9, "between the two lanes")
+        }
+        XCTAssertEqual(taiwan[1][0].x, 10, accuracy: 1e-9)
+        let japan = Map3DRoadMarkings.laneLines(along: road, width: 7, region: .japan)
+        XCTAssertEqual(japan.count, 10)
+        XCTAssertEqual(japan[1][0].x, 10, accuracy: 1e-9)
+        XCTAssertEqual(try XCTUnwrap(japan[0].last).x, 5, accuracy: 1e-9)
+        // Three lanes: two lines, a third of the way across each.
+        let wide = Map3DRoadMarkings.laneLines(along: road, width: 10)
+        XCTAssertEqual(Set(wide.map { ($0[0].z * 10).rounded() / 10 }), [-1.7, 1.7])
     }
 }

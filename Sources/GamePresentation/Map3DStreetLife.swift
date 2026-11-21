@@ -1084,7 +1084,7 @@ extension Map3DScene.Builder {
             let half = kind.width(ramp: road.isRamp) / 2
             if let traffic = Self.traffic(kind) {
                 var lane = Map3DStreetLife.Lane(
-                    path: path, half: half, twoWay: !road.isRamp && kind != .motorway, speed: traffic.speed,
+                    path: path, half: half, twoWay: !road.isRamp && kind != .motorway && !road.oneway, speed: traffic.speed,
                     perHundred: traffic.perHundred * (0.25 + 0.75 * level), scooters: kind != .motorway && kind != .trunk || level > 0.5,
                     seed: lifeSeed(path.points[0], salt: 256), buses: !road.isRamp && Self.busRoutes.contains(kind))
                 lane.collects = !road.isRamp && Self.collectionRounds.contains(kind)

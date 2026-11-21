@@ -709,6 +709,65 @@ struct Map3DRoadMarkings {
         return distance(p, Map3DBaseMap.Point(x: a.x + dx * t, z: a.z + dz * t))
     }
 
+    /// Decision 920's later note (the owner: 「我記得一堆單行道你都畫
+    /// 雙向」): a one-way road's lanes, one each 3.2 m (one to three), and
+    /// the white broken lines between them (道路交通標誌標線號誌設置規則
+    /// 第 182 條, 車道線: 10 cm, 4 m painted and 6 m left out; Japan's
+    /// 車線境界線 on an ordinary road, 区画線及び道路標示に関する命令
+    /// 別表第六, 5 m and 5 m; Hong Kong's and Finland's taken as Taiwan's).
+    static let laneLineWidth = 0.1
+    static func laneDashAndGap(_ region: Map3DStreetRegion) -> (dash: Double, gap: Double) {
+        region == .japan ? (5, 5) : (4, 6)
+    }
+    static func lanes(oneWayWidth width: Double) -> Int { max(1, min(3, Int(width / 3.2))) }
+
+    /// Decision 920's later note: the dashes of the lane lines of a
+    /// one-way road `width` metres wide along its middle line `points`.
+    static func laneLines(along points: [Map3DBaseMap.Point], width: Double, region: Map3DStreetRegion = .taiwan) -> [[Map3DBaseMap.Point]] {
+        let (laneDash, laneGap) = laneDashAndGap(region)
+        let lanes = lanes(oneWayWidth: width)
+        guard lanes > 1, points.count >= 2 else { return [] }
+        // Each point's normal (to the left of the way), averaged at a bend.
+        var normals: [Map3DBaseMap.Point] = []
+        for index in points.indices {
+            let a = points[max(0, index - 1)], b = points[min(points.count - 1, index + 1)]
+            let length = max(1e-9, distance(a, b))
+            normals.append(Map3DBaseMap.Point(x: (b.z - a.z) / length, z: -(b.x - a.x) / length))
+        }
+        var dashes: [[Map3DBaseMap.Point]] = []
+        for line in 1..<lanes {
+            let offset = -width / 2 + Double(line) * width / Double(lanes)
+            let shifted = zip(points, normals).map { Map3DBaseMap.Point(x: $0.x + $1.x * offset, z: $0.z + $1.z * offset) }
+            // Walk the shifted line: on for a dash, off for a gap.
+            var walked = 0.0, dash: [Map3DBaseMap.Point] = []
+            for (a, b) in zip(shifted, shifted.dropFirst()) {
+                let length = distance(a, b)
+                guard length > 1e-6 else { continue }
+                var at = 0.0
+                while at < length {
+                    let phase = walked.truncatingRemainder(dividingBy: laneDash + laneGap)
+                    let on = phase < laneDash
+                    let step = min(length - at, on ? laneDash - phase : laneDash + laneGap - phase)
+                    let from = Map3DBaseMap.Point(x: a.x + (b.x - a.x) * at / length, z: a.z + (b.z - a.z) * at / length)
+                    let to = Map3DBaseMap.Point(x: a.x + (b.x - a.x) * (at + step) / length, z: a.z + (b.z - a.z) * (at + step) / length)
+                    if on {
+                        if dash.isEmpty { dash.append(from) }
+                        dash.append(to)
+                    } else if dash.count >= 2 {
+                        dashes.append(dash)
+                        dash = []
+                    } else {
+                        dash = []
+                    }
+                    at += step
+                    walked += step
+                }
+            }
+            if dash.count >= 2 { dashes.append(dash) }
+        }
+        return dashes
+    }
+
     /// Decision 920: how far along the road two of a crossroads' points
     /// may be and still be one junction, metres (OSMnx's
     /// `consolidate_intersections`, MIT, Copyright (c) 2016–2025 Geoff
@@ -914,7 +973,7 @@ struct Map3DRoadMarkings {
                 // through and left (decision 732: through and right in
                 // Hong Kong).
                 // Decision 920: a one-way road's lanes, one each 3.2 m.
-                let lanes = arm.oneway ? max(1, min(3, Int(incoming.width / 3.2))) : half >= 5 ? 2 : 1, lane = incoming.width / Double(lanes)
+                let lanes = arm.oneway ? Self.lanes(oneWayWidth: incoming.width) : half >= 5 ? 2 : 1, lane = incoming.width / Double(lanes)
                 for index in 0..<lanes {
                     marks.append(Mark(kind: .arrow(left: lanes > 1 && index == 0, mirrored: region.keepsLeft),
                                       centre: moved(place.point, right(way), incoming.start + (Double(index) + 0.5) * lane),

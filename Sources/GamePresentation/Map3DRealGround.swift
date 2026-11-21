@@ -249,6 +249,15 @@ extension Map3DScene.Builder {
         let centreLine = streets.hasYellowCentreLines ? Map3DPalette.centreLine : Self.paint
         for (number, road) in roads.enumerated() where Self.hasCentreLine(road) {
             for piece in markings.centreLines(of: road, number: number) {
+                // Decision 920's later note: a one-way road has no centre
+                // line, its lanes white broken lines.
+                if road.oneway {
+                    for dash in Map3DRoadMarkings.laneLines(along: piece, width: Double(road.kind.width(ramp: road.isRamp)), region: streets) {
+                        addStrip(dash, bounds: road.bounds, width: Float(Map3DRoadMarkings.laneLineWidth), lift: Self.centreLineLift, color: Self.paint,
+                                 paint: nil, raised: true, onDeck: road.bridgeLevel > 0, taking: &lines)
+                    }
+                    continue
+                }
                 addStrip(piece, bounds: road.bounds, width: 0.3, lift: Self.centreLineLift, color: centreLine, paint: nil,
                          raised: true, onDeck: road.bridgeLevel > 0, taking: &lines)
             }
