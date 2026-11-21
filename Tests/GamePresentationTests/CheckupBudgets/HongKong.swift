@@ -17,11 +17,11 @@ extension TimetableCheckupBudgets {
     static let hongKongFull: [String: TimetableCheckup.Budget] = [
         "hk EAL_LMC simple": .init(notSent: 0, late: 40, lateOutOfDepot: 0, peakGapMinutes: 7),
         "hk EAL_LMC realistic": .init(notSent: 0, late: 9, lateOutOfDepot: 0, peakGapMinutes: 3),
-        "hk SIL simple": .init(notSent: 0, late: 134, lateOutOfDepot: 1, peakGapMinutes: 7),
-        "hk SIL realistic": .init(notSent: 0, late: 91, lateOutOfDepot: 1, peakGapMinutes: 4),
+        "hk SIL simple": .init(notSent: 0, late: 70, lateOutOfDepot: 0, peakGapMinutes: 8),
+        "hk SIL realistic": .init(notSent: 0, late: 88, lateOutOfDepot: 0, peakGapMinutes: 7),
         "hk TCL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
-        "hk TCL realistic": .init(notSent: 0, late: 19, lateOutOfDepot: 1, peakGapMinutes: 11),
+        "hk TCL realistic": .init(notSent: 0, late: 17, lateOutOfDepot: 1, peakGapMinutes: 13),
         "hk TCL+AEL+DRL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
-        "hk TCL+AEL+DRL realistic": .init(notSent: 0, late: 18, lateOutOfDepot: 1, peakGapMinutes: 11),
+        "hk TCL+AEL+DRL realistic": .init(notSent: 0, late: 17, lateOutOfDepot: 1, peakGapMinutes: 13),
     ]
 }
