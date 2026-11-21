@@ -150,6 +150,10 @@ public enum Map3DSignalTiming {
         /// Decision 846's later note: Finland's (``Map3DFinlandStreet``),
         /// placed and lit as Hong Kong's; `nil` in a pack without them.
         let finland: (red: Int, redAmber: Int, amber: Int, green: Int)?
+        /// Decision 921: Japan's (``Map3DJapanSignal``), hung from an arm
+        /// as Taiwan's, placed and lit as Taiwan's; `nil` in a pack
+        /// without them.
+        let japan: (red: Int, amber: Int, green: Int)?
 
         public init?(pack: Map3DModelPack) {
             guard let red = pack.index(of: Map3DProp.signalStop.modelName), let amber = pack.index(of: Map3DProp.signalAmber.modelName),
@@ -163,11 +167,18 @@ public enum Map3DSignalTiming {
             }
             hongKong = upright(Map3DHongKongSignal.modelName)
             finland = upright(Map3DFinlandStreet.modelName)
+            if let r = pack.index(of: Map3DJapanSignal.Unit.red.rawValue), let a = pack.index(of: Map3DJapanSignal.Unit.amber.rawValue),
+               let g = pack.index(of: Map3DJapanSignal.Unit.green.rawValue) {
+                japan = (r, a, g)
+            } else {
+                japan = nil
+            }
         }
 
         public static func == (a: Models, b: Models) -> Bool {
             (a.red, a.amber, a.green) == (b.red, b.amber, b.green) && a.hongKong.map { [$0.red, $0.redAmber, $0.amber, $0.green] } == b.hongKong.map { [$0.red, $0.redAmber, $0.amber, $0.green] }
                 && a.finland.map { [$0.red, $0.redAmber, $0.amber, $0.green] } == b.finland.map { [$0.red, $0.redAmber, $0.amber, $0.green] }
+                && a.japan.map { [$0.red, $0.amber, $0.green] } == b.japan.map { [$0.red, $0.amber, $0.green] }
         }
 
         /// The model to draw the instances of `model` of `group` with at
@@ -178,9 +189,11 @@ public enum Map3DSignalTiming {
             // The upright signals at the kerb (Hong Kong's, Finland's) this
             // model is one of, placed with its green or its red.
             let upright = [hongKong, finland].compactMap { $0 }.first { model == $0.green || model == $0.red }
-            if model == green || model == upright?.green {
+            // Decision 921: or Japan's, on its arm as Taiwan's.
+            let arm = japan.flatMap { model == $0.green || model == $0.red ? $0 : nil } ?? (red: red, amber: amber, green: green)
+            if model == green || model == upright?.green || model == japan?.green {
                 road = .main
-            } else if model == red || upright != nil {
+            } else if model == red || upright != nil || model == japan?.red {
                 road = .cross
             } else {
                 return model
@@ -195,9 +208,9 @@ public enum Map3DSignalTiming {
                 }
             }
             switch light {
-            case .red, .redAmber: return red
-            case .amber: return amber
-            case .green: return green
+            case .red, .redAmber: return arm.red
+            case .amber: return arm.amber
+            case .green: return arm.green
             }
         }
     }
