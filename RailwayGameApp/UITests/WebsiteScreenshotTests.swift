@@ -624,19 +624,14 @@ final class WebsiteScreenshotTests: XCTestCase {
         var opened = false
         for _ in 0..<3 where !opened {
             map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: point.x, dy: point.y)).press(forDuration: 1.2)
-            opened = app.buttons["station.jump"].firstMatch.appears(within: 6)
+            opened = app.segmentedControls["station.pages"].firstMatch.appears(within: 6)
         }
-        // Its riders' group, where the airports are, then down to them.
-        let jump = app.buttons["station.jump"].firstMatch
-        XCTAssertTrue(jump.appears(within: 10), "The hold opens the station's panel")
-        jump.tap()
-        let riders = app.buttons["station.jump.riders"].firstMatch
-        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
-        riders.tap()
+        // Its riders' page (decision 911), where the airports are, then
+        // down to them.
+        XCTAssertTrue(opened, "The hold opens the station's panel")
+        let list = app.showStationPage("Riders", "旅客與運量")
         settle()
         let section = app.descendants(matching: .any)["station.airport.1"].firstMatch
-        // Decision 746: the panel covers the whole screen (`stationPanelList`).
-        let list = app.stationPanelList()
         XCTAssertTrue(app.dragUntilWhollyOnScreen(section, in: list, drags: 14), "The station's panel has its airport")
         settle()
         keep("airport-station-panel", app)
@@ -2321,17 +2316,12 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.dragUntilWhollyOnScreen(materials, in: list), "The materials row with its next step comes into view")
         settle()
         keep("materials-next-step", app)
-        // The platforms are in the operations group at the top, which never
-        // folds and so is not in the toolbar's jump menu: drag back up
-        // until the list has loaded their footer again (`swipeDown()`
-        // did not move the list in 20 swipes, run 41169918330), starting
-        // below the panel's toolbar, which covers the list's top (drags
-        // begun there moved nothing, run 41171191571).
+        // The platforms are on the operations page (decision 911), in its
+        // trailing column where the screen is wide.
         let footer = app.descendants(matching: .any)["station.platforms.footer"].firstMatch
-        let toolbar = app.buttons["station.jump"].firstMatch
-        let top = toolbar.exists ? toolbar.frame.maxY + 8 : (list?.frame.minY ?? 0) + 80
-        dragBack(to: footer, in: list, below: top, in: app)
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(footer, in: list, below: top), "The platforms' footer comes into view")
+        let platforms = app.showStationPage("Operations", "營運", trailing: true)
+        settle()
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(footer, in: platforms), "The platforms' footer comes into view")
         settle()
         keep("station-own-track", app)
     }
@@ -2351,16 +2341,11 @@ final class WebsiteScreenshotTests: XCTestCase {
         let alert = alerts.allElementsBoundByIndex.first(where: \.isHittable)
         XCTAssertNotNil(alert, "A bubble is on screen")
         alert?.tap()
-        let jump = app.buttons["station.jump"].firstMatch
-        XCTAssertTrue(jump.appears(within: 10), "A tap on a bubble opens its station's panel")
-        jump.tap()
-        let riders = app.buttons["station.jump.riders"].firstMatch
-        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
-        riders.tap()
+        // Decision 911: the size section is on the riders' page, in its
+        // trailing column where the screen is wide.
+        let list = app.showStationPage("Riders", "旅客與運量", trailing: true)
         settle()
         let section = app.descendants(matching: .any)["station.expansion.current"].firstMatch
-        // Decision 746: the panel covers the whole screen (`stationPanelList`).
-        let list = app.stationPanelList()
         XCTAssertTrue(app.dragUntilWhollyOnScreen(section, in: list), "The station size section comes into view")
         settle()
         keep("station-expansion", app)
@@ -2463,12 +2448,8 @@ final class WebsiteScreenshotTests: XCTestCase {
             list = app.stationPanelList(within: 5)
         }
         XCTAssertNotNil(list, "The hold opens the station's panel")
-        let jump = app.buttons["station.jump"].firstMatch
-        XCTAssertTrue(jump.appears(within: 10), "The panel has its jump menu")
-        jump.tap()
-        let riders = app.buttons["station.jump.riders"].firstMatch
-        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
-        riders.tap()
+        // Decision 911: the size section, the riders' page's trailing column.
+        list = app.showStationPage("Riders", "旅客與運量", trailing: true)
         settle()
         let offer = app.descendants(matching: .any)["station.expansion.build"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(offer, in: list), "The station size card's offer comes into view")
@@ -2541,12 +2522,8 @@ final class WebsiteScreenshotTests: XCTestCase {
             list = app.stationPanelList(within: 5)
         }
         XCTAssertNotNil(list, "The hold opens the station's panel")
-        let jump = app.buttons["station.jump"].firstMatch
-        XCTAssertTrue(jump.appears(within: 10), "The panel has its jump menu")
-        jump.tap()
-        let riders = app.buttons["station.jump.riders"].firstMatch
-        XCTAssertTrue(riders.appears(within: 5), "The jump menu opens")
-        riders.tap()
+        // Decision 911: the trips by hour, the riders' page.
+        list = app.showStationPage("Riders", "旅客與運量")
         settle()
         // By its words too: in the list the row's identifier was not found
         // though it showed (run 41281919190's recording).
@@ -2588,6 +2565,9 @@ final class WebsiteScreenshotTests: XCTestCase {
             list = app.stationPanelList(within: 5)
         }
         XCTAssertNotNil(list, "The hold opens the station's panel")
+        // Decision 911: the sounds stand in the operations page's trailing
+        // column where the screen is wide.
+        list = app.stationPanelList(trailing: true)
         let write = app.buttons["station.writeMelody"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(write, in: list), "The workshop's button comes into view")
         settle()
@@ -4090,12 +4070,10 @@ final class WebsiteScreenshotTests: XCTestCase {
         app.coordinate(withNormalizedOffset: .zero)
             .withOffset(CGVector(dx: points[0].x - app.frame.minX, dy: points[0].y - app.frame.minY))
             .press(forDuration: 1)
-        tapButton("station.jump", in: app)
-        tapButton("station.jump.area", in: app)
+        // Decision 911: the surroundings' page.
+        let list = app.showStationPage("Area", "周邊與土地")
         settle()
         let next = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "臺鐵 下一班")).firstMatch
-        // Decision 746: the panel covers the whole screen (`stationPanelList`).
-        let list = app.stationPanelList()
         let shown = app.dragUntilWhollyOnScreen(next, in: list)
         settle()
         keep("real-station-next-trains", app)
@@ -4582,11 +4560,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(materials.appears(within: 10), "A tap on a bubble opens its station's panel")
         settle()
         keep("chart-station-panel", app)
-        tapButton("station.jump", in: app)
-        tapButton("station.jump.riders", in: app)
+        // Decision 911: the riders' page.
+        let list = app.showStationPage("Riders", "旅客與運量")
         settle()
-        // Decision 746: the panel covers the whole screen (`stationPanelList`).
-        let list = app.stationPanelList()
         let entries = app.descendants(matching: .any)["station.flow.entries"].firstMatch
         XCTAssertTrue(app.dragUntilWhollyOnScreen(entries, in: list), "The trips by hour come into view")
         settle()

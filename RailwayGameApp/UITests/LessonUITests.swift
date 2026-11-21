@@ -162,7 +162,13 @@ final class LessonUITests: XCTestCase {
         coordinate(stations[0]).press(forDuration: 1)
         XCTAssertTrue(element("station.operations").appears(within: 10), "The station panel must be open before looking for freight")
         let freight = app.buttons["station.freight.build"]
-        revealPastMenus(freight)
+        // Decision 911: over the whole screen the freight yard is on the
+        // panel's last page, at its top; beside the map, down its list.
+        if app.segmentedControls["station.pages"].firstMatch.exists {
+            app.showStationPage("Freight", "貨運與拆除")
+        } else {
+            revealPastMenus(freight)
+        }
         XCTAssertTrue(freight.becomesHittable(within: 5))
     }
 
