@@ -1,87 +1,119 @@
 {
   "comment" : "Decision 782: the models of the registered train finlandNight (Map3DFinlandSleeper): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
-  "lampCount" : 12,
-  "lamps" : "9a52dddd69c5f7ce",
+  "lampCount" : 16,
+  "lamps" : "532d0f6d09f25e6a",
   "models" : {
     "light-set-finlandNight-car" : {
       "hash" : "b8eff880127a33e9",
       "triangles" : 396
     },
+    "light-set-finlandNight-centre" : {
+      "hash" : "9e6d0c2ce6b04d81",
+      "triangles" : 96
+    },
     "light-set-finlandNight-tail" : {
-      "hash" : "bb4ff6ebc98445e9",
-      "triangles" : 396
+      "hash" : "9e6d0c2ce6b04d81",
+      "triangles" : 96
     },
     "light-set-finlandNightFar-car" : {
       "hash" : "f5dbfe9aa9cd4cd0",
       "triangles" : 84
     },
+    "light-set-finlandNightFar-centre" : {
+      "hash" : "8349f26ef3464149",
+      "triangles" : 36
+    },
     "light-set-finlandNightFar-tail" : {
-      "hash" : "c45fa876687fe6d0",
-      "triangles" : 84
+      "hash" : "8349f26ef3464149",
+      "triangles" : 36
     },
     "light-set-finlandNightSr3-car" : {
       "hash" : "b8eff880127a33e9",
       "triangles" : 396
     },
+    "light-set-finlandNightSr3-centre" : {
+      "hash" : "9e6d0c2ce6b04d81",
+      "triangles" : 96
+    },
     "light-set-finlandNightSr3-tail" : {
-      "hash" : "bb4ff6ebc98445e9",
-      "triangles" : 396
+      "hash" : "9e6d0c2ce6b04d81",
+      "triangles" : 96
     },
     "light-set-finlandNightSr3Far-car" : {
       "hash" : "f5dbfe9aa9cd4cd0",
       "triangles" : 84
     },
+    "light-set-finlandNightSr3Far-centre" : {
+      "hash" : "8349f26ef3464149",
+      "triangles" : 36
+    },
     "light-set-finlandNightSr3Far-tail" : {
-      "hash" : "c45fa876687fe6d0",
-      "triangles" : 84
+      "hash" : "8349f26ef3464149",
+      "triangles" : 36
     },
     "set-finlandNight-car" : {
       "hash" : "273262cd91586583",
       "triangles" : 6790
+    },
+    "set-finlandNight-centre" : {
+      "hash" : "5255212c18235f0e",
+      "triangles" : 4560
     },
     "set-finlandNight-head" : {
       "hash" : "c224fff123e180fd",
       "triangles" : 11644
     },
     "set-finlandNight-tail" : {
-      "hash" : "8fecaeb90defd862",
-      "triangles" : 6790
+      "hash" : "119ebb7406a69adf",
+      "triangles" : 4560
     },
     "set-finlandNightFar-car" : {
       "hash" : "5de723e7f9130a4f",
       "triangles" : 2904
+    },
+    "set-finlandNightFar-centre" : {
+      "hash" : "e07f1d040a5af589",
+      "triangles" : 2190
     },
     "set-finlandNightFar-head" : {
       "hash" : "3f59185929600e94",
       "triangles" : 4116
     },
     "set-finlandNightFar-tail" : {
-      "hash" : "81ceb7542484a14d",
-      "triangles" : 2904
+      "hash" : "41e079f75663471c",
+      "triangles" : 2190
     },
     "set-finlandNightSr3-car" : {
       "hash" : "273262cd91586583",
       "triangles" : 6790
+    },
+    "set-finlandNightSr3-centre" : {
+      "hash" : "5255212c18235f0e",
+      "triangles" : 4560
     },
     "set-finlandNightSr3-head" : {
       "hash" : "30c3b8177f71d508",
       "triangles" : 4816
     },
     "set-finlandNightSr3-tail" : {
-      "hash" : "8fecaeb90defd862",
-      "triangles" : 6790
+      "hash" : "119ebb7406a69adf",
+      "triangles" : 4560
     },
     "set-finlandNightSr3Far-car" : {
       "hash" : "5de723e7f9130a4f",
       "triangles" : 2904
+    },
+    "set-finlandNightSr3Far-centre" : {
+      "hash" : "e07f1d040a5af589",
+      "triangles" : 2190
     },
     "set-finlandNightSr3Far-head" : {
       "hash" : "239b2f293fa0ded0",
       "triangles" : 2200
     },
     "set-finlandNightSr3Far-tail" : {
-      "hash" : "81ceb7542484a14d",
-      "triangles" : 2904
+      "hash" : "41e079f75663471c",
+      "triangles" : 2190
     }
   }
 }
