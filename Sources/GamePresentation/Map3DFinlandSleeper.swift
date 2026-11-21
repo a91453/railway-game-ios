@@ -40,8 +40,10 @@ extension Map3DFinlandSleeper {
     /// Decision 782: the night train's sets (behind the Sr2 and behind the
     /// Sr3), near and far, its showcase row and its cars' triangles (the
     /// sleeping car 6,790 near and 2,904 far, the Sr2 11,644 and 4,116, the
-    /// Sr3 4,816 and 2,200) and lengths (the locomotives 19.02 and 19.05 m,
-    /// the sleeping car 26.40 m).
+    /// Sr3 4,816 and 2,200, decision 914's closed car carrier 4,560 and
+    /// 2,190, decision 916's open one 5,336 and 2,448) and lengths (the
+    /// locomotives 19.02 and 19.05 m, the sleeping car and the open car
+    /// carrier 26.40 m, the closed one 26.70 m).
     static let registration = Map3DTrainRegistration(
         id: "finlandNight",
         sets: [Map3DTrainSet.finlandNight(sr3: false), .finlandNight(sr3: false, far: true),
@@ -52,21 +54,29 @@ extension Map3DFinlandSleeper {
             Map3DShowcase.Entry(sr3Key, "Finnish night train, double-deck sleepers (Sr3)", "芬蘭夜車（雙層臥鋪車，Sr3）", .finland,
                                 cars: Map3DFinlandSr2.cars, most: 10, gauge: 1.524),
         ],
-        triangles: 2_200...11_700, length: 19.0...26.45)
+        triangles: 2_190...11_700, length: 19.0...26.75)
 }
 
 extension Map3DTrainSet {
     /// FINLAND-TRAINS-2: the night train, its locomotive (the Sr2, or the
     /// Sr3 when `sr3`) and its double-deck sleeping cars at their own
-    /// lengths, the locomotive's front lamps lit and the last car's tail
-    /// lamps.
+    /// lengths, the locomotive's front lamps lit. Decision 914: its last
+    /// two cars the car carriers, the last the closed one
+    /// (``Map3DFinlandCarCarrier``) with its tail lamps lit, decision 916:
+    /// the one before it the open one (``Map3DFinlandCarCarrierGfot``); of
+    /// a train of fewer than seven cars only the last.
     static func finlandNight(sr3: Bool, far: Bool = false) -> Map3DTrainSet {
         let key = sr3 ? Map3DFinlandSleeper.sr3Key : Map3DFinlandSleeper.key
-        return Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true, far: far ? nil : key + "Far") {
+        return Map3DTrainSet(key: far ? key + "Far" : key, centreCars: [Map3DFinlandSr2.cars - 2], ownLengths: true,
+                             far: far ? nil : key + "Far") {
             let sleeper = Map3DFinlandSleeper.model(far: far)
                 ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: false).model(named: Map3DFinlandSleeper.name)
+            let carrier = Map3DFinlandCarCarrier.model(far: far)
+                ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: false).model(named: Map3DFinlandCarCarrier.name)
+            let open = Map3DFinlandCarCarrierGfot.model(far: far)
+                ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: false).model(named: Map3DFinlandCarCarrierGfot.name)
             return Cars(head: litLenses(finlandLocomotive(sr3: sr3, far: far), front: true), middle: sleeper,
-                        tail: litLenses(sleeper.turned, front: false), single: nil)
+                        tail: litLenses(carrier, front: false), single: nil, centre: open)
         }
     }
 
