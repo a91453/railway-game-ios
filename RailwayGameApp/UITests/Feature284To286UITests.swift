@@ -45,7 +45,9 @@ final class Feature284To286UITests: XCTestCase {
         XCTAssertTrue(element("station.operations").appears(within: 10))
         for index in 0...1 {
             let platform = app.buttons["station.platformTrack.\(index)"]
-            reveal(platform)
+            // Decision 911: the platforms' tracks stand in the operations
+            // page's trailing column where the screen is wide.
+            reveal(platform, in: app.stationPanelList(trailing: true))
             XCTAssertTrue(platform.becomesHittable(within: 5), "Platform \(index + 1) must be on screen")
             XCTAssertTrue(platform.label.contains("第 \(index + 1) 月台"), platform.label)
         }
@@ -205,8 +207,8 @@ final class Feature284To286UITests: XCTestCase {
         XCTFail("The train types did not open")
     }
 
-    private func reveal(_ control: XCUIElement) {
-        let list = app.collectionViews.firstMatch
+    private func reveal(_ control: XCUIElement, in panel: XCUIElement? = nil) {
+        let list = panel ?? app.collectionViews.firstMatch
         XCTAssertTrue(list.appears(within: 10))
         // Measured while the panel still slides in, the list's place is its
         // trailing edge, and every drag there misses it (main e255b0a's full
