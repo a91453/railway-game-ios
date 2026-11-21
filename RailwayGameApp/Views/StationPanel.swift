@@ -2093,8 +2093,17 @@ private struct HourlyBarChart: View {
             }
             .chartXSelection(value: $picked)
             .chartXAxis {
-                AxisMarks(values: [0, 6, 12, 18].map { spec.xLabels[$0] }) { _ in
-                    AxisValueLabel().foregroundStyle(Theme.textSecondary)
+                // Every sixth hour named. A list of the hours to mark was
+                // not honoured on this category axis: all 24 were named,
+                // and in a column of a two-column page (decision 911) they
+                // ran into each other.
+                AxisMarks(values: spec.xLabels) { value in
+                    AxisValueLabel {
+                        if let label = value.as(String.self), let hour = spec.xLabels.firstIndex(of: label), hour % 6 == 0 {
+                            Text(verbatim: label)
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
                 }
             }
             .chartYAxis {
