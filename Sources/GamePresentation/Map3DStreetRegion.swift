@@ -134,6 +134,11 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// where a crossing has no signal.
     var hasFinnishFurniture: Bool { self == .finland }
 
+    /// Decision 921: whether its traffic signals are Japan's own
+    /// (``Map3DJapanSignal``), hung over the lanes from an arm as Taiwan's
+    /// but reaching right from the left kerb.
+    var hasJapaneseSignals: Bool { self == .japan }
+
     /// Decision 846's second later note: whether the roads coming into a
     /// roundabout have the give-way line painted across their incoming
     /// lanes at the ring's edge: Finland's row of white triangles
