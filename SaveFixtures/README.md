@@ -16,6 +16,9 @@ Rules, as for the golden scenarios:
   the new version next to the old ones (the reference pack's
   `01_MIGRATION_MAP.md`: "Every schema change should have an explicit
   migration function and regression fixture").
+- Write what the new version adds in `SaveFixtures/versions/<N>.md`, one
+  file a version (decision 910; `SaveVersionNotesTests` checks each
+  version has one).
 
 Since version 6 (Stage F3d, ARCHITECTURE decision 54) a world is its
 bounds in world units; the map of `w × h` tiles a save before version 6
