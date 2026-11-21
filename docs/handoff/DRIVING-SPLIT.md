@@ -10,9 +10,9 @@
 - 決策 910。存檔版本、golden schema、`GoldenScenarios/`、`SaveFixtures/`、`ReplayFixtures/` 都不動（純搬家）。
 - 第 1 刀 #2561：解死結的救援一步一檔＋順位表（`Sources/GameCore/Railway/DeadlockRescue/`，表檔 `merge=union`，加一步＝加一檔＋表一列）。
 - 第 2 刀 #2567：`RouteReservation.swift` 依段落拆四檔。
-- 第 3 刀：`GameWorld.swift` 的時間推進／派車／發車／行進拆成 `WorldAdvance`／`WorldDispatch`／`WorldDeparture`／`WorldMovement`。
-- 第 4 刀：時刻表全日檢查的門檻一張地圖一檔（`Tests/GamePresentationTests/CheckupBudgets/`）。
-- 第 5 刀：存檔版本說明一版一檔（`SaveFixtures/versions/<N>.md`，`SaveVersionNotesTests` 擋缺檔）；新功能狀態放自己小 struct 的規則（決策 910 §5）。
+- 第 3 刀 #2568：`GameWorld.swift` 的時間推進／派車／發車／行進拆成 `WorldAdvance`／`WorldDispatch`／`WorldDeparture`／`WorldMovement`。
+- 第 4 刀 #2569：時刻表全日檢查的門檻一張地圖一檔（`Tests/GamePresentationTests/CheckupBudgets/`）。
+- 第 5 刀（最後一張）：存檔版本說明一版一檔（`SaveFixtures/versions/<N>.md`，`SaveVersionNotesTests` 擋缺檔）；新功能狀態放自己小 struct 的規則（決策 910 §5）。
 - 每刀：Linux 本機建置（`-warnings-as-errors`）＋ Replay／Golden／SavedGame 測試；CI 全層、手動 `ci.yml` 的時刻表全日檢查與 main 數字相同。
 
 ## 還留下什麼
