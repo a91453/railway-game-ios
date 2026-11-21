@@ -12,8 +12,8 @@ extension TimetableCheckupBudgets {
         "sanying:LB simple": .init(notSent: 0, late: 7, lateOutOfDepot: 0, peakGapMinutes: 5),
         "trtc:BR simple": .init(notSent: 6, late: 179, lateOutOfDepot: 30, peakGapMinutes: 10),
         "trtc:BR realistic": .init(notSent: 0, late: 149, lateOutOfDepot: 0, peakGapMinutes: 7),
-        "tymc:A simple": .init(notSent: 4, late: 103, lateOutOfDepot: 8, peakGapMinutes: 26),
-        "tymc:A realistic": .init(notSent: 1, late: 19, lateOutOfDepot: 7, peakGapMinutes: 13),
+        "tymc:A simple": .init(notSent: 12, late: 97, lateOutOfDepot: 10, peakGapMinutes: 31),
+        "tymc:A realistic": .init(notSent: 1, late: 9, lateOutOfDepot: 4, peakGapMinutes: 5),
     ]
 
     /// Taiwan's lines that share a station, bought together (2026-11-18).
@@ -42,7 +42,7 @@ extension TimetableCheckupBudgets {
     /// none under the realistic rules (measured 2026-11-19).
     static let taiwanAllBought: [String: TimetableCheckup.Budget] = [
         "taiwan ntdlrt:V+ntdlrt:VB simple": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 7),
-        "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
-        "taiwan tra:NEIWAN+tra:LIUJIA realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
+        "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
+        "taiwan tra:NEIWAN+tra:LIUJIA realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
     ]
 }
