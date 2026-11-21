@@ -10,6 +10,10 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
             ("sr3", Map3DFinlandSr3.model(), Map3DFinlandSr3.model(far: true), 19.04, 3.02),
             ("control", Map3DFinlandControlCar.model(), Map3DFinlandControlCar.model(far: true), 27.40, 3.2),
             ("sleeper", Map3DFinlandSleeper.model(), Map3DFinlandSleeper.model(far: true), 26.40, 3.2),
+            // Decision 914.
+            ("car carrier", Map3DFinlandCarCarrier.model(), Map3DFinlandCarCarrier.model(far: true), 26.70, 2.9),
+            // Decision 916.
+            ("open car carrier", Map3DFinlandCarCarrierGfot.model(), Map3DFinlandCarCarrierGfot.model(far: true), 26.40, 2.6),
         ]
         for (label, near, far, length, width) in cars {
             let near = try XCTUnwrap(near, label), far = try XCTUnwrap(far, label)
@@ -47,21 +51,42 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
     }
 
     /// The intercity: the locomotive, five coaches, the control car at the
-    /// back with its cab turned back; the night train: the locomotive and
-    /// six sleeping cars.
+    /// back with its cab turned back; the night train: the locomotive, four
+    /// sleeping cars and (decisions 914 and 916) two car carriers, the
+    /// open one and then the closed one, its tail lamps lit at the back.
     func testTheSetsAreLaidAsTheRealTrains() throws {
         let pack = Map3DModelPack.standard
         let count = Map3DFinlandSr2.cars
-        for key in [Map3DFinlandSr2.key, Map3DFinlandSr3.key, Map3DFinlandSleeper.key, Map3DFinlandSleeper.sr3Key] {
-            let names = try (0..<count).map { car in
+        func names(_ key: String) throws -> [String] {
+            try (0..<count).map { car in
                 pack.models[try XCTUnwrap(pack.modelIndex(forType: key, carIndex: car, count: count), key)].name
             }
-            XCTAssertEqual(names, ["set-\(key)-head"] + Array(repeating: "set-\(key)-car", count: 5) + ["set-\(key)-tail"], key)
+        }
+        for key in [Map3DFinlandSr2.key, Map3DFinlandSr3.key] {
+            let coaches: [String] = Array(repeating: "set-\(key)-car", count: 5)
+            let expected: [String] = ["set-\(key)-head"] + coaches + ["set-\(key)-tail"]
+            XCTAssertEqual(try names(key), expected, key)
+        }
+        for key in [Map3DFinlandSleeper.key, Map3DFinlandSleeper.sr3Key] {
+            let sleepers: [String] = Array(repeating: "set-\(key)-car", count: 4)
+            let expected: [String] = ["set-\(key)-head"] + sleepers + ["set-\(key)-centre", "set-\(key)-tail"]
+            XCTAssertEqual(try names(key), expected, key)
         }
         let sr3 = try XCTUnwrap(pack.layout(forType: Map3DFinlandSr3.key, count: count))
         XCTAssertEqual(sr3.map(\.length).reduce(0, +), 19.04 + 26.40 * 5 + 27.40, accuracy: 0.15)
         let night = try XCTUnwrap(pack.layout(forType: Map3DFinlandSleeper.key, count: count))
-        XCTAssertEqual(night.map(\.length).reduce(0, +), 19.02 + 26.40 * 6, accuracy: 0.15)
+        let nightLength: Float = 19.02 + 26.40 * 5 + 26.70
+        XCTAssertEqual(night.map(\.length).reduce(0, +), nightLength, accuracy: 0.15)
+        // The car carrier's tail lamps lit at the train's back, the other's not.
+        let nightCars = Map3DTrainSet.finlandNight(sr3: false).build()
+        let carrierTail = try XCTUnwrap(nightCars.tail), carrier = try XCTUnwrap(nightCars.centre)
+        XCTAssertEqual(carrierTail.length, 26.70, accuracy: 0.02)
+        let lit = carrierTail.vertices.filter { $0.layer == Map3DVertex.glowing }.map(\.x)
+        XCTAssertFalse(lit.isEmpty)
+        XCTAssertLessThan(lit.max() ?? 0, carrierTail.minimum.x + 1, "the lamps at its back end")
+        XCTAssertFalse(carrier.vertices.contains { $0.layer == Map3DVertex.glowing })
+        XCTAssertEqual(carrier.length, 26.40, accuracy: 0.02, "the open car carrier before it")
+        XCTAssertEqual(carrier.maximum.z, 4.535, accuracy: 0.03)
         // The control car's cab (its headlamps) at the train's back.
         let tail = try XCTUnwrap(pack.models.first { $0.name == "set-\(Map3DFinlandSr2.key)-tail" })
         let lamps = tail.vertices.filter { $0.color == Map3DTrainStyle.headlamp }.map(\.x)
