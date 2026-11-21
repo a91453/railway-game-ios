@@ -442,27 +442,12 @@ private struct TutorialCardLayout: Layout {
             let size = card.sizeThatFits(ProposedViewSize(width: CGFloat(proposed.width), height: CGFloat(proposed.height)))
             return TutorialCardPlacement.Size(width: Double(size.width), height: Double(size.height))
         }
-        #if DEBUG
-        // DIAG (full lane 6a9e23d, step 7 on a phone on its side): what the
-        // card was placed beside, once for each change.
-        let line = "tutorial.place bounds \(TutorialCardPlacement.Frame(bounds)) card \(frame) target \(placement.target.map { "\($0)" } ?? "none") map \(placement.map.map { "\($0)" } ?? "none") previous \(placement.previous.map { "\($0)" } ?? "none") required \(placement.required) sites \(placement.sites) panels \(placement.panels) backdrops \(placement.backdrops) controls \(placement.controls)"
-        if line != TutorialPlaceTrace.last {
-            TutorialPlaceTrace.last = line
-            UITestTrace.action(line)
-        }
-        #endif
         card.place(
             at: CGPoint(x: CGFloat(frame.x), y: CGFloat(frame.y)), anchor: .topLeading,
             proposal: ProposedViewSize(width: CGFloat(frame.width), height: CGFloat(frame.height))
         )
     }
 }
-
-#if DEBUG
-private enum TutorialPlaceTrace {
-    nonisolated(unsafe) static var last = ""
-}
-#endif
 
 extension TutorialCardPlacement.Frame {
     /// `rect`, in the placement's own rectangles (GamePresentation has no
