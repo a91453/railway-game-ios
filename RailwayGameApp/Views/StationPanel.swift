@@ -982,7 +982,22 @@ struct StationPanel: View {
     private func transferSection(_ station: Station) -> some View {
         let language = session.language
         let group = session.world.transferGroupText(of: station.id)
+        // Decision 912: how long a change between each two lines here
+        // takes, by the platforms they stop at.
+        let changes = StationTransfers(world: session.world, station: station.id)
         return Section {
+            ForEach(changes.pairs) { pair in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: pair.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(verbatim: pair.text(in: language))
+                        .font(.caption)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("station.lineChange.\(pair.first.rawValue).\(pair.second.rawValue)")
+            }
             if let group {
                 Label {
                     Text(verbatim: group)
@@ -1010,8 +1025,8 @@ struct StationPanel: View {
             Text(verbatim: language.text("Transfers", "轉乘"))
         } footer: {
             Text(verbatim: language.text(
-                "Passengers walk between the stations of a group to change trains, however far apart, at 5 km/h. Without one they walk only to stations under 450 m away.",
-                "同一轉乘群組的車站之間，乘客不論距離都會以時速 5 公里步行轉乘；沒有群組時只會走到 450 公尺內的車站。"
+                "Changing lines here is quickest across one island platform. Pick each line's platforms on its page. Passengers walk between the stations of a group to change trains, however far apart, at 5 km/h. Without one they walk only to stations under 450 m away.",
+                "在這站換線，同一座島式月台對面換最快；每條線停哪座月台在路線頁挑。同一轉乘群組的車站之間，乘客不論距離都會以時速 5 公里步行轉乘；沒有群組時只會走到 450 公尺內的車站。"
             ))
         }
     }

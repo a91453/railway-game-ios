@@ -16,6 +16,9 @@ struct StationOperationsSection: View {
     var body: some View {
         let language = session.language
         let page = StationOperations(world: session.world, station: station, use: session.platformUse)
+        // Decision 912: the lines that stop at each platform.
+        let changes = StationTransfers(world: session.world, station: station)
+        let codes = LineBadge.codes(for: session.world.lines)
         Section {
             waitingRow(page, language: language)
             if page.platforms.isEmpty {
@@ -25,7 +28,10 @@ struct StationOperationsSection: View {
             }
             ForEach(page.platforms) { row in
                 PlatformTrackRow(row: row, lineName: row.line.flatMap { session.world.line(id: $0)?.name },
-                                 code: row.line.flatMap { LineBadge.codes(for: session.world.lines)[$0] }, language: language)
+                                 code: row.line.flatMap { codes[$0] }, language: language,
+                                 stopping: (changes.linesAt[row.platform] ?? []).compactMap { id in
+                                     session.world.line(id: id).map { PlatformTrackRow.Stopping(line: id, code: codes[id], name: $0.name, color: $0.color) }
+                                 })
             }
             if !page.days.isEmpty {
                 WeatherDaysCard(days: page.days, language: language)
@@ -67,6 +73,15 @@ private struct PlatformTrackRow: View {
     let lineName: String?
     let code: String?
     let language: DisplayLanguage
+    /// Decision 912: the lines whose trains stop at this platform.
+    var stopping: [Stopping] = []
+
+    struct Stopping: Hashable {
+        let line: LineID
+        let code: String?
+        let name: String
+        let color: LineColor?
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -97,6 +112,21 @@ private struct PlatformTrackRow: View {
                         .font(.caption)
                         .foregroundStyle(row.train == nil ? Theme.textSecondary : Theme.textPrimary)
                         .lineLimit(1)
+                }
+                if !stopping.isEmpty {
+                    HStack(spacing: 4) {
+                        Text(verbatim: language.text("Stops here:", "停靠："))
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                        ForEach(stopping, id: \.self) { line in
+                            if let code = line.code {
+                                LineCodeBadge(code: code, color: Palette.lineColor(line.line, custom: line.color), size: .small)
+                            } else {
+                                Text(verbatim: line.name).font(.caption)
+                            }
+                        }
+                    }
+                    .lineLimit(1)
                 }
                 if let busy = row.busyness, let text = row.busyText(in: language), let percent = row.busyPercent {
                     ViewThatFits(in: .horizontal) {
@@ -156,6 +186,9 @@ private struct PlatformTrackRow: View {
         var parts = [language.text("Platform \(row.number)", "第 \(row.number) 月台"), row.trainText(lineName: lineName, in: language)]
         if let busy = row.busyness, let text = row.busyText(in: language) {
             parts.append(text + " " + busy.text(in: language))
+        }
+        if !stopping.isEmpty {
+            parts.append(language.text("Stops here: ", "停靠：") + stopping.map(\.name).joined(separator: language.text(", ", "、")))
         }
         return parts.joined(separator: ", ")
     }
