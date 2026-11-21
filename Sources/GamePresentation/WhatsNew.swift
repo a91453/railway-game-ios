@@ -30,6 +30,66 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 143.
+        Entry(
+            id: "2026-11-21-143",
+            items: [
+                Line(
+                    english: "On the full-screen station page, its sections sit on four pages: operations, passengers, surroundings, and freight; a wide screen shows two columns.",
+                    chinese: "車站頁蓋滿畫面時分成營運、旅客、周邊與土地、貨運與拆除四頁，畫面寬時分兩欄。"
+                ),
+                Line(
+                    english: "Changing lines takes as long as the walk between the two lines' platforms: across the platform is quickest, and stations show it.",
+                    chinese: "換乘時間看兩條線停的月台：對面換乘最快，走天橋、上下樓較久；車站頁與挑月台時看得到。"
+                ),
+                Line(
+                    english: "A full-screen train catalogue: sort by type, price, seats, speed or cost, and show only what you can afford.",
+                    chinese: "車種型錄改成全螢幕，可依類別、價格、每節人數、速度、成本排序，也能只看買得起的。"
+                ),
+                Line(
+                    english: "Hong Kong's Peak has the Peak Tower, and the harbour has its ferries and two kinds of pier.",
+                    chinese: "香港太平山頂多了凌霄閣，維港多了港內渡輪與兩款碼頭。"
+                ),
+                Line(
+                    english: "Rovaniemi has four landmarks: the Lumberjack's Candle Bridge, Arktikum, the church and Santa Claus Village.",
+                    chinese: "羅瓦涅米多了四座地標：蠟燭橋、Arktikum 玻璃長廊、羅瓦涅米教堂、北極圈聖誕老人村。"
+                ),
+                Line(
+                    english: "Rovaniemi's night train carries car carriers, closed and open, at its end.",
+                    chinese: "羅瓦涅米夜車車尾掛上汽車運輸車，有封閉式與露天式。"
+                ),
+                Line(
+                    english: "New train models: the MTR South Island Line, TEMU2000 and TEMU1000, and the EMU900's cab with its bright green band.",
+                    chinese: "新的列車模型：港鐵南港島綫、台鐵 TEMU2000 與 TEMU1000 整列，EMU900 換新車臉、腰帶改亮綠。"
+                ),
+                Line(
+                    english: "Taiwan's street lights, utility poles, traffic lights, rubbish trucks and recycling trucks have new models.",
+                    chinese: "台灣的路燈、電線桿、紅綠燈、垃圾車與資源回收車換上新模型。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "A diagonal road's fork no longer takes an extra cell.",
+                    chinese: "斜拖道路的分岔不再多佔一格。"
+                ),
+                Line(
+                    english: "Road bridges over rivers and the sea stand above the water.",
+                    chinese: "過河、過海的公路橋抬高到水面上，不再貼著水。"
+                ),
+                Line(
+                    english: "Holding the phone sideways, the folded tutorial card no longer covers the ✓.",
+                    chinese: "手機橫拿時，摺起的教學卡片不再蓋住 ✓。"
+                ),
+                Line(
+                    english: "A line that cannot be removed says why before you confirm.",
+                    chinese: "刪不了的路線，確認視窗會先說明原因。"
+                ),
+                Line(
+                    english: "Tapping your own track beside a ferry station selects the track.",
+                    chinese: "在渡輪站旁點自己的軌道，照常選到軌道。"
+                ),
+            ]
+        ),
         // 142.
         Entry(
             id: "2026-11-20-142",
