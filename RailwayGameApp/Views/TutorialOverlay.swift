@@ -448,12 +448,28 @@ private struct TutorialCardLayout: Layout {
             // placement never takes more than it proposes.
             return TutorialCardPlacement.Size(width: Double(size.width.rounded(.up)) + 1, height: Double(size.height))
         }
+        #if DEBUG
+        // DIAG2: what the card measures at the width it is placed at.
+        let again = card.sizeThatFits(ProposedViewSize(width: CGFloat(frame.width), height: CGFloat(frame.height)))
+        let free = card.sizeThatFits(ProposedViewSize(width: CGFloat(frame.width), height: nil))
+        let line = "tutorial.place2 bounds \(TutorialCardPlacement.Frame(bounds)) card \(frame) again \(again) free \(free) target \(placement.target.map { "\($0)" } ?? "none") maxWidth \(placement.maxWidth) maxHeight \(placement.maxHeight)"
+        if line != TutorialPlaceTrace.last {
+            TutorialPlaceTrace.last = line
+            UITestTrace.action(line)
+        }
+        #endif
         card.place(
             at: CGPoint(x: CGFloat(frame.x), y: CGFloat(frame.y)), anchor: .topLeading,
             proposal: ProposedViewSize(width: CGFloat(frame.width), height: CGFloat(frame.height))
         )
     }
 }
+
+#if DEBUG
+private enum TutorialPlaceTrace {
+    nonisolated(unsafe) static var last = ""
+}
+#endif
 
 extension TutorialCardPlacement.Frame {
     /// `rect`, in the placement's own rectangles (GamePresentation has no
@@ -805,6 +821,9 @@ private struct FoldedTutorialCard: View {
                 "展開教學：\(tutorial.step.title(in: .traditionalChinese))"
             )))
             .accessibilityIdentifier("tutorial.unfold")
+            #if DEBUG
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { UITestTrace.action("tutorial.unfold frame \($0)") }
+            #endif
             if offersSkip {
                 Divider()
                     .frame(height: 24)
@@ -837,5 +856,8 @@ private struct FoldedTutorialCard: View {
         // offers (``TutorialCardPlacement``), never wider than the screen:
         // with a long title and large text the title is cut short.
         .fixedSize(horizontal: false, vertical: true)
+        #if DEBUG
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { UITestTrace.action("tutorial.folded frame \($0)") }
+        #endif
     }
 }
