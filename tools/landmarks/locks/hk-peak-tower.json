@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark hk-peak-tower: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "hk-peak-tower" : {
+      "hash" : "26921bd73108e061",
+      "triangles" : 2412
+    },
+    "hk-peak-tower-far" : {
+      "hash" : "f9ec18b0ebf02ac4",
+      "triangles" : 492
+    }
+  }
+}

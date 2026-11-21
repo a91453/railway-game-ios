@@ -59,7 +59,7 @@ enum TimetableCheckupWorlds {
         let over = TimetableCheckup.overBudget(measured, budget)
         if over.isEmpty, measured.notSent < budget.notSent || measured.late < budget.late
             || measured.lateOutOfDepot < budget.lateOutOfDepot || measured.peakGapMinutes < budget.peakGapMinutes {
-            text += "  better than the budget (\(budget)): lower it in TimetableCheckupTests\n"
+            text += "  better than the budget (\(budget)): lower it in its map's file in CheckupBudgets/\n"
         }
         FileHandle.standardError.write(Data(text.utf8))
         XCTAssertTrue(results.contains { $0.runs > 0 }, "\(name): no timetabled run looked at", file: file, line: line)
@@ -170,47 +170,9 @@ final class TimetableCheckupFullTests: XCTestCase {
 
     private static let rules: [(String, NewGameRules)] = [("simple", .simple), ("realistic", .realistic)]
 
-    /// `main`'s numbers for each world (decision 844; `main` `2cd9c94`,
-    /// 2026-11-18): runs not sent, late, late out of a depot, and the peak
-    /// gap's minutes over the timetable's. A world not listed must have
-    /// none of any. The sessions fixing a bug lower its world's numbers.
-    /// Decision 849 (the home signal) lowered Hong Kong's under a new
-    /// game's rules: the South Island Line from 21 not sent, the East
-    /// Rail Line from 15, the Tseung Kwan O Line from 92 late to none
-    /// (and the Liujia Line's 3 late).
-    /// The Tung Chung Line's went from 2 not sent, 81 late and 6 late out
-    /// of a depot to 1, 64 and 7: one more late out of Siu Ho Wan, a run
-    /// after midnight, which decision 850 (TCL-DEPOT-CLAIM) took back,
-    /// with two of the late runs.
-    /// Decision 849's later part (the home signal with block sections
-    /// too) lowered Hong Kong's under the realistic rules: the South
-    /// Island Line from 10 not sent, the East Rail Line from 4, the Tung
-    /// Chung Line from 4 (alone) and 3 (with the Airport Express and the
-    /// Disneyland Resort Line, 64 late on `main` `5a1efcf`), the Tseung
-    /// Kwan O Line from 92 late to none (and the Liujia Line's 3 late).
-    /// Decision 871 (the Taoyuan Airport MRT under the Tamsui River and
-    /// at Huanbei, its viaduct stations at 16 m) moved its realistic
-    /// day from 2 not sent, 26 late, 11 late out of a depot and a peak
-    /// gap of +10 min to 1, 19, 7 and +13 (one gap of 27.7 min against
-    /// 15 at Airport Terminal 1 at 18:01); under a new game's rules it
-    /// is as it was.
-    static let budgets: [String: TimetableCheckup.Budget] = [
-        "ntalrt:K simple": .init(notSent: 0, late: 2, lateOutOfDepot: 0, peakGapMinutes: 0),
-        "ntalrt:K realistic": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 0),
-        "sanying:LB simple": .init(notSent: 0, late: 7, lateOutOfDepot: 0, peakGapMinutes: 5),
-        "trtc:BR simple": .init(notSent: 6, late: 179, lateOutOfDepot: 30, peakGapMinutes: 10),
-        "trtc:BR realistic": .init(notSent: 0, late: 149, lateOutOfDepot: 0, peakGapMinutes: 7),
-        "tymc:A simple": .init(notSent: 4, late: 103, lateOutOfDepot: 8, peakGapMinutes: 26),
-        "tymc:A realistic": .init(notSent: 1, late: 19, lateOutOfDepot: 7, peakGapMinutes: 13),
-        "hk EAL_LMC simple": .init(notSent: 0, late: 40, lateOutOfDepot: 0, peakGapMinutes: 7),
-        "hk EAL_LMC realistic": .init(notSent: 0, late: 9, lateOutOfDepot: 0, peakGapMinutes: 3),
-        "hk SIL simple": .init(notSent: 0, late: 134, lateOutOfDepot: 1, peakGapMinutes: 7),
-        "hk SIL realistic": .init(notSent: 0, late: 91, lateOutOfDepot: 1, peakGapMinutes: 4),
-        "hk TCL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
-        "hk TCL realistic": .init(notSent: 0, late: 19, lateOutOfDepot: 1, peakGapMinutes: 11),
-        "hk TCL+AEL+DRL simple": .init(notSent: 1, late: 62, lateOutOfDepot: 6, peakGapMinutes: 19),
-        "hk TCL+AEL+DRL realistic": .init(notSent: 0, late: 18, lateOutOfDepot: 1, peakGapMinutes: 11),
-    ]
+    /// The budgets of every line's whole day alone, one file a map in
+    /// `CheckupBudgets/` (decision 910).
+    static let budgets = TimetableCheckupBudgets.full
 
     private func check(_ name: String, _ world: @autoclosure () throws -> GameWorld) throws {
         guard wanted(name) else { return }

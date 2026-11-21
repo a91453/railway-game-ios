@@ -121,6 +121,58 @@ public struct RoadDraft: Hashable, Sendable {
             column = next.column
         }
     }
+
+    /// ROAD-FORK-CELL (decision 821's next step): a road drawn off a road
+    /// already there at a slant takes side steps beside it first, and with
+    /// the road cells beside them they make blocks of 2 × 2, drawn as small
+    /// triangles and paid for a cell too many. A new cell of the road drawn
+    /// in such a block (with cells that have a road, `roads`, the city's or
+    /// the player's, or are drawn) goes instead through a road cell beside
+    /// the cells before and after it, side by side where it can, or is left
+    /// out where those two are beside each other: the road drawn keeps on
+    /// along the road until it leaves it, and the fork is a plain T, its
+    /// cells not laid. The same where it comes onto a road. The first and
+    /// last cells (under the finger), and a cell the road drawn goes
+    /// through twice, are left.
+    mutating func join(_ roads: RoadGrid) {
+        func beside(_ a: CellPosition, _ b: CellPosition) -> Bool {
+            a != b && abs(a.row - b.row) <= 1 && abs(a.column - b.column) <= 1
+        }
+        var passes = 0
+        changing: while passes < 2 * RoadGrid.longestBuiltRoad {
+            passes += 1
+            let drawn = Set(cells)
+            func paved(_ cell: CellPosition) -> Bool { drawn.contains(cell) || roads.contains(cell) }
+            for index in cells.indices.dropFirst().dropLast() {
+                let at = cells[index]
+                guard !roads.contains(at), cells.lazy.filter({ $0 == at }).count == 1 else { continue }
+                let block = [(-1, -1), (-1, 0), (0, -1), (0, 0)].contains { dr, dc in
+                    let row = at.row + dr, column = at.column + dc
+                    return [(0, 0), (0, 1), (1, 0), (1, 1)].allSatisfy { paved(CellPosition(row: row + $0, column: column + $1)) }
+                }
+                guard block else { continue }
+                let before = cells[index - 1], after = cells[index + 1]
+                // The road cells round it beside both, those beside it
+                // side by side first.
+                let round = [(-1, 0), (0, -1), (0, 1), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+                    .map { CellPosition(row: at.row + $0, column: at.column + $1) }
+                if let road = round.first(where: { roads.contains($0) && beside($0, before) && beside($0, after) }) {
+                    cells[index] = road
+                } else if beside(before, after) {
+                    cells.remove(at: index)
+                } else {
+                    continue
+                }
+                // A way there and back is one cell.
+                var back = 1
+                while back < cells.count - 1 {
+                    if cells[back - 1] == cells[back + 1] { cells.removeSubrange(back...back + 1) } else { back += 1 }
+                }
+                continue changing
+            }
+            return
+        }
+    }
 }
 
 /// What the drawn road would be, as GameCore quotes it.
@@ -260,6 +312,12 @@ extension GameSession {
         guard world.bounds.contains(end) else { return }
         let before = roadDraft
         roadDraft.extend(from: roadDragFinger ?? start, to: end)
+        if roadDraft != before {
+            // The land under it first, so a real-world map's streets there
+            // are known.
+            readLandUnderRoadDraft()
+            if let roads = world.roads { roadDraft.join(roads) }
+        }
         roadDragFinger = end
         if roadDraft != before || roadPreview == nil { refreshRoadPreview() }
     }
