@@ -151,7 +151,8 @@ def primitives(path, gltf, nodes):
             yield prim, place
 
 
-def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 1), unsigned_z=True, centre=False, turn=0.0):
+def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 1), unsigned_z=True, centre=False, turn=0.0,
+           lift=0.0):
     """The GLB at `path` encoded; its vertex and triangle counts, and its
     bounds in metres."""
     aliases = aliases or {}
@@ -181,7 +182,7 @@ def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 
             if axes == "enu":
                 # glTF (+x east, +y up, +z south) onto (+x east, +y north, +z up).
                 east, north = x * turn_cos + z * turn_sin, x * turn_sin - z * turn_cos
-                key = (round(east * 100), round(north * 100), round(y * 100))
+                key = (round(east * 100), round(north * 100), round((y + lift) * 100))
             else:
                 key = (round(x * 100), round(y * 100), round(z * 100))
             if key not in keys:
@@ -264,6 +265,9 @@ def main():
     parser.add_argument("--centre", action="store_true", help="move the footprint's middle to the origin")
     parser.add_argument("--turn", type=float, default=0.0,
                         help="turn the models this many degrees anticlockwise, seen from above, as OpenStreetMap lays them")
+    parser.add_argument("--raise", dest="lift", type=float, default=0.0,
+                        help="raise the models this many metres, so a part the studio built below its ground (a plinth down a "
+                             "hillside) stands at 0; the registration's `sink` lowers it again")
     parser.add_argument("--legacy", choices=sorted(LEGACY), help="write a landmark file made before the registry")
     parser.add_argument("--assets", help="--legacy sunmoon: the folder of the Sun Moon Lake GLBs")
     parser.add_argument("--allow-ground-plate", action="store_true", help="a level plate beyond the body belongs to the model")
@@ -292,7 +296,7 @@ def main():
     materials = a.materials.split(",")
     models = []
     for path in a.glbs:
-        data, v, t, _, _ = encode(path, materials, centre=a.centre, turn=a.turn)
+        data, v, t, _, _ = encode(path, materials, centre=a.centre, turn=a.turn, lift=a.lift)
         name = os.path.splitext(os.path.basename(path))[0]
         ground_plate.check(data, name, allow=a.allow_ground_plate)
         print(f"{name}: {v} vertices, {t} triangles, {len(data)} bytes")

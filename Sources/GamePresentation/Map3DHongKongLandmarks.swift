@@ -134,11 +134,12 @@ extension Map3DScene.Builder {
     /// built (the enum's raw values, the registrations' ids).
     @discardableResult
     mutating func addHongKongLandmarks(frame: RealWorldFrame) -> Set<String> {
-        typealias Placed = (id: String, latitude: Double, longitude: Double, baseHeight: Float, model: (Bool) -> LandmarkMesh)
+        typealias Placed = (id: String, latitude: Double, longitude: Double, baseHeight: Float, sink: Float,
+                            model: (Bool) -> LandmarkMesh)
         let landmarks: [Placed] = Map3DHongKongLandmark.allCases.map { landmark in
-            (landmark.rawValue, landmark.latitude, landmark.longitude, landmark.baseHeight, landmark.model(full:))
+            (landmark.rawValue, landmark.latitude, landmark.longitude, landmark.baseHeight, 0, landmark.model(full:))
         } + Map3DLandmarkRegistry.landmarks.map { landmark in
-            (landmark.id, landmark.latitude, landmark.longitude, landmark.baseHeight, landmark.model(full:))
+            (landmark.id, landmark.latitude, landmark.longitude, landmark.baseHeight, landmark.sink, landmark.model(full:))
         }
         var built = Set<String>()
         for landmark in landmarks {
@@ -148,8 +149,12 @@ extension Map3DScene.Builder {
             let models = [true: landmark.model(true), false: landmark.model(false)]
             let body = LandmarkMesh.corners(Map3DHongKongLandmark.body(of: models[true]!), origin: centre, rotation: 0)
             guard isClearOfTrack(body) else { continue }
-            // On its podium where the ground is lower than its foot.
-            let ground = max(body.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0, landmark.baseHeight)
+            // On its podium where the ground is lower than its foot; one
+            // sunk into a hillside (decision 913) with its floor on the
+            // ground at its middle, its foot that far below.
+            let found = landmark.sink > 0 ? drawnGround(x: centre.x, z: centre.z)
+                : body.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0
+            let ground = max(found, landmark.baseHeight) - landmark.sink
             let saved = target
             for (level, full) in [(Target.near, true), (.far, false)] {
                 target = level
