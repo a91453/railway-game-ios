@@ -90,12 +90,9 @@ struct TrainControls: View {
                     // view (``TrainPlacementChoices``).
                     // Item 2: the type of its cars, as the reference's
                     // `TRAIN_TYPES` (what a car carries, and its doors).
-                    TrainTypeMenu(
-                        type: train.type, choices: session.trainTypeMenuChoices(for: train.id), language: session.language
-                    ) { type in
-                        session.setSelectedTrainType(type)
-                    }
-                    .equatable()
+                    // Decision 915: chosen in the train types over the
+                    // whole screen, in place of a 23-row menu.
+                    TrainTypeButton(session: session, train: train.id, type: train.type)
                     headingPicker
                 } else {
                     HStack {
@@ -519,38 +516,21 @@ private struct LineAssignMenu: View, Equatable {
     }
 }
 
-/// The type of a train's cars (the reference's `TRAIN_TYPES`): the standard
-/// car, the reference's main types and its extras; in a scenario's era
-/// (decision 153), only the era's types. Keeps no type of its own: a choice
-/// calls `choose`, which applies one `GameWorld` command through the
-/// session.
-///
-/// Equatable on what it shows, from ``GameSession/trainTypeMenuChoices(for:)``,
-/// and used with `.equatable()`: the author could not scroll it while the
-/// game ran (decision 184, later).
-private struct TrainTypeMenu: View, Equatable {
+/// The type of a train's cars (the reference's `TRAIN_TYPES`): its name,
+/// what a car carries and its doors; touched, the train types over the
+/// whole screen (decision 915, ``RollingStockCatalogView``), whose choice
+/// applies one `GameWorld` command through the session. In a scenario's
+/// era (decision 153) the catalog lists only the era's types.
+private struct TrainTypeButton: View {
+    let session: GameSession
+    let train: TrainID
     let type: TrainType?
-    /// Each type with the line under its name (decision 180): its capacity,
-    /// prices, daily cost and top speed, and what changing the train to it
-    /// costs. The standard car (`nil`) first where the game offers it.
-    let choices: [MenuChoice<TrainType?>]
-    let language: DisplayLanguage
-    let choose: @MainActor (TrainType?) -> Void
-
-    nonisolated static func == (lhs: TrainTypeMenu, rhs: TrainTypeMenu) -> Bool {
-        lhs.type == rhs.type && lhs.choices == rhs.choices && lhs.language == rhs.language
-    }
+    @State private var showsCatalog = false
 
     var body: some View {
-        Menu {
-            ForEach(choices.filter { $0.id == nil }) { choice in
-                button(choice)
-            }
-            Section {
-                ForEach(choices.filter { $0.id != nil }) { choice in
-                    button(choice)
-                }
-            }
+        let language = session.language
+        Button {
+            showsCatalog = true
         } label: {
             Label {
                 Text(verbatim: Train.typeText(type, in: language))
@@ -559,35 +539,17 @@ private struct TrainTypeMenu: View, Equatable {
             }
             .font(.footnote)
             .monospacedDigit()
+            .frame(minHeight: 44)
         }
         .accessibilityIdentifier("train.type")
         .accessibilityLabel(Text(verbatim: Train.typeText(type, in: language)))
         .accessibilityHint(Text(verbatim: language.text(
-            "Chooses the type of its cars: how many passengers each carries and how many doors it has.",
-            "選擇車種：每節載客數與車門數。"
+            "Opens the train types to choose the type of its cars: how many passengers each carries and how many doors it has.",
+            "打開車種型錄選擇車種：每節載客數與車門數。"
         )))
-    }
-
-    private func button(_ choice: MenuChoice<TrainType?>) -> some View {
-        Button {
-            choose(choice.id)
-        } label: {
-            option(choice.title, detail: choice.detail ?? "", isChosen: choice.id == type)
-        }
-    }
-
-    @ViewBuilder
-    private func option(_ title: String, detail: String, isChosen: Bool) -> some View {
-        if isChosen {
-            Label {
-                Text(verbatim: title)
-                Text(verbatim: detail)
-            } icon: {
-                Image(systemName: "checkmark")
-            }
-        } else {
-            Text(verbatim: title)
-            Text(verbatim: detail)
+        .fullScreenCover(isPresented: $showsCatalog) {
+            RollingStockCatalogView(session: session, train: train)
+                .coversTheMap(session)
         }
     }
 }
