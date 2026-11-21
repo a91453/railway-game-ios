@@ -2878,7 +2878,8 @@ struct LinesPanel: View {
                 .font(.footnote)
             }
             .accessibilityIdentifier("line.staff.catalog")
-            .sheet(isPresented: $showsCatalog) {
+            // Decision 915: over the whole screen.
+            .fullScreenCover(isPresented: $showsCatalog) {
                 RollingStockCatalogView(session: session, type: $staffType, cars: $staffCars)
                     .coversTheMap(session)
             }

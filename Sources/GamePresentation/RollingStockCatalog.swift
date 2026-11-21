@@ -73,6 +73,61 @@ public struct RollingStockCatalog: Equatable, Sendable {
         return family[(index + offset + family.count) % family.count].type
     }
 
+    /// Decision 915: how the full-screen catalog's list is ordered.
+    public enum Order: String, CaseIterable, Sendable {
+        /// Family by family, in the menu's order.
+        case family
+        /// The whole train's price, cheapest first.
+        case price
+        /// What a car carries, most first.
+        case capacity
+        /// Top speed, fastest first.
+        case speed
+        /// What the train costs an hour on a line, cheapest first.
+        case hourlyCost
+
+        public func title(in language: DisplayLanguage) -> String {
+            switch self {
+            case .family: language.text("Family", "類別")
+            case .price: language.text("Price", "價格")
+            case .capacity: language.text("Riders a car", "每節人數")
+            case .speed: language.text("Top speed", "最高速度")
+            case .hourlyCost: language.text("Cost an hour", "每小時成本")
+            }
+        }
+    }
+
+    /// Decision 915: the types the catalog's list shows: those of `family`
+    /// (every family when `nil`), in `order` for trains of `cars` cars in
+    /// `world`, ties kept in the menu's order; with `affordableOnly`, only
+    /// those whose whole train the company can pay for now.
+    public func listed(family: Family?, order: Order, cars: Int, affordableOnly: Bool, in world: GameWorld) -> [Entry] {
+        let shown = entries.enumerated().filter { family == nil || $0.element.family == family }
+        let trains = Dictionary(uniqueKeysWithValues: shown.map { ($0.element.type, Self.train($0.element.type, cars: cars, in: world)) })
+        let kept = shown.filter { !affordableOnly || world.economy.canAfford(trains[$0.element.type]!.price) }
+        func key(_ entry: Entry) -> Int64 {
+            let train = trains[entry.type]!
+            switch order {
+            case .family: return 0
+            case .price: return train.price.amount
+            case .capacity: return -entry.card.capacityPerCar
+            case .speed: return -entry.card.topSpeed
+            case .hourlyCost: return train.hourly.amount
+            }
+        }
+        return kept.sorted { lhs, rhs in
+            let (l, r) = (key(lhs.element), key(rhs.element))
+            return l != r ? l < r : lhs.offset < rhs.offset
+        }.map(\.element)
+    }
+
+    /// The type after `type` in `list`, round to the first; and before:
+    /// the detail's arrows over what the list shows (decision 915).
+    public static func step(in list: [Entry], from type: TrainType, by offset: Int) -> TrainType? {
+        guard let index = list.firstIndex(where: { $0.type == type }), list.count > 1 else { return nil }
+        return list[(index + offset + list.count) % list.count].type
+    }
+
     /// A train of `type` with `cars` cars: what it carries, costs, costs a
     /// day and costs an hour on a line (decision 301), in `world`.
     public static func train(_ type: TrainType, cars: Int, in world: GameWorld) -> (riders: Int64, price: Money, daily: Money, hourly: Money) {
