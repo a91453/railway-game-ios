@@ -236,7 +236,17 @@ extension GameWorld {
             let fitting = Set(berths(of: platform.station, length: length).filter { berth in
                 berth.traversal.edge == platform.edge && (berth.traversal.direction == .forward ? berth.offset == platform.end : berth.offset == lastEdge.length - platform.start)
             })
-            return path(from: start, toStation: platform.station, length: length, eligible: fitting, memo: &memo)
+            // HK-LATE-RUNS: the shortest way there (decision 202 §3), unless
+            // the way keeping left (or right) takes fewer crossovers: the
+            // platform is the line's, the way to it is not, and the shortest
+            // one can cross over to the other track of a double line and
+            // back, against its traffic, a few metres shorter.
+            let shortest = path(from: start, toStation: platform.station, length: length, eligible: fitting, memo: &memo)
+            guard keepLeft, let shortest,
+                  let kept = path(from: start, toStation: platform.station, length: length, eligible: fitting, keepingLeft: true, memo: &memo),
+                  kept.traversals != shortest.traversals,
+                  crossovers(on: kept) < crossovers(on: shortest) else { return shortest }
+            return kept
         }
         // A train returning from a passing place may rejoin later in the
         // same walk. Repeated edges retain their first reachable occurrence.
@@ -258,6 +268,20 @@ extension GameWorld {
             return TrainPath(traversals: Array(walk.dropFirst()), end: end == lastEdge.length ? nil : end, distance: total)
         }
         return nil
+    }
+
+    /// HK-LATE-RUNS: how many crossovers `path` takes: edges that leave
+    /// both their nodes beside another edge, the way the branch of a
+    /// turnout does (a crossover between two tracks), rather than as the
+    /// one edge on its side of a node.
+    func crossovers(on path: TrainPath) -> Int {
+        path.traversals.count { traversal in
+            guard let edge = network.edge(traversal.edge), edge.from != edge.to else { return false }
+            return [edge.from, edge.to].allSatisfy { id in
+                guard let node = network.node(id), let end = node.end(of: edge.id) else { return false }
+                return node.ends.contains { $0.edge != edge.id && $0.direction.dot(end.direction) > 0 }
+            }
+        }
     }
 
     /// Decision 228: the way from `start`, off `preference`'s walk, along
