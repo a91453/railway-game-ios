@@ -13,5 +13,6 @@ extension Map3DLandmarkRegistry {
         Map3DRovaniemiArcticGallery.registration,
         Map3DRovaniemiChurch.registration,
         Map3DRovaniemiArcticVillage.registration,
+        Map3DPeakTower.registration,
     ]
 }
