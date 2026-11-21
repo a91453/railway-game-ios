@@ -1979,10 +1979,15 @@ struct LinesPanel: View {
                 isPresented: $confirmsRemoval,
                 titleVisibility: .visible
             ) {
-                Button(role: .destructive) {
-                    session.removeSelectedLine()
-                } label: {
-                    Text(verbatim: session.language.text("Remove Line", "刪除路線"))
+                // REVIEW-L29 P3-1: a line that cannot be removed now
+                // (``GameSession/lineRemovalRefusal(_:)``) is offered only
+                // Cancel, the message saying why.
+                if session.lineRemovalRefusal(line.id) == nil {
+                    Button(role: .destructive) {
+                        session.removeSelectedLine()
+                    } label: {
+                        Text(verbatim: session.language.text("Remove Line", "刪除路線"))
+                    }
                 }
             } message: {
                 Text(verbatim: session.lineRemovalText(line.id))
