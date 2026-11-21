@@ -13,7 +13,7 @@
 - 第 3 刀 #2568：`GameWorld.swift` 的時間推進／派車／發車／行進拆成 `WorldAdvance`／`WorldDispatch`／`WorldDeparture`／`WorldMovement`。
 - 第 4 刀 #2569：時刻表全日檢查的門檻一張地圖一檔（`Tests/GamePresentationTests/CheckupBudgets/`）。
 - 第 5 刀（最後一張）：存檔版本說明一版一檔（`SaveFixtures/versions/<N>.md`，`SaveVersionNotesTests` 擋缺檔）；新功能狀態放自己小 struct 的規則（決策 910 §5）。
-- 每刀：Linux 本機建置（`-warnings-as-errors`）＋ Replay／Golden／SavedGame 測試；CI 全層、手動 `ci.yml` 的時刻表全日檢查與 main 數字相同。
+- 每刀：Linux 本機建置（`-warnings-as-errors`）＋相關測試；PR 的 CI 綠才合。動到 GameCore 的第 1–3 刀另跑手動 `ci.yml`，五個時刻表全日檢查都與 main 數字相同。
 
 ## 還留下什麼
 
