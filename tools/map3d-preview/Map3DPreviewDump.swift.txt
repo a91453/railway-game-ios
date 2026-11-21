@@ -141,6 +141,18 @@ final class Map3DPreviewDump: XCTestCase {
             cityHeights = ground.heights
             cityLandCover = ground.landCover
             if fullRailways { railways = try RovaniemiRailwaysTests.railways() }
+        // Decision 920: a new game on Fukuoka's map, looking at MAP3D_AT
+        // (天神 without it); MAP3D_BASEMAP and MAP3D_FOOTPRINTS as Hong Kong's.
+        case "fukuoka":
+            let pack = MapPack(root: root.appendingPathComponent("MapPacks/fukuoka"))
+            let ground = try OverseasGround(city: .fukuoka, pack: pack)
+            world = GameWorld.newOverseasGame(ground)
+            cityFootprints = try [pack.buildingsFile].compactMap { $0 }.map { try Data(contentsOf: $0, options: .alwaysMapped) }
+            let at = (ProcessInfo.processInfo.environment["MAP3D_AT"] ?? "33.5906:130.3989").split(separator: ":").map { Double(String($0))! }
+            focus = try XCTUnwrap(RealWorldFrame(world: world)).worldPosition(latitude: at[0], longitude: at[1])
+            cities = ground.baseMap.map { [$0] } ?? []
+            cityHeights = ground.heights
+            cityLandCover = ground.landCover
         case "realdemo":
             let heights = try HeightGrid(data: resource("RealWorld/taiwan_heights.dat"))
             let water = try WaterGrid(data: resource("RealWorld/taiwan_water.json"))
