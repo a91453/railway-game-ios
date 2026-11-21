@@ -881,12 +881,38 @@ extension XCUIApplication {
     /// (TestFlight 131's full lane, run 43599067177). It is held by its
     /// place among the lists: a query by its rows finds nothing once they
     /// scroll away.
-    func stationPanelList(within timeout: TimeInterval = 5) -> XCUIElement? {
+    ///
+    /// Decision 911: over the whole screen the panel is in pages, a page in
+    /// two columns where the screen is wide: the trailing column's list
+    /// when `trailing` and the page stands in two, else the leading (or
+    /// only) one.
+    func stationPanelList(trailing: Bool = false, within timeout: TimeInterval = 5) -> XCUIElement? {
         let panel = collectionViews.containing(NSPredicate(format: "identifier BEGINSWITH %@", "station.")).firstMatch
         guard panel.appears(within: timeout) else { return nil }
         panel.waitUntilStill()
+        let page = collectionViews["station.page"].firstMatch
+        if page.exists {
+            let own = collectionViews["station.page.trailing"].firstMatch
+            let list = trailing && own.exists ? own : page
+            list.waitUntilStill()
+            return list
+        }
         let place = panel.frame
         return collectionViews.allElementsBoundByIndex.first { $0.exists && $0.frame == place }
+    }
+
+    /// Decision 911: picks a page of the station panel by its name on the
+    /// control over it, in either language, and returns the list its
+    /// sections are in (``stationPanelList(trailing:within:)``).
+    @discardableResult
+    func showStationPage(_ english: String, _ chinese: String, trailing: Bool = false,
+                         file: StaticString = #filePath, line: UInt = #line) -> XCUIElement? {
+        let pages = segmentedControls["station.pages"].firstMatch
+        XCTAssertTrue(pages.appears(within: 10), "The station's panel has no pages", file: file, line: line)
+        let page = pages.buttons.matching(NSPredicate(format: "label == %@ OR label == %@", english, chinese)).firstMatch
+        XCTAssertTrue(page.becomesHittable(within: 10), "No page \(english) on the station's panel", file: file, line: line)
+        if !page.isSelected { page.tap() }
+        return stationPanelList(trailing: trailing)
     }
 
     /// Decision 481: opens a line's own page from the lines panel's list

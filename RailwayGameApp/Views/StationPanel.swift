@@ -67,67 +67,26 @@ struct StationPanel: View {
     /// station and the next launch (``StationPanelFolds``).
     @AppStorage("stationPanelFolded") private var foldedGroups = ""
 
+    /// Decision 911: the page shown over the whole screen, and the
+    /// window's width, which decides whether it stands in two columns.
+    @State private var stationPage: StationPanelGroup = .operations
+    @State private var pageWidth: CGFloat?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     private var folds: StationPanelFolds {
         StationPanelFolds(stored: foldedGroups)
     }
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
-            Form {
-                if let station = session.selectedStation {
-                    // Decision 472 (UI health check N): the sections in
-                    // four groups, the everyday ones first. The first has
-                    // no heading, so the panel opens on the same rows as
-                    // before; the others fold by their headings and are
-                    // reached from the toolbar's menu.
-                    ForEach(StationPanelGroup.allCases) { group in
-                        if group.isFoldable { groupHeader(group) }
-                        if !folds.isFolded(group) {
-                            ForEach(group.parts, id: \.self) { part in
-                                self.part(part, of: station)
-                            }
-                        }
-                    }
+            Group {
+                // Decision 911: over the whole screen, in pages; beside
+                // the map (a lesson), the one folding list.
+                if session.stationPanelCoversScreen, let station = session.selectedStation {
+                    pagedBody(station)
                 } else {
-                    Section {
-                        Text("Select a station on the map, or choose one above.")
-                            .font(.footnote)
-                            .foregroundStyle(Theme.textSecondary)
-                    }
+                    foldingList
                 }
-            }
-            // Decision 376: the button a tutorial step asks for (lesson 8's
-            // freight yard, last in the form) is scrolled into view.
-            .onChange(of: RevealKey(step: session.tutorial?.step.id, target: session.tutorial?.step.revealsInPanel, station: session.selectedStationID), initial: true) { _, key in
-                guard let target = key.target else { return }
-                if let group = StationPanelGroup.holding(target), folds.isFolded(group) {
-                    var unfolded = folds
-                    unfolded.unfold(group)
-                    foldedGroups = unfolded.stored
-                }
-                Task { @MainActor in
-                    await Task.yield()
-                    withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
-                }
-            }
-            // Decision 477: a map bubble's group (a town short of
-            // materials: freight), as the toolbar's menu goes to it.
-            .onChange(of: screen.stationFocus, initial: true) { _, focus in
-                guard let focus else { return }
-                screen.stationFocus = nil
-                jump(to: focus, proxy)
-            }
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { _ in
-                if pendingJump != nil { settleJump(proxy) }
-            }
-            .toolbar {
-                if session.selectedStation != nil {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        groupJumpMenu(proxy)
-                    }
-                }
-            }
             }
             .panelTitle(session.selectedStation?.name ?? session.language.text("Station", "車站"))
             .hardTopScrollEdge()
@@ -166,6 +125,161 @@ struct StationPanel: View {
             journey = nil
             openJourneyOption = nil
         }
+    }
+
+    /// Decisions 472 and 477: the one list, its groups folded by their
+    /// headings and reached from the toolbar's menu. Beside the map, in a
+    /// lesson (decision 746), and with no station selected.
+    private var foldingList: some View {
+        ScrollViewReader { proxy in
+        Form {
+            if let station = session.selectedStation {
+                // Decision 472 (UI health check N): the sections in
+                // four groups, the everyday ones first. The first has
+                // no heading, so the panel opens on the same rows as
+                // before; the others fold by their headings and are
+                // reached from the toolbar's menu.
+                ForEach(StationPanelGroup.allCases) { group in
+                    if group.isFoldable { groupHeader(group) }
+                    if !folds.isFolded(group) {
+                        ForEach(group.parts, id: \.self) { part in
+                            self.part(part, of: station)
+                        }
+                    }
+                }
+            } else {
+                Section {
+                    Text("Select a station on the map, or choose one above.")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+        }
+        // Decision 376: the button a tutorial step asks for (lesson 8's
+        // freight yard, last in the form) is scrolled into view.
+        .onChange(of: RevealKey(step: session.tutorial?.step.id, target: session.tutorial?.step.revealsInPanel, station: session.selectedStationID), initial: true) { _, key in
+            guard let target = key.target else { return }
+            if let group = StationPanelGroup.holding(target), folds.isFolded(group) {
+                var unfolded = folds
+                unfolded.unfold(group)
+                foldedGroups = unfolded.stored
+            }
+            Task { @MainActor in
+                await Task.yield()
+                withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { proxy.scrollTo(target, anchor: .center) }
+            }
+        }
+        // Decision 477: a map bubble's group (a town short of
+        // materials: freight), as the toolbar's menu goes to it.
+        .onChange(of: screen.stationFocus, initial: true) { _, focus in
+            guard let focus else { return }
+            screen.stationFocus = nil
+            jump(to: focus, proxy)
+        }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { _ in
+            if pendingJump != nil { settleJump(proxy) }
+        }
+        .toolbar {
+            if session.selectedStation != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    groupJumpMenu(proxy)
+                }
+            }
+        }
+        }
+    }
+
+    // MARK: - Pages (decision 911)
+
+    /// What of the game decides the pages' sections.
+    private var pageLayout: StationPageLayout {
+        StationPageLayout(StationPageLayout.Facts(showsFreight: session.showsFreight))
+    }
+
+    /// Decision 911: the panel over the whole screen, a page for each
+    /// group, two columns side by side where the window is wide, one of a
+    /// readable width in the middle where it is not (or the text is large).
+    private func pagedBody(_ station: Station) -> some View {
+        let layout = pageLayout
+        let page = stationPage
+        let columns = layout.columns(of: page)
+        return Group {
+            if let width = pageWidth, layout.isSplit(page, width: width, accessibilitySize: dynamicTypeSize.isAccessibilitySize) {
+                HStack(spacing: 0) {
+                    pageForm(columns.leading, of: station, page: page)
+                        .accessibilityIdentifier("station.page")
+                    pageForm(columns.trailing, of: station, page: page)
+                        .accessibilityIdentifier("station.page.trailing")
+                }
+            } else if let width = pageWidth {
+                pageForm(columns.all, of: station, page: page)
+                    .accessibilityIdentifier("station.page")
+                    .frame(maxWidth: StationPageLayout.oneColumnWidth(in: width))
+                    .frame(maxWidth: .infinity)
+            } else {
+                // Not measured yet: nothing for a frame, rather than one
+                // column that turns into two.
+                Color.clear
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(uiColor: .systemGroupedBackground))
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pageWidth = $0 }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            pageBar(layout)
+        }
+        // Two lists side by side: a bar of the lists' own background hides
+        // both under it (as the company's figures and a line's page).
+        .toolbarBackground(Color(uiColor: .systemGroupedBackground), for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        // Decision 477: a map bubble's group (a town short of materials:
+        // freight) opens its page.
+        .onChange(of: screen.stationFocus, initial: true) { _, focus in
+            guard let focus else { return }
+            screen.stationFocus = nil
+            stationPage = layout.opening(at: focus)
+        }
+        // Decision 376: the page of a button a tutorial step asks for.
+        .onChange(of: RevealKey(step: session.tutorial?.step.id, target: session.tutorial?.step.revealsInPanel, station: session.selectedStationID), initial: true) { _, key in
+            guard let target = key.target, let holding = layout.page(holding: target) else { return }
+            stationPage = holding
+        }
+    }
+
+    /// One column of a page: its sections, in order. Another station or
+    /// another page starts at the top.
+    private func pageForm(_ parts: [StationPanelPart], of station: Station, page: StationPanelGroup) -> some View {
+        Form {
+            ForEach(parts, id: \.self) { part in
+                self.part(part, of: station)
+            }
+        }
+        .id(PageID(station: station.id, page: page))
+        .hardTopScrollEdge()
+    }
+
+    private struct PageID: Hashable {
+        let station: StationID
+        let page: StationPanelGroup
+    }
+
+    /// Over every page, the control that picks it.
+    private func pageBar(_ layout: StationPageLayout) -> some View {
+        let language = session.language
+        return Picker(selection: $stationPage) {
+            ForEach(layout.pages) { page in
+                Text(verbatim: page.pageTitle(in: language)).tag(page)
+            }
+        } label: {
+            Text(verbatim: language.text("Page", "分頁"))
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 520)
+        .accessibilityIdentifier("station.pages")
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(Color(uiColor: .systemGroupedBackground))
     }
 
     /// What decides the tutorial's button to scroll to: the step, and the
