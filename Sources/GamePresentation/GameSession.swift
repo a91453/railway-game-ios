@@ -3373,11 +3373,8 @@ public final class GameSession {
         // trains run on and stop along (the Green Mountain Line's, the
         // Blue Coast Line's): removed, its track would stay under the
         // other line, and bought again it could not be taken up.
-        if let other = RealLineLaying.lineRunning(onTrackOf: line.id, in: world) {
-            message = StatusMessage(kind: .failure, text: language.text(
-                "\(other.name)'s trains run on this line's track. Remove \(other.name) first.",
-                "\(other.name)的列車行駛在這條線的軌道上，請先刪除\(other.name)。"
-            ))
+        if let refusal = lineRemovalRefusal(line.id) {
+            message = StatusMessage(kind: .failure, text: refusal)
             return
         }
         let followsLineTrain = followedTrainID.map { world.assignedLine(of: $0) == line.id } ?? false
