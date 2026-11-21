@@ -149,6 +149,21 @@ struct PassengerRouteGraph: Equatable {
         /// Seconds its trains stay at a call between its ends (decision
         /// 207, ``LineJourney/dwellSeconds``).
         var dwellSeconds: Int64 = GameWorld.defaultDwellSeconds
+        /// Decision 912: the platform its trains stand at at each call when
+        /// its line names one (``GameWorld/designatedPlatform(of:service:direction:stop:)``);
+        /// empty when it names none.
+        var platforms: [TrackPlatform?] = []
+
+        func at(_ platforms: [TrackPlatform?]) -> ServicePath {
+            var path = self
+            path.platforms = platforms.contains { $0 != nil } ? platforms : []
+            return path
+        }
+
+        /// The platform of call `stop`, if named.
+        func platform(_ stop: Int) -> TrackPlatform? {
+            platforms.indices.contains(stop) ? platforms[stop] : nil
+        }
     }
 
     typealias Walk = PassengerWalk
@@ -161,8 +176,16 @@ struct PassengerRouteGraph: Equatable {
     /// Served stations where nobody boards, alights or changes (see
     /// ``StationOperationMode/closed``): trains run through them.
     let closed: Set<StationID>
+    /// Decision 912: the change between each two named platforms of one
+    /// station that two calls of different lines stand at.
+    let platformChanges: [PlatformPair: PlatformChange]
     /// The same, in arrays for ``PassengerRouteSearch``.
     let lookup: Lookup
+
+    struct PlatformPair: Hashable {
+        let from: TrackPlatform
+        let to: TrackPlatform
+    }
 
     /// The graph's served stations numbered from 0 in the order the paths
     /// first call at them, and what a search asks of each: its calls, its
@@ -182,13 +205,19 @@ struct PassengerRouteGraph: Equatable {
         var calls: [[PassengerRouteNode]] = []
         var walks: [[Walk]] = []
         var closed: [Bool] = []
+        /// Decision 912: each call's named platform.
+        var platform: [TrackPlatform?] = []
+        var changes: [PlatformPair: PlatformChange] = [:]
 
         init(paths: [ServicePath], stopsAt: [StationID: [PassengerRouteNode]],
-             walks: [StationID: [PassengerWalk]], closed: Set<StationID>) {
+             walks: [StationID: [PassengerWalk]], closed: Set<StationID>,
+             changes: [PlatformPair: PlatformChange] = [:]) {
+            self.changes = changes
             var stations: [StationID] = []
             for path in paths {
                 firstNode.append(nodeSlot.count)
-                for station in path.stations {
+                for (stop, station) in path.stations.enumerated() {
+                    platform.append(path.platform(stop))
                     if slot[station] == nil {
                         slot[station] = stations.count
                         stations.append(station)
@@ -209,6 +238,7 @@ struct PassengerRouteGraph: Equatable {
     /// The calls are derived from the paths.
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.paths == rhs.paths && lhs.walks == rhs.walks && lhs.closed == rhs.closed
+            && lhs.platformChanges == rhs.platformChanges
     }
 
     init(paths: [ServicePath], walks: [StationID: [Walk]] = [:], closed: Set<StationID> = []) {
@@ -221,6 +251,7 @@ struct PassengerRouteGraph: Equatable {
         stopsAt = calls
         self.walks = walks
         self.closed = closed
+        platformChanges = [:]
         lookup = Lookup(paths: included, stopsAt: calls, walks: walks, closed: closed)
     }
 
@@ -240,6 +271,9 @@ struct PassengerRouteGraph: Equatable {
             let capacities = world.capacityProfiles(of: line, journeys: journeys)
             for service in 0..<line.serviceCount {
                 let pattern = service == 0 ? nil : service - 1
+                func platforms(_ stops: [Int], _ direction: LineDirection) -> [TrackPlatform?] {
+                    stops.map { world.designatedPlatform(of: line, service: service, direction: direction, stop: $0) }
+                }
                 let plans = line.services(at: level, roundTrips: journeys.prefix(service + 1).map { $0?.roundTripMinutes },
                                           capacities: Array(capacities.prefix(service + 1))).plans
                 guard let headway = plans[service]?.headway, let journey = journeys[service] else { continue }
@@ -271,17 +305,22 @@ struct PassengerRouteGraph: Equatable {
                             (0..<legs).map { seconds[(place + $0) % count] }
                         }
                         let (laps, arcs) = line.ringRunPaths(way: direction)
+                        func stops(from stop: Int, legs: Int) -> [Int] {
+                            (0...legs).map { (stop + $0 * step) % count }
+                        }
                         for start in laps {
                             Self.add(ServicePath(line: line.id, pattern: nil, direction: way, stations: stations(from: start, legs: count),
                                                  runSeconds: legSeconds(from: line.ringPlace(of: start, way: direction), legs: count),
-                                                 headway: headway, isRing: true, dailyCapacity: capacity, dwellSeconds: lap.dwellSeconds),
+                                                 headway: headway, isRing: true, dailyCapacity: capacity, dwellSeconds: lap.dwellSeconds)
+                                        .at(platforms(stops(from: start, legs: count), way)),
                                      to: &included, calls: &calls)
                         }
                         for arc in arcs {
                             let first = direction == .inner ? arc.start : (count - arc.start) % count
                             Self.add(ServicePath(line: line.id, pattern: nil, direction: way, stations: stations(from: first, legs: arc.legs),
                                                  runSeconds: legSeconds(from: arc.start, legs: arc.legs),
-                                                 headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: lap.dwellSeconds),
+                                                 headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: lap.dwellSeconds)
+                                        .at(platforms(stops(from: first, legs: arc.legs), way)),
                                      to: &included, calls: &calls)
                         }
                     }
@@ -289,10 +328,12 @@ struct PassengerRouteGraph: Equatable {
                     for direction in [RingDirection.inner, .outer] where line.ringWayRuns(direction) {
                         guard let lap = direction == .inner ? journey : world.journey(of: line, service: service, direction: .outer) else { continue }
                         let stationIDs = line.ringCalls(direction).map { line.stops[$0] }
+                        let way: LineDirection = direction == .inner ? .outbound : .inbound
                         let path = ServicePath(line: line.id, pattern: nil,
-                                               direction: direction == .inner ? .outbound : .inbound,
+                                               direction: way,
                                                stations: stationIDs, runSeconds: lap.legs.map(\.seconds),
                                                headway: headway, isRing: true, dailyCapacity: capacity, dwellSeconds: lap.dwellSeconds)
+                            .at(platforms(line.ringCalls(direction), way))
                         Self.add(path, to: &included, calls: &calls)
                     }
                 } else if line.hasRuns {
@@ -308,7 +349,8 @@ struct PassengerRouteGraph: Equatable {
                         Self.add(ServicePath(line: line.id, pattern: nil, direction: .outbound,
                                              stations: stretch.map { line.stops[$0] },
                                              runSeconds: Array(out[stretch.lowerBound..<stretch.upperBound]),
-                                             headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds),
+                                             headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds)
+                                    .at(platforms(Array(stretch), .outbound)),
                                  to: &included, calls: &calls)
                     }
                     for stretch in line.runStretches(outbound: false) {
@@ -317,7 +359,8 @@ struct PassengerRouteGraph: Equatable {
                         Self.add(ServicePath(line: line.id, pattern: nil, direction: .inbound,
                                              stations: stretch.reversed().map { line.stops[$0] },
                                              runSeconds: Array(back[(count - 1 - stretch.upperBound)..<(count - 1 - stretch.lowerBound)]),
-                                             headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds),
+                                             headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds)
+                                    .at(platforms(stretch.reversed(), .inbound)),
                                  to: &included, calls: &calls)
                     }
                 } else {
@@ -327,10 +370,12 @@ struct PassengerRouteGraph: Equatable {
                                               stations: callIndices.map { line.stops[$0] },
                                               runSeconds: Array(journey.legs.prefix(half).map(\.seconds)),
                                               headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds)
+                        .at(platforms(callIndices, .outbound))
                     let backward = ServicePath(line: line.id, pattern: pattern, direction: .inbound,
                                                stations: callIndices.reversed().map { line.stops[$0] },
                                                runSeconds: Array(journey.legs.suffix(half).map(\.seconds)),
                                                headway: headway, isRing: false, dailyCapacity: capacity, dwellSeconds: journey.dwellSeconds)
+                        .at(platforms(callIndices.reversed(), .inbound))
                     Self.add(forward, to: &included, calls: &calls)
                     Self.add(backward, to: &included, calls: &calls)
                 }
@@ -351,7 +396,21 @@ struct PassengerRouteGraph: Equatable {
             }
         }
         self.walks = walks
-        lookup = Lookup(paths: included, stopsAt: calls, walks: walks, closed: closed)
+        // Decision 912: the changes between the named platforms that calls
+        // of two different lines stand at, at each station.
+        var changes: [PlatformPair: PlatformChange] = [:]
+        for nodes in calls.values {
+            let named = nodes.compactMap { node in included[node.line].platform(node.stop).map { (included[node.line].line, $0) } }
+            for (lineA, a) in named {
+                for (lineB, b) in named where lineA != lineB {
+                    let pair = PlatformPair(from: a, to: b)
+                    guard changes[pair] == nil else { continue }
+                    changes[pair] = world.platformChange(from: a, to: b) ?? .unknown
+                }
+            }
+        }
+        platformChanges = changes
+        lookup = Lookup(paths: included, stopsAt: calls, walks: walks, closed: closed, changes: changes)
     }
 
     private static func add(_ path: ServicePath, to paths: inout [ServicePath], calls: inout [StationID: [PassengerRouteNode]]) {
@@ -865,8 +924,19 @@ struct PassengerRouteSearch {
             let sameLine = paths[other.line].line == paths[node.line].line
             let wait = max(1, passengerMinutesRoundingUp(paths[other.line].headway, by: 2)) * GameTime.secondsPerMinute
             // A change of line within a station: the reference's
-            // default transfer type for one station, same-platform.
-            let transfer: Int64 = sameLine ? 0 : PassengerTransferTier.samePlatform.penaltySeconds
+            // default transfer type for one station, same-platform,
+            // unless both lines name the platforms the passenger gets off
+            // and on at (decision 912).
+            let transfer: Int64
+            if sameLine {
+                transfer = 0
+            } else if label.state.onboard, let a = lookup.platform[number],
+                      let b = lookup.platform[lookup.firstNode[other.line] + other.stop],
+                      let change = lookup.changes[PassengerRouteGraph.PlatformPair(from: a, to: b)] {
+                transfer = change.penaltySeconds
+            } else {
+                transfer = PassengerTransferTier.samePlatform.penaltySeconds
+            }
             offer(PassengerRouteLabel(state: PassengerRouteState(node: other, onboard: false),
                                       total: label.total + wait + transfer,
                                       ride: label.ride, wait: label.wait + wait,
