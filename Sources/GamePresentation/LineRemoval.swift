@@ -93,6 +93,9 @@ extension GameSession {
     /// BUGHUNT_BUILD P3-5, decision 528), that it can be bought again and
     /// its track and stations stay meanwhile.
     public func lineRemovalText(_ id: LineID) -> String {
+        // REVIEW-L29 P3-1: a line that cannot be removed says why before
+        // the player confirms, not only after.
+        if let refusal = lineRemovalRefusal(id) { return refusal }
         let sale = world.lineRemovalSale(id)
         let trains = sale.trains > 0
             ? language.text(
@@ -104,6 +107,21 @@ extension GameSession {
         return trains + language.text(
             " This line was bought: once removed, it can be bought again. Its track and stations stay.",
             "這條線是買來的，刪掉後可以再買回來；軌道與車站會留著。"
+        )
+    }
+
+    /// Why line `id` cannot be removed now, or `nil` when it can.
+    /// SHALUN-ONE-ISLAND (decision 885): not a bought line whose track
+    /// another line's trains run on and stop along (the Green Mountain
+    /// Line's, the Blue Coast Line's): removed, its track would stay under
+    /// the other line, and bought again it could not be taken up. The
+    /// removal's confirmation says it (REVIEW-L29 P3-1) and offers no
+    /// Remove; ``removeSelectedLine()`` refuses it all the same.
+    public func lineRemovalRefusal(_ id: LineID) -> String? {
+        guard let other = RealLineLaying.lineRunning(onTrackOf: id, in: world) else { return nil }
+        return language.text(
+            "\(other.name)'s trains run on this line's track. Remove \(other.name) first.",
+            "\(other.name)的列車行駛在這條線的軌道上，請先刪除\(other.name)。"
         )
     }
 

@@ -175,8 +175,14 @@ extension Map3DSceneMemoryTests {
         // more side streets, and a link road's bridge comes down beside
         // the bridge it left. The price of the height, taken knowingly
         // and scored to mend (docs/decisions/391.md), not a mend undone.
+        // Its later note (RIVER-BRIDGE-CLEARANCE): with the bridges over
+        // 50 m of a river or the sea held 6 m over it, 272 sites (45 new,
+        // 5 gone): 43 of the new are ramps off a street's bridge over a
+        // river meeting the streets along its banks (21 at 青埔's rivers,
+        // 25.01–25.02, 121.21–121.22; 台中's 筏子溪, 大漢溪), 2 a deck
+        // and the ground. Those bridges had lain on the water.
         XCTAssertLessThanOrEqual(kinds[.deckAndGround] ?? 0, 80, "\(kinds[.deckAndGround] ?? 0) sites where a deck and a road on the ground meet 0.5–4.5 m apart")
-        XCTAssertLessThanOrEqual(all.count, 235, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
+        XCTAssertLessThanOrEqual(all.count, 275, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
     }
 }
 

@@ -32,12 +32,13 @@ final class Map3DRoadBridgeTests: XCTestCase {
     }
 
     /// `roads` laid on `world` as a real map's are, with its track.
-    private func built(_ world: GameWorld, roads: [Map3DBaseMap.Road]) -> Map3DScene.Builder {
+    private func built(_ world: GameWorld, roads: [Map3DBaseMap.Road], areas: [Map3DBaseMap.Area] = [],
+                       waterways: [Map3DBaseMap.Waterway] = []) -> Map3DScene.Builder {
         let snapshot = world.railwaySnapshot()
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
         builder.trackCover = Map3DTrackCover(snapshot, builder: &builder)
         builder.addGround()
-        _ = builder.addBaseMap(Map3DBaseMap(roads: roads))
+        _ = builder.addBaseMap(Map3DBaseMap(areas: areas, roads: roads, waterways: waterways))
         _ = builder.addTrack(snapshot)
         return builder
     }
@@ -87,7 +88,7 @@ final class Map3DRoadBridgeTests: XCTestCase {
 
     /// Over a road on the ground, a bridge stands 9 m up on the first
     /// level and 6 m more a level (ELEVATED-ROAD-HEIGHT; 6 m a level
-    /// before it); over nothing (a river) and as a culvert (under 20 m) it
+    /// before it); over nothing (no road, track or water) and as a culvert (under 20 m) it
     /// stays at the ground; two tiles' pieces of one bridge, meeting end to
     /// end, are one deck with no ramp between.
     func testABridgeStandsALevelUp() throws {
@@ -107,12 +108,52 @@ final class Map3DRoadBridgeTests: XCTestCase {
         XCTAssertEqual(Map3DRoadBridges.rise(ofLevel: 5), 33)
         XCTAssertEqual(try XCTUnwrap(roadTop(250, 600, in: meshes)), 20 + lift + 9, accuracy: 0.01)
         XCTAssertEqual(try XCTUnwrap(roadTop(508, 800, in: meshes)), 20 + lift, accuracy: 0.01)
-        XCTAssertEqual(try XCTUnwrap(roadTop(250, 900, in: meshes)), 20 + lift, accuracy: 0.01, "over a river")
+        XCTAssertEqual(try XCTUnwrap(roadTop(250, 900, in: meshes)), 20 + lift, accuracy: 0.01, "over nothing")
         // The road under it stays on the ground.
         XCTAssertEqual(try XCTUnwrap(roadTop(250, 520, in: meshes, kind: .minor)), 20 + Map3DScene.Builder.lift(of: .minor), accuracy: 0.01)
         for x: Float in [180, 200, 220] {
             XCTAssertEqual(try XCTUnwrap(roadTop(x, 200, in: meshes)), 20 + lift + 15, accuracy: 0.01, "at the tiles' edge, \(x)")
         }
+    }
+
+    /// RIVER-BRIDGE-CLEARANCE (decision 391's later note): a bridge over
+    /// 50 m of water or more (a river's or a lake's area, a river's or a
+    /// canal's line) stands 6 m up over it, whatever map it is on,
+    /// and comes down from its banks at its grade; one over a narrow
+    /// channel, a stream, or a sea's island (its hole), stays at the
+    /// ground.
+    func testABridgeOverWaterStandsALevelUp() throws {
+        let world = try flatWorld(track: false)
+        let lift = Map3DScene.Builder.lift(of: .secondary)
+        let all = Self.bounds
+        func ring(_ minX: Double, _ minZ: Double, _ maxX: Double, _ maxZ: Double) -> [Map3DBaseMap.Point] {
+            [.init(x: minX, z: minZ), .init(x: maxX, z: minZ), .init(x: maxX, z: maxZ), .init(x: minX, z: maxZ)]
+        }
+        // A river's water from x 230 to 290, the length of the map.
+        let river = Map3DBaseMap.Area(cover: .water, rings: [ring(230, 0, 290, 1_024)], bounds: all)
+        // A sea round an island from x 600 to 1,000, z 150 to 450.
+        let sea = Map3DBaseMap.Area(cover: .water, rings: [ring(560, 100, 1_024, 500), ring(600, 150, 1_000, 450)], bounds: all, isSea: true)
+        let canal = Map3DBaseMap.Waterway(kind: .canal, points: [.init(x: 760, z: 520), .init(x: 760, z: 1_024)], bounds: all)
+        let stream = Map3DBaseMap.Waterway(kind: .stream, points: [.init(x: 760, z: 0), .init(x: 760, z: 100)], bounds: all)
+        let builder = built(world, roads: [road([(100, 700), (400, 700)], level: 1), road([(650, 300), (950, 300)], level: 1),
+                                           road([(610, 800), (910, 800)], level: 1), road([(100, 960), (200, 960)], level: 1)],
+                            areas: [river, sea], waterways: [canal])
+        let meshes = meshes(builder)
+        XCTAssertEqual(try XCTUnwrap(roadTop(250, 700, in: meshes)), 20 + lift + Map3DRoadBridges.overWater, accuracy: 0.01, "over the river")
+        XCTAssertEqual(Map3DRoadBridges.overWater, 6)
+        // A canal's 9 m (a city's drainage channel): crossed at the
+        // street's height, as a real street crosses one.
+        XCTAssertEqual(try XCTUnwrap(roadTop(760, 800, in: meshes)), 20 + lift, accuracy: 0.01, "over the canal")
+        // Off the river, it comes down from its banks at its grade.
+        // (Its last hold 10 m inside the bank, level 15 m round it.)
+        XCTAssertEqual(try XCTUnwrap(roadTop(330, 700, in: meshes)), 20 + lift + 6 - 35 * Map3DRoadBridges.grade(.secondary), accuracy: 0.3, "off the bank")
+        XCTAssertEqual(try XCTUnwrap(roadTop(800, 300, in: meshes)), 20 + lift, accuracy: 0.01, "on the island")
+        XCTAssertEqual(try XCTUnwrap(roadTop(150, 960, in: meshes)), 20 + lift, accuracy: 0.01, "beside the river")
+        // A stream's line: no water under the bridge.
+        let wet = Map3DBaseMap.wetPoints(along: [.init(x: 700, z: 50), .init(x: 820, z: 50)], areas: [], waterways: [stream])
+        XCTAssertTrue(wet.isEmpty, "over a stream")
+        let canalWet = Map3DBaseMap.wetPoints(along: [.init(x: 700, z: 800), .init(x: 820, z: 800)], areas: [], waterways: [canal])
+        XCTAssertEqual(canalWet.map(\.x), [760], "every 10 m, within half the canal's width")
     }
 
     /// ELEVATED-ROAD-HEIGHT: a bridge's end with no bridge going on comes
@@ -333,7 +374,7 @@ final class Map3DRoadBridgeTests: XCTestCase {
         XCTAssertTrue(low.isEmpty, "\(low.count) wall tops under a metre, the lowest \(low.map(\.y).min() ?? 0)")
     }
 
-    /// Roads on the ground, and a bridge left at the ground (over a river),
+    /// Roads on the ground, and a bridge left at the ground (over nothing),
     /// draw no parapet or wall.
     func testRoadsOnTheGroundHaveNoParapets() throws {
         let world = try flatWorld(track: false)
