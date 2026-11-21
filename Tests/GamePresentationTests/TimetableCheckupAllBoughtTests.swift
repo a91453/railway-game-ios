@@ -36,60 +36,9 @@ import XCTest
 final class TimetableCheckupAllBoughtTests: XCTestCase {
     private static let rules: [(String, NewGameRules)] = [("simple", .simple), ("realistic", .realistic)]
 
-    /// `main`'s numbers for each world (2026-11-18), as
-    /// ``TimetableCheckupFullTests/budgets``: a world not listed must have
-    /// none of any. The sessions fixing a bug lower its world's numbers.
-    /// The Liujia line's three late runs under the realistic rules are
-    /// its own (`tra:LIUJIA realistic`, LIUJIA-LATE), the same with the
-    /// Neiwan line bought; under a new game's rules it has none since
-    /// decision 849 (measured again on `main` `5a1efcf`), as alone.
-    /// Decision 885 (SHALUN-ONE-ISLAND): the Blue Coast Line's trains
-    /// run from Hongshulin on the Green Mountain Line's track, and those
-    /// toward Fisherman's Wharf share Binhai Shalun's south platform
-    /// track with the Green Mountain Line's trains toward Hongshulin
-    /// (the game has no level crossing), so some wait there: none not
-    /// sent, the latest 19 minutes behind (measured 2026-11-19).
-    /// GRADE-CROSSING-SHALUN (decision 885, later): those toward the
-    /// wharf now stop on the north face and cross the Green Mountain
-    /// Line's track west of the station on the flat, and wait there no
-    /// more. Of the 11 runs still late under a new game's rules, 10 leave
-    /// Hongshulin late, both lines' (HONGSHULIN-TURN); 4 under the
-    /// realistic rules; none late out of the depot (measured 2026-11-19).
-    /// HONGSHULIN-TURN: the Green Mountain Line's Hongshulin is laid with
-    /// 7 tracks, so the Blue Coast Line's three trains stand there at
-    /// night as the real ones do, not one of them at the wharf: none
-    /// leaves Hongshulin late. One run is left under a new game's rules,
-    /// the Green Mountain Line's from Kanding at 17:38, 15 minutes late,
-    /// and its evening peak gap at Hongshulin of 24.7 minutes against 18;
-    /// none under the realistic rules (measured 2026-11-19).
-    /// FUKUOKA-OPEN: Fukuoka's three lines, bought together, as measured
-    /// when its map opened (2026-11-19, Release): every run sent, but the
-    /// Nanakuma Line's turns at its ends at 3 min 15 s run up to 15
-    /// minutes late (126 or 127 runs), and the Kuko Line's peak gap at
-    /// Fukuoka Airport is 10 minutes against 3.3 (60 runs late under a new
-    /// game's rules, 3 under the realistic ones); the Hakozaki Line has
-    /// none. FUKUOKA-LATE lowers them.
-    /// Decision 890 (FUKUOKA-LATE): the home signal at the Kuko Line's
-    /// ends, its trains late 0 (were 60 and 3) and its peak gap 7.0 and
-    /// 6.0 minutes; the Nanakuma Line's are its trains too few for its
-    /// peak (two more run it on time, but its ends have no tracks for
-    /// them: FUKUOKA-NANAKUMA-FLEET).
-    /// Decision 881, later (EAL-LMC-PEAK-GAP): under a new game's rules
-    /// the Kuko Line's longest peak gap is 7.4 minutes, 24 s more (+5
-    /// for +4), its worst run 2.0 minutes late for 3.7, the runs late as
-    /// they were: fewer of the day's moves into the other berth of an end.
-    /// Decision 898 (FUKUOKA-NANAKUMA-FLEET): the Nanakuma Line bought
-    /// with its depot past Hashimoto and 23 trains, its day laid out from
-    /// that end: no run late under either rules (were 127 and 126), its
-    /// worst 3.5 minutes, its longest peak gap 6.5 minutes against 3.2;
-    /// the Kuko Line's 7.0 against 3.3 (+3.7) and 6.0 (+2.7).
-    static let budgets: [String: TimetableCheckup.Budget] = [
-        "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 4),
-        "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 4),
-        "taiwan ntdlrt:V+ntdlrt:VB simple": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 7),
-        "taiwan tra:LIUJIA+tra:NEIWAN realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
-        "taiwan tra:NEIWAN+tra:LIUJIA realistic": .init(notSent: 0, late: 3, lateOutOfDepot: 0, peakGapMinutes: 0),
-    ]
+    /// The budgets of the lines bought together, one file a map in
+    /// `CheckupBudgets/` (decision 910), as ``TimetableCheckupFullTests/budgets``.
+    static let budgets = TimetableCheckupBudgets.allBought
 
     /// The lines on sale in `session` that share a station with another,
     /// in groups, each in the order it is laid, the groups sorted by
