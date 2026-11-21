@@ -288,6 +288,13 @@ private struct TutorialCardSlot: View {
     /// (``TutorialCardPlacement/previous``). Opening or folding it places
     /// it afresh.
     @State private var placed: (folded: Bool, frame: CGRect)?
+    /// How tall the folded card shows. Measured it can be a line shorter
+    /// than it is laid out: on the iOS 27.2 Simulator, a phone on its side,
+    /// step 7, it measured 321.7 × 44 and showed 287 × 59, its title on
+    /// two lines, and the 15 points it grew stood over the ✓ below (main
+    /// 6a9e23d's full lane, run 44840574606; the app's trace in
+    /// 44869011460). The placement takes the taller of the two.
+    @State private var foldedHeight: CGFloat = 0
     /// The step has waited long enough to offer "Skip this step".
     @State private var waitedForSkip = false
     /// The open card's measures, so that on a phone on its side its
@@ -359,7 +366,7 @@ private struct TutorialCardSlot: View {
         let skips = offersSkip(hint: hint, done: session.isTutorialStepDone)
         // Read here: the animator's closures run off the main actor.
         let reduceMotion = self.reduceMotion, settle = self.settle
-        TutorialCardLayout(placement: isFolded ? sized.folded : sized) {
+        TutorialCardLayout(placement: isFolded ? sized.folded : sized, shownHeight: isFolded ? Double(foldedHeight) : 0) {
             // One view the layout places, open or folded: the one shown
             // takes the other's place at once (two would share their
             // buttons' identifiers), then settles (decision 253).
@@ -369,6 +376,7 @@ private struct TutorialCardSlot: View {
                         UITestTrace.action("tutorial.unfold")
                         choose(folded: false)
                     }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { foldedHeight = $0 }
                 } else {
                     TutorialCard(session: session, tutorial: tutorial, hint: hint, offersSkip: skips, lines: $lines) {
                         UITestTrace.action("tutorial.fold")
@@ -431,6 +439,9 @@ private struct TutorialCardSlot: View {
 /// and puts it where ``TutorialCardPlacement`` says.
 private struct TutorialCardLayout: Layout {
     let placement: TutorialCardPlacement
+    /// How tall the card shows now, when that is more than it measures
+    /// (``TutorialCardSlot/foldedHeight``); 0 for none.
+    var shownHeight: Double = 0
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         proposal.replacingUnspecifiedDimensions()
@@ -440,7 +451,7 @@ private struct TutorialCardLayout: Layout {
         guard let card = subviews.first else { return }
         let frame = placement.frame(in: TutorialCardPlacement.Frame(bounds)) { proposed in
             let size = card.sizeThatFits(ProposedViewSize(width: CGFloat(proposed.width), height: CGFloat(proposed.height)))
-            return TutorialCardPlacement.Size(width: Double(size.width), height: Double(size.height))
+            return TutorialCardPlacement.Size(width: Double(size.width), height: max(Double(size.height), shownHeight))
         }
         card.place(
             at: CGPoint(x: CGFloat(frame.x), y: CGFloat(frame.y)), anchor: .topLeading,
