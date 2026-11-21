@@ -4708,6 +4708,18 @@
     "tw-yellow-tit-glide" : {
       "hash" : "c09af23c792a85f6",
       "triangles" : 314
+    },
+    "jp-signal-red" : {
+      "hash" : "caf3c61702a37598",
+      "triangles" : 162
+    },
+    "jp-signal-amber" : {
+      "hash" : "f3911b08993ff4a0",
+      "triangles" : 162
+    },
+    "jp-signal-green" : {
+      "hash" : "26b67f3c20fd4108",
+      "triangles" : 162
     }
   }
 }
