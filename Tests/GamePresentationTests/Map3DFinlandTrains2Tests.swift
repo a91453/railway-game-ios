@@ -12,6 +12,8 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
             ("sleeper", Map3DFinlandSleeper.model(), Map3DFinlandSleeper.model(far: true), 26.40, 3.2),
             // Decision 914.
             ("car carrier", Map3DFinlandCarCarrier.model(), Map3DFinlandCarCarrier.model(far: true), 26.70, 2.9),
+            // Decision 916.
+            ("open car carrier", Map3DFinlandCarCarrierGfot.model(), Map3DFinlandCarCarrierGfot.model(far: true), 26.40, 2.6),
         ]
         for (label, near, far, length, width) in cars {
             let near = try XCTUnwrap(near, label), far = try XCTUnwrap(far, label)
@@ -50,8 +52,8 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
 
     /// The intercity: the locomotive, five coaches, the control car at the
     /// back with its cab turned back; the night train: the locomotive, four
-    /// sleeping cars and (decision 914) two car carriers, the last one's
-    /// tail lamps lit at the back.
+    /// sleeping cars and (decisions 914 and 916) two car carriers, the
+    /// open one and then the closed one, its tail lamps lit at the back.
     func testTheSetsAreLaidAsTheRealTrains() throws {
         let pack = Map3DModelPack.standard
         let count = Map3DFinlandSr2.cars
@@ -73,7 +75,7 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
         let sr3 = try XCTUnwrap(pack.layout(forType: Map3DFinlandSr3.key, count: count))
         XCTAssertEqual(sr3.map(\.length).reduce(0, +), 19.04 + 26.40 * 5 + 27.40, accuracy: 0.15)
         let night = try XCTUnwrap(pack.layout(forType: Map3DFinlandSleeper.key, count: count))
-        let nightLength: Float = 19.02 + 26.40 * 4 + 26.70 * 2
+        let nightLength: Float = 19.02 + 26.40 * 5 + 26.70
         XCTAssertEqual(night.map(\.length).reduce(0, +), nightLength, accuracy: 0.15)
         // The car carrier's tail lamps lit at the train's back, the other's not.
         let nightCars = Map3DTrainSet.finlandNight(sr3: false).build()
@@ -83,6 +85,8 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
         XCTAssertFalse(lit.isEmpty)
         XCTAssertLessThan(lit.max() ?? 0, carrierTail.minimum.x + 1, "the lamps at its back end")
         XCTAssertFalse(carrier.vertices.contains { $0.layer == Map3DVertex.glowing })
+        XCTAssertEqual(carrier.length, 26.40, accuracy: 0.02, "the open car carrier before it")
+        XCTAssertEqual(carrier.maximum.z, 4.535, accuracy: 0.03)
         // The control car's cab (its headlamps) at the train's back.
         let tail = try XCTUnwrap(pack.models.first { $0.name == "set-\(Map3DFinlandSr2.key)-tail" })
         let lamps = tail.vertices.filter { $0.color == Map3DTrainStyle.headlamp }.map(\.x)
