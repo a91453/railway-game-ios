@@ -2171,14 +2171,17 @@ struct LinesPanel: View {
             let choices = memo.routeChoices(line.id, from: pair.0, to: pair.1, pattern: pattern, of: session)
             // Decision 184, later: drawn from these values alone, so a
             // running game's ticks leave the open menu alone.
-            let choiceTexts = RoutePreview.choiceTexts(choices, in: session.language)
+            // Decision 912: each choice says what its platform makes of
+            // the changes with the other lines there.
+            let choiceTexts = session.routeChoiceTexts(choices, line: line.id)
             let selectedText = selected.map { RoutePreview.choiceText($0, in: session.language) }
+            let transferNote = session.platformTransferNote(selected, line: line.id)
             let leg = "\(name(of: line.stops[pair.0])) → \(name(of: line.stops[pair.1]))"
             let previewing = session.isPreviewingRoute(from: pair.0, to: pair.1, pattern: pattern)
             let previewText = previewing ? preview?.text(in: session.language) : nil
             // Decision 755: the leg's platforms in order, once it names one.
             let platforms = selected == nil ? nil : session.platformListLeg(from: pair.0, to: pair.1, pattern: pattern)
-            TickStable(StableKey(line.id, pattern, pair.0, pair.1, choices, choiceTexts, selectedText, leg, previewing, previewText, platforms)) {
+            TickStable(StableKey(line.id, pattern, pair.0, pair.1, choices, choiceTexts, selectedText, leg, previewing, previewText, platforms, transferNote)) {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Menu {
@@ -2208,6 +2211,15 @@ struct LinesPanel: View {
                                 Text(verbatim: leg)
                                 if let selectedText { Text(selectedText).font(.caption) }
                                 else { Text("Automatic route").font(.caption) }
+                                if let transferNote {
+                                    Label {
+                                        Text(verbatim: transferNote)
+                                    } icon: {
+                                        Image(systemName: "arrow.triangle.swap")
+                                    }
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textSecondary)
+                                }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .contentShape(Rectangle())

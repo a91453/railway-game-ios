@@ -183,7 +183,7 @@ extension GameWorld {
                 if group.destination == entry.station && isOpen {
                     if let next = group.journey?.next {
                         changing += enqueueTransfer(group.count, along: next, at: entry.station,
-                                                    after: group.journey!.leg.line, memo: &memo)
+                                                    after: group.journey!.leg, memo: &memo)
                     } else {
                         passengers[passengerIndex(of: group.origin)].arrived += group.count
                         arrived += group.count
@@ -387,17 +387,20 @@ extension GameWorld {
     /// starts (see ``walkingTransfer(from:to:)``). They may board once the
     /// reference's least change time
     /// (``PassengerTransferRules.minimumChangeSeconds``, 120 s) or their
-    /// walk, if longer, has passed; another train of the same line at the
+    /// walk, if longer, has passed (at the same station, the change between
+    /// the two lines' platforms, decision 912); another train of the same line at the
     /// same station needs no time. Those whose next leg is gone or out of
     /// reach, or who find no room to wait, leave. Returns how many wait at
     /// `alighting` itself (decision 222 counts them once).
     private mutating func enqueueTransfer(_ count: Int64, along journey: PassengerJourney,
-                                          at alighting: StationID, after line: LineID, memo: inout DispatchMemo) -> Int64 {
+                                          at alighting: StationID, after ridden: PassengerJourneyLeg, memo: inout DispatchMemo) -> Int64 {
         let origin = journey.origin
         let station = journey.leg.from
         let seconds: Int64
         if station == alighting {
-            seconds = line == journey.leg.line ? 0 : PassengerTransferRules.minimumChangeSeconds
+            // Decision 912: across one island 60 s, to another platform
+            // the walk and the climb, when both lines name their platform.
+            seconds = ridden.line == journey.leg.line ? 0 : memoizedPlatformChange(from: ridden, to: journey.leg, memo: &memo).minimumSeconds
         } else if let walk = walkingTransfer(from: alighting, to: station) {
             seconds = max(PassengerTransferRules.minimumChangeSeconds, walk.seconds)
         } else {

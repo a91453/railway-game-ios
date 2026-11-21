@@ -29,6 +29,12 @@ public struct Map3DLandmarkRegistration: Sendable {
     /// How high its foot stands above the map's datum (metres), where that
     /// is above the ground the map draws; 0 to stand on that ground.
     public let baseHeight: Float
+    /// How far its model's foot stands below the ground it is set on
+    /// (metres): a building whose ground floor is above its foot, as the
+    /// Peak Tower's plaza stands over its plinth down the hillside
+    /// (decision 913); its floor is set on the ground at its middle. 0 to
+    /// stand on the lowest ground under it.
+    public let sink: Float
     /// The colour of each of its mesh's materials, in the order
     /// `glb_to_swift.py --materials` gave them: ``Map3DPalette``'s.
     let palette: [UInt32]
@@ -46,13 +52,14 @@ public struct Map3DLandmarkRegistration: Sendable {
     /// metre either way): the real building's.
     let size: (x: Float, y: Float, z: Float)
 
-    init(id: String, map: String, latitude: Double, longitude: Double, baseHeight: Float = 0, palette: [UInt32],
+    init(id: String, map: String, latitude: Double, longitude: Double, baseHeight: Float = 0, sink: Float = 0, palette: [UInt32],
          glass: Set<Int> = [], bandedGlass: Set<Int> = [], encoded: [String: String], size: (x: Float, y: Float, z: Float)) {
         self.id = id
         self.map = map
         self.latitude = latitude
         self.longitude = longitude
         self.baseHeight = baseHeight
+        self.sink = sink
         self.palette = palette
         self.glass = glass
         self.bandedGlass = bandedGlass
