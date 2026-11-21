@@ -1133,7 +1133,9 @@ extension Map3DScene.Builder {
             // Its later note: Finland's own, where the pack has them.
             let finland = markings.region.hasFinnishFurniture ? Self.finlandSignals[signal.road] : nil
             let hongKong = markings.region.standsSignalsAtKerb ? Self.hongKongSignals[signal.road] : nil
-            guard let model = finland ?? hongKong ?? Self.propModels[signal.road == .main ? .signalGo : .signalStop] else { continue }
+            // Decision 921: Japan's own, the owner's old model.
+            let japan = markings.region.hasJapaneseSignals ? Self.japanSignals[signal.road] : nil
+            guard let model = finland ?? hongKong ?? japan ?? Self.propModels[signal.road == .main ? .signalGo : .signalStop] else { continue }
             place(model, at: signal.foot, forward: signal.along, clearing: 1.5, tint: Map3DColor.rgb(0xFFFFFF), group: signal.group)
         }
         // Decision 846's later note: Finland's sign at a crossing with no
@@ -1270,6 +1272,12 @@ extension Map3DScene.Builder {
     })
     static let finlandSignals: [Map3DSignalTiming.Road: Int] = Dictionary(uniqueKeysWithValues: [Map3DSignalTiming.Road.main, .cross].compactMap { road in
         Map3DModelCatalog.standard.index(of: Map3DFinlandStreet.placedName(road)).map { (road, $0) }
+    })
+
+    /// Decision 921: Japan's traffic signals' models in
+    /// ``Map3DModelPack/standard``, by the road they face (as ``hongKongSignals``).
+    static let japanSignals: [Map3DSignalTiming.Road: Int] = Dictionary(uniqueKeysWithValues: [Map3DSignalTiming.Road.main, .cross].compactMap { road in
+        Map3DModelCatalog.standard.index(of: Map3DJapanSignal.placedName(road)).map { (road, $0) }
     })
 
     /// Decision 445: the pedestrian signals' models in ``Map3DModelPack/standard``.
