@@ -224,6 +224,31 @@ final class FerryCijinShoreTests: XCTestCase {
         XCTAssertEqual(session.tool, .select)
     }
 
+    /// Review L30: the company's track under the finger beside a ferry
+    /// station is the track tapped, as anywhere else; the 150 m round the
+    /// pier only opens the ferry with nothing of the company's there.
+    func testATapOnTrackBesideAFerryStationPicksTheTrack() throws {
+        let map = try map()
+        var world = map.session.world
+        let (x, y) = map.frame.worldPosition(latitude: 22.6198008, longitude: 120.2700518)
+        let middle = PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded()))
+        let half = 40 * WorldCoordinate.unitsPerMetre
+        let ends = try [-half, half].map { dx in
+            let plan = PlanPoint(x: middle.x + dx, y: middle.y)
+            let height = try XCTUnwrap(world.groundHeight(at: plan))
+            return try world.buildTrackNode(at: WorldCoordinate(x: plan.x, y: plan.y, z: height))
+        }
+        let edge = try world.buildTrackEdge(from: ends[0], to: ends[1], structure: .elevated)
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.population = map.session.population
+        session.water = map.water
+        session.selectTool(.select)
+        session.tapMap(at: middle, reach: 64 * WorldCoordinate.unitsPerMetre / 8)
+        XCTAssertEqual(session.tool, .select, String(describing: session.message?.text))
+        XCTAssertEqual(session.selectedTrackEdge, edge)
+        XCTAssertTrue(session.ferryDraft.isEmpty)
+    }
+
     /// Decision 585 續 (FERRY-STATION-TAP): every real ferry the map has
     /// is offered, not the first only: with Tamsui's land read in as well,
     /// Gushan–Cijin is still offered beside Tamsui–Bali.

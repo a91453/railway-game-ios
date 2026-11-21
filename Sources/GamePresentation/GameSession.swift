@@ -1407,16 +1407,18 @@ public final class GameSession {
             selectBuilding(building.id, at: point)
             return
         }
+        // Decision 184: with nothing else there, the track under the tap.
+        let track = station == nil && tool == .select ? world.trackEdgePoint(near: point, within: reach)?.edge : nil
         // Decision 585 續 (FERRY-STATION-TAP): a real ferry station, with
-        // no station of the company's there, opens its ferry.
-        if station == nil, openRealFerryStation(at: point) { return }
+        // no station of the company's there, opens its ferry. Review L30:
+        // nor the company's track under the finger, which the 150 m round
+        // the pier would otherwise take.
+        if station == nil, track == nil, openRealFerryStation(at: point) { return }
         // A stop the draft refused keeps the message saying why.
         var refused = false
         if isPickingLineStops, let station {
             refused = !appendToLineDraft(station)
         }
-        // Decision 184: with nothing else there, the track under the tap.
-        let track = station == nil && tool == .select ? world.trackEdgePoint(near: point, within: reach)?.edge : nil
         guard point != selectedPoint || station != selectedStationID || tappedTrainID != nil || track != selectedTrackEdge else { return }
         selectedPoint = point
         selectedStationID = station
@@ -3373,11 +3375,8 @@ public final class GameSession {
         // trains run on and stop along (the Green Mountain Line's, the
         // Blue Coast Line's): removed, its track would stay under the
         // other line, and bought again it could not be taken up.
-        if let other = RealLineLaying.lineRunning(onTrackOf: line.id, in: world) {
-            message = StatusMessage(kind: .failure, text: language.text(
-                "\(other.name)'s trains run on this line's track. Remove \(other.name) first.",
-                "\(other.name)的列車行駛在這條線的軌道上，請先刪除\(other.name)。"
-            ))
+        if let refusal = lineRemovalRefusal(line.id) {
+            message = StatusMessage(kind: .failure, text: refusal)
             return
         }
         let followsLineTrain = followedTrainID.map { world.assignedLine(of: $0) == line.id } ?? false
