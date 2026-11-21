@@ -11,7 +11,9 @@ import GameCore
 // OpenStreetMap layer is a storey of a crossing: 9 m on the first and 6 m
 // more a level, ``Map3DRoadBridges/rise(ofLevel:)``; 6 m a level before
 // ELEVATED-ROAD-HEIGHT), and higher where it must
-// clear the track; one over a river or a ditch only, at the ground; the
+// clear the track; one over water 6 m up over the water only
+// (RIVER-BRIDGE-CLEARANCE), one over a ditch or a stream only, at the
+// ground; the
 // tallest motorway viaducts at their real decks (the freeway bureau's
 // tallest bridges, data.gov.tw 30616). Roads running on from a bridge's
 // ends ramp down to the ground at the reference city's grades
@@ -113,8 +115,8 @@ struct Map3DRoadBridges: Sendable {
         /// Where it crosses over a lower road or the track, and how far
         /// over the ground it stands there, metres: within ``plateau`` of
         /// one, so high, then giving way at its grade. None on a culvert,
-        /// over a cutting, or over nothing but water or a ditch: there it
-        /// lies on the ground.
+        /// over a cutting, or over nothing but water or a ditch: over
+        /// water a ``Bound`` holds it up instead (RIVER-BRIDGE-CLEARANCE).
         let lifts: [(point: Map3DBaseMap.Point, rise: Float)]
         let grade: Float
         let bounds: [Bound]
@@ -267,6 +269,40 @@ struct Map3DRoadBridges: Sendable {
     static let plateau: Float = 150
     /// The squares a deck's lifts are kept one to, metres.
     static let liftSpacing: Double = 50
+    /// RIVER-BRIDGE-CLEARANCE: the squares a deck's holds over water are
+    /// kept one to, metres, and how far round each it stays level: so
+    /// the deck stays level over the water and gives way from its banks.
+    static let wetSquare: Double = 20
+    static let wetFlat: Float = 15
+    /// RIVER-BRIDGE-CLEARANCE: how far a bridge over water stands over
+    /// the drawn ground there (the 64 m grid's, the banks' height),
+    /// metres: a river's bridges stand on its levees, some 6 m over the
+    /// streets round it, not a storey of a crossing (9 m), whose ramps
+    /// ran 50 m further into the riverside streets. A deck crossing a
+    /// road or the track too stands as high as that asks.
+    static let overWater: Float = 6
+    /// RIVER-BRIDGE-CLEARANCE: the least run of water along a bridge,
+    /// metres, it is held up over: a street's bridge over a city's
+    /// drainage channel (mapped as a river or a canal, 10–40 m across)
+    /// crosses it at the street's height, as a real one does; lifted a
+    /// level, its ramps ran 150 m into the streets each side.
+    static let wideWater: Double = 50
+
+    /// RIVER-BRIDGE-CLEARANCE: of `wet` (``Map3DBaseMap/Bridge/wet``),
+    /// the points in runs of ``wideWater`` or more, each point a
+    /// ``Map3DBaseMap/wetSpacing`` metres of it.
+    static func wideWater(_ wet: [Map3DBaseMap.Point]) -> [Map3DBaseMap.Point] {
+        let step = Map3DBaseMap.wetSpacing
+        var runs: [[Map3DBaseMap.Point]] = []
+        for p in wet {
+            if let last = runs.last?.last, ((p.x - last.x) * (p.x - last.x) + (p.z - last.z) * (p.z - last.z)).squareRoot() <= step * 1.5 {
+                runs[runs.count - 1].append(p)
+            } else {
+                runs.append([p])
+            }
+        }
+        return runs.filter { Double($0.count) * step >= wideWater }.flatMap { $0 }
+    }
     /// ELEVATED-ROAD-HEIGHT: how near what its deck crosses an end's way
     /// down stops (``Map3DScene/Builder/endDips(into:ends:others:)``),
     /// metres: the road crossed has a width, and the deck stands at its
@@ -538,7 +574,8 @@ extension Map3DScene.Builder {
         // and the bridge lay on the sea.
         var overCutting = [[Point]](repeating: [], count: members.count)
         // Where it crosses over something, the track or a lower road: a
-        // bridge over nothing else (a river, a ditch) stays at the ground.
+        // bridge over nothing else stays at the ground (over water, held
+        // up by its own bounds below).
         // One a ``Map3DRoadBridges/liftSpacing`` square, the least of
         // them, whatever order they are found in.
         var crossings = [[Map3DScene.ChunkKey: Point]](repeating: [:], count: members.count)
@@ -710,6 +747,23 @@ extension Map3DScene.Builder {
             }
             if run.count >= 4 { run.forEach { cross(deck, at: $0) } }
         }
+        // Decision 391 (後來, RIVER-BRIDGE-CLEARANCE): over water (a sea,
+        // a river, a lake, a canal) ``Map3DRoadBridges/overWater`` up, but
+        // only over the water: a hold a ``Map3DRoadBridges/wetSquare`` square,
+        // level within ``Map3DRoadBridges/wetFlat`` of it, then down at
+        // the deck's grade from the bank (a lift held it up 150 m past
+        // each bank, over the riverside streets: 台中's interchange over
+        // 筏子溪 met its streets at twice as many places). A bridge over a
+        // river had lain on the water, in every map.
+        var overWater = [[Map3DScene.ChunkKey: (point: Point, level: Int)]](repeating: [:], count: members.count)
+        for (number, bridge) in bridges.enumerated() {
+            let deck = deckOf[root(number)]!, spacing = Map3DRoadBridges.wetSquare
+            for p in Map3DRoadBridges.wideWater(bridge.wet) {
+                let key = Map3DScene.ChunkKey(column: Int((p.x / spacing).rounded(.down)), row: Int((p.z / spacing).rounded(.down)))
+                if let kept = overWater[deck][key], (kept.level, -kept.point.x, -kept.point.z) >= (bridge.level, -p.x, -p.z) { continue }
+                overWater[deck][key] = (p, bridge.level)
+            }
+        }
         addJoins(of: map, into: &result)
         if let frame {
             for tall in Map3DRoadBridges.tallestFreewayBridges {
@@ -729,8 +783,8 @@ extension Map3DScene.Builder {
             }
         }
         // Decision 873: a cable-stayed bridge's deck at its real height
-        // where its stays carry it (a bridge over a river only lies on the
-        // water, and 淡江大橋's did): a hold every 25 m along its middle,
+        // where its stays carry it (a bridge over a river stands only 6 m up,
+        // RIVER-BRIDGE-CLEARANCE, and 淡江大橋 had lain on the water): a hold every 25 m along its middle,
         // level across the bridge and between them, on every deck with a
         // bridge within its corridor. From the bridge's own stations, so a
         // chunk built apart raises it as the whole scene does (its last
@@ -769,6 +823,13 @@ extension Map3DScene.Builder {
             let kind = numbers.map { bridges[$0].kind }.max { $0.rawValue < $1.rawValue } ?? .minor
             let rise = Map3DRoadBridges.rise(ofLevel: level)
             let cuttings = overCutting[deck], near = Double(Map3DRoadBridges.plateau) * Double(Map3DRoadBridges.plateau)
+            if length >= Map3DRoadBridges.culvert {
+                for (_, wet) in overWater[deck].sorted(by: { ($0.key.row, $0.key.column) < ($1.key.row, $1.key.column) }) {
+                    let ground = drawnGround(x: Float(wet.point.x), z: Float(wet.point.z))
+                    bounds[deck].append(.init(point: wet.point, height: ground + Map3DRoadBridges.overWater, isFloor: true,
+                                              flat: Map3DRoadBridges.wetFlat))
+                }
+            }
             let lifts = length < Map3DRoadBridges.culvert ? [] : crossings[deck].sorted { ($0.key.row, $0.key.column) < ($1.key.row, $1.key.column) }
                 .filter { lift in !cuttings.contains { ($0.x - lift.value.x) * ($0.x - lift.value.x) + ($0.z - lift.value.z) * ($0.z - lift.value.z) <= near } }
                 .map { (point: $0.value, rise: rise) }
