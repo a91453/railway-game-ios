@@ -1407,16 +1407,18 @@ public final class GameSession {
             selectBuilding(building.id, at: point)
             return
         }
+        // Decision 184: with nothing else there, the track under the tap.
+        let track = station == nil && tool == .select ? world.trackEdgePoint(near: point, within: reach)?.edge : nil
         // Decision 585 續 (FERRY-STATION-TAP): a real ferry station, with
-        // no station of the company's there, opens its ferry.
-        if station == nil, openRealFerryStation(at: point) { return }
+        // no station of the company's there, opens its ferry. Review L30:
+        // nor the company's track under the finger, which the 150 m round
+        // the pier would otherwise take.
+        if station == nil, track == nil, openRealFerryStation(at: point) { return }
         // A stop the draft refused keeps the message saying why.
         var refused = false
         if isPickingLineStops, let station {
             refused = !appendToLineDraft(station)
         }
-        // Decision 184: with nothing else there, the track under the tap.
-        let track = station == nil && tool == .select ? world.trackEdgePoint(near: point, within: reach)?.edge : nil
         guard point != selectedPoint || station != selectedStationID || tappedTrainID != nil || track != selectedTrackEdge else { return }
         selectedPoint = point
         selectedStationID = station
