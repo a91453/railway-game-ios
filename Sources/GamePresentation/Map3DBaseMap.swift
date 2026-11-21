@@ -77,6 +77,9 @@ struct Map3DBaseMap: Sendable {
         /// Decision 822: the tiles' sea (water `class` `ocean`), whose
         /// holes are the land; a river's or a lake's are its islands.
         var isSea = false
+        /// RIVER-BRIDGE-CLEARANCE: the tiles' lake or pond (water `class`
+        /// `lake`, `pond`): a park's bridge over one lies low on it.
+        var isLake = false
     }
 
     struct Road: Sendable {
@@ -106,6 +109,69 @@ struct Map3DBaseMap: Sendable {
         let points: [Point]
         /// ROAD-RAMP-HEIGHT: a link road's bridge (the tiles' `ramp`).
         var isRamp = false
+        /// Decision 391 (後來, RIVER-BRIDGE-CLEARANCE): every
+        /// ``wetSpacing`` metres along it, the points over water (its
+        /// tile's sea, river or lake, or within a river's or a canal's
+        /// width of its line; not a stream's), from its own tile's
+        /// features, so a chunk built apart finds the same.
+        var wet: [Point] = []
+    }
+
+    /// Decision 391 (後來, RIVER-BRIDGE-CLEARANCE): how far apart along a
+    /// bridge its points over water are looked for, metres.
+    static let wetSpacing: Double = 10
+
+    /// Decision 391 (後來, RIVER-BRIDGE-CLEARANCE): the points of the
+    /// line `points`, every ``wetSpacing`` metres from its first, over
+    /// water: inside one of `areas` (rings: an outer ring, then its holes;
+    /// a sea's or a river's, a sea's holes, its land, not), or within half its width of one of `waterways` that is a
+    /// river or a canal. A stream's bridge (a ditch, a brook) stays at
+    /// the ground.
+    static func wetPoints(along points: [Point], areas: [[[Point]]], waterways: [Waterway]) -> [Point] {
+        guard points.count >= 2, !areas.isEmpty || !waterways.isEmpty else { return [] }
+        func inside(_ p: Point, _ rings: [[Point]]) -> Bool {
+            var odd = false
+            for ring in rings where ring.count >= 3 {
+                var j = ring.count - 1
+                for i in ring.indices {
+                    let a = ring[i], b = ring[j]
+                    if (a.z > p.z) != (b.z > p.z), p.x < (b.x - a.x) * (p.z - a.z) / (b.z - a.z) + a.x { odd.toggle() }
+                    j = i
+                }
+            }
+            return odd
+        }
+        let box = (minX: points.map(\.x).min()!, minZ: points.map(\.z).min()!, maxX: points.map(\.x).max()!, maxZ: points.map(\.z).max()!)
+        let near = areas.filter { rings in
+            guard let outer = rings.first, !outer.isEmpty else { return false }
+            return outer.map(\.x).min()! <= box.maxX && outer.map(\.x).max()! >= box.minX
+                && outer.map(\.z).min()! <= box.maxZ && outer.map(\.z).max()! >= box.minZ
+        }
+        let channels = waterways.filter { way in
+            let pad = Double(way.kind.width) / 2
+            return way.kind != .stream && zip(way.points, way.points.dropFirst()).contains { a, b in
+                min(a.x, b.x) <= box.maxX + pad && max(a.x, b.x) >= box.minX - pad && min(a.z, b.z) <= box.maxZ + pad && max(a.z, b.z) >= box.minZ - pad
+            }
+        }
+        guard !near.isEmpty || !channels.isEmpty else { return [] }
+        var wet: [Point] = []
+        var travelled = 0.0
+        for (a, b) in zip(points, points.dropFirst()) {
+            let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
+            guard length > 0.01 else { continue }
+            var along = (wetSpacing - travelled.truncatingRemainder(dividingBy: wetSpacing)).truncatingRemainder(dividingBy: wetSpacing)
+            while along <= length {
+                let p = Point(x: a.x + dx * along / length, z: a.z + dz * along / length)
+                let overWater = near.contains { inside(p, $0) } || channels.contains { way in
+                    let half = Double(way.kind.width) / 2
+                    return zip(way.points, way.points.dropFirst()).contains { Map3DRoadBridges.nearest(p, $0.0, $0.1).distance <= half }
+                }
+                if overWater { wet.append(p) }
+                along += wetSpacing
+            }
+            travelled += length
+        }
+        return wet
     }
 
     struct Waterway: Sendable {
@@ -160,6 +226,9 @@ struct Map3DBaseMap: Sendable {
                 }
             }
         }
+        // Decision 391 (後來, RIVER-BRIDGE-CLEARANCE).
+        let water = areas.filter { $0.cover == .water && !$0.isLake }.map(\.rings)
+        for index in bridges.indices { bridges[index].wet = Self.wetPoints(along: bridges[index].points, areas: water, waterways: waterways) }
     }
 
     /// Decision 391: how far round the scene's region its bridges and the
@@ -216,12 +285,15 @@ struct Map3DBaseMap: Sendable {
                 // Decision 391: the tiles round the region only for their
                 // bridges.
                 let isDrawn = drawn.columns.contains(column) && drawn.rows.contains(row)
-                let wanted: Set<String> = isDrawn ? ["water", "landcover", "park", "waterway", "transportation"] : ["transportation"]
+                // Decision 391 (後來, RIVER-BRIDGE-CLEARANCE): their water
+                // too, to find their bridges over it.
+                let wanted: Set<String> = isDrawn ? ["water", "landcover", "park", "waterway", "transportation"] : ["water", "waterway", "transportation"]
                 guard let bytes = try? tiles.tile(zoom: zoom, x: column, y: row),
                       let decoded = try? VectorTile(bytes, layers: names && isDrawn ? wanted.union(["transportation_name"]) : wanted)
                 else { continue }
-                let roadsBefore = roads.count
+                let roadsBefore = roads.count, bridgesBefore = bridges.count
                 var named: [(name: String, points: [Point])] = []
+                var water: [[[Point]]] = [], channels: [Waterway] = []
                 for layer in decoded.layers.values {
                     // A tile unit to a scene metre.
                     let scale = tilePoints / Double(layer.extent) / pointsPerMetre
@@ -231,8 +303,23 @@ struct Map3DBaseMap: Sendable {
                     func scene(_ point: VectorTile.Point) -> Point {
                         Point(x: westX + Double(point.x) * scale, z: northZ + Double(point.y) * scale)
                     }
+                    let tileBounds = Bounds(minX: westX, minZ: northZ, maxX: westX + span, maxZ: northZ + span)
                     if layer.name == "transportation" {
-                        addBridges(layer, tile: Bounds(minX: westX, minZ: northZ, maxX: westX + span, maxZ: northZ + span), scene: scene)
+                        addBridges(layer, tile: tileBounds, scene: scene)
+                    }
+                    // Decision 391 (後來, RIVER-BRIDGE-CLEARANCE): the
+                    // tile's own water: its sea and rivers, not its lakes
+                    // and ponds (a park's bridges lie low over them).
+                    if layer.name == "water" {
+                        for feature in layer.features where feature.kind == .polygon && Self.cover(layer: "water", class: feature.string("class")) != nil
+                            && !Self.isLake(layer: "water", class: feature.string("class")) {
+                            for polygon in feature.polygons { water.append(polygon.map { $0.map(scene) }) }
+                        }
+                    } else if layer.name == "waterway" {
+                        for feature in layer.features where feature.kind == .line && feature.string("brunnel") != "tunnel" {
+                            guard let kind = Self.waterwayKind(feature.string("class")), kind != .stream else { continue }
+                            for part in feature.parts where part.count >= 2 { channels.append(Waterway(kind: kind, points: part.map(scene), bounds: tileBounds)) }
+                        }
                     }
                     guard isDrawn else { continue }
                     if layer.name == "transportation_name" {
@@ -249,6 +336,9 @@ struct Map3DBaseMap: Sendable {
                         addTunnelEnds(layer, tile: Bounds(minX: westX, minZ: northZ, maxX: westX + span, maxZ: northZ + span), bounds: bounds,
                                       scene: scene)
                     }
+                }
+                for index in bridgesBefore..<bridges.count {
+                    bridges[index].wet = Self.wetPoints(along: bridges[index].points, areas: water, waterways: channels)
                 }
                 if !named.isEmpty {
                     for index in roadsBefore..<roads.count { roads[index].name = Self.name(of: roads[index].points, in: named) }
@@ -316,7 +406,8 @@ struct Map3DBaseMap: Sendable {
                     let rings = polygon.map { $0.map(scene) }
                     // No fountain, pool or pond too small to read as one.
                     if lake, Self.isSpeck(rings, in: tile) { continue }
-                    areas.append(Area(cover: cover, rings: rings, bounds: bounds, isSea: feature.string("class") == "ocean"))
+                    areas.append(Area(cover: cover, rings: rings, bounds: bounds, isSea: feature.string("class") == "ocean",
+                                      isLake: Self.isLake(layer: layer.name, class: feature.string("class"))))
                 }
             case ("transportation", .line):
                 guard feature.string("brunnel") != "tunnel", let kind = Self.roadKind(feature.string("class")) else { continue }
@@ -407,6 +498,12 @@ struct Map3DBaseMap: Sendable {
             return abs(sum) / 2
         }
         return area(outer) - rings.dropFirst().reduce(0) { $0 + area($1) } < smallestLake
+    }
+
+    /// RIVER-BRIDGE-CLEARANCE: whether a feature of the tiles' `layer`
+    /// of `class` is a lake or a pond.
+    static func isLake(layer: String, class name: String?) -> Bool {
+        layer == "water" && (name == "lake" || name == "pond")
     }
 
     static func cover(layer: String, class name: String?) -> Cover? {
