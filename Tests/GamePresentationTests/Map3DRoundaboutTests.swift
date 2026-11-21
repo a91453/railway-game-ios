@@ -195,7 +195,17 @@ final class Map3DRoundaboutTests: XCTestCase {
                            "a signal at the ring round \(ring.centre)")
         }
         XCTAssertEqual(finland.junctions, taiwan.junctions)
-        XCTAssertLessThan(finland.signals.count, taiwan.signals.count * 2 / 3)
+        // Decision 920: each point where roads cross marked on its own
+        // (as decision 846 measured), the roundabouts take a third of the
+        // signals away (122 of 220 on 53b6da1); with a crossroads' points
+        // joined into one junction (a signalled ring's too), fewer in both
+        // looks (108 and 159).
+        let apart = (finland: Map3DRoadMarkings(map.roads, region: .finland, joining: false),
+                     taiwan: Map3DRoadMarkings(map.roads, region: .taiwan, joining: false))
+        XCTAssertLessThan(apart.finland.signals.count, apart.taiwan.signals.count * 2 / 3)
+        XCTAssertLessThan(finland.signals.count, taiwan.signals.count)
+        XCTAssertLessThanOrEqual(finland.signals.count, apart.finland.signals.count)
+        XCTAssertLessThanOrEqual(taiwan.signals.count, apart.taiwan.signals.count)
         // Decision 846's second later note: their give-way lines, every
         // triangle near a ring; none in Taiwan's look.
         let teeth = finland.marks.filter { $0.kind == .giveWay }
