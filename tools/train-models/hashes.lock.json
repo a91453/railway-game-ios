@@ -4485,6 +4485,30 @@
       "hash": "8423447cf0516a54",
       "triangles": 684
     },
+    "ferry-hongKong-single" : {
+      "hash" : "86cec101bde2866f",
+      "triangles" : 4296
+    },
+    "ferry-pier-finger-single" : {
+      "hash" : "9b68932d01b68e2c",
+      "triangles" : 3262
+    },
+    "ferry-pier-hall-single" : {
+      "hash" : "c6de340462f1b8c7",
+      "triangles" : 2740
+    },
+    "ferry-hongKong-single-far" : {
+      "hash" : "34e577656abfde0",
+      "triangles" : 524
+    },
+    "ferry-pier-finger-single-far" : {
+      "hash" : "4de6cb8db0b75f9f",
+      "triangles" : 354
+    },
+    "ferry-pier-hall-single-far" : {
+      "hash" : "8f6d1a21a5d653cf",
+      "triangles" : 472
+    },
     "ferry-tamsui-single": {
       "hash": "501527aac580aab1",
       "triangles": 2368

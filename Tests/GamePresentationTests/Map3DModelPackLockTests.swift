@@ -250,13 +250,13 @@ final class Map3DModelPackLockTests: XCTestCase {
         // Decision 889: and the yellow tit's four poses after those.
         // Decision 897: and the Ngong Ping cabins' four after the Sun
         // Moon Lake cabins (every model after them moves by 4).
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "ddad2b1609dbbe18")
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "4f02a4139003a974")
         // Decision 840: and the studio's sleigh in the stand-in's place
         // (the same name and order; its model is new, `hashes.lock.json`);
         // its later amendment: dark brown antlers, the sleigh's team brown.
         // Decision 897: every cabin and hall lit after dark (their new
         // hashes in `hashes.lock.json`).
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "b720ca799a4942db")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "e82b61eac4ac5e96")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -272,7 +272,7 @@ final class Map3DModelPackLockTests: XCTestCase {
                                                           + santa.count + taiwanCars.count + herd.count + plain.count + finland.count + tits.count)), "5a0aba989e6893bf")
         // Decision 889: the windows after the cable car move by the
         // yellow tit's 4; decision 897: and by the Ngong Ping cabins' 4.
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "b8879d646933f935")
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "581c4da563197b45")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "b693d447389ff604")
     }
 

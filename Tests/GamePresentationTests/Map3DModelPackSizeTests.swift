@@ -101,9 +101,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // yellow tit's four poses after them (4 models, 3,936 vertices
         // more, 157 KB a copy). Decision 897: the Ngong Ping cabins after
         // the Sun Moon Lake cabins and the Maokong cabins' ceiling lamps (4
-        // models, 12,840 vertices more, 514 KB a copy).
-        XCTAssertEqual(models.count, 936)
-        XCTAssertEqual(vertices, 6_810_471)
+        // models, 12,840 vertices more, 514 KB a copy). Decision 909: Hong
+        // Kong's ferry and its two piers, near and far, after the ferries
+        // (6 models, 34,944 vertices more, 1.4 MB a copy).
+        XCTAssertEqual(models.count, 942)
+        XCTAssertEqual(vertices, 6_845_415)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

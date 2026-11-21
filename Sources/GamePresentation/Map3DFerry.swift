@@ -27,15 +27,19 @@ public enum Map3DFerry {
         case tamsui
         /// The Gushan–Cijin double-ended ferry: sails either way.
         case cijin
+        /// Decision 909: Hong Kong's green and white double-ended harbour
+        /// ferry, from the local studio (``Map3DHongKongFerry``).
+        case hongKong
 
         /// Length overall and beam, metres (decision 579).
-        public var length: Float { self == .tamsui ? 18 : 25.3 }
-        public var beam: Float { self == .tamsui ? 4.43 : 8.2 }
+        public var length: Float { self == .tamsui ? 18 : self == .cijin ? 25.3 : 34 }
+        public var beam: Float { self == .tamsui ? 4.43 : self == .cijin ? 8.2 : 8.6 }
         /// People it takes (decision 579's sources; the game's boats take
         /// ``FerryRoute/capacity`` whichever is drawn).
+        /// Hong Kong's: none sourced (decision 909), Cijin's.
         public var people: Int { self == .tamsui ? 99 : 170 }
         /// Whether it sails either end first instead of turning round.
-        public var isDoubleEnded: Bool { self == .cijin }
+        public var isDoubleEnded: Bool { self != .tamsui }
 
         /// Decision 585 PR-4 (FERRYFOLLOW): where the follow camera sits
         /// in the boat, read off the model below. The bridge view's eye:
@@ -46,8 +50,10 @@ public enum Map3DFerry {
         /// middle, 11.8 m long, floor 5.73 m, the same either way), low
         /// enough that the bow shows under the look
         /// (``Map3DFerries/bridgeLookDown``).
-        public var bridgeFront: Float { self == .tamsui ? 5.7 : 5.9 }
-        public var bridgeEye: Float { self == .tamsui ? 3.6 : 6.9 }
+        /// Decision 909: Hong Kong's ferry has a wheelhouse on its roof at
+        /// each end, its front window at x 14.94, 6.9–7.5 m up.
+        public var bridgeFront: Float { self == .tamsui ? 5.7 : self == .cijin ? 5.9 : 14.3 }
+        public var bridgeEye: Float { self == .tamsui ? 3.6 : self == .cijin ? 6.9 : 7.3 }
         /// The cabin window view's seat: a seated eye 1.15 m over the
         /// saloon's floor (the open lower deck at 0.77 m; the upper saloon
         /// at 3.40 m), as far out to the side as the walls and posts
@@ -55,11 +61,12 @@ public enum Map3DFerry {
         /// view (the saloon's wall at 3.25 m). The open lower deck's seat
         /// is near its middle: by its posts and life rings (1.98 m and
         /// 2.25 m out) they filled the window; from 1.6 m they frame it.
-        public var seatAcross: Float { self == .tamsui ? 0.4 : 2.6 }
-        public var seatHeight: Float { self == .tamsui ? 1.92 : 4.55 }
+        /// Hong Kong's: its upper saloon (floor 3.6 m, glass out to 4.23 m).
+        public var seatAcross: Float { self == .tamsui ? 0.4 : self == .cijin ? 2.6 : 2.8 }
+        public var seatHeight: Float { self == .tamsui ? 1.92 : self == .cijin ? 4.55 : 4.75 }
         /// How tall it stands over the water, for the view beside it (to
         /// the wheelhouse's roof).
-        public var height: Float { self == .tamsui ? 4.6 : 7.8 }
+        public var height: Float { self == .tamsui ? 4.6 : self == .cijin ? 7.8 : 7.9 }
 
         /// The boat a route's crossing draws: the double-ended ferry on a
         /// short harbour crossing (under a kilometre, as Gushan–Cijin's
@@ -67,6 +74,37 @@ public enum Map3DFerry {
         /// 1,260 m).
         public static func drawn(forMetres metres: Int64) -> Boat {
             metres < 1_000 ? .cijin : .tamsui
+        }
+
+        /// Decision 909: the boat a route draws in `region`: Hong Kong's
+        /// own there, else by its length (``drawn(forMetres:)``).
+        public static func drawn(forMetres metres: Int64, in region: Map3DStreetRegion) -> Boat {
+            region == .hongKong ? .hongKong : drawn(forMetres: metres)
+        }
+    }
+
+    /// Decision 909: the kinds of pier. Each model's +x points out over
+    /// the water.
+    public enum PierKind: String, CaseIterable, Sendable {
+        /// Decision 579's floating pier: its origin ``pierOffshore`` out
+        /// from the bank, its pontoon out to ``pontoonReach``.
+        case pontoon
+        /// Hong Kong's long two-storey finger pier, 72 m out from the
+        /// bank (its origin), 16 m wide.
+        case finger
+        /// Hong Kong's hall pier: a colonnade 70 m along the bank, 22 m
+        /// out.
+        case hall
+
+        /// How far out from the bank's edge its origin stands.
+        public var offshore: Float { self == .pontoon ? Map3DFerry.pierOffshore : 0 }
+        /// How far its seaward end is from its origin.
+        public var reach: Float {
+            switch self {
+            case .pontoon: Map3DFerry.pontoonReach
+            case .finger: 72
+            case .hall: 22
+            }
         }
     }
 
@@ -82,8 +120,14 @@ public enum Map3DFerry {
     public static var drawn: [Map3DModelPack.Model] {
         var made: [Map3DModelPack.Model] = []
         for far in [false, true] {
-            for boat in Boat.allCases { made.append(model(boat, far: far)) }
+            for boat in [Boat.tamsui, .cijin] { made.append(model(boat, far: far)) }
             made.append(pier(far: far))
+        }
+        // Decision 909: Hong Kong's after them, so the others keep their
+        // places in the pack.
+        for far in [false, true] {
+            made.append(model(.hongKong, far: far))
+            for kind in [PierKind.finger, .hall] { made.append(pier(kind, far: far)) }
         }
         return made
     }
@@ -94,17 +138,26 @@ public enum Map3DFerry {
         "ferry-" + boat.rawValue + "-single" + (far ? "-far" : "")
     }
 
-    public static func pierName(far: Bool = false) -> String {
-        "ferry-pier-single" + (far ? "-far" : "")
+    public static func pierName(_ kind: PierKind = .pontoon, far: Bool = false) -> String {
+        "ferry-pier" + (kind == .pontoon ? "" : "-" + kind.rawValue) + "-single" + (far ? "-far" : "")
     }
 
     public static func model(_ boat: Boat, far: Bool = false) -> Map3DModelPack.Model {
+        if boat == .hongKong {
+            return Map3DHongKongFerry.model(.boat, far: far, named: name(boat, far: far)) ?? .flat(named: name(boat, far: far), from: Map3DMesh())
+        }
         var m = CableMesh()
         solids(boat, far: far).append(to: &m.kit.mesh)
         return .flat(named: name(boat, far: far), from: m.kit.mesh)
     }
 
-    public static func pier(far: Bool = false) -> Map3DModelPack.Model {
+    public static func pier(_ kind: PierKind = .pontoon, far: Bool = false) -> Map3DModelPack.Model {
+        switch kind {
+        case .finger, .hall:
+            let name = pierName(kind, far: far)
+            return Map3DHongKongFerry.model(kind == .finger ? .finger : .hall, far: far, named: name) ?? .flat(named: name, from: Map3DMesh())
+        case .pontoon: break
+        }
         var m = CableMesh()
         pierSolids(far: far).append(to: &m.kit.mesh)
         return .flat(named: pierName(far: far), from: m.kit.mesh)
@@ -116,6 +169,7 @@ public enum Map3DFerry {
         switch boat {
         case .tamsui: s.tamsui(far: far)
         case .cijin: s.cijin(far: far)
+        case .hongKong: break
         }
         return s
     }

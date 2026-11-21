@@ -48,6 +48,8 @@ public struct Map3DFerries: Sendable {
         let origin: Map3DPoint
         let out: Map3DPoint
         let berth: Map3DPoint
+        /// Decision 909: which model it draws.
+        var kind: Map3DFerry.PierKind = .pontoon
     }
 
     struct Line: Sendable {
@@ -93,15 +95,17 @@ public struct Map3DFerries: Sendable {
             let p = scene.point(worldX: Double(plan.x), worldY: Double(plan.y), height: 0)
             return Map3DPoint(p.x, 0, p.z)
         }
+        let region = Map3DStreetRegion(world: world)
         lines = world.ferryRoutes.compactMap { route in
             guard route.piers.count >= 2 else { return nil }
-            let boat = Map3DFerry.Boat.drawn(forMetres: route.metres)
+            let boat = Map3DFerry.Boat.drawn(forMetres: route.metres, in: region)
+            let kinds = Self.pierKinds(of: route, in: region)
             let piers = route.piers.indices.map { index -> Pier in
-                let cell = route.piers[index]
+                let cell = route.piers[index], kind = kinds[index]
                 let other = route.piers[index == route.piers.count - 1 ? index - 1 : index + 1]
                 let middle = flat(cell.middle)
                 let edge: Map3DPoint, out: Map3DPoint
-                if let shore = Self.shore(from: middle, toward: flat(other.middle), boat: boat,
+                if let shore = Self.shore(from: middle, toward: flat(other.middle), boat: boat, pier: kind,
                                           in: scene.drawnWater(round: middle, radius: Self.shoreReach + Self.clearWay + 60)) {
                     (edge, out) = shore
                 } else {
@@ -110,11 +114,11 @@ public struct Map3DFerries: Sendable {
                     edge = flat(PlanPoint(x: cell.middle.x + Int64(side.column) * half, y: cell.middle.y + Int64(side.row) * half))
                     out = Map3DPoint(edge.x - middle.x, 0, edge.z - middle.z).normalized ?? Map3DPoint(1, 0, 0)
                 }
-                var origin = edge + out * Map3DFerry.pierOffshore
+                var origin = edge + out * kind.offshore
                 origin.y = scene.drawnGround.height(x: origin.x, z: origin.z, world: world) + Self.waterLift
-                var berth = origin + out * (Map3DFerry.pontoonReach + Self.berthGap + boat.length / 2)
+                var berth = origin + out * (kind.reach + Self.berthGap + Self.berthHalf(boat, at: kind))
                 berth.y = origin.y
-                return Pier(origin: origin, out: out, berth: berth)
+                return Pier(origin: origin, out: out, berth: berth, kind: kind)
             }
             var line = Line(id: route.id, route: route, boat: boat, piers: piers)
             line.bends = piers.indices.dropLast().map { leg in
@@ -124,6 +128,26 @@ public struct Map3DFerries: Sendable {
             }
             return line
         }
+    }
+
+    /// Decision 909: each of `route`'s piers' kind. Hong Kong's harbour
+    /// ferries: the southernmost pier, on Hong Kong Island's shore (as
+    /// Central's and Wan Chai's), the hall pier, the others Kowloon's
+    /// finger pier (as Tsim Sha Tsui's); elsewhere the floating pier.
+    static func pierKinds(of route: FerryRoute, in region: Map3DStreetRegion) -> [Map3DFerry.PierKind] {
+        guard region == .hongKong else { return route.piers.map { _ in .pontoon } }
+        // The world's y runs south.
+        let south = route.piers.indices.max { route.piers[$0].middle.y < route.piers[$1].middle.y }
+        return route.piers.indices.map { $0 == south ? .hall : .finger }
+    }
+
+    /// Decision 909: from a berth to the end of the boat lying there
+    /// toward the pier: half its length off the floating pier, which it
+    /// lies along; half its diagonal off Hong Kong's, whose end it lies
+    /// off bow first at the angle it came in at, so it clears the pier's
+    /// corners whatever that is.
+    static func berthHalf(_ boat: Map3DFerry.Boat, at kind: Map3DFerry.PierKind) -> Float {
+        kind == .pontoon ? boat.length / 2 : (boat.length * boat.length + boat.beam * boat.beam).squareRoot() / 2
     }
 
     /// Whether there is anything to draw.
@@ -159,10 +183,10 @@ public struct Map3DFerries: Sendable {
     /// run 41927167376), and a boat lying there would cut through one. A
     /// berth is taken only with the boat's turning circle (half its
     /// diagonal round the berth) all open water.
-    static func shore(from middle: Map3DPoint, toward: Map3DPoint, boat kind: Map3DFerry.Boat,
+    static func shore(from middle: Map3DPoint, toward: Map3DPoint, boat kind: Map3DFerry.Boat, pier: Map3DFerry.PierKind = .pontoon,
                       in drawn: Map3DScene.DrawnWater) -> (edge: Map3DPoint, out: Map3DPoint)? {
         guard let ahead = Map3DPoint(toward.x - middle.x, 0, toward.z - middle.z).normalized else { return nil }
-        let boat = kind.length, swing = (kind.length * kind.length + kind.beam * kind.beam).squareRoot() / 2
+        let swing = (kind.length * kind.length + kind.beam * kind.beam).squareRoot() / 2
         func water(_ p: Map3DPoint) -> Bool { drawn.isOpenWater(x: p.x, z: p.z) }
         let steps = Int(shoreReach / shoreStep)
         if water(middle) {
@@ -182,9 +206,9 @@ public struct Map3DFerries: Sendable {
                     if drawn.isBuilt(x: p.x, z: p.z) { return false }
                 }
             }
-            let pontoon = Map3DFerry.pierOffshore + Map3DFerry.pontoonReach
+            let pontoon = pier.offshore + pier.reach
             for s in stride(from: shoreStep, through: pontoon, by: shoreStep) where !water(edge + way * s) { return false }
-            let berth = edge + way * (pontoon + berthGap + boat / 2)
+            let berth = edge + way * (pontoon + berthGap + berthHalf(kind, at: pier))
             for turn in 0..<16 {
                 let angle = Float(turn) * .pi / 8, round = Map3DPoint(cos(angle), 0, sin(angle))
                 for r in [swing / 2, swing] where !water(berth + round * r) { return false }
@@ -516,7 +540,7 @@ public struct Map3DFerries: Sendable {
     /// The models' indices in `pack`, or `nil` when it lacks any.
     struct Models {
         let boat: [Map3DFerry.Boat: (near: Int, far: Int)]
-        let pier: (near: Int, far: Int)
+        let pier: [Map3DFerry.PierKind: (near: Int, far: Int)]
 
         init?(_ pack: Map3DModelPack) {
             var boat: [Map3DFerry.Boat: (near: Int, far: Int)] = [:]
@@ -524,9 +548,13 @@ public struct Map3DFerries: Sendable {
                 guard let near = pack.index(of: Map3DFerry.name(kind)), let far = pack.index(of: Map3DFerry.name(kind, far: true)) else { return nil }
                 boat[kind] = (near, far)
             }
-            guard let near = pack.index(of: Map3DFerry.pierName()), let far = pack.index(of: Map3DFerry.pierName(far: true)) else { return nil }
+            var pier: [Map3DFerry.PierKind: (near: Int, far: Int)] = [:]
+            for kind in Map3DFerry.PierKind.allCases {
+                guard let near = pack.index(of: Map3DFerry.pierName(kind)), let far = pack.index(of: Map3DFerry.pierName(kind, far: true)) else { return nil }
+                pier[kind] = (near, far)
+            }
             self.boat = boat
-            pier = (near, far)
+            self.pier = pier
         }
     }
 
@@ -560,8 +588,8 @@ public struct Map3DFerries: Sendable {
         for line in lines {
             for pier in line.piers {
                 let d = (pier.origin - eye).length
-                guard d < far else { continue }
-                frame.instances.append(.prop(d < near ? models.pier.near : models.pier.far, at: pier.origin, forward: pier.out, scale: 1,
+                guard d < far, let pair = models.pier[pier.kind] else { continue }
+                frame.instances.append(.prop(d < near ? pair.near : pair.far, at: pier.origin, forward: pier.out, scale: 1,
                                              tint: 0xFFFFFF))
             }
             let followed = following?.route == line.id ? following?.number : nil
