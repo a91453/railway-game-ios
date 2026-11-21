@@ -3,3 +3,6 @@
 Sources/GamePresentation/Map3DTrainRegistryList.swift merge=union
 # Decision 895: one registered landmark a line, the same way.
 Sources/GamePresentation/Map3DLandmarkRegistryList.swift merge=union
+# Decision 910: one step of the way out of a deadlock a line, the same way
+# (DeadlockRescueListTests checks the result).
+Sources/GameCore/Railway/DeadlockRescue/DeadlockRescueList.swift merge=union
