@@ -220,7 +220,7 @@ struct RollingStockCatalogView: View {
         }
     }
 
-    /// One type: its train small, its name, what the order sorts by and the
+    /// One type: its train's 3D model small, its name, what the order sorts by and the
     /// whole train's price; a lock while a lesson keeps it shut, a tick on
     /// the type chosen.
     private func row(_ other: RollingStockCatalog.Entry, isShown: Bool, language: DisplayLanguage) -> some View {
@@ -231,9 +231,9 @@ struct RollingStockCatalogView: View {
             withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { shown = other.type }
         } label: {
             HStack(spacing: 10) {
-                CatalogTrain(stripe: stripe(other.family), cars: 2)
-                    .frame(width: 56, height: 18)
-                    .opacity(other.isOpen ? 1 : 0.4)
+                // TRAIN-IDENTITY: the 3D map's own model of the type.
+                TrainPortraitView(key: TrainPortrait.key(of: other.type), cars: 2, stripe: stripe(other.family), dimmed: !other.isOpen)
+                    .frame(width: 84, height: 30)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: other.type.title(in: language))
                         .font(.subheadline.weight(.bold))
@@ -336,11 +336,13 @@ struct RollingStockCatalogView: View {
     }
 
     /// The train on its platform: the name board, the arrows either side,
-    /// and the train as long as the cars chosen (up to eight drawn).
+    /// and the train's 3D model (TRAIN-IDENTITY), up to three cars of it.
     private func showroom(_ list: [RollingStockCatalog.Entry], entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
         VStack(spacing: 0) {
             HStack {
-                Text(verbatim: Train.typeText(entry.type, in: language))
+                // TRAIN-IDENTITY: its name alone; what a car carries and
+                // its doors are the figures under the train.
+                Text(verbatim: entry.type.title(in: language))
                     .font(.title3.weight(.heavy))
                     .foregroundStyle(Palette.markerFill)
                     .padding(.horizontal, 14)
@@ -351,9 +353,11 @@ struct RollingStockCatalogView: View {
             .padding(.bottom, 10)
             HStack(spacing: 8) {
                 arrow("chevron.left", to: RollingStockCatalog.step(in: list, from: entry.type, by: -1), label: language.text("Previous", "上一款"))
-                CatalogTrain(stripe: stripe(entry.family), cars: min(shownCars, 8))
-                    .frame(maxWidth: .infinity, minHeight: 60)
-                    .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: shownCars)
+                // TRAIN-IDENTITY: the train the 3D map draws, its head
+                // and two cars behind it.
+                TrainPortraitView(key: TrainPortrait.key(of: entry.type), cars: min(shownCars, 3), stripe: stripe(entry.family))
+                    .frame(maxWidth: .infinity, minHeight: 110, maxHeight: 150)
+                    .padding(.bottom, 4)
                 arrow("chevron.right", to: RollingStockCatalog.step(in: list, from: entry.type, by: 1), label: language.text("Next", "下一款"))
             }
             // The track and the platform's edge under it.

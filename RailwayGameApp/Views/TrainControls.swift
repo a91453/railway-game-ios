@@ -23,8 +23,12 @@ struct TrainControls: View {
             header
             if let train = session.selectedTrain {
                 status(of: train)
+                // TRAIN-IDENTITY: one name for the train, the one the 3D
+                // map draws it as, with its model; how it runs and what
+                // its cars carry are figures under it.
+                identity(of: train)
                 // Stage C3: how it runs between calls (Stage W2c).
-                PerformanceMenu(performance: train.performance, language: session.language, identifier: "train.performance") { performance in
+                PerformanceMenu(performance: train.performance, language: session.language, identifier: "train.performance", showsName: false) { performance in
                     session.setSelectedTrainPerformance(performance)
                 }
                 .equatable()
@@ -200,6 +204,21 @@ struct TrainControls: View {
             // The step that asks for it keeps the card off it.
             .tutorialTarget(.buyTrain)
         }
+    }
+
+    /// TRAIN-IDENTITY: the train's one name and its 3D model small.
+    private func identity(of train: Train) -> some View {
+        let name = train.identityName(in: session.language)
+        return HStack(spacing: 8) {
+            TrainPortraitView(key: TrainPortrait.key(type: train.type, performance: train.performance), cars: 2, stripe: Theme.primary)
+                .frame(width: 72, height: 26)
+            Text(verbatim: name)
+                .font(.subheadline.weight(.bold))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(verbatim: name))
+        .accessibilityIdentifier("train.identity")
     }
 
     /// Where the train is, the path it has left and the station it is
@@ -532,8 +551,10 @@ private struct TrainTypeButton: View {
         Button {
             showsCatalog = true
         } label: {
+            // TRAIN-IDENTITY: what its cars carry, said to be the cars';
+            // the train's name is the card's (``TrainControls``).
             Label {
-                Text(verbatim: Train.typeText(type, in: language))
+                Text(verbatim: Train.carsFigureText(type, in: language))
             } icon: {
                 Image(systemName: "tram")
             }

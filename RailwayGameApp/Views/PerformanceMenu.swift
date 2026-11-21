@@ -16,10 +16,14 @@ struct PerformanceMenu: View, Equatable {
     let language: DisplayLanguage
     /// `train.performance` or `line.performance`.
     let identifier: String
+    /// TRAIN-IDENTITY: `false` on a train's card, under the train's one
+    /// name: the figures alone, the preset ticked in the menu.
+    var showsName = true
     let choose: @MainActor (TrainPerformance) -> Void
 
     nonisolated static func == (lhs: PerformanceMenu, rhs: PerformanceMenu) -> Bool {
         lhs.performance == rhs.performance && lhs.language == rhs.language && lhs.identifier == rhs.identifier
+            && lhs.showsName == rhs.showsName
     }
 
     var body: some View {
@@ -45,7 +49,7 @@ struct PerformanceMenu: View, Equatable {
         } label: {
             // Touched over at least 44 points: the footnote line alone was
             // some 16 points tall (full lane run 38362099969).
-            Label(performance.displayText(in: language), systemImage: "speedometer")
+            Label(text, systemImage: "speedometer")
                 .font(.footnote)
                 .monospacedDigit()
                 .frame(minHeight: 44, alignment: .leading)
@@ -54,6 +58,10 @@ struct PerformanceMenu: View, Equatable {
         .accessibilityIdentifier(identifier)
         .accessibilityLabel("Performance: \(performance.displayText(in: language))")
         .accessibilityHint("Chooses how it accelerates, brakes and how fast it may run.")
+    }
+
+    private var text: String {
+        showsName ? performance.displayText(in: language) : performance.figuresText(in: language)
     }
 
     @ViewBuilder
