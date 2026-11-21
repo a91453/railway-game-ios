@@ -3906,6 +3906,9 @@ public struct GameWorld: Equatable, Sendable {
         /// and runs trains at some level of its window (see
         /// ``GameWorld/isServed(_:memo:)``), once worked out.
         var scheduledServices: [ScheduledService: Bool] = [:]
+        /// Decision 912: the change from each leg ridden to the next, once
+        /// worked out (see ``GameWorld/platformChange(from:to:)``).
+        var platformChanges: [PlatformChangeLegs: PlatformChange] = [:]
     }
 
     struct ScheduledService: Hashable {
