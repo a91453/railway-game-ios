@@ -3,47 +3,92 @@ import GamePresentation
 import SwiftUI
 
 /// The train types as a showroom (ARCHITECTURE decision 224, option 2A,
-/// `a91453/railway-reference-private: Railway/game-art-previews/docs/art/railway-ui-redesign-2026-10-14/s2-*.png`): one type at a time,
-/// its train standing on a platform under a navy name board, arrows to the
-/// next in its family, four figures, the cars stepped on the train itself
-/// with the whole train's price on a tag, and a row of the family's other
-/// types. Choosing a type sets the type and cars the line's staffing
-/// buys; nothing is bought here. ``RollingStockCatalog`` lists the types.
-/// Decision 374: in a lesson, a type a later lesson opens is shown with
-/// that lesson in place of the choice.
+/// `a91453/railway-reference-private: Railway/game-art-previews/docs/art/railway-ui-redesign-2026-10-14/s2-*.png`),
+/// over the whole screen (decision 915): a list of the types on the left,
+/// with a family, an order and "only those the company can pay for", and
+/// the type chosen in the list on the right: its train standing on a
+/// platform under a navy name board, arrows to the next in the list, four
+/// figures, and what choosing it does. ``RollingStockCatalog`` lists the
+/// types. Decision 374: in a lesson, a type a later lesson opens is shown
+/// with that lesson in place of the choice.
+///
+/// One screen for three purposes (decision 915): the type and cars a line's
+/// staffing buys (nothing is bought here); the type of a train not yet on
+/// the track (`GameSession.setSelectedTrainType`, the one command, in place
+/// of the 23-row menu); and only looking, from the fleet overview.
 struct RollingStockCatalogView: View {
+    enum Purpose: Equatable {
+        case staffing
+        case train(TrainID)
+        case browse
+    }
+
     let session: GameSession
+    var purpose: Purpose = .staffing
     @Binding var type: TrainType?
     @Binding var cars: Int
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var shown: TrainType?
     @State private var shownCars = 4
+    /// The family the list shows; `nil`, every family.
+    @State private var family: RollingStockCatalog.Family?
+    @State private var order: RollingStockCatalog.Order = .family
+    @State private var affordableOnly = false
+
+    /// The type and cars a line's staffing buys.
+    init(session: GameSession, type: Binding<TrainType?>, cars: Binding<Int>) {
+        self.session = session
+        _type = type
+        _cars = cars
+    }
+
+    /// The type of train `train`, not yet on the track.
+    init(session: GameSession, train: TrainID) {
+        self.session = session
+        purpose = .train(train)
+        _type = .constant(session.world.train(id: train)?.type)
+        _cars = .constant(session.world.train(id: train)?.cars ?? 4)
+    }
+
+    /// Only looking.
+    init(browsing session: GameSession) {
+        self.session = session
+        purpose = .browse
+        _type = .constant(nil)
+        _cars = .constant(4)
+    }
 
     var body: some View {
         let language = session.language
         let catalog = RollingStockCatalog(world: session.world)
+        let list = catalog.listed(family: family, order: order, cars: shownCars, affordableOnly: affordableOnly, in: session.world)
+        let entry = list.first(where: { $0.type == shown }) ?? list.first
         NavigationStack {
-            ScrollView {
-                if let entry = catalog.entries.first(where: { $0.type == current(catalog) }) {
-                    VStack(spacing: 14) {
-                        familyPicker(catalog, entry: entry, language: language)
-                        showroom(catalog, entry: entry, language: language)
-                        figures(entry, language: language)
-                        if let note = session.world.sightseeingNote(for: entry.type, in: language) {
-                            Text(verbatim: note)
-                                .font(.footnote)
-                                .foregroundStyle(Theme.textSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        purchase(entry, language: language)
-                        thumbnails(catalog, entry: entry, language: language)
+            VStack(spacing: 0) {
+                filters(catalog, language: language)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                Divider()
+                // A phone on its side and an iPad: the list beside the
+                // type; a phone upright: the type over the list.
+                if isWide {
+                    HStack(spacing: 0) {
+                        listColumn(list, entry: entry, language: language)
+                            .frame(width: 300)
+                        Divider()
+                        ScrollView { detail(list, entry: entry, language: language).padding(16) }
                     }
-                    .padding(16)
                 } else {
-                    Text(verbatim: language.text("No train type to buy here.", "這裡沒有可以買的車種。"))
-                        .foregroundStyle(Theme.textSecondary)
-                        .padding(24)
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            detail(list, entry: entry, language: language)
+                            rows(list, entry: entry, language: language)
+                        }
+                        .padding(16)
+                    }
                 }
             }
             .background(Theme.background)
@@ -51,7 +96,7 @@ struct RollingStockCatalogView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(language.text("Cancel", "取消")) { dismiss() }
+                    Button(purpose == .browse ? language.text("Done", "完成") : language.text("Cancel", "取消")) { dismiss() }
                         .accessibilityIdentifier("catalog.cancel")
                 }
             }
@@ -63,17 +108,42 @@ struct RollingStockCatalogView: View {
         .accessibilityIdentifier("catalog")
     }
 
-    private func current(_ catalog: RollingStockCatalog) -> TrainType? {
-        shown ?? catalog.firstOpen
+    /// A phone on its side or an iPad: the list beside the type.
+    private var isWide: Bool {
+        horizontalSizeClass == .regular || verticalSizeClass == .compact
     }
 
-    private func familyPicker(_ catalog: RollingStockCatalog, entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
-        Picker(selection: Binding(
-            get: { entry.family },
-            set: { family in shown = catalog.entries(of: family).first?.type }
-        )) {
+    // MARK: The list
+
+    /// The family, the order and "only affordable", in one row where the
+    /// list stands beside the type. Chosen by the size classes, not a
+    /// `ViewThatFits`, which measures its picker off the main thread
+    /// (CRASH101).
+    @ViewBuilder
+    private func filters(_ catalog: RollingStockCatalog, language: DisplayLanguage) -> some View {
+        if isWide {
+            HStack(spacing: 12) {
+                familyPicker(catalog, language: language)
+                orderMenu(language: language)
+                affordableToggle(language: language)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                familyPicker(catalog, language: language)
+                HStack(spacing: 12) {
+                    orderMenu(language: language)
+                    Spacer(minLength: 0)
+                    affordableToggle(language: language)
+                }
+            }
+        }
+    }
+
+    private func familyPicker(_ catalog: RollingStockCatalog, language: DisplayLanguage) -> some View {
+        Picker(selection: $family) {
+            Text(verbatim: language.text("All", "全部")).tag(RollingStockCatalog.Family?.none)
             ForEach(catalog.families, id: \.self) { family in
-                Text(verbatim: family.title(in: language)).tag(family)
+                Text(verbatim: family.title(in: language)).tag(Optional(family))
             }
         } label: {
             Text(verbatim: language.text("Family", "類別"))
@@ -82,9 +152,192 @@ struct RollingStockCatalogView: View {
         .accessibilityIdentifier("catalog.family")
     }
 
+    private func orderMenu(language: DisplayLanguage) -> some View {
+        Menu {
+            Picker(selection: $order) {
+                ForEach(RollingStockCatalog.Order.allCases, id: \.self) { order in
+                    Text(verbatim: order.title(in: language)).tag(order)
+                }
+            } label: {
+                Text(verbatim: language.text("Sort by", "排序"))
+            }
+        } label: {
+            Label {
+                Text(verbatim: order.title(in: language))
+            } icon: {
+                Image(systemName: "arrow.up.arrow.down")
+            }
+            .font(.subheadline)
+            .frame(minHeight: 44)
+        }
+        .fixedSize()
+        .accessibilityIdentifier("catalog.sort")
+        .accessibilityLabel(Text(verbatim: language.text("Sort by \(order.title(in: language))", "排序：\(order.title(in: language))")))
+    }
+
+    private func affordableToggle(language: DisplayLanguage) -> some View {
+        Toggle(isOn: $affordableOnly) {
+            Text(verbatim: language.text("Only affordable", "只看買得起"))
+                .font(.subheadline)
+        }
+        .toggleStyle(.button)
+        .fixedSize()
+        .frame(minHeight: 44)
+        .accessibilityIdentifier("catalog.affordable")
+    }
+
+    private func listColumn(_ list: [RollingStockCatalog.Entry], entry: RollingStockCatalog.Entry?, language: DisplayLanguage) -> some View {
+        ScrollViewReader { reader in
+            ScrollView {
+                rows(list, entry: entry, language: language)
+                    .padding(12)
+            }
+            .onAppear {
+                if let entry { reader.scrollTo(entry.type, anchor: .center) }
+            }
+        }
+        .accessibilityIdentifier("catalog.list")
+    }
+
+    private func rows(_ list: [RollingStockCatalog.Entry], entry: RollingStockCatalog.Entry?, language: DisplayLanguage) -> some View {
+        // Not lazy: some two dozen rows, and a lazy stack builds its
+        // cells off the main thread (CRASHSWEEP-2).
+        VStack(spacing: 6) {
+            if case let .train(id) = purpose, session.world.offersStandardCar {
+                standardRow(id, language: language)
+            }
+            if list.isEmpty {
+                Text(verbatim: language.text("No train type the company can pay for now.", "目前沒有買得起的車種。"))
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(8)
+            }
+            ForEach(list) { other in
+                row(other, isShown: other.type == entry?.type, language: language)
+                    .id(other.type)
+            }
+        }
+    }
+
+    /// One type: its train small, its name, what the order sorts by and the
+    /// whole train's price; a lock while a lesson keeps it shut, a tick on
+    /// the type chosen.
+    private func row(_ other: RollingStockCatalog.Entry, isShown: Bool, language: DisplayLanguage) -> some View {
+        let train = RollingStockCatalog.train(other.type, cars: shownCars, in: session.world)
+        let affordable = session.world.economy.canAfford(train.price)
+        let isChosen = purpose != .browse && other.type == type
+        return Button {
+            withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { shown = other.type }
+        } label: {
+            HStack(spacing: 10) {
+                CatalogTrain(stripe: stripe(other.family), cars: 2)
+                    .frame(width: 56, height: 18)
+                    .opacity(other.isOpen ? 1 : 0.4)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: other.type.title(in: language))
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                    HStack(spacing: 6) {
+                        Text(verbatim: rowFigure(other, train: train, language: language))
+                            .foregroundStyle(Theme.textSecondary)
+                        Text(verbatim: train.price.moneyText)
+                            .foregroundStyle(affordable ? Theme.textSecondary : Theme.error)
+                    }
+                    .font(.caption.monospacedDigit())
+                }
+                Spacer(minLength: 4)
+                if !other.isOpen {
+                    Image(systemName: "lock.fill")
+                        .foregroundStyle(Theme.textSecondary)
+                } else if isChosen {
+                    Image(systemName: "checkmark")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Theme.primary)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(minHeight: 44)
+            .background(isShown ? Theme.chip : Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(isShown ? Palette.ink : Theme.panelBorder, lineWidth: isShown ? 2 : 1)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(verbatim: "\(Train.typeText(other.type, in: language)) · \(train.price.moneyText)"))
+        .accessibilityAddTraits(isShown ? .isSelected : [])
+        .accessibilityIdentifier("catalog.row")
+    }
+
+    /// What the list is sorted by, for one row: what a car carries unless
+    /// the order is a speed or an hour's cost.
+    private func rowFigure(_ entry: RollingStockCatalog.Entry, train: (riders: Int64, price: Money, daily: Money, hourly: Money), language: DisplayLanguage) -> String {
+        switch order {
+        case .speed: "\(entry.card.topSpeed) km/h"
+        case .hourlyCost: language.text("\(train.hourly.moneyText) an hour", "每小時 \(train.hourly.moneyText)")
+        case .family, .price, .capacity: language.text("\(entry.card.capacityPerCar) a car", "每節 \(entry.card.capacityPerCar) 人")
+        }
+    }
+
+    /// The standard car, for a train being placed where the game offers it.
+    private func standardRow(_ id: TrainID, language: DisplayLanguage) -> some View {
+        let isChosen = session.world.train(id: id)?.type == nil
+        return Button {
+            session.setSelectedTrainType(nil)
+            dismiss()
+        } label: {
+            HStack {
+                Text(verbatim: Train.standardCarName(in: language))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                if isChosen {
+                    Image(systemName: "checkmark")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Theme.primary)
+                }
+            }
+            .padding(.horizontal, 10)
+            .frame(minHeight: 44)
+            .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.panelBorder, lineWidth: 1))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: Train.typeText(nil, in: language)))
+        .accessibilityIdentifier("catalog.standard")
+    }
+
+    // MARK: The type shown
+
+    @ViewBuilder
+    private func detail(_ list: [RollingStockCatalog.Entry], entry: RollingStockCatalog.Entry?, language: DisplayLanguage) -> some View {
+        if let entry {
+            VStack(spacing: 14) {
+                showroom(list, entry: entry, language: language)
+                figures(entry, language: language)
+                if let note = session.world.sightseeingNote(for: entry.type, in: language) {
+                    Text(verbatim: note)
+                        .font(.footnote)
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                purchase(entry, language: language)
+            }
+        } else {
+            Text(verbatim: language.text("No train type to buy here.", "這裡沒有可以買的車種。"))
+                .foregroundStyle(Theme.textSecondary)
+                .padding(24)
+        }
+    }
+
     /// The train on its platform: the name board, the arrows either side,
     /// and the train as long as the cars chosen (up to eight drawn).
-    private func showroom(_ catalog: RollingStockCatalog, entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
+    private func showroom(_ list: [RollingStockCatalog.Entry], entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
         VStack(spacing: 0) {
             HStack {
                 Text(verbatim: Train.typeText(entry.type, in: language))
@@ -97,11 +350,11 @@ struct RollingStockCatalogView: View {
             }
             .padding(.bottom, 10)
             HStack(spacing: 8) {
-                arrow("chevron.left", to: catalog.previous(before: entry.type), label: language.text("Previous", "上一款"))
+                arrow("chevron.left", to: RollingStockCatalog.step(in: list, from: entry.type, by: -1), label: language.text("Previous", "上一款"))
                 CatalogTrain(stripe: stripe(entry.family), cars: min(shownCars, 8))
                     .frame(maxWidth: .infinity, minHeight: 60)
                     .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: shownCars)
-                arrow("chevron.right", to: catalog.next(after: entry.type), label: language.text("Next", "下一款"))
+                arrow("chevron.right", to: RollingStockCatalog.step(in: list, from: entry.type, by: 1), label: language.text("Next", "下一款"))
             }
             // The track and the platform's edge under it.
             ZStack(alignment: .top) {
@@ -170,22 +423,23 @@ struct RollingStockCatalogView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// The cars, stepped on the train above; the whole train's price on a
-    /// dashed tag; and the choice.
+    /// The cars, stepped on the train above (a train being placed keeps its
+    /// own); the whole train's price on a dashed tag, or what changing the
+    /// train to it costs; and the choice, unless only looking.
     private func purchase(_ entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
         let train = RollingStockCatalog.train(entry.type, cars: shownCars, in: session.world)
         return VStack(alignment: .leading, spacing: 6) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
-                    carsStepper(language: language, riders: train.riders)
+                    carsControl(language: language, riders: train.riders)
                     Spacer(minLength: 4)
-                    priceTag(train.price, language: language)
+                    priceTag(entry, price: train.price, language: language)
                     chooseButton(entry, language: language)
                 }
                 VStack(spacing: 10) {
-                    carsStepper(language: language, riders: train.riders)
+                    carsControl(language: language, riders: train.riders)
                     HStack(spacing: 12) {
-                        priceTag(train.price, language: language)
+                        priceTag(entry, price: train.price, language: language)
                         chooseButton(entry, language: language)
                     }
                 }
@@ -203,28 +457,41 @@ struct RollingStockCatalogView: View {
         }
     }
 
-    private func carsStepper(language: DisplayLanguage, riders: Int64) -> some View {
-        Stepper(value: $shownCars, in: Train.minimumCars...Train.maximumCars) {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(verbatim: language.text("\(shownCars) \(shownCars == 1 ? "car" : "cars")", "\(shownCars) 節"))
-                    .font(.headline.monospacedDigit())
-                Text(verbatim: language.text("\(riders) riders", "共 \(riders) 人"))
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
-            }
+    @ViewBuilder
+    private func carsControl(language: DisplayLanguage, riders: Int64) -> some View {
+        let label = VStack(alignment: .leading, spacing: 0) {
+            Text(verbatim: language.text("\(shownCars) \(shownCars == 1 ? "car" : "cars")", "\(shownCars) 節"))
+                .font(.headline.monospacedDigit())
+            Text(verbatim: language.text("\(riders) riders", "共 \(riders) 人"))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
         }
-        .fixedSize()
-        .accessibilityIdentifier("catalog.cars")
+        if case .train = purpose {
+            // The train's own cars: its stepper is on the train's card.
+            label
+        } else {
+            Stepper(value: $shownCars, in: Train.minimumCars...Train.maximumCars) { label }
+                .fixedSize()
+                .accessibilityIdentifier("catalog.cars")
+        }
     }
 
-    private func priceTag(_ price: Money, language: DisplayLanguage) -> some View {
-        VStack(alignment: .trailing, spacing: 0) {
-            Text(verbatim: language.text("A train", "一列"))
+    /// The whole train's price, or for a train being placed what changing
+    /// it to this type costs (decision 180's refit).
+    private func priceTag(_ entry: RollingStockCatalog.Entry, price: Money, language: DisplayLanguage) -> some View {
+        var title = language.text("A train", "一列")
+        var cost = price
+        if case let .train(id) = purpose, session.world.rollingStockEconomics {
+            title = language.text("Change", "改裝")
+            cost = session.world.train(id: id)?.type == entry.type ? .zero : session.world.refitCost(of: id, to: entry.type)
+        }
+        return VStack(alignment: .trailing, spacing: 0) {
+            Text(verbatim: title)
                 .font(.caption2)
                 .foregroundStyle(Theme.textSecondary)
-            Text(verbatim: price.moneyText)
+            Text(verbatim: cost.moneyText)
                 .font(.headline.monospacedDigit())
-                .foregroundStyle(session.world.economy.canAfford(price) ? Theme.textPrimary : Theme.error)
+                .foregroundStyle(session.world.economy.canAfford(cost) ? Theme.textPrimary : Theme.error)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
@@ -246,15 +513,22 @@ struct RollingStockCatalogView: View {
             .frame(minWidth: 96, minHeight: 44)
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("catalog.locked")
-        } else {
+        } else if purpose != .browse {
             choose(entry, language: language)
         }
     }
 
     private func choose(_ entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
         Button {
-            type = entry.type
-            cars = shownCars
+            switch purpose {
+            case .staffing:
+                type = entry.type
+                cars = shownCars
+            case .train:
+                session.setSelectedTrainType(entry.type)
+            case .browse:
+                break
+            }
             dismiss()
         } label: {
             Text(verbatim: language.text("Choose this", "選這款"))
@@ -263,46 +537,6 @@ struct RollingStockCatalogView: View {
         }
         .buttonStyle(ThemeProminentButtonStyle())
         .accessibilityIdentifier("catalog.choose")
-    }
-
-    /// The family's types, small, the one shown outlined.
-    private func thumbnails(_ catalog: RollingStockCatalog, entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(catalog.entries(of: entry.family)) { other in
-                    Button {
-                        withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { shown = other.type }
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(verbatim: Train.typeText(other.type, in: language))
-                                .font(.caption2.weight(.bold))
-                                .foregroundStyle(Theme.textPrimary)
-                                .lineLimit(1)
-                            CatalogTrain(stripe: stripe(other.family), cars: 2)
-                                .frame(width: 70, height: 20)
-                                .opacity(other.isOpen ? 1 : 0.4)
-                            if let unlock = session.world.lessonUnlockText(for: other.type, in: language) {
-                                Label {
-                                    Text(verbatim: unlock)
-                                } icon: {
-                                    Image(systemName: "lock.fill")
-                                }
-                                .font(.caption2)
-                                .foregroundStyle(Theme.textSecondary)
-                                .lineLimit(1)
-                            }
-                        }
-                        .padding(8)
-                        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .strokeBorder(other.type == entry.type ? Palette.ink : Theme.panelBorder, lineWidth: other.type == entry.type ? 2 : 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
     }
 
     /// The stripe along the cars: teal for the metro, warm for the

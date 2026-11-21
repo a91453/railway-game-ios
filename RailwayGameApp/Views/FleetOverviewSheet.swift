@@ -22,6 +22,8 @@ struct FleetOverviewSheet: View {
     @State private var order: [TrainID]?
     /// Decision 223: the train roster, over the whole screen.
     @State private var showsRoster = false
+    /// Decision 915: the train types, only to look at.
+    @State private var showsCatalog = false
 
     /// Sorts the roster by ``sort`` as the trains are now, and keeps that
     /// order.
@@ -156,6 +158,10 @@ struct FleetOverviewSheet: View {
             TrainRosterView(session: session)
                 .coversTheMap(session)
         }
+        .fullScreenCover(isPresented: $showsCatalog) {
+            RollingStockCatalogView(browsing: session)
+                .coversTheMap(session)
+        }
     }
 
     /// Decision 180: a train on no line is sold back at 70 % of its books;
@@ -224,20 +230,36 @@ struct FleetOverviewSheet: View {
                 }
             }
 
-            // Decision 223: what each train did today, trip by trip.
-            if !trains.isEmpty {
+            HStack(spacing: 8) {
+                // Decision 223: what each train did today, trip by trip.
+                if !trains.isEmpty {
+                    Button {
+                        showsRoster = true
+                    } label: {
+                        Label {
+                            Text(verbatim: session.language.text("Train roster", "列車運用表"))
+                        } icon: {
+                            Image(systemName: "chart.bar.doc.horizontal")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityIdentifier("fleet.roster")
+                }
+                // Decision 915: the train types, only to look at, at any
+                // time.
                 Button {
-                    showsRoster = true
+                    showsCatalog = true
                 } label: {
                     Label {
-                        Text(verbatim: session.language.text("Train roster", "列車運用表"))
+                        Text(verbatim: session.language.text("Train types", "車種型錄"))
                     } icon: {
-                        Image(systemName: "chart.bar.doc.horizontal")
+                        Image(systemName: "tram.circle")
                     }
                     .font(.subheadline.weight(.semibold))
                 }
                 .buttonStyle(.bordered)
-                .accessibilityIdentifier("fleet.roster")
+                .accessibilityIdentifier("fleet.catalog")
             }
         }
         .padding(14)

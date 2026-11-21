@@ -124,24 +124,20 @@ final class Feature284To286UITests: XCTestCase {
         XCTAssertTrue(gap.label.contains(text), gap.label)
     }
 
+    /// Decision 915: the type is touched in the catalog's list, found by
+    /// its name, so adding another train type does not change the test.
     private func showCatalogType(_ name: String) {
-        let previous = app.buttons["上一款"]
-        // Navigate by the showroom's name, so adding another train type
-        // does not change the test. A matching thumbnail farther down the
-        // scroll view is not the title above the arrows.
-        for _ in 0..<40 {
-            XCTAssertTrue(app.scrollUntilShown(previous, in: app.scrollViews.firstMatch))
-            previous.waitUntilSettled()
-            let title = catalogHeading(name)
-            if title.exists, !title.frame.isEmpty, title.frame.maxY <= previous.frame.minY {
-                XCTAssertTrue(app.scrollUntilShown(title, in: app.scrollViews.firstMatch))
-                title.waitUntilSettled()
-                XCTAssertTrue(title.becomesHittable(within: 5))
-                return
-            }
-            tap(previous)
-        }
-        XCTFail("The showroom never showed \(name)")
+        let row = app.buttons.matching(NSPredicate(format: "identifier == %@ AND label BEGINSWITH %@", "catalog.row", "\(name) ·")).firstMatch
+        let list = app.scrollViews.containing(.button, identifier: "catalog.row").firstMatch
+        XCTAssertTrue(list.appears(within: 10), "The catalog's list is missing")
+        XCTAssertTrue(app.scrollUntilShown(row, in: list), "The list never showed \(name)")
+        tap(row)
+        XCTAssertTrue(catalogHeading(name).appears(within: 5), "The catalog never showed \(name)")
+    }
+
+    /// The scroll view of the type shown, beside (or over) the list.
+    private var catalogDetail: XCUIElement {
+        app.scrollViews.containing(.button, identifier: "catalog.choose").firstMatch
     }
 
     private func catalogHeading(_ name: String) -> XCUIElement {
@@ -155,7 +151,7 @@ final class Feature284To286UITests: XCTestCase {
         XCTAssertTrue(heading.appears(within: 5))
         XCTAssertTrue(heading.becomesHittable(within: 5), "The showroom must show \(name)")
         let note = app.staticTexts["觀光列車：停靠景點 800 公尺內的車站時，景點加 0.5 星，觀光客會變多。"]
-        let scroll = app.scrollViews.firstMatch
+        let scroll = catalogDetail
         XCTAssertTrue(app.scrollUntilShown(note, in: scroll))
         XCTAssertTrue(note.becomesHittable(within: 5))
         let choose = app.buttons["catalog.choose"]

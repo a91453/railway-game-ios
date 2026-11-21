@@ -407,13 +407,51 @@ final class StartSaveFlowSmokeTests: XCTestCase {
         touchMenuRow(row, closing: app.buttons.matching(NSPredicate(format: "label == %@", name)), in: app, name: name)
         waitForLabel("Train: \(name)", of: picker.firstMatch)
 
-        // Every type's name says what a car carries ("… · 140 a car · 4
-        // doors"); the menu's own button is left out.
-        checkMenuStaysStillAndChooses(
-            "train.type",
-            rows: app.buttons.matching(NSPredicate(format: "label CONTAINS %@ AND identifier != %@", " a car · ", "train.type")),
-            in: app
-        )
+        // Decision 915: the type is chosen in the train types over the
+        // whole screen, not a menu.
+        checkTrainTypesStayStillAndChoose(in: app)
+    }
+
+    /// Opens the train types from the unplaced train's card with the clock
+    /// running (decision 915): the list must stay as it opened for thirty
+    /// ticks, and another type touched and chosen must be the train's.
+    private func checkTrainTypesStayStillAndChoose(in app: XCUIApplication) {
+        let target = app.buttons.matching(identifier: "train.type").firstMatch
+        XCTAssertTrue(target.appears(within: 10), "Missing the train's type")
+        if !touchable(target) {
+            let panel = app.scrollViews.containing(.button, identifier: "train.type").firstMatch
+            XCTAssertTrue(panel.exists, "No panel holds the train's type")
+            _ = app.dragUntilWhollyOnScreen(target, in: panel)
+        }
+        let button = requiredButton("train.type", in: app)
+        let chosen = button.label
+        button.tap()
+        let rows = app.buttons.matching(identifier: "catalog.row")
+        XCTAssertTrue(rows.firstMatch.appears(within: 10), "The train types did not open")
+        func visibleRows() -> [String] {
+            rows.allElementsBoundByIndex.filter(touchable).map { "\($0.label) \($0.frame)" }
+        }
+        let opened = settledRows(visibleRows, menu: "catalog")
+        XCTAssertGreaterThan(opened.count, 1, "The train types show their rows")
+        Thread.sleep(forTimeInterval: 3)
+        XCTAssertEqual(visibleRows(), opened, "The open train types changed by themselves while the clock ran")
+        // Every row begins with the type's name and what a car carries
+        // ("… · 140 a car · 4 doors · $ …"), as the train's button does.
+        let others = rows.allElementsBoundByIndex.filter(touchable).filter { !$0.label.hasPrefix(chosen) }
+        guard !others.isEmpty else { return XCTFail("The train types offer nothing else: \(opened)") }
+        let row = others[(others.count - 1) / 2]
+        let label = row.label
+        row.tap()
+        let choose = app.buttons["catalog.choose"]
+        XCTAssertTrue(choose.appears(within: 10), "No choice for \(label)")
+        let detail = app.scrollViews.containing(.button, identifier: "catalog.choose").firstMatch
+        XCTAssertTrue(app.scrollUntilShown(choose, in: detail), "Choose this out of reach for \(label)")
+        XCTAssertTrue(choose.becomesHittable(within: 5))
+        choose.tap()
+        XCTAssertTrue(rows.firstMatch.disappears(within: 10), "The train types stayed open")
+        let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", chosen), object: button)
+        XCTAssertEqual(XCTWaiter().wait(for: [changed], timeout: 10), .completed, "Choosing \(label) changed nothing")
+        XCTAssertTrue(label.hasPrefix(button.label), "The train shows \(button.label), not the type chosen: \(label)")
     }
 
     /// The menu in the author's screenshot (decision 184, later): how a
