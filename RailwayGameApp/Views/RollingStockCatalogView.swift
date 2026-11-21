@@ -267,7 +267,10 @@ struct RollingStockCatalogView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
+        // The button stays one element with its own label: wrapping it in
+        // `.accessibilityElement(children: .ignore)` made a new element
+        // without the button trait, which VoiceOver and the UI tests did
+        // not find as a button (full lane of a011379, after 143).
         .accessibilityLabel(Text(verbatim: "\(Train.typeText(other.type, in: language)) · \(train.price.moneyText)"))
         .accessibilityAddTraits(isShown ? .isSelected : [])
         .accessibilityIdentifier("catalog.row")
