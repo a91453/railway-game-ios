@@ -12,9 +12,9 @@ import GameCore
 /// stands on a slope; the game's ground is flat, so the deck and stairs
 /// stand on it at the heights the model has.
 enum Map3DPingxiStation {
-    /// The railings' wood: the timber siding's colour of
-    /// ``Map3DStationExteriorBatch2``, darker than the frames'.
-    static let railWood = Map3DColor.rgb(0x4E392F)
+    /// The railings' wood: the frames' dark wood, a colour of the palette
+    /// (decision 891).
+    static let railWood = Map3DPalette.cityRoofs[2].color
 
     /// The mesh's palette, in the order given to `glb_to_swift.py`: stone,
     /// glazing, trim, concrete, roofDark, woodDark, dark, grille, deck,
