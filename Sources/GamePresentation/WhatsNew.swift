@@ -35,8 +35,8 @@ public enum WhatsNew {
             id: "2026-11-23-145",
             items: [
                 Line(
-                    english: "Taipei's Dazhi has the Miramar Ferris wheel, and Tamsui its Fort San Domingo.",
-                    chinese: "台北大直多了美麗華摩天輪，淡水多了紅毛城。"
+                    english: "New landmarks: Sun Moon Lake's Ci'en Pagoda, Lalu Island and Wenwu Temple's front and rear halls, Taichung's opera house and Luce Chapel, Kaohsiung's Weiwuying, Tainan's Chihkan Tower.",
+                    chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
                 ),
             ],
             fixes: []
@@ -64,6 +64,10 @@ public enum WhatsNew {
                 Line(
                     english: "Changhua's Baguashan has its Great Buddha, and Kaohsiung's Lotus Pond its Dragon and Tiger Pagodas.",
                     chinese: "彰化八卦山多了大佛，高雄蓮池潭多了龍虎塔。"
+                ),
+                Line(
+                    english: "Taipei's Dazhi has the Miramar Ferris wheel, and Tamsui its Fort San Domingo.",
+                    chinese: "台北大直多了美麗華摩天輪，淡水多了紅毛城。"
                 ),
             ],
             fixes: [
