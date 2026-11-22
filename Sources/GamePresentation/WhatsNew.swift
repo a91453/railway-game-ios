@@ -50,6 +50,10 @@ public enum WhatsNew {
                     english: "Hong Kong's Central waterfront has its observation wheel, beside the Star Ferry piers.",
                     chinese: "香港中環海濱多了摩天輪，就在天星碼頭旁。"
                 ),
+                Line(
+                    english: "Changhua's Baguashan has its Great Buddha, and Kaohsiung's Lotus Pond its Dragon and Tiger Pagodas.",
+                    chinese: "彰化八卦山多了大佛，高雄蓮池潭多了龍虎塔。"
+                ),
             ],
             fixes: [
                 Line(
