@@ -3,7 +3,7 @@
 ## 進度
 
 - 做到哪：八座登錄地標（慈恩塔、拉魯島、臺中國家歌劇院、路思義教堂、衛武營、赤崁樓、文武廟前殿與後殿）已接進台灣 3D 地圖（決策 928）。**關渡大橋、夜市三件還沒接**。
-- 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DLandmarkRegistryTests`（4）、`Map3DPaletteGuardTests`（2）、`SunMoon|Landmark|Map3DTaiwan` 過濾到的測試全過；`doc_numbers.py --check` 過。台灣地圖登錄地標近景 36,816／60,000 個三角形。
+- 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`Map3DLandmarkRegistryTests`（4）、`Map3DPaletteGuardTests`（2）、`SunMoon|Landmark|Map3DTaiwan` 過濾到的測試全過；`doc_numbers.py --check` 過。台灣地圖登錄地標近景 44,216／60,000 個三角形（含決策 926、927 的四座；關渡大橋再加 3,168）。
 - 下一步的第一個指令：`sed -n 1,80p Sources/GamePresentation/Map3DRoadBridge.swift`（先看關渡大橋那一段公路橋怎麼畫，再決定橋面對齊哪一種）。
 
 派工：「鐵道遊戲主規劃 3」協調者（session_01JMHz9ZYaf6dBe9otGWsXhV）。實作 session：session_01JMHz9a3iMFJ1BJqHyhhrHb。分支 `claude/models-145-tw-landmarks`。決策 928。存檔版本、golden schema、GameCore 不動。
