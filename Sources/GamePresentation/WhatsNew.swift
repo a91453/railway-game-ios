@@ -46,6 +46,10 @@ public enum WhatsNew {
                     english: "The train catalogue shows each train as its 3D model, and a train's card shows one name.",
                     chinese: "車種型錄改用 3D 列車模型圖，列車卡只留一個車名。"
                 ),
+                Line(
+                    english: "Hong Kong's Central waterfront has its observation wheel, beside the Star Ferry piers.",
+                    chinese: "香港中環海濱多了摩天輪，就在天星碼頭旁。"
+                ),
             ],
             fixes: [
                 Line(
