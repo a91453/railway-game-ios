@@ -59,7 +59,21 @@ public struct Map3DCableways: Sendable {
     /// Decision 615: the cabins a cable car runs, picked by where it is,
     /// not by the player: the Sun Moon Lake Ropeway's near it, Maokong's
     /// everywhere else; decision 897: the Ngong Ping cable car's near it.
-    public enum CabinLook: Sendable { case maokong, sunMoonLake, ngongPing }
+    /// Decision 930: Wulai's two large cabins near it.
+    public enum CabinLook: Sendable {
+        case maokong, sunMoonLake, ngongPing, wulai
+
+        /// Decision 930: whether a line of it runs two cabins, one going
+        /// up as the other comes down (``CablewayCabins/numbers(of:pair:)``),
+        /// not a loop of many.
+        public var isPair: Bool { self == .wulai }
+    }
+
+    /// Decision 930: within this of either of the Wulai cable car's
+    /// stations (``RealCableway/wulai``), a stop puts its cable car at
+    /// Wulai: the two stations are 381 m apart in a gorge, the village
+    /// some 1.5 km down the river; the Maokong Gondola some 16 km away.
+    public static let wulaiReach: Double = 2_000
 
     /// Decision 615: within this of either of the Sun Moon Lake Ropeway's
     /// stations (``RealCableway/sunMoonLake``), a stop puts its cable car
@@ -87,7 +101,8 @@ public struct Map3DCableways: Sendable {
         guard let frame = RealWorldFrame(world: world) else { return .maokong }
         let units = Double(WorldCoordinate.unitsPerMetre)
         for (real, reach, look) in [(RealCableway.sunMoonLake, sunMoonLakeReach, CabinLook.sunMoonLake),
-                                    (RealCableway.ngongPing, ngongPingReach, CabinLook.ngongPing)] {
+                                    (RealCableway.ngongPing, ngongPingReach, CabinLook.ngongPing),
+                                    (RealCableway.wulai, wulaiReach, CabinLook.wulai)] {
             let stations = real.stops.map { frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude) }
             for stop in stops {
                 let middle = stop.cell.middle
@@ -214,6 +229,9 @@ public struct Map3DCableways: Sendable {
         /// Decision 897: the Ngong Ping cabins; empty in a pack without
         /// them, which then runs Maokong's there.
         let ngongPing: [Map3DNgongPingCabin.Kind: (near: Int, far: Int)]
+        /// Decision 930: Wulai's two cabins; empty in a pack without them,
+        /// which then runs Maokong's there.
+        let wulai: [Map3DWulaiCabin.Kind: (near: Int, far: Int)]
 
         init?(_ pack: Map3DModelPack) {
             func pair(_ name: String) -> (near: Int, far: Int)? {
@@ -243,6 +261,12 @@ public struct Map3DCableways: Sendable {
                 ngongPing[kind] = p
             }
             self.ngongPing = ngongPing
+            var wulai: [Map3DWulaiCabin.Kind: (near: Int, far: Int)] = [:]
+            for kind in Map3DWulaiCabin.Kind.allCases {
+                guard let p = pair(Map3DWulaiCabin.name(kind)) else { wulai = [:]; break }
+                wulai[kind] = p
+            }
+            self.wulai = wulai
             self.cabin = cabin
             self.tower = tower
             self.hall = hall
@@ -253,6 +277,7 @@ public struct Map3DCableways: Sendable {
         func cabin(_ number: Int, look: CabinLook) -> (near: Int, far: Int)? {
             if look == .sunMoonLake, let pair = sunMoon[Map3DCableCar.sunMoonCabin(number)] { return pair }
             if look == .ngongPing, let pair = ngongPing[Map3DNgongPingCabin.kind(number)] { return pair }
+            if look == .wulai, let pair = wulai[Map3DWulaiCabin.kind(number)] { return pair }
             return cabin[CablewayCabins.isCrystal(number) ? .crystal : .standard]
         }
     }
@@ -328,8 +353,10 @@ public struct Map3DCableways: Sendable {
             }
             let open = CablewayCabins.runs(line.id, in: world, at: GameTime(seconds: whole))
             var inHall: [Int: Int] = [:]
+            // Decision 930: a line of two cabins draws those two only.
+            let numbers = line.look.isPair ? Set(CablewayCabins.numbers(of: line.cableway, pair: true)) : nil
             for cabin in CablewayCabins.cabins(of: line.cableway, atSecond: whole, open: open)
-                where followed != CabinID(cableway: line.id, number: cabin.number) {
+                where followed != CabinID(cableway: line.id, number: cabin.number) && numbers?.contains(cabin.number) != false {
                 let point: Map3DPoint, along: Map3DPoint
                 switch cabin.place {
                 case .span(let leg, let permille, let outbound):
@@ -359,6 +386,7 @@ public struct Map3DCableways: Sendable {
                 let d = (point - eye).length
                 guard d < far, let pair = models.cabin(cabin.number, look: line.look) else { continue }
                 let heavy = (line.look == .sunMoonLake && !models.sunMoon.isEmpty) || (line.look == .ngongPing && !models.ngongPing.isEmpty)
+                    || (line.look == .wulai && !models.wulai.isEmpty)
                 cabins.append((weight(point), d, point, along, pair, heavy))
             }
         }
@@ -439,8 +467,8 @@ public struct Map3DCableways: Sendable {
     /// is no such cabin. Its place moves on without a jump, through the
     /// stops too (``CablewayCabins/glide(of:on:atSecond:)``).
     public func pose(of id: CabinID, second: Double) -> Map3DFollow.Pose? {
-        guard let line = lines.first(where: { $0.id == id.cableway }), id.number >= 0,
-              id.number < CablewayCabins.count(of: line.cableway),
+        guard let line = lines.first(where: { $0.id == id.cableway }),
+              CablewayCabins.numbers(of: line.cableway, pair: line.look.isPair).contains(id.number),
               CablewayCabins.runs(id.cableway, in: world, at: GameTime(seconds: Int64(second.rounded(.down)))) else { return nil }
         let at = place(CablewayCabins.glide(of: id.number, on: line.cableway, atSecond: second), on: line)
         let floor = at.point - Map3DPoint(0, Map3DCableCar.cabinDrop, 0)
@@ -470,7 +498,7 @@ public struct Map3DCableways: Sendable {
         let eye = camera.eye
         for line in lines {
             guard CablewayCabins.runs(line.id, in: world, at: GameTime(seconds: Int64(second.rounded(.down)))) else { continue }
-            for number in 0..<CablewayCabins.count(of: line.cableway) {
+            for number in CablewayCabins.numbers(of: line.cableway, pair: line.look.isPair) {
                 let at = place(CablewayCabins.glide(of: number, on: line.cableway, atSecond: second), on: line)
                 let body = at.point - Map3DPoint(0, Map3DCableCar.cabinDrop - Self.cabinHeight / 2, 0)
                 guard (body - eye).length < Self.nearReach, let screen = camera.screenPoint(of: body) else { continue }

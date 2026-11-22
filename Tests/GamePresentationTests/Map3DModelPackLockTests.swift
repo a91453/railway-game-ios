@@ -226,7 +226,10 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Self.digest(before.map(\.name)), "45d52b8e433922ec")
         // Decision 891: the red commuter car's body and band in the
         // palette's colours (its three models in `hashes.lock.json`).
-        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "b4df6f4bda66e5b3")
+        // Decision 930: the Midsummer Formosa's locomotive and tender the
+        // studio's CT273, near and far (the same names and order; their
+        // four models and the head lamps are new, `hashes.lock.json`).
+        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "93cd0848f7d945a2")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
         XCTAssertEqual(Array(pack.models[firstCable + cable.count..<firstCable + cable.count + ferry.count].map(\.name)),
                        Map3DFerry.drawn.map(\.name))
@@ -266,13 +269,16 @@ final class Map3DModelPackLockTests: XCTestCase {
         // Moon Lake cabins (every model after them moves by 4).
         // Decision 921: and Japan's traffic signals after the yellow tit.
         // Decision 923: and Japan's poles, pedestrian signals and bus stop.
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "79fc75aa9a61b581")
+        // Decision 930: and Hong Kong's outlying island catamaran, near
+        // and far, after its ferry's piers (every model after them moves
+        // by 2).
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "e71af30550c474dd")
         // Decision 840: and the studio's sleigh in the stand-in's place
         // (the same name and order; its model is new, `hashes.lock.json`);
         // its later amendment: dark brown antlers, the sleigh's team brown.
         // Decision 897: every cabin and hall lit after dark (their new
         // hashes in `hashes.lock.json`).
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "9dd077422aec2895")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "f1e6c2cff14cbf80")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -286,12 +292,14 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(lamps(movingBack: 0).count, 373)
         XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count + winter.count
                                                           + santa.count + taiwanCars.count + herd.count + plain.count + finland.count + tits.count
-                                                          + japan.count + japanStreet.count)), "5a0aba989e6893bf")
+                                                          + japan.count + japanStreet.count)), "1f7966f965f380ab")
         // Decision 889: the windows after the cable car move by the
         // yellow tit's 4; decision 897: and by the Ngong Ping cabins' 4;
         // decision 921: and by Japan's traffic signals' 3; decision 923: and
         // by Japan's street furniture's 9.
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "ae2665f8c10d3271")
+        // Decision 930: the CT273's head lamp, and the windows after the
+        // ferries move by the catamaran's 2.
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "beeb3d2b12d305ad")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "b693d447389ff604")
     }
 

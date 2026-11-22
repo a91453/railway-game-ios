@@ -1901,10 +1901,6 @@
       "hash" : "5334d881abcefe8f",
       "triangles" : 356
     },
-    "light-set-SUMMER-head" : {
-      "hash" : "167c6d891fb380d",
-      "triangles" : 32
-    },
     "light-set-SUMMER-car" : {
       "hash" : "2d6cad0d4d66cb7",
       "triangles" : 836
@@ -4385,6 +4381,22 @@
       "hash": "4ffee26daf37f7a3",
       "triangles": 608
     },
+    "cablecar-cabin-wulai-green": {
+      "hash": "8c671ead9a295b96",
+      "triangles": 2004
+    },
+    "cablecar-cabin-wulai-red": {
+      "hash": "f59bb8cede1937d0",
+      "triangles": 2004
+    },
+    "cablecar-cabin-wulai-green-far": {
+      "hash": "6cbcfe114b9e9d79",
+      "triangles": 480
+    },
+    "cablecar-cabin-wulai-red-far": {
+      "hash": "f0bbc508cc48d90a",
+      "triangles": 480
+    },
     "cablecar-cabin-sunmoon-red": {
       "hash": "b3a1e641fc75284c",
       "triangles": 5660
@@ -4504,6 +4516,14 @@
     "ferry-hongKong-single-far" : {
       "hash" : "34e577656abfde0",
       "triangles" : 524
+    },
+    "ferry-hongKongOutlying-single" : {
+      "hash" : "57706c247f501419",
+      "triangles" : 2024
+    },
+    "ferry-hongKongOutlying-single-far" : {
+      "hash" : "a47976f9a3948910",
+      "triangles" : 592
     },
     "ferry-pier-finger-single-far" : {
       "hash" : "4de6cb8db0b75f9f",

@@ -52,6 +52,15 @@ public enum CablewayCabins {
         Int(max(1, loopSeconds(of: cableway) / Cableway.cabinIntervalSeconds))
     }
 
+    /// Decision 930: the numbers of the cabins a cable car of `cableway`
+    /// runs: every one of ``count(of:)``, or, with `pair` (an aerial
+    /// tramway, as Wulai's: two large cabins, one going up as the other
+    /// comes down), the first and the one half the loop behind it.
+    public static func numbers(of cableway: Cableway, pair: Bool) -> [Int] {
+        let count = count(of: cableway)
+        return pair && count > 1 ? [0, count / 2] : Array(0..<count)
+    }
+
     /// Whether the cabins run at `time` on `world`: on a day the cable car
     /// runs (``GameWorld/cablewayIsOpen(_:onDay:)``), within its hours
     /// (from 9:00, ``Cableway/operatingHours(onDay:)``).

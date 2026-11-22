@@ -33,10 +33,11 @@ public enum Map3DCT273 {
 
     /// `unit`, its front at +x; `far`, the light version drawn from
     /// 500 m out. `nil` if its mesh does not decode. Its cab's windows are
-    /// not marked as glass: they do not light at night.
+    /// marked as its glass, so nothing else of it is taken for a window
+    /// and, a locomotive, none lights at night.
     public static func model(_ unit: Unit, far: Bool = false) -> Map3DModelPack.Model? {
         let name = unit.rawValue + (far ? "-far" : "")
         guard let text = encoded[name], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { return nil }
-        return Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette)
+        return Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette, glass: 5)
     }
 }

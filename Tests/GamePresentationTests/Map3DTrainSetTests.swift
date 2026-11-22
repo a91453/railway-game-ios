@@ -277,11 +277,12 @@ final class Map3DTrainSetTests: XCTestCase {
         // Decision 461: the L's set while the pack is locked is the C381, whose far set takes over from 500 m.
         XCTAssertEqual(Map3DTrainSet.reach(of: "L"), Map3DTrainSet.tramReach)
         XCTAssertEqual(Map3DTrainSet.reach(of: "fourCarMetro"), Map3DTrains.modelReach)
-        // The locomotive's headlamp lit at its smokebox's lens.
+        // The locomotive's headlamp lit at its smokebox's lens (decision
+        // 930: the CT273's own lens, on top of its smokebox).
         let head = recipes.models[try XCTUnwrap(pack.index(of: "set-SUMMER-head"))]
         let lamp = head.vertices.filter(\.glows)
         XCTAssertFalse(lamp.isEmpty)
-        XCTAssertTrue(lamp.allSatisfy { abs($0.x - 5.67) < 0.02 && abs($0.z - 2.83) < 0.14 && abs($0.y) < 0.14 })
+        XCTAssertTrue(lamp.allSatisfy { abs($0.x - 5.435) < 0.02 && abs($0.z - 3.44) < 0.14 && abs($0.y) < 0.14 })
     }
 
     /// A train's key: its type's when the type has a style or a set, else
