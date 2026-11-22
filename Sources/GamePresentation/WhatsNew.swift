@@ -35,7 +35,7 @@ public enum WhatsNew {
             id: "2026-11-23-145",
             items: [
                 Line(
-                    english: "Fukuoka's pedestrian lights have dark housings, as the real ones do.",
+                    english: "Fukuoka's pedestrian signal boxes are dark, like the real ones.",
                     chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
                 ),
             ],
