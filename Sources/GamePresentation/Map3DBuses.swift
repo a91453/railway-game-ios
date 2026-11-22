@@ -441,7 +441,7 @@ public struct Map3DBuses: Sendable {
                 high = Map3DPoint(max(high.x, point.x), 0, max(high.z, point.z))
             }
             let reach = Map3DBuses.heightReach, middle = (low + high) * 0.5, spread = (high - low).length / 2
-            for lane in lanes where lane.twoWay && lane.path.boxDistance(to: middle) < reach + spread {
+            for lane in lanes where (lane.twoWay || lane.oneWayStreet) && lane.path.boxDistance(to: middle) < reach + spread {
                 let line = lane.path.points
                 for index in 1..<line.count {
                     let a = line[index - 1], b = line[index]

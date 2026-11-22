@@ -709,6 +709,54 @@ struct Map3DRoadMarkings {
         return distance(p, Map3DBaseMap.Point(x: a.x + dx * t, z: a.z + dz * t))
     }
 
+    /// Decision 920's later note (the owner: 「我記得一堆單行道你都畫
+    /// 雙向」): a one-way road's lanes, one each 3.2 m (one to three), and
+    /// the white broken lines between them (道路交通標誌標線號誌設置規則
+    /// 第 182 條, 車道線: 10 cm, 4 m painted and 6 m left out; Japan's
+    /// 車線境界線 on an ordinary road, 区画線及び道路標示に関する命令
+    /// 別表第六, 5 m and 5 m; Hong Kong's and Finland's taken as Taiwan's).
+    static let laneLineWidth = 0.1
+    static func laneDashAndGap(_ region: Map3DStreetRegion) -> (dash: Double, gap: Double) {
+        region == .japan ? (5, 5) : (4, 6)
+    }
+    static func lanes(oneWayWidth width: Double) -> Int { max(1, min(3, Int(width / 3.2))) }
+
+    /// Decision 920's later note: the dashes of the lane lines of a
+    /// one-way road `width` metres wide along its middle line `points`.
+    static func laneLines(along points: [Map3DBaseMap.Point], width: Double, region: Map3DStreetRegion = .taiwan) -> [[Map3DBaseMap.Point]] {
+        let (laneDash, laneGap) = laneDashAndGap(region)
+        let period = laneDash + laneGap, lanes = lanes(oneWayWidth: width)
+        guard lanes > 1, points.count >= 2 else { return [] }
+        var dashes: [[Map3DBaseMap.Point]] = []
+        // Each straight piece on its own, its dashes where the map's own
+        // metres put them (measured along the piece from the line through
+        // the map's origin square to it), not from where the road starts:
+        // a chunk built apart (Map3DStreaming) cuts the road
+        // elsewhere and must paint the same dashes.
+        for (a, b) in zip(points, points.dropFirst()) {
+            let length = distance(a, b)
+            guard length > 1e-6 else { continue }
+            let along = (x: (b.x - a.x) / length, z: (b.z - a.z) / length), left = (x: along.z, z: -along.x)
+            let start = a.x * along.x + a.z * along.z, end = start + length
+            for line in 1..<lanes {
+                let offset = -width / 2 + Double(line) * width / Double(lanes)
+                // The foot of the shifted line nearest the origin, and a
+                // point `s` metres along from it.
+                let across = a.x * left.x + a.z * left.z + offset
+                func point(_ s: Double) -> Map3DBaseMap.Point {
+                    Map3DBaseMap.Point(x: left.x * across + along.x * s, z: left.z * across + along.z * s)
+                }
+                var on = (start / period).rounded(.down) * period
+                while on < end {
+                    let from = max(on, start), to = min(on + laneDash, end)
+                    if to - from > 1e-6 { dashes.append([point(from), point(to)]) }
+                    on += period
+                }
+            }
+        }
+        return dashes
+    }
+
     /// Decision 920: how far along the road two of a crossroads' points
     /// may be and still be one junction, metres (OSMnx's
     /// `consolidate_intersections`, MIT, Copyright (c) 2016–2025 Geoff
@@ -914,7 +962,7 @@ struct Map3DRoadMarkings {
                 // through and left (decision 732: through and right in
                 // Hong Kong).
                 // Decision 920: a one-way road's lanes, one each 3.2 m.
-                let lanes = arm.oneway ? max(1, min(3, Int(incoming.width / 3.2))) : half >= 5 ? 2 : 1, lane = incoming.width / Double(lanes)
+                let lanes = arm.oneway ? Self.lanes(oneWayWidth: incoming.width) : half >= 5 ? 2 : 1, lane = incoming.width / Double(lanes)
                 for index in 0..<lanes {
                     marks.append(Mark(kind: .arrow(left: lanes > 1 && index == 0, mirrored: region.keepsLeft),
                                       centre: moved(place.point, right(way), incoming.start + (Double(index) + 0.5) * lane),

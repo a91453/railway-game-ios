@@ -417,6 +417,10 @@ public struct Map3DStreetLife: Sendable {
         /// Whether the evening garbage truck collects along it (a town
         /// street's, decision 437).
         public var collects = false
+        /// Decision 920's later note: a one-way city street (not a ramp
+        /// or the motorway), its traffic only along its way, where a city
+        /// bus may still go.
+        public var oneWayStreet = false
         /// Decision 596: where its traffic stops for the signals.
         public var stops: [Stop] = []
         /// Decision 596: its vehicles' trips each way it has stops,
@@ -1084,10 +1088,11 @@ extension Map3DScene.Builder {
             let half = kind.width(ramp: road.isRamp) / 2
             if let traffic = Self.traffic(kind) {
                 var lane = Map3DStreetLife.Lane(
-                    path: path, half: half, twoWay: !road.isRamp && kind != .motorway, speed: traffic.speed,
+                    path: path, half: half, twoWay: !road.isRamp && kind != .motorway && !road.oneway, speed: traffic.speed,
                     perHundred: traffic.perHundred * (0.25 + 0.75 * level), scooters: kind != .motorway && kind != .trunk || level > 0.5,
                     seed: lifeSeed(path.points[0], salt: 256), buses: !road.isRamp && Self.busRoutes.contains(kind))
                 lane.collects = !road.isRamp && Self.collectionRounds.contains(kind)
+                lane.oneWayStreet = road.oneway && !road.isRamp && kind != .motorway
                 if let markings {
                     lane.stops = Self.laneStops(path, stops: markings.stops)
                     lane.schedules = Map3DStreetLife.schedules(of: lane, region: streetLife.region)
