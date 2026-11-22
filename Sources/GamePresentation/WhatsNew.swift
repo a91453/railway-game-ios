@@ -39,7 +39,12 @@ public enum WhatsNew {
                     chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
                 ),
             ],
-            fixes: []
+            fixes: [
+                Line(
+                    english: "Tapping Arrange on the train roster no longer closes the app.",
+                    chinese: "點車隊運用表的「編排」不再閃退。"
+                ),
+            ]
         ),
         // 144.
         Entry(
