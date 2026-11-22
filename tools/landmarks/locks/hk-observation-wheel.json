@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark hk-observation-wheel: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "hk-observation-wheel" : {
+      "hash" : "7781d4b7c566b7af",
+      "triangles" : 5108
+    },
+    "hk-observation-wheel-far" : {
+      "hash" : "817064c1e9734d9e",
+      "triangles" : 1168
+    }
+  }
+}

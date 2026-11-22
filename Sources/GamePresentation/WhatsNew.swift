@@ -30,6 +30,46 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 144.
+        Entry(
+            id: "2026-11-22-144",
+            items: [
+                Line(
+                    english: "Fukuoka's streets have Japanese traffic lights, pedestrian lights, utility poles, street lights and bus stops.",
+                    chinese: "福岡的街道換上日本的紅綠燈、行人燈、電線桿、路燈與公車站牌。"
+                ),
+                Line(
+                    english: "Small stations you build in Fukuoka have wooden station houses, and Fukuoka's gas holders and water towers stand where they really are.",
+                    chinese: "在福岡蓋的小站換成木造站房，福岡的球形瓦斯槽與給水塔也照真實位置立起來。"
+                ),
+                Line(
+                    english: "The train catalogue shows each train as its 3D model, and a train's card shows one name.",
+                    chinese: "車種型錄改用 3D 列車模型圖，列車卡只留一個車名。"
+                ),
+                Line(
+                    english: "Hong Kong's Central waterfront has its observation wheel, beside the Star Ferry piers.",
+                    chinese: "香港中環海濱多了摩天輪，就在天星碼頭旁。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "A junction of divided roads has one set of zebra crossings, not a heap of them.",
+                    chinese: "分隔道路的路口只畫一套斑馬線，不再擠成一坨。"
+                ),
+                Line(
+                    english: "One-way streets have lane lines instead of a centre line, and their traffic goes one way.",
+                    chinese: "單行道不畫中心線，改畫車道線，車也只往一個方向開。"
+                ),
+                Line(
+                    english: "Trains heading for a set platform keep to their own track, so fewer late runs in Hong Kong.",
+                    chinese: "開往指定月台的列車照自己的軌道走，香港晚點的班次變少。"
+                ),
+                Line(
+                    english: "With VoiceOver, each row of the train catalogue is a button again.",
+                    chinese: "使用 VoiceOver 時，車種型錄的每一列又能當按鈕點。"
+                ),
+            ]
+        ),
         // 143.
         Entry(
             id: "2026-11-21-143",
