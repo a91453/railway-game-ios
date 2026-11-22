@@ -86,8 +86,9 @@ final class Map3DStationExteriorBatch2MapTests: XCTestCase {
         for profile in [Map3DStationKit.Profile.timber, .heritage, .halt, .regional, .elevated] {
             XCTAssertNil(Map3DExteriorStudy.study(for: profile), "\(profile)")
         }
-        XCTAssertEqual(Map3DExteriorStudy.allCases.count, 20)
-        XCTAssertEqual(Set(Map3DExteriorStudy.allCases.map(\.rawValue)).count, 20)
+        // Decision 929: and the studio's four high-speed stations.
+        XCTAssertEqual(Map3DExteriorStudy.allCases.count, 24)
+        XCTAssertEqual(Set(Map3DExteriorStudy.allCases.map(\.rawValue)).count, 24)
     }
 
     /// Each study's outlines, on the ground round its origin, and the
