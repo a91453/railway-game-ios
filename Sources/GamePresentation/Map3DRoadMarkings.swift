@@ -725,45 +725,34 @@ struct Map3DRoadMarkings {
     /// one-way road `width` metres wide along its middle line `points`.
     static func laneLines(along points: [Map3DBaseMap.Point], width: Double, region: Map3DStreetRegion = .taiwan) -> [[Map3DBaseMap.Point]] {
         let (laneDash, laneGap) = laneDashAndGap(region)
-        let lanes = lanes(oneWayWidth: width)
+        let period = laneDash + laneGap, lanes = lanes(oneWayWidth: width)
         guard lanes > 1, points.count >= 2 else { return [] }
-        // Each point's normal (to the left of the way), averaged at a bend.
-        var normals: [Map3DBaseMap.Point] = []
-        for index in points.indices {
-            let a = points[max(0, index - 1)], b = points[min(points.count - 1, index + 1)]
-            let length = max(1e-9, distance(a, b))
-            normals.append(Map3DBaseMap.Point(x: (b.z - a.z) / length, z: -(b.x - a.x) / length))
-        }
         var dashes: [[Map3DBaseMap.Point]] = []
-        for line in 1..<lanes {
-            let offset = -width / 2 + Double(line) * width / Double(lanes)
-            let shifted = zip(points, normals).map { Map3DBaseMap.Point(x: $0.x + $1.x * offset, z: $0.z + $1.z * offset) }
-            // Walk the shifted line: on for a dash, off for a gap.
-            var walked = 0.0, dash: [Map3DBaseMap.Point] = []
-            for (a, b) in zip(shifted, shifted.dropFirst()) {
-                let length = distance(a, b)
-                guard length > 1e-6 else { continue }
-                var at = 0.0
-                while at < length {
-                    let phase = walked.truncatingRemainder(dividingBy: laneDash + laneGap)
-                    let on = phase < laneDash
-                    let step = min(length - at, on ? laneDash - phase : laneDash + laneGap - phase)
-                    let from = Map3DBaseMap.Point(x: a.x + (b.x - a.x) * at / length, z: a.z + (b.z - a.z) * at / length)
-                    let to = Map3DBaseMap.Point(x: a.x + (b.x - a.x) * (at + step) / length, z: a.z + (b.z - a.z) * (at + step) / length)
-                    if on {
-                        if dash.isEmpty { dash.append(from) }
-                        dash.append(to)
-                    } else if dash.count >= 2 {
-                        dashes.append(dash)
-                        dash = []
-                    } else {
-                        dash = []
-                    }
-                    at += step
-                    walked += step
+        // Each straight piece on its own, its dashes where the map's own
+        // metres put them (measured along the piece from the line through
+        // the map's origin square to it), not from where the road starts:
+        // a chunk built apart (Map3DStreaming) cuts the road
+        // elsewhere and must paint the same dashes.
+        for (a, b) in zip(points, points.dropFirst()) {
+            let length = distance(a, b)
+            guard length > 1e-6 else { continue }
+            let along = (x: (b.x - a.x) / length, z: (b.z - a.z) / length), left = (x: along.z, z: -along.x)
+            let start = a.x * along.x + a.z * along.z, end = start + length
+            for line in 1..<lanes {
+                let offset = -width / 2 + Double(line) * width / Double(lanes)
+                // The foot of the shifted line nearest the origin, and a
+                // point `s` metres along from it.
+                let across = a.x * left.x + a.z * left.z + offset
+                func point(_ s: Double) -> Map3DBaseMap.Point {
+                    Map3DBaseMap.Point(x: left.x * across + along.x * s, z: left.z * across + along.z * s)
+                }
+                var on = (start / period).rounded(.down) * period
+                while on < end {
+                    let from = max(on, start), to = min(on + laneDash, end)
+                    if to - from > 1e-6 { dashes.append([point(from), point(to)]) }
+                    on += period
                 }
             }
-            if dash.count >= 2 { dashes.append(dash) }
         }
         return dashes
     }
