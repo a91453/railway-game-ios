@@ -38,6 +38,10 @@ public enum WhatsNew {
                     english: "Fukuoka's pedestrian signal boxes are dark, like the real ones.",
                     chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
                 ),
+                Line(
+                    english: "New landmarks: Ci'en Pagoda, Lalu Island and the front and rear halls of Wenwu Temple at Sun Moon Lake, the National Taichung Theater and Luce Chapel in Taichung, Weiwuying in Kaohsiung and Chihkan Tower in Tainan.",
+                    chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
+                ),
             ],
             fixes: []
         ),
