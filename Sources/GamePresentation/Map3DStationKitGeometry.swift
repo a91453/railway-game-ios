@@ -8,6 +8,10 @@ struct StationKitBuilder {
     /// built for, for its name boards (``boardName(real:game:)``); `nil`
     /// for the kit's own models, which carry the real station's name.
     var gameName: String?
+    /// Decision 922: whether the station stands in Japan, where a small
+    /// station is the earlier version's wooden one
+    /// (``genericHouse(_:expansion:far:)``).
+    var japanese = false
     static let forward=Map3DPoint(1,0,0)
     static let glass=Map3DPalette.glazing
     static let steel=Map3DPalette.tankStand

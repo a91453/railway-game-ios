@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark fukuoka-gas-holder-804614370: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "fukuoka-gas-holder-804614370" : {
+      "hash" : "4a660e27654e49dd",
+      "triangles" : 377
+    },
+    "fukuoka-gas-holder-804614370-far" : {
+      "hash" : "8b4c805d2d970c94",
+      "triangles" : 170
+    }
+  }
+}
