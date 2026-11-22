@@ -35,8 +35,8 @@ public enum WhatsNew {
             id: "2026-11-23-145",
             items: [
                 Line(
-                    english: "New landmarks: Sun Moon Lake's Ci'en Pagoda, Lalu Island and Wenwu Temple's front and rear halls, Taichung's opera house and Luce Chapel, Kaohsiung's Weiwuying, Tainan's Chihkan Tower.",
-                    chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
+                    english: "Fukuoka's pedestrian signal boxes are dark, like the real ones.",
+                    chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
                 ),
             ],
             fixes: []
