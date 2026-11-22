@@ -84,6 +84,11 @@ extension StationKitBuilder {
             japanStation(back: 7, far: far)
             return
         }
+        // Decision 929: in Finland, the studio's Finnish country station.
+        if finnish, Map3DFinlandStation.replaces(profile: station.profile, expansion: expansion) {
+            finlandStation(back: 7, far: far)
+            return
+        }
         let model = Map3DGenericStation.building(profile: station.profile, tier: station.tier)
         let depth = model == .halt ? Map3DGenericStation.haltDepth : Map3DGenericStation.bodyDepth
         let back: Float = 7, x = back + depth / 2
