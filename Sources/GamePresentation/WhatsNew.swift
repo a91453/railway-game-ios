@@ -39,7 +39,12 @@ public enum WhatsNew {
                     chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
                 ),
             ],
-            fixes: []
+            fixes: [
+                Line(
+                    english: "Fukuoka's water towers stand properly on the ground, on open legs.",
+                    chinese: "福岡給水塔的底部改正，好好站在地上。"
+                ),
+            ]
         ),
         // 144.
         Entry(
