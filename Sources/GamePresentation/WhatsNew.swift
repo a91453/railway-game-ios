@@ -47,6 +47,10 @@ public enum WhatsNew {
                     chinese: "平溪站與日南站畫成各自的木造站房。"
                 ),
                 Line(
+                    english: "Jingtong on the Pingxi Line and Checheng on the Jiji Line have timber stations modelled on the real ones.",
+                    chinese: "平溪線菁桐、集集線車埕換上照真實站房做的木造車站。"
+                ),
+                Line(
                     english: "Small stations on the Nordic map are yellow timber station houses.",
                     chinese: "北歐地圖的小站改成黃色的木造站房。"
                 ),

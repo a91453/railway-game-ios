@@ -39,6 +39,48 @@ enum Map3DRinanStation {
     ]
 }
 
+extension Map3DPalette {
+    /// Decision 932: the dark brown boards of a timber station's walls, the
+    /// second batch's Chiayi-style siding's colour
+    /// (`Map3DStationExteriorBatch2`), given a name so Checheng's walls can
+    /// use it (decision 891: a colour of the palette, not a new one).
+    static let timberSiding = Map3DColor.rgb(0x4E392F)
+}
+
+/// Decision 932: Jingtong's station, the Pingxi Line's terminus, from the
+/// local studio (`a91453/railway-assets-private-2`
+/// `game-art-previews/docs/art/tw-stations-jingtong-checheng-2026-11/revision-2`,
+/// #348; lessons in `docs/studio/lessons/tw-stations-jingtong-checheng.md`),
+/// in place of the Alishan line's `timber` recipe: white boarded walls
+/// under a dark grey tiled gable roof, a narrow brown awning along the
+/// front with five white lozenge boards above it (blocks of colour, no
+/// word on any), a lower open porch at one end, a lean-to gallery on white
+/// posts on the platform side, a red brick plinth.
+enum Map3DJingtongStation {
+    /// The mesh's palette, in the order given to `glb_to_swift.py`:
+    /// wallWhite, trim, roofTile, woodDark, brickBase, glazingDark, dark.
+    static let meshPalette: [UInt32] = [
+        Map3DPalette.tankWhite, Map3DPalette.tileWhite, Map3DPalette.arcade, Map3DPalette.cityRoofs[2].color,
+        Map3DContainerWagon.rust, Map3DDepotFacilities.glass, Map3DPalette.dark,
+    ]
+}
+
+/// Decision 932: Checheng's station, the Jiji Line's terminus, from the
+/// same studio ticket: a long house of dark brown boards under a red-brown
+/// tiled gable roof, a raised monitor roof with a louvred band along the
+/// middle of its ridge, a grey sheet-roofed gallery on a row of dark posts
+/// with braces on the platform side, a plain timber board under the eaves
+/// (no word on it).
+enum Map3DChechengStation {
+    /// The mesh's palette, in the order given to `glb_to_swift.py`:
+    /// timberWall, woodDark, roofTerracotta, metalRoof, concrete,
+    /// timberBoard, glazingDark, dark.
+    static let meshPalette: [UInt32] = [
+        Map3DPalette.timberSiding, Map3DPalette.cityRoofs[2].color, Map3DPalette.cityRoofs[5].color, Map3DPalette.steel,
+        Map3DPalette.concrete, Map3DPalette.timber, Map3DDepotFacilities.glass, Map3DPalette.dark,
+    ]
+}
+
 /// Decision 929: the real stations whose building is the studio's own
 /// model of it, by the catalog's id. The models' own space is the generic
 /// station's (decision 899): metres, +x along the platforms, +y towards
@@ -47,6 +89,9 @@ enum Map3DRinanStation {
 enum Map3DStudioStation: String, CaseIterable, Sendable {
     case pingxi = "station-tra_sched-a5dcd0a9"
     case rinan = "station-tra_sched-333125bf"
+    /// Decision 932.
+    case jingtong = "station-tra_sched-b2e8d7d9"
+    case checheng = "station-tra_sched-49f63912"
 
     /// How far behind the origin the platform side's clear line is.
     static let platformLine: Float = 6
@@ -55,6 +100,8 @@ enum Map3DStudioStation: String, CaseIterable, Sendable {
         switch self {
         case .pingxi: "station-pingxi"
         case .rinan: "station-rinan"
+        case .jingtong: "station-jingtong"
+        case .checheng: "station-checheng"
         }
     }
 
@@ -62,6 +109,8 @@ enum Map3DStudioStation: String, CaseIterable, Sendable {
         switch self {
         case .pingxi: Map3DPingxiStation.meshPalette
         case .rinan: Map3DRinanStation.meshPalette
+        case .jingtong: Map3DJingtongStation.meshPalette
+        case .checheng: Map3DChechengStation.meshPalette
         }
     }
 
@@ -71,6 +120,8 @@ enum Map3DStudioStation: String, CaseIterable, Sendable {
         let text: String? = switch self {
         case .pingxi: Map3DPingxiStation.encoded[name]
         case .rinan: Map3DRinanStation.encoded[name]
+        case .jingtong: Map3DJingtongStation.encoded[name]
+        case .checheng: Map3DChechengStation.encoded[name]
         }
         guard let text, let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { return nil }
         return Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette)
