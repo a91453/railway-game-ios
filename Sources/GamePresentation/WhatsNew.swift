@@ -30,6 +30,17 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 145.
+        Entry(
+            id: "2026-11-23-145",
+            items: [
+                Line(
+                    english: "Taipei's Dazhi has the Miramar Ferris wheel, and Tamsui its Fort San Domingo.",
+                    chinese: "台北大直多了美麗華摩天輪，淡水多了紅毛城。"
+                ),
+            ],
+            fixes: []
+        ),
         // 144.
         Entry(
             id: "2026-11-22-144",
