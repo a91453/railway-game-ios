@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-miramar-wheel: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-miramar-wheel" : {
+      "hash" : "804dadaea978940a",
+      "triangles" : 5844
+    },
+    "tw-miramar-wheel-far" : {
+      "hash" : "4d1f21d8f6838b8e",
+      "triangles" : 968
+    }
+  }
+}

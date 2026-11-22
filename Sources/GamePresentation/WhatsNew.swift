@@ -30,6 +30,57 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 145.
+        Entry(
+            id: "2026-11-23-145",
+            items: [
+                Line(
+                    english: "Fukuoka's pedestrian signal boxes are dark, like the real ones.",
+                    chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
+                ),
+                Line(
+                    english: "The Finnish night train has a double-deck seating car.",
+                    chinese: "芬蘭夜車多了一節雙層座車。"
+                ),
+                Line(
+                    english: "The Finnish night train has a restaurant car.",
+                    chinese: "芬蘭夜車多了一節餐車。"
+                ),
+                Line(
+                    english: "The EMU100 has its own 3D model.",
+                    chinese: "EMU100 自強號有自己的 3D 模型。"
+                ),
+                Line(
+                    english: "The garage has Hong Kong's Peak Tram car.",
+                    chinese: "車庫多了香港山頂纜車的車廂。"
+                ),
+                Line(
+                    english: "Monorail trains have a 3D model instead of a box.",
+                    chinese: "單軌列車有 3D 模型，不再是方塊。"
+                ),
+                Line(
+                    english: "Maglev trains have a 3D model instead of a box.",
+                    chinese: "磁浮列車有 3D 模型，不再是方塊。"
+                ),
+                Line(
+                    english: "Light monorail trains hang from their beam as a 3D model instead of a box.",
+                    chinese: "輕型單軌列車有懸吊式的 3D 模型，不再是方塊。"
+                ),
+                Line(
+                    english: "The Midsummer Formosa's steam locomotive is a new CT273 model.",
+                    chinese: "仲夏寶島號的蒸汽機車換成新的 CT273 模型。"
+                ),
+                Line(
+                    english: "Long ferry routes in Hong Kong are sailed by a catamaran.",
+                    chinese: "香港較長的渡輪航線改由雙體船行駛。"
+                ),
+                Line(
+                    english: "The Wulai cable car has its two cabins, one green and one red, passing each other.",
+                    chinese: "烏來纜車換成兩部對開的車廂，一綠一紅。"
+                ),
+            ],
+            fixes: []
+        ),
         // 144.
         Entry(
             id: "2026-11-22-144",
@@ -53,6 +104,10 @@ public enum WhatsNew {
                 Line(
                     english: "Changhua's Baguashan has its Great Buddha, and Kaohsiung's Lotus Pond its Dragon and Tiger Pagodas.",
                     chinese: "彰化八卦山多了大佛，高雄蓮池潭多了龍虎塔。"
+                ),
+                Line(
+                    english: "Taipei's Dazhi has the Miramar Ferris wheel, and Tamsui its Fort San Domingo.",
+                    chinese: "台北大直多了美麗華摩天輪，淡水多了紅毛城。"
                 ),
             ],
             fixes: [
