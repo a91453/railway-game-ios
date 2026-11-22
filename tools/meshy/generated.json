@@ -163,5 +163,221 @@
     "credits": 30,
     "raw_sha256": "f4c5363cea28dcd5889eff54a6d6363c579850e08a873c7bf9d3d3855aac40a5",
     "raw_bytes": 5059460
+  },
+  "bicycle": {
+    "note": "Decision 918. Made in the owner's batch meshy-batch-2026-10 (a91453/railway-assets-private, its generated.json's hq holds the prompts, each task's credits and times); copied from railway-assets-private-2 game-art-previews/docs/art/meshy-bicycles-2026-11/SOURCE.md. The game draws the local studio's rebuilt model (Map3DBicycle), which holds none of the raw file's triangles.",
+    "tasks": [
+      {
+        "id": "01a17bef-df4f-746b-a68f-1fc0b0b24f6c",
+        "type": "text-to-3d-preview",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a17bf0-89ca-75b4-8b01-ca99288b7708",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a17bf5-c537-7707-93a9-9ca93138deb1",
+        "type": "remesh",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 35,
+    "raw_sha256": "47326a68215f8cca25adf3c4e98769a7430734ef10f1c2af8bed0fddd4ffd07b",
+    "raw_bytes": null
+  },
+  "public-bike": {
+    "note": "Decision 918. Made in the owner's batch meshy-batch-2026-10 (a91453/railway-assets-private, its generated.json's hq holds the prompts, each task's credits and times); copied from railway-assets-private-2 game-art-previews/docs/art/meshy-bicycles-2026-11/SOURCE.md. The game draws the local studio's rebuilt model (Map3DBicycle), which holds none of the raw file's triangles.",
+    "tasks": [
+      {
+        "id": "01a17bf0-6a17-7041-a71e-0faab3294242",
+        "type": "text-to-3d-preview",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a17bf1-136b-7278-bf91-9815ed8e11d0",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a17bf5-c471-7799-a654-bbc31583bba3",
+        "type": "remesh",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 35,
+    "raw_sha256": "db0eb56d50ddad673295fe59aa2ca35e72ee1b24b0923730d16e380a6009382e",
+    "raw_bytes": null
+  },
+  "pedestrian-elderly": {
+    "note": "Decision 918. Generated on 2026-11-20 on the owner's plan; the raw file and the prompts are on the owner's Mac, not in a repository; copied from railway-assets-private-2 game-art-previews/docs/art/pedestrians-2026-11/SOURCE.md. The game draws the local studio's rebuilt figures (Map3DPedestrian).",
+    "tasks": [
+      {
+        "id": "01a1f79d-11e3-75b2-9c9f-cac4ae1464d9",
+        "type": "text-to-3d-preview",
+        "model_type": "standard",
+        "ai_model": "meshy-7.1",
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a1f79e-5dbb-76e3-b657-ff3eeef089bf",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "5c8900996f35fc46ba853fe03011c65e9f3df5021647bef985e9bb5dd680f254",
+    "raw_bytes": null
+  },
+  "pedestrian-traveller": {
+    "note": "Decision 918. Generated on 2026-11-20 on the owner's plan; the raw file and the prompts are on the owner's Mac, not in a repository; copied from railway-assets-private-2 game-art-previews/docs/art/pedestrians-2026-11/SOURCE.md. The game draws the local studio's rebuilt figures (Map3DPedestrian).",
+    "tasks": [
+      {
+        "id": "01a1f79d-1b17-7493-bb9d-c009fad4a644",
+        "type": "text-to-3d-preview",
+        "model_type": "standard",
+        "ai_model": "meshy-7.1",
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a1f7a1-7cf6-7752-ab8f-aaaa9ea5c652",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "59315511c8c3e127f5e52b5c4639fc229006aae29d0db649703fc783b0e81b65",
+    "raw_bytes": null
+  },
+  "pedestrian-office-worker": {
+    "note": "Decision 918. Generated on 2026-11-20 on the owner's plan; the raw file and the prompts are on the owner's Mac, not in a repository; copied from railway-assets-private-2 game-art-previews/docs/art/pedestrians-2026-11/SOURCE.md. The game draws the local studio's rebuilt figures (Map3DPedestrian).",
+    "tasks": [
+      {
+        "id": "01a1f7a1-a46f-75e1-8db2-abc4db74c2e7",
+        "type": "text-to-3d-preview",
+        "model_type": "standard",
+        "ai_model": "meshy-7.1",
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a1f7a2-7a1a-7055-8f20-3b8f3ad527b0",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "280b62f0f2d7855e2baf078eac72fcb19a9c92ae981501052cd5df9ad51db7b6",
+    "raw_bytes": null
+  },
+  "pedestrian-student": {
+    "note": "Decision 918. Generated on 2026-11-20 on the owner's plan; the raw file and the prompts are on the owner's Mac, not in a repository; copied from railway-assets-private-2 game-art-previews/docs/art/pedestrians-2026-11/SOURCE.md. The game draws the local studio's rebuilt figures (Map3DPedestrian).",
+    "tasks": [
+      {
+        "id": "01a1f7a1-c51a-752f-8284-93286992d840",
+        "type": "text-to-3d-preview",
+        "model_type": "standard",
+        "ai_model": "meshy-7.1",
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a1f7a2-9271-738d-ab1f-d2815858bb70",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "55b77e588e5739861fe9c0a13e135ca281821e431a0b67764fd5c67b9dd7fb17",
+    "raw_bytes": null
+  },
+  "pedestrian-umbrella": {
+    "note": "Decision 918. Generated on 2026-11-20 on the owner's plan; the raw file and the prompts are on the owner's Mac, not in a repository; copied from railway-assets-private-2 game-art-previews/docs/art/pedestrians-2026-11/SOURCE.md. The game draws the local studio's rebuilt figures (Map3DPedestrian).",
+    "tasks": [
+      {
+        "id": "01a1f7a1-ea3e-7006-ba69-690c39745800",
+        "type": "text-to-3d-preview",
+        "model_type": "standard",
+        "ai_model": "meshy-7.1",
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a1f7a2-b1f1-71f2-8cc4-e05be8df6072",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "48ff64904987b8db4eb25a204375e8504874c50e8c93fced6489fab583dca9cb",
+    "raw_bytes": null
   }
 }

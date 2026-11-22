@@ -1405,6 +1405,19 @@ extension Map3DScene.Builder {
                         place(model, at: out(width / 2 + pavement - 0.4, ahead: sheltered ? -3.6 : -3), forward: forward, clearing: 1.2,
                               tint: Map3DColor.rgb(0xFFFFFF), onDeck: road.bridgeLevel > 0)
                     }
+                    // Decision 918: bicycles parked by some of the stops,
+                    // further along the pavement than the shelter and
+                    // the vending machine: a row across a wide pavement
+                    // (their front wheels to the buildings), one along
+                    // the back of a narrow one.
+                    let outward = Map3DBaseMap.Point(x: left.x * side, z: left.z * side)
+                    for bicycle in Map3DBicycle.parked(pavement: pavement, publicBikes: streetLife.region.hasPublicBicycles,
+                                                       random: (map3DRandom(seed.0, seed.1, salt: 359), map3DRandom(seed.0, seed.1, salt: 360),
+                                                                map3DRandom(seed.0, seed.1, salt: 361))) {
+                        guard let model = Self.bicycleModels[bicycle.unit] else { continue }
+                        place(model, at: out(width / 2 + pavement - bicycle.fromBack, ahead: bicycle.ahead), forward: bicycle.across ? outward : along,
+                              clearing: 0.5, tint: Map3DColor.rgb(0xFFFFFF), onDeck: road.bridgeLevel > 0)
+                    }
                     if sheltered {
                         guard map3DRandom(seed.0, seed.1, salt: 356) < 0.4 else { continue }
                     }
@@ -1454,6 +1467,11 @@ extension Map3DScene.Builder {
     /// Decision 923: Japan's utility poles' and pedestrian signals' models
     /// in ``Map3DModelPack/standard``.
     static let japanModels: [Map3DJapanStreet.Unit: Int] = Dictionary(uniqueKeysWithValues: Map3DJapanStreet.Unit.allCases.compactMap { unit in
+        Map3DModelCatalog.standard.index(of: unit.rawValue).map { (unit, $0) }
+    })
+
+    /// Decision 918: the parked bicycles' models in ``Map3DModelPack/standard``.
+    static let bicycleModels: [Map3DBicycle.Unit: Int] = Dictionary(uniqueKeysWithValues: Map3DBicycle.Unit.allCases.compactMap { unit in
         Map3DModelCatalog.standard.index(of: unit.rawValue).map { (unit, $0) }
     })
 

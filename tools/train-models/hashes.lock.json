@@ -4756,6 +4756,54 @@
     "jp-bus-stop" : {
       "hash" : "70a16cb911c9d19b",
       "triangles" : 220
+    },
+    "bicycle" : {
+      "hash" : "9f83ff81febf9bfa",
+      "triangles" : 928
+    },
+    "public-bike" : {
+      "hash" : "5e58c5f874376aa9",
+      "triangles" : 924
+    },
+    "ped-office-standing" : {
+      "hash" : "98e79e1106eb65d4",
+      "triangles" : 292
+    },
+    "ped-office-walking" : {
+      "hash" : "d240f453175abc9",
+      "triangles" : 292
+    },
+    "ped-student-standing" : {
+      "hash" : "38e3bc7abd903560",
+      "triangles" : 292
+    },
+    "ped-student-walking" : {
+      "hash" : "c9c510de56823d0c",
+      "triangles" : 292
+    },
+    "ped-elderly-standing" : {
+      "hash" : "ab7e4cb49d589869",
+      "triangles" : 292
+    },
+    "ped-elderly-walking" : {
+      "hash" : "3519a91241f32a53",
+      "triangles" : 286
+    },
+    "ped-umbrella-standing" : {
+      "hash" : "2441c9da1a601ec4",
+      "triangles" : 348
+    },
+    "ped-umbrella-walking" : {
+      "hash" : "a05a8327f059471",
+      "triangles" : 356
+    },
+    "ped-traveller-standing" : {
+      "hash" : "8d0b651c7592fcf4",
+      "triangles" : 354
+    },
+    "ped-traveller-walking" : {
+      "hash" : "4b460878750289ff",
+      "triangles" : 346
     }
   }
 }
