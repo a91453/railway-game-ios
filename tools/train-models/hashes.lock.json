@@ -4720,6 +4720,42 @@
     "jp-signal-green" : {
       "hash" : "26b67f3c20fd4108",
       "triangles" : 162
+    },
+    "jp-pole" : {
+      "hash" : "937c28005023961",
+      "triangles" : 37
+    },
+    "jp-pole-transformer" : {
+      "hash" : "cb3dcf00d6494962",
+      "triangles" : 39
+    },
+    "jp-pole-transformers" : {
+      "hash" : "8e0ef6150ce50fc5",
+      "triangles" : 60
+    },
+    "jp-pole-plain" : {
+      "hash" : "5ca8c8aaf78694a",
+      "triangles" : 39
+    },
+    "jp-pole-lamp" : {
+      "hash" : "3b5a0b5c1da07f5",
+      "triangles" : 30
+    },
+    "jp-walk-stop" : {
+      "hash" : "3f21b81f67e949e0",
+      "triangles" : 286
+    },
+    "jp-walk-dark" : {
+      "hash" : "2c95d09cd53f8619",
+      "triangles" : 286
+    },
+    "jp-walk-walk" : {
+      "hash" : "6ef4c2b45a5bbb68",
+      "triangles" : 286
+    },
+    "jp-bus-stop" : {
+      "hash" : "70a16cb911c9d19b",
+      "triangles" : 220
     }
   }
 }

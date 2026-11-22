@@ -1370,16 +1370,19 @@ extension Map3DScene.Builder {
                     let seed = (Int32(truncatingIfNeeded: Int(((centre.x + east) * 2).rounded())), Int32(truncatingIfNeeded: Int(((centre.z + south) * 2).rounded())))
                     // Decision 846's later note: Finland's stop is its sign
                     // on a post by the kerb, with no shelter of Taiwan's.
-                    let finnish = markings.region.hasFinnishFurniture ? Self.finlandModels[.busStop] : nil
-                    let sheltered = pavement >= 2.5 && finnish == nil
-                    if let finnish {
-                        place(finnish, at: out(width / 2 + 0.45, ahead: -1.5), forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF),
+                    // Decision 923: Japan's, the sign alone on its post
+                    // by the kerb, as Fukuoka's stops are.
+                    let ownSign = markings.region.hasFinnishFurniture ? Self.finlandModels[.busStop]
+                        : markings.region.hasJapaneseFurniture ? Self.japanModels[.busStop] : nil
+                    let sheltered = pavement >= 2.5 && ownSign == nil
+                    if let ownSign {
+                        place(ownSign, at: out(width / 2 + 0.45, ahead: -1.5), forward: forward, clearing: 1, tint: Map3DColor.rgb(0xFFFFFF),
                               onDeck: road.bridgeLevel > 0)
                         // Decision 846's fourth later note: and its glass
                         // shelter beside the sign where the pavement is
                         // wide enough, open toward the road, its back at
                         // the pavement's back.
-                        if pavement >= Self.finnishShelterPavement, let shelter = Self.finlandModels[.shelter] {
+                        if markings.region.hasFinnishFurniture, pavement >= Self.finnishShelterPavement, let shelter = Self.finlandModels[.shelter] {
                             place(shelter, at: out(width / 2 + pavement - Self.finnishShelterBack, ahead: Self.finnishShelterAhead), forward: forward,
                                   clearing: 2.6, tint: Map3DColor.rgb(0xFFFFFF), onDeck: road.bridgeLevel > 0)
                         }
@@ -1448,6 +1451,12 @@ extension Map3DScene.Builder {
         Map3DModelCatalog.standard.index(of: Map3DJapanSignal.placedName(road)).map { (road, $0) }
     })
 
+    /// Decision 923: Japan's utility poles' and pedestrian signals' models
+    /// in ``Map3DModelPack/standard``.
+    static let japanModels: [Map3DJapanStreet.Unit: Int] = Dictionary(uniqueKeysWithValues: Map3DJapanStreet.Unit.allCases.compactMap { unit in
+        Map3DModelCatalog.standard.index(of: unit.rawValue).map { (unit, $0) }
+    })
+
     /// Decision 445: the pedestrian signals' models in ``Map3DModelPack/standard``.
     /// Decision 820: from ``Map3DModelCatalog``, not waiting for the pack.
     static let walkModels = Map3DPedestrianSignal.Models(index: Map3DModelCatalog.standard.index(of:))
@@ -1482,7 +1491,8 @@ extension Map3DScene.Builder {
     /// taken away, for what stands there.
     private mutating func clearStreetFurniture(at foot: Map3DPoint, within clearing: Float) {
         let key = key(of: foot)
-        let streetFurniture = Set([Map3DProp.tree, .lamp, .pole].compactMap { Self.propModels[$0] } + [Self.finlandModels[.lamp]].compactMap { $0 })
+        let streetFurniture = Set([Map3DProp.tree, .lamp, .pole].compactMap { Self.propModels[$0] } + [Self.finlandModels[.lamp]].compactMap { $0 }
+            + Map3DJapanStreet.poleMix.compactMap { Self.japanModels[$0.unit] })
         props[key] = props[key]?.filter { instance in
             guard streetFurniture.contains(instance.model) else { return true }
             let dx = instance.transform[12] - foot.x, dz = instance.transform[14] - foot.z
