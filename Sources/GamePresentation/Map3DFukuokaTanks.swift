@@ -14,9 +14,10 @@ enum Map3DFukuokaTanks {
     /// A gas holder's sphere and its legs: the factory tanks' white and
     /// the water tank's stand (the same slots the game's yard tanks use).
     static let gasPalette: [UInt32] = [Map3DPalette.tankWhite, Map3DPalette.tankStand]
-    /// A water tower's tank, its legs, catwalk and ladder, and the pale
-    /// panels round its legs.
-    static let waterPalette: [UInt32] = [Map3DPalette.steel, Map3DPalette.tankStand, Map3DPalette.concrete]
+    /// A water tower's tank, and its legs, braces, catwalk and ladder
+    /// (the bays between the legs are open cross braces, not panels:
+    /// decision 924's later note).
+    static let waterPalette: [UInt32] = [Map3DPalette.steel, Map3DPalette.tankStand]
 
     /// The model `name`'s near and far meshes under the landmark `id`'s
     /// names (one model stands in several places).
