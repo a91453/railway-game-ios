@@ -30,6 +30,17 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 145.
+        Entry(
+            id: "2026-11-23-145",
+            items: [
+                Line(
+                    english: "Fukuoka's pedestrian lights have dark housings, as the real ones do.",
+                    chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
+                ),
+            ],
+            fixes: []
+        ),
         // 144.
         Entry(
             id: "2026-11-22-144",
