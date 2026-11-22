@@ -31,5 +31,6 @@ extension Map3DLandmarkRegistry {
         Map3DFukuokaTanks.waterTower964502374,
         Map3DFukuokaTanks.waterTower1175768613,
         Map3DFukuokaTanks.waterTower1418044218,
+        Map3DHKObservationWheel.registration,
     ]
 }
