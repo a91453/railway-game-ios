@@ -42,6 +42,22 @@ public enum WhatsNew {
                     english: "New landmarks: Ci'en Pagoda, Lalu Island and the front and rear halls of Wenwu Temple at Sun Moon Lake, the National Taichung Theater and Luce Chapel in Taichung, Weiwuying in Kaohsiung and Chihkan Tower in Tainan.",
                     chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
                 ),
+                Line(
+                    english: "The high-speed stations at Miaoli, Changhua, Yunlin and Chiayi have their own buildings.",
+                    chinese: "高鐵苗栗、彰化、雲林、嘉義站有了自己的站房。"
+                ),
+                Line(
+                    english: "Pingxi and Rinan stations are drawn as their own timber station houses.",
+                    chinese: "平溪站與日南站畫成各自的木造站房。"
+                ),
+                Line(
+                    english: "Small stations on the Nordic map are yellow timber station houses.",
+                    chinese: "北歐地圖的小站改成黃色的木造站房。"
+                ),
+                Line(
+                    english: "Level crossings have barrier machines with striped arms and warning lights.",
+                    chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
+                ),
             ],
             fixes: []
         ),
