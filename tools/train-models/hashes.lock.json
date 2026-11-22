@@ -4742,15 +4742,15 @@
       "triangles" : 30
     },
     "jp-walk-stop" : {
-      "hash" : "3f21b81f67e949e0",
+      "hash" : "f7463bc3418584f0",
       "triangles" : 286
     },
     "jp-walk-dark" : {
-      "hash" : "2c95d09cd53f8619",
+      "hash" : "ba4c6a00b3c03249",
       "triangles" : 286
     },
     "jp-walk-walk" : {
-      "hash" : "6ef4c2b45a5bbb68",
+      "hash" : "585abda417b9f578",
       "triangles" : 286
     },
     "jp-bus-stop" : {

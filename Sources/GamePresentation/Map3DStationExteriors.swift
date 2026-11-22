@@ -109,16 +109,20 @@ extension Map3DStationExteriorBatch1 {
 enum Map3DExteriorStudy: Hashable, Sendable, CaseIterable {
     case batch1(Map3DStationExteriorBatch1.Station)
     case batch2(Map3DStationExteriorBatch2.Station)
+    /// Decision 929: the local studio's model of a high-speed station.
+    case studio(Map3DHSRStudioStation)
 
     typealias LevelOfDetail = Map3DStationExteriorBatch1.LevelOfDetail
 
     static let allCases: [Self] = Map3DStationExteriorBatch1.Station.allCases.map(Self.batch1)
         + Map3DStationExteriorBatch2.Station.allCases.map(Self.batch2)
+        + Map3DHSRStudioStation.allCases.map(Self.studio)
 
     var rawValue: String {
         switch self {
         case .batch1(let station): station.rawValue
         case .batch2(let station): "b2-" + station.rawValue
+        case .studio(let station): "studio-" + station.rawValue
         }
     }
 
@@ -147,6 +151,7 @@ enum Map3DExteriorStudy: Hashable, Sendable, CaseIterable {
             // The second batch keeps (longitude, latitude).
             let (longitude, latitude) = Map3DStationExteriorBatch2.origin(of: station)
             return (latitude, longitude)
+        case .studio(let station): return station.origin
         }
     }
 
@@ -158,6 +163,7 @@ enum Map3DExteriorStudy: Hashable, Sendable, CaseIterable {
     var outlines: [[(Float, Float)]] {
         switch self {
         case .batch1(let station): return Map3DStationExteriorBatch1.outlines(of: station)
+        case .studio(let station): return station.outlines
         case .batch2(let station):
             typealias B = Map3DStationExteriorBatch2
             switch station {
@@ -188,6 +194,7 @@ enum Map3DExteriorStudy: Hashable, Sendable, CaseIterable {
         switch self {
         case .batch1(let station): Map3DStationExteriorBatch1.mesh(for: station, detail: detail)
         case .batch2(let station): Map3DStationExteriorBatch2.mesh(for: station, detail: detail == .near ? .near : .far)
+        case .studio(let station): station.mesh(far: detail != .near)
         }
     }
 
@@ -199,11 +206,13 @@ enum Map3DExteriorStudy: Hashable, Sendable, CaseIterable {
     func sceneMesh(detail: LevelOfDetail) -> Map3DMesh {
         switch self {
         case .batch1(let station): return Map3DStationExteriorBatch1.sceneMesh(for: station, detail: detail)
-        case .batch2:
+        case .batch2, .studio:
+            // Decision 929: a studio model's lamp band glows as it is.
+            let glows = if case .studio = self { true } else { false }
             let study = mesh(detail: detail)
             let vertices = study.vertices.map { v in
                 let position = Map3DPoint(v.x, v.y, -v.z), normal = Map3DPoint(v.nx, v.ny, -v.nz)
-                let layer = v.layer != Map3DVertex.glowing ? v.layer : abs(normal.y) < 0.55 ? Map3DVertex.floodlit : Map3DVertex.plain
+                let layer = v.layer != Map3DVertex.glowing || glows ? v.layer : abs(normal.y) < 0.55 ? Map3DVertex.floodlit : Map3DVertex.plain
                 return Map3DVertex(position, normal: normal, color: v.color, u: v.u, v: v.v, layer: layer)
             }
             var indices: [UInt32] = []
