@@ -17,9 +17,10 @@ import Foundation
 ///   the model's left (the road, as ``Map3DProp/lamp``'s).
 /// - The pedestrian signals were modelled by the local studio from
 ///   photographs (`a91453/railway-assets-private-2`
-///   `game-art-previews/docs/art/jp-street-signals-2026-11/revision-1`)
+///   `game-art-previews/docs/art/jp-street-signals-2026-11/revision-2`,
+///   whose head is dark as Japan's are; the first round's was pale)
 ///   and written here by `tools/train-models/glb_to_swift.py`
-///   (``encoded``): a slim post 2.95 m tall and a pale head of two
+///   (``encoded``): a slim post 2.95 m tall and a dark head of two
 ///   squares, the red figure standing over the green one walking, each
 ///   under its hood, no countdown. Its face looks toward its left (as
 ///   ``Map3DPedestrianSignal``'s), as the studio drew it.
@@ -67,7 +68,9 @@ public enum Map3DJapanStreet {
     /// `glb_to_swift.py --materials` gave them: the studio's material
     /// names steel, tankSteel, dark, red_lit, red_unlit, green_lit,
     /// green_unlit, signWhite, signRed, concrete. The galvanised and pale
-    /// greys, the signals' housing for the faces
+    /// greys (the pale one is the bus stop's alone since the pedestrian
+    /// signals' second round, and keeps its place so the later ones keep
+    /// theirs), the signals' housing for the heads and the faces
     /// (``Map3DProp/signalHousing``) and the signals' red and green
     /// (``Map3DProp/signalLights``), as Finland's (decision 846); the bus
     /// stop's sign white (``Map3DPalette/sidewalk``), route red
