@@ -46,6 +46,14 @@ public enum WhatsNew {
                     english: "Hong Kong: the Hong Kong Palace Museum stands by the harbour in West Kowloon, wider at each storey up.",
                     chinese: "香港西九文化區多了香港故宮文化博物館：在海邊，一層比一層往外挑。"
                 ),
+                Line(
+                    english: "Bicycles are parked by some bus stops; in Taiwan, rows of orange public bicycles too.",
+                    chinese: "有些公車站旁停著腳踏車；台灣還看得到一排橘色的公共自行車。"
+                ),
+                Line(
+                    english: "People seen close up now differ: office workers, students, elders, travellers with suitcases, someone under an umbrella.",
+                    chinese: "近看街上與月台的人不再都一樣：有上班族、學生、長者、拉行李的旅客和撐傘的人。"
+                ),
             ],
             fixes: []
         ),
