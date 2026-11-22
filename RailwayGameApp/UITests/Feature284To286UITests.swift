@@ -141,9 +141,12 @@ final class Feature284To286UITests: XCTestCase {
     }
 
     private func catalogHeading(_ name: String) -> XCUIElement {
-        // The showroom and thumbnails use Train.typeText: the name is
-        // followed by capacity and doors, rather than being the whole label.
-        app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "\(name) ·")).firstMatch
+        // TRAIN-IDENTITY (#2576) made the showroom's board the name alone
+        // (what a car carries is in the figures under the train), so it is
+        // found by its own identifier and the whole name (REVIEW-L32: the
+        // full lane of main 4915b01, run 44960546431, still looked for
+        // the name followed by " ·").
+        app.staticTexts.matching(NSPredicate(format: "identifier == %@ AND label == %@", "catalog.name", name)).firstMatch
     }
 
     private func checkCatalogType(_ name: String) {
