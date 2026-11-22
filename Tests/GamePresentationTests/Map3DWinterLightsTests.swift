@@ -201,7 +201,11 @@ final class Map3DWinterLightsTests: XCTestCase {
         let japan = Map3DJapanSignal.Unit.allCases.map(\.rawValue)
         let firstJapan = firstFinland + finland.count + tits.count
         XCTAssertEqual(Array(names[firstJapan..<firstJapan + japan.count]), japan)
-        XCTAssertEqual(names[firstJapan + japan.count], Map3DLowFloorBus.routeModel().name)
+        // Decision 923: then Japan's utility poles and pedestrian signals.
+        let japanStreet = Map3DJapanStreet.Unit.allCases.map(\.rawValue)
+        let firstJapanStreet = firstJapan + japan.count
+        XCTAssertEqual(Array(names[firstJapanStreet..<firstJapanStreet + japanStreet.count]), japanStreet)
+        XCTAssertEqual(names[firstJapanStreet + japanStreet.count], Map3DLowFloorBus.routeModel().name)
         for decor in Map3DWinterDecor.allCases {
             XCTAssertEqual(pack.models[first + decor.index].triangleCount, try XCTUnwrap(decor.model).triangleCount)
         }

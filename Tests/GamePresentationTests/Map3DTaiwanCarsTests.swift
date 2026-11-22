@@ -82,6 +82,7 @@ final class Map3DTaiwanCarsTests: XCTestCase {
         XCTAssertEqual(standard.index(of: Map3DStreetModel.yellowTaxi.modelName), sleigh + 2)
         let between = Map3DReindeerHerd.drawn.count + Map3DPedestrianSignal.plainDrawn.count + Map3DFinlandStreet.Unit.allCases.count
             + Map3DYellowTit.drawn.count + Map3DJapanSignal.Unit.allCases.count
+            + Map3DJapanStreet.Unit.allCases.count
         XCTAssertEqual(standard.models[sleigh + 3 + between].name, Map3DLowFloorBus.routeModel().name)
     }
 

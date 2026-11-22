@@ -203,6 +203,10 @@ final class Map3DModelPackLockTests: XCTestCase {
         // the route bus; left out with them (the whole pack's names and
         // hashes and the windows' indices move by 3, the rest as before).
         let japan = Set(Map3DJapanSignal.drawn.map(\.name))
+        // Decision 923: Japan's utility poles, pedestrian signals and bus
+        // stop after them, before the route bus; left out with them (the
+        // whole pack's names and hashes and the windows' indices move by 9).
+        let japanStreet = Set(Map3DJapanStreet.drawn.map(\.name))
         // Decision 767: the coal bunker's stand-in after the other scenery
         // props: every model after it, the cars' windows and the head
         // signs move by one, so the digests are made again; the models
@@ -218,7 +222,7 @@ final class Map3DModelPackLockTests: XCTestCase {
         let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) && !coach.contains($0.name) && !hk.contains($0.name)
             && !figures.contains($0.name) && !winter.contains($0.name) && !santa.contains($0.name) && !taiwanCars.contains($0.name) && !herd.contains($0.name)
             && !plain.contains($0.name) && !finland.contains($0.name) && !tits.contains($0.name)
-            && !japan.contains($0.name) }
+            && !japan.contains($0.name) && !japanStreet.contains($0.name) }
         XCTAssertEqual(Self.digest(before.map(\.name)), "45d52b8e433922ec")
         // Decision 891: the red commuter car's body and band in the
         // palette's colours (its three models in `hashes.lock.json`).
@@ -248,6 +252,9 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Array(pack.models[firstTit..<firstTit + tits.count].map(\.name)), Map3DYellowTit.Pose.allCases.map(\.rawValue))
         let firstJapan = firstTit + tits.count
         XCTAssertEqual(Array(pack.models[firstJapan..<firstJapan + japan.count].map(\.name)), Map3DJapanSignal.Unit.allCases.map(\.rawValue))
+        let firstJapanStreet = firstJapan + japan.count
+        XCTAssertEqual(Array(pack.models[firstJapanStreet..<firstJapanStreet + japanStreet.count].map(\.name)),
+                       Map3DJapanStreet.Unit.allCases.map(\.rawValue))
         // Decision 840: the reindeer after Taiwan's cars (the whole
         // pack's names, hashes and lamps' window indices move).
         // Decision 846: and the pedestrian signals with no countdown's box
@@ -258,13 +265,14 @@ final class Map3DModelPackLockTests: XCTestCase {
         // Decision 897: and the Ngong Ping cabins' four after the Sun
         // Moon Lake cabins (every model after them moves by 4).
         // Decision 921: and Japan's traffic signals after the yellow tit.
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "943bbc22a1cd8a43")
+        // Decision 923: and Japan's poles, pedestrian signals and bus stop.
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "79fc75aa9a61b581")
         // Decision 840: and the studio's sleigh in the stand-in's place
         // (the same name and order; its model is new, `hashes.lock.json`);
         // its later amendment: dark brown antlers, the sleigh's team brown.
         // Decision 897: every cabin and hall lit after dark (their new
         // hashes in `hashes.lock.json`).
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "ceca6dd7b95386f4")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "9dd077422aec2895")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -278,11 +286,12 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(lamps(movingBack: 0).count, 373)
         XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count + winter.count
                                                           + santa.count + taiwanCars.count + herd.count + plain.count + finland.count + tits.count
-                                                          + japan.count)), "5a0aba989e6893bf")
+                                                          + japan.count + japanStreet.count)), "5a0aba989e6893bf")
         // Decision 889: the windows after the cable car move by the
         // yellow tit's 4; decision 897: and by the Ngong Ping cabins' 4;
-        // decision 921: and by Japan's traffic signals' 3.
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "2c75c5cd3876a1ea")
+        // decision 921: and by Japan's traffic signals' 3; decision 923: and
+        // by Japan's street furniture's 9.
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "ae2665f8c10d3271")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "b693d447389ff604")
     }
 

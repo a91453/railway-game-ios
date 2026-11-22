@@ -105,9 +105,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // Kong's ferry and its two piers, near and far, after the ferries
         // (6 models, 34,944 vertices more, 1.4 MB a copy). Decision 921:
         // Japan's traffic signals after the yellow tit (3 models, 1,458
-        // vertices more, 58 KB a copy).
-        XCTAssertEqual(models.count, 945)
-        XCTAssertEqual(vertices, 6_846_873)
+        // vertices more, 58 KB a copy). Decision 923: Japan's utility poles,
+        // pedestrian signals and bus stop after them (9 models, 3,849
+        // vertices more, 154 KB a copy).
+        XCTAssertEqual(models.count, 954)
+        XCTAssertEqual(vertices, 6_850_722)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 
