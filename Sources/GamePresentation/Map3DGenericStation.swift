@@ -79,6 +79,11 @@ extension StationKitBuilder {
     /// studio's models, its back at x 7 (as the boxes before it), and an
     /// expanded one's wings either side and its front canopy.
     mutating func genericHouse(_ station: Map3DStationKit.Station, expansion: StationExpansion?, far: Bool = false) {
+        // Decision 922: in Japan, the earlier version's wooden station.
+        if japanese, Map3DJapanStation.replaces(profile: station.profile, expansion: expansion) {
+            japanStation(back: 7, far: far)
+            return
+        }
         let model = Map3DGenericStation.building(profile: station.profile, tier: station.tier)
         let depth = model == .halt ? Map3DGenericStation.haltDepth : Map3DGenericStation.bodyDepth
         let back: Float = 7, x = back + depth / 2
