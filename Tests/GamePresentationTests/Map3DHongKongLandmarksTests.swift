@@ -77,11 +77,17 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         var central = builder()
         let names = central.addHongKongLandmarks(frame: frame)
         let built = Set(names.compactMap(Map3DHongKongLandmark.init(rawValue:)))
-        XCTAssertEqual(built.count, names.count, "no registered landmark in Hong Kong: \(names)")
+        // Decision 925: the Observation Wheel, registered, stands on the
+        // Central waterfront within the scene too.
+        let registered = names.compactMap(Map3DLandmarkRegistry.registration)
+        XCTAssertEqual(Set(registered.map(\.id)), ["hk-observation-wheel"], "\(names)")
+        XCTAssertEqual(built.count + registered.count, names.count, "\(names)")
         XCTAssertTrue(built.isSuperset(of: [.twoIFC, .bankOfChinaTower, .cheungKongCenter, .hsbcMainBuilding, .theCenter, .centralPlaza, .conventionCentre]), "\(built)")
         let triangles = { (meshes: [Map3DScene.ChunkKey: Map3DMesh]) in meshes.values.reduce(0) { $0 + $1.indices.count / 3 } }
-        XCTAssertEqual(triangles(central.nearMeshes), built.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })
-        XCTAssertEqual(triangles(central.farMeshes), built.reduce(0) { $0 + $1.model(full: false).indices.count / 3 })
+        XCTAssertEqual(triangles(central.nearMeshes), built.reduce(0) { $0 + $1.model(full: true).indices.count / 3 }
+            + registered.reduce(0) { $0 + $1.model(full: true).indices.count / 3 })
+        XCTAssertEqual(triangles(central.farMeshes), built.reduce(0) { $0 + $1.model(full: false).indices.count / 3 }
+            + registered.reduce(0) { $0 + $1.model(full: false).indices.count / 3 })
         let middle = central.point(x: place.x, y: place.y, height: 0)
         XCTAssertTrue(central.underLandmark(middle))
         XCTAssertFalse(central.underLandmark(middle + Map3DPoint(0, 0, 120)))

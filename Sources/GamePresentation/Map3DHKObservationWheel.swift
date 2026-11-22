@@ -15,7 +15,7 @@ enum Map3DHKObservationWheel {
         // white (rim, spokes, legs, cabin bands), hub, cabinRed, glass
         // (the cabins' windows), base (the deck), dark (the hangers),
         // rim_lit (the warm band inside the rim).
-        palette: [Map3DPalette.tileWhite, Map3DOverheadLine.mastSteel, Map3DPalette.mtrRed, Map3DPalette.glazing,
+        palette: [Map3DPalette.tileWhite, Map3DPalette.mastSteel, Map3DPalette.mtrRed, Map3DPalette.glazing,
                   Map3DPalette.granite, Map3DPalette.dark, Map3DPalette.tunnelLamp],
         encoded: encoded,
         // The A-legs' feet 25.6 m apart east to west, the wheel 55.1 m
