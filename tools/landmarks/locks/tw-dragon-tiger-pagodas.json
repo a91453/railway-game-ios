@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-dragon-tiger-pagodas: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-dragon-tiger-pagodas" : {
+      "hash" : "ad02e732705b18ae",
+      "triangles" : 5660
+    },
+    "tw-dragon-tiger-pagodas-far" : {
+      "hash" : "9e9f0a4c056dfe8f",
+      "triangles" : 1332
+    }
+  }
+}

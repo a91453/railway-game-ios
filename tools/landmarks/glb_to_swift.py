@@ -152,9 +152,10 @@ def primitives(path, gltf, nodes):
 
 
 def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 1), unsigned_z=True, centre=False, turn=0.0,
-           lift=0.0):
+           lift=0.0, mid=None):
     """The GLB at `path` encoded; its vertex and triangle counts, and its
-    bounds in metres."""
+    bounds in metres. With `centre`, `mid` (centimetres east and north) is
+    the shift to take off rather than this model's own footprint middle."""
     aliases = aliases or {}
     gltf, blob = read_glb(path)
     keys, points, triangles = {}, [], []
@@ -198,7 +199,8 @@ def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 
     if centre:
         # Put the middle of the model's footprint at the origin (the studio's
         # origin is its outline's centroid); the shift is printed.
-        mid = tuple((max(p[k] for p in points) + min(p[k] for p in points)) // 2 for k in (0, 1))
+        if mid is None:
+            mid = tuple((max(p[k] for p in points) + min(p[k] for p in points)) // 2 for k in (0, 1))
         print(f"{path}: footprint middle {mid[0] / 100:.2f} m east, {mid[1] / 100:.2f} m north of the GLB's origin")
         points = [(x - mid[0], y - mid[1], z) for x, y, z in points]
     if len(points) > 65535 or len(triangles) > 65535:
@@ -262,7 +264,7 @@ def main():
     parser.add_argument("--enum", help="the registered landmark's Swift enum")
     parser.add_argument("--materials", help="material names in palette order, comma-separated")
     parser.add_argument("--source", help="where the GLBs are, for the file's first line")
-    parser.add_argument("--centre", action="store_true", help="move the footprint's middle to the origin")
+    parser.add_argument("--centre", action="store_true", help="move the near (first) model's footprint middle to the origin, every model by the same")
     parser.add_argument("--turn", type=float, default=0.0,
                         help="turn the models this many degrees anticlockwise, seen from above, as OpenStreetMap lays them")
     parser.add_argument("--raise", dest="lift", type=float, default=0.0,
@@ -270,6 +272,9 @@ def main():
                              "hillside) stands at 0; the registration's `sink` lowers it again")
     parser.add_argument("--legacy", choices=sorted(LEGACY), help="write a landmark file made before the registry")
     parser.add_argument("--assets", help="--legacy sunmoon: the folder of the Sun Moon Lake GLBs")
+    parser.add_argument("--nodes", action="store_true",
+                        help="apply each node's translation, rotation and scale (one mesh placed twice, as the Dragon and "
+                             "Tiger Pagodas' two towers), rather than refuse a transformed node")
     parser.add_argument("--allow-ground-plate", action="store_true", help="a level plate beyond the body belongs to the model")
     parser.add_argument("glbs", nargs="*")
     a = parser.parse_args()
@@ -295,8 +300,15 @@ def main():
         raise SystemExit("a registered landmark needs --enum, --materials, --source and its GLBs")
     materials = a.materials.split(",")
     models = []
+    # Decision 927: every model is moved by the first (near) model's
+    # footprint middle, so a far model smaller than the near one (the
+    # Dragon and Tiger Pagodas' has no zigzag bridge) stays where it is.
+    mid = None
     for path in a.glbs:
-        data, v, t, _, _ = encode(path, materials, centre=a.centre, turn=a.turn, lift=a.lift)
+        if a.centre and mid is None:
+            _, _, _, low, high = encode(path, materials, nodes=a.nodes, turn=a.turn, lift=a.lift)
+            mid = tuple((round(high[k] * 100) + round(low[k] * 100)) // 2 for k in (0, 1))
+        data, v, t, _, _ = encode(path, materials, nodes=a.nodes, centre=a.centre, turn=a.turn, lift=a.lift, mid=mid)
         name = os.path.splitext(os.path.basename(path))[0]
         ground_plate.check(data, name, allow=a.allow_ground_plate)
         print(f"{name}: {v} vertices, {t} triangles, {len(data)} bytes")
