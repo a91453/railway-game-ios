@@ -54,6 +54,10 @@ public enum WhatsNew {
                     english: "Changhua's Baguashan has its Great Buddha, and Kaohsiung's Lotus Pond its Dragon and Tiger Pagodas.",
                     chinese: "彰化八卦山多了大佛，高雄蓮池潭多了龍虎塔。"
                 ),
+                Line(
+                    english: "Taipei's Dazhi has the Miramar Ferris wheel, and Tamsui its Fort San Domingo.",
+                    chinese: "台北大直多了美麗華摩天輪，淡水多了紅毛城。"
+                ),
             ],
             fixes: [
                 Line(

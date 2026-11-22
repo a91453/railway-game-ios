@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-fort-san-domingo: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-fort-san-domingo" : {
+      "hash" : "0034c992451db942",
+      "triangles" : 1556
+    },
+    "tw-fort-san-domingo-far" : {
+      "hash" : "8c1053492f4facfc",
+      "triangles" : 304
+    }
+  }
+}
