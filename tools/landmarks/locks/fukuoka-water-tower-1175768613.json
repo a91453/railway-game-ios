@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark fukuoka-water-tower-1175768613: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "fukuoka-water-tower-1175768613" : {
+      "hash" : "99d41eba3db67f1c",
+      "triangles" : 410
+    },
+    "fukuoka-water-tower-1175768613-far" : {
+      "hash" : "89005b2a0275b2b8",
+      "triangles" : 204
+    }
+  }
+}
