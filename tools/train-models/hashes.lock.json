@@ -1901,6 +1901,10 @@
       "hash" : "5334d881abcefe8f",
       "triangles" : 356
     },
+    "light-set-SUMMER-head" : {
+      "hash" : "167c6d891fb380d",
+      "triangles" : 32
+    },
     "light-set-SUMMER-car" : {
       "hash" : "2d6cad0d4d66cb7",
       "triangles" : 836
@@ -3198,32 +3202,32 @@
       "triangles" : 6476
     },
     "set-SUMMER-head" : {
-      "hash" : "c4b286e28d60aadf",
-      "triangles" : 10092
+      "hash" : "c28ba869775b9dad",
+      "triangles" : 5370
     },
     "set-SUMMER-tail" : {
       "hash" : "ac77eb322d524d1a",
       "triangles" : 6500
     },
     "set-SUMMER-tender" : {
-      "hash" : "8154ea47f3dba6ea",
-      "triangles" : 4000
+      "hash" : "392b7ba12743f298",
+      "triangles" : 2044
     },
     "set-SUMMERFar-car" : {
       "hash" : "4897f0f5bae9636a",
       "triangles" : 4008
     },
     "set-SUMMERFar-head" : {
-      "hash" : "3fa19398045420d3",
-      "triangles" : 10092
+      "hash" : "eb9d1b617b7db867",
+      "triangles" : 1654
     },
     "set-SUMMERFar-tail" : {
       "hash" : "ef4c9712a6fa04ed",
       "triangles" : 4032
     },
     "set-SUMMERFar-tender" : {
-      "hash" : "be29b5ea75e0c329",
-      "triangles" : 4000
+      "hash" : "fc03cacaedad38de",
+      "triangles" : 664
     },
     "set-taichungGreen-head" : {
       "hash" : "6233fc09ae3711ed",
