@@ -116,21 +116,24 @@ final class Map3DHongKongStationTests: XCTestCase {
     }
 
     /// The footbridge head's opening is in the platform-side wall at the
-    /// studio's place: a dark plug a tenth of a metre inside it, 2.4 m
-    /// wide, its floor 6.5 m and its head 9 m above the model's ground.
+    /// studio's place: dark from the wall's face to a tenth of a metre
+    /// inside it, 2.4 m wide, its floor 6.5 m and its head 9 m above the
+    /// model's ground (the plug behind the frame is 5 cm larger all round).
     func testTheFootbridgeOpening() throws {
         let centres: [Map3DGenericStation.Model: Float] = [.oneFloor: -9.7, .twoFloor: 13.4, .halt: 0]
         for (kind, centre) in centres {
             let model = try XCTUnwrap(Map3DHongKongStation.model(kind))
             let wall: Float = kind == .halt ? 3 : 6
             let plug = model.vertices.filter {
-                $0.color == Map3DPalette.dark && abs($0.y - (wall - 0.1)) < 0.005 && abs($0.x - centre) < 1.21 && $0.z > 6.4 && $0.z < 9.1
+                $0.color == Map3DPalette.dark && $0.y > wall - 0.11 && $0.y < wall + 0.005
+                    && abs($0.x - centre) < 1.26 && $0.z > 6.4 && $0.z < 9.05
             }
             XCTAssertFalse(plug.isEmpty, kind.rawValue)
-            XCTAssertEqual(plug.map(\.x).min() ?? 0, centre - 1.2, accuracy: 0.02, kind.rawValue)
-            XCTAssertEqual(plug.map(\.x).max() ?? 0, centre + 1.2, accuracy: 0.02, kind.rawValue)
-            XCTAssertEqual(plug.map(\.z).min() ?? 0, 6.5, accuracy: 0.02, kind.rawValue)
-            XCTAssertEqual(plug.map(\.z).max() ?? 0, 9, accuracy: 0.02, kind.rawValue)
+            let left = plug.map(\.x).min() ?? 0, right = plug.map(\.x).max() ?? 0
+            XCTAssertEqual((left + right) / 2, centre, accuracy: 0.02, kind.rawValue)
+            XCTAssertEqual(right - left, 2.45, accuracy: 0.06, kind.rawValue)
+            XCTAssertEqual(plug.map(\.z).min() ?? 0, 6.5, accuracy: 0.06, kind.rawValue)
+            XCTAssertEqual(plug.map(\.z).max() ?? 0, 9, accuracy: 0.05, kind.rawValue)
         }
     }
 }
