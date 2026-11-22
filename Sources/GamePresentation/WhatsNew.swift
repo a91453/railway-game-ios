@@ -30,6 +30,17 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 145.
+        Entry(
+            id: "2026-11-23-145",
+            items: [
+                Line(
+                    english: "Fukuoka's pedestrian signal boxes are dark, like the real ones.",
+                    chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
+                ),
+            ],
+            fixes: []
+        ),
         // 144.
         Entry(
             id: "2026-11-22-144",
@@ -53,6 +64,10 @@ public enum WhatsNew {
                 Line(
                     english: "Changhua's Baguashan has its Great Buddha, and Kaohsiung's Lotus Pond its Dragon and Tiger Pagodas.",
                     chinese: "彰化八卦山多了大佛，高雄蓮池潭多了龍虎塔。"
+                ),
+                Line(
+                    english: "Taipei's Dazhi has the Miramar Ferris wheel, and Tamsui its Fort San Domingo.",
+                    chinese: "台北大直多了美麗華摩天輪，淡水多了紅毛城。"
                 ),
             ],
             fixes: [
