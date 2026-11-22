@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-baguashan-buddha: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-baguashan-buddha" : {
+      "hash" : "e684211b3b3314ba",
+      "triangles" : 2982
+    },
+    "tw-baguashan-buddha-far" : {
+      "hash" : "7c42e05b12e75ba7",
+      "triangles" : 1482
+    }
+  }
+}

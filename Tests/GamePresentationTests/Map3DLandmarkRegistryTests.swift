@@ -50,12 +50,20 @@ final class Map3DLandmarkRegistryTests: XCTestCase {
                 XCTAssertFalse(model.vertices.isEmpty, "\(id)")
                 guard !model.vertices.isEmpty else { continue }
                 let xs = model.vertices.map(\.x), ys = model.vertices.map(\.y), zs = model.vertices.map(\.z)
-                XCTAssertEqual(xs.max()! - xs.min()!, landmark.size.x, accuracy: 0.5, "\(id) east")
-                XCTAssertEqual(ys.max()! - ys.min()!, landmark.size.y, accuracy: 0.5, "\(id) north")
                 XCTAssertEqual(zs.max()!, landmark.size.z, accuracy: 0.5, "\(id) height")
                 XCTAssertEqual(zs.min()!, 0, accuracy: 0.01, "\(id) foot")
-                XCTAssertEqual(abs(xs.max()! + xs.min()!) / 2, 0, accuracy: 0.5, "\(id) centred east")
-                XCTAssertEqual(abs(ys.max()! + ys.min()!) / 2, 0, accuracy: 0.5, "\(id) centred north")
+                if model.full {
+                    XCTAssertEqual(xs.max()! - xs.min()!, landmark.size.x, accuracy: 0.5, "\(id) east")
+                    XCTAssertEqual(ys.max()! - ys.min()!, landmark.size.y, accuracy: 0.5, "\(id) north")
+                    XCTAssertEqual(abs(xs.max()! + xs.min()!) / 2, 0, accuracy: 0.5, "\(id) centred east")
+                    XCTAssertEqual(abs(ys.max()! + ys.min()!) / 2, 0, accuracy: 0.5, "\(id) centred north")
+                } else {
+                    // Decision 927: the far model may leave out a low part
+                    // (the Dragon and Tiger Pagodas' zigzag bridge), so it
+                    // stands within the near one's footprint, not over it.
+                    let half = (x: landmark.size.x / 2 + 0.5, y: landmark.size.y / 2 + 0.5)
+                    XCTAssertTrue(xs.allSatisfy { abs($0) <= half.x } && ys.allSatisfy { abs($0) <= half.y }, "\(id) far within near")
+                }
             }
             XCTAssertLessThanOrEqual(near.indices.count / 3, 15_000, "\(id)")
             XCTAssertLessThanOrEqual(far.indices.count * 2, near.indices.count + 3, "\(id) far")
