@@ -51,7 +51,7 @@ final class Map3DFukuokaTanksTests: XCTestCase {
                 var onTheGround = 0
                 for start in stride(from: 0, to: mesh.indices.count, by: 3) {
                     let corners = (0..<3).map { mesh.vertices[Int(mesh.indices[start + $0])] }
-                    guard corners.allSatisfy({ $0.z < 0.55 * height }) else { continue }
+                    guard corners.allSatisfy({ $0.z < 0.6 * height }) else { continue }
                     XCTAssertTrue(corners.allSatisfy { $0.color == Map3DPalette.tankStand }, "\(tower.id): a pale face under the catwalk")
                     let (a, b, c) = (corners[0], corners[1], corners[2])
                     let u = Map3DPoint(b.x - a.x, b.y - a.y, b.z - a.z), v = Map3DPoint(c.x - a.x, c.y - a.y, c.z - a.z)
