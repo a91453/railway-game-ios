@@ -272,7 +272,9 @@ final class Map3DModelPackLockTests: XCTestCase {
         // its later amendment: dark brown antlers, the sleigh's team brown.
         // Decision 897: every cabin and hall lit after dark (their new
         // hashes in `hashes.lock.json`).
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "9dd077422aec2895")
+        // Decision 923's later note: Japan's pedestrian signals' heads
+        // dark (the studio's second round; the same triangles).
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "89d6808b145c9c1b")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
