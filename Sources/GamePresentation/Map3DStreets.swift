@@ -540,6 +540,10 @@ extension Map3DScene.Builder {
                 // A barrier on that side: a striped post and its boom,
                 // raised.
                 guard let ground = feet[end] else { continue }
+                // Decision 929: the studio's warning post and boom, its
+                // lamps towards the way in, its boom's reach over the
+                // street; decision 263's boxes if it does not decode.
+                if Map3DCrossingGate.add(to: &mesh, at: ground, reach: across * end, facing: along * end) { continue }
                 mesh.addBox(base: ground, forward: along, length: 0.3, width: 0.3, height: 1.2, top: Self.barrierBlack, side: Self.barrierYellow)
                 for segment in 0..<4 {
                     mesh.addBox(base: ground + Map3DPoint(0, 1.2 + Float(segment), 0), forward: along, length: 0.12, width: 0.12, height: 1,
