@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-lalu-island: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-lalu-island" : {
+      "hash" : "07506c424f7b3a16",
+      "triangles" : 612
+    },
+    "tw-lalu-island-far" : {
+      "hash" : "258c4b66e9e96192",
+      "triangles" : 148
+    }
+  }
+}

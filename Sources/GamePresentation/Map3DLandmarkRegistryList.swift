@@ -34,5 +34,13 @@ extension Map3DLandmarkRegistry {
         Map3DBaguashanBuddha.registration,
         Map3DDragonTigerPagodas.registration,
         Map3DHKObservationWheel.registration,
+        Map3DCienPagoda.registration,
+        Map3DLaluIsland.registration,
+        Map3DTaichungOpera.registration,
+        Map3DLuceChapel.registration,
+        Map3DWeiwuying.registration,
+        Map3DChihkanTower.registration,
+        Map3DWenwuFrontHall.registration,
+        Map3DWenwuRearHall.registration,
     ]
 }

@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-weiwuying: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-weiwuying" : {
+      "hash" : "de0b091de1080995",
+      "triangles" : 7946
+    },
+    "tw-weiwuying-far" : {
+      "hash" : "9a20c0272f91b6d0",
+      "triangles" : 822
+    }
+  }
+}
