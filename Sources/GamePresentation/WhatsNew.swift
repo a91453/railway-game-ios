@@ -38,6 +38,14 @@ public enum WhatsNew {
                     english: "Fukuoka's pedestrian signal boxes are dark, like the real ones.",
                     chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
                 ),
+                Line(
+                    english: "Hong Kong: M+ stands in West Kowloon beside Kowloon station, its tall slab on a long dark podium.",
+                    chinese: "香港西九文化區多了 M+：九龍站旁，長長的深色基座上立著一片高樓。"
+                ),
+                Line(
+                    english: "Hong Kong: the Hong Kong Palace Museum stands by the harbour in West Kowloon, wider at each storey up.",
+                    chinese: "香港西九文化區多了香港故宮文化博物館：在海邊，一層比一層往外挑。"
+                ),
             ],
             fixes: []
         ),
