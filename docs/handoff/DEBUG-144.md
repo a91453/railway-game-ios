@@ -12,7 +12,7 @@
    `Map3DJapanSignalTests`、`Map3DJapanStreetTests`、`Map3DJapanStationTests`、`Map3DFukuokaTanksTests`（921–924）；`Map3DLandmarkRegistryTests`、`Map3DHongKongLandmarksTests`（925–927）；`HongKongBoughtAgainTests`（CIOPT-13 搬的那一類，release 23 秒）。
 3. **`TrainPortrait` 全掃**（REVIEW-L32 P3-2）：原本的測試每個車種只畫 3 節，App 會要 1–3 節與沒有車種的演出車。補了 `testEveryKeyTheAppAsksForPaintsAtEveryLength`：每個車種的鍵與每組演出車的鍵，1、2 節都和 3 節一樣畫得出來（或一樣沒有模型）、大小對、圖裡有車。debug（CI）與 release（本機）都過。
 4. **讀程式找當機寫法**（強制解包、`try!`、浮點轉 `Int`、範圍、除以零、越界）：結果寫在 REVIEW-L32，沒有要修的。
-5. **CI**：nightly `ci.yml` 44956141155（`53b6da1`）全綠、沒有缺權重的警告；`e6728ee` 的完整 `ci.yml`（45046206140）與 full lane（45046220626）結果見 PR #2591。
+5. **CI**：nightly `ci.yml` 44956141155（`53b6da1`）全綠、沒有缺權重的警告；`e6728ee` 的完整 `ci.yml`（45046206140）全綠；full lane（45046220626）紅三支，一支是 REVIEW-L32 P2-1（已修）、兩支重跑就過（不穩），表在 REVIEW-L32。
 
 ## 注意（給下一個做 DEBUG 的人）
 
