@@ -472,7 +472,7 @@ public struct Map3DCableways: Sendable {
               CablewayCabins.runs(id.cableway, in: world, at: GameTime(seconds: Int64(second.rounded(.down)))) else { return nil }
         let at = place(CablewayCabins.glide(of: id.number, on: line.cableway, atSecond: second), on: line)
         let floor = at.point - Map3DPoint(0, Map3DCableCar.cabinDrop, 0)
-        let crystal = Self.isCrystal(id.number)
+        let crystal = CablewayCabins.isCrystal(id.number, pair: line.look.isPair)
         return Map3DFollow.Pose(forward: at.along, nose: floor + at.along * (Map3DCableCar.cabinLength / 2), rail: at.point, middle: floor,
                                 length: Map3DCableCar.cabinLength, ground: nil, inTunnel: false, eyeHeight: Self.cabinSeatHeight,
                                 bodyHeight: Self.cabinHeight,

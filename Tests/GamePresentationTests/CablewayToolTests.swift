@@ -1,6 +1,6 @@
 import Foundation
 import GameCore
-import GamePresentation
+@testable import GamePresentation
 import XCTest
 
 /// Decision 574 (PR-2): the network tool's cable car mode, its card, the
@@ -298,6 +298,10 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertEqual(pair, [0, 11])
         XCTAssertEqual(CablewayCabins.numbers(of: built, pair: false), Array(0..<22))
         XCTAssertEqual(session.world.cabinNumbers(of: built), pair)
+        // REVIEW-L33: Wulai's green cabin 0 is no crystal cabin (no glass
+        // floor), though cabin 0 of a gondola is.
+        XCTAssertTrue(CablewayCabins.isCrystal(0, pair: false))
+        XCTAssertFalse(pair.contains { CablewayCabins.isCrystal($0, pair: true) })
         guard case .span(_, let up, let outbound) = CablewayCabins.glide(of: pair[0], on: built, atSecond: 40),
               case .span(_, let down, let back) = CablewayCabins.glide(of: pair[1], on: built, atSecond: 40) else { return XCTFail("both out on the span") }
         XCTAssertTrue(outbound)

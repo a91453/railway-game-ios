@@ -63,8 +63,9 @@ extension GameWorld {
             guard case .span(let leg, let share, _) = CablewayCabins.glide(of: number, on: cableway, atSecond: second), leg == longest else { return nil }
             return (number, abs(share - 0.5))
         }
+        let pair = Map3DCableways.look(of: cableway, in: self).isPair
         let best = out.min { a, b in
-            let crystalA = CablewayCabins.isCrystal(a.number), crystalB = CablewayCabins.isCrystal(b.number)
+            let crystalA = CablewayCabins.isCrystal(a.number, pair: pair), crystalB = CablewayCabins.isCrystal(b.number, pair: pair)
             return crystalA != crystalB ? crystalA : a.offMiddle < b.offMiddle
         }
         return best.map { CabinID(cableway: id, number: $0.number) }
@@ -111,7 +112,8 @@ extension GameWorld {
         let direction = outbound ? language.text("To \(name(end))", "往\(name(end))") : language.text("Back to \(name(end))", "回\(name(end))")
         return CabinFollowFacts(
             cabin: id, name: CablewayText.name(id.cableway, in: language),
-            kind: CablewayCabins.isCrystal(id.number) ? language.text("Crystal cabin", "水晶吊廂") : nil,
+            kind: CablewayCabins.isCrystal(id.number, pair: Map3DCableways.look(of: cableway, in: self).isPair)
+                ? language.text("Crystal cabin", "水晶吊廂") : nil,
             stopText: stopText, directionText: direction, runningSpeed: clock.isPaused ? nil : clock.speed)
     }
 }
