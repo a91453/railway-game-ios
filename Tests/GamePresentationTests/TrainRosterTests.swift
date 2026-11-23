@@ -369,4 +369,22 @@ final class TrainRosterTests: XCTestCase {
         XCTAssertNil(TrainRosterDrag.row(atY: .nan, axisHeight: 24, rowHeight: 44, rows: 3))
         XCTAssertNil(TrainRosterDrag.row(atY: 100, axisHeight: 24, rowHeight: 44, rows: 0))
     }
+
+    /// ROSTERCRASH-2: the scene the UI test opens Arrange on
+    /// (`TrainRosterArrangeUITests`) has what the player's roster had:
+    /// more rows than a phone on its side, or an iPad, holds at their full
+    /// height, so the roster opens on its short rows; trips drawn in them;
+    /// and trains on no line for the Arrange page's column.
+    func testTheRosterFleetSceneOpensOnShortRows() {
+        let world = ScreenshotScene.rosterFleet.make(in: .traditionalChinese)
+        let roster = TrainRoster(world: world)
+        XCTAssertEqual(roster.rows.count, 24, "the UI test reads this number from the summary")
+        XCTAssertEqual(world.lines.count, ScreenshotScene.rosterFleetLines)
+        XCTAssertEqual(roster.waiting.count, ScreenshotScene.rosterFleetWaitingTrains)
+        // The tallest table is a 13-inch iPad's, held upright.
+        XCTAssertTrue(TrainRosterLayout.usesCompactRows(rows: roster.rows.count, height: 1_000))
+        XCTAssertEqual(roster.rows.filter { $0.cells.count > 3 }.count, ScreenshotScene.rosterFleetLines)
+        XCTAssertTrue(roster.rows.contains { !$0.gaps.isEmpty })
+        XCTAssertEqual(Set(roster.rows.map(\.id)).count, roster.rows.count)
+    }
 }
