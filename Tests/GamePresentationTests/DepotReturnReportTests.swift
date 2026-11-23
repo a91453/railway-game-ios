@@ -33,6 +33,7 @@ import XCTest
 final class DepotReturnReportTests: XCTestCase {
     private func wanted(_ name: String) throws {
         GameWorld.probe919Off = ProcessInfo.processInfo.environment["PROBE_919_OFF"] != nil // DEBUG-7d1c
+        GameWorld.probeFoulOff = ProcessInfo.processInfo.environment["PROBE_FOUL_OFF"] != nil // DEBUG-7d1c
         guard ProcessInfo.processInfo.environment["DEPOT_RETURN_REPORT"] != nil else {
             throw XCTSkip("Set DEPOT_RETURN_REPORT=1 to measure the depots (decision 535).")
         }
@@ -378,7 +379,6 @@ final class DepotReturnReportTests: XCTestCase {
             var text = ""
             for edge in world.network.edges { text += "E \(edge.id) \(edge.from) \(edge.to) \(edge.length)\n" }
             for platform in world.network.platforms { text += "P \(platform.edge) \(platform.start) \(platform.end) \(world.station(id: platform.station)?.name ?? "?")\n" }
-            for line in world.lines { for route in line.routes { text += "R \(route.from) \(route.to) \(route.platform.edge) tracks \(route.tracks.count)\n" } }
             try text.write(toFile: path, atomically: true, encoding: .utf8)
         }
         // The demos open under traffic control; with DEPOT_RETURN_SIMPLE
@@ -545,6 +545,17 @@ final class DepotReturnReportTests: XCTestCase {
                     let tt = train.timetable.map { "\(world.station(id: $0.station)?.name ?? "?")@\(clock($0.departure.seconds).suffix(5))" }.joined(separator: " ")
                     let ends = train.timetable.first.flatMap { world.station(id: $0.station)?.name } ?? "-"
                     let last = train.timetable.last.flatMap { world.station(id: $0.station)?.name } ?? "-"
+                    if named { // DEBUG-7d1c
+                        var byEdge: [String: (Int64, Int64)] = [:]
+                        var nodes: [String] = []
+                        for resource in world.heldResources(of: train.id) {
+                            switch resource {
+                            case .node(let n): nodes.append("\(n)")
+                            case .span(let s): let k = "\(s.edge)"; byEdge[k] = (min(byEdge[k]?.0 ?? s.start, s.start), max(byEdge[k]?.1 ?? s.end, s.end))
+                            }
+                        }
+                        text += "  [DEBUG-7d1c] \(train.name) len \(train.length) holds \(byEdge.sorted { $0.key < $1.key }.map { "\($0.key)[\($0.value.0)-\($0.value.1)]" }.joined(separator: " ")) nodes \(nodes.joined(separator: " ")) allEdges \(train.movement.edges.map { "\($0)" }.joined(separator: ","))\n"
+                    }
                     text += "  \(train.name) on \(edge) at \(at.joined(separator: "/")) exec \(String(describing: train.execution).prefix(40)) dead \(train.isDeadheading) tt \(ends)->\(last) next \(next) \(wait) edges \(train.movement.edges.dropFirst(train.movement.cursor).prefix(8).map { "\($0)" }.joined(separator: ",")) timetable \(tt.prefix(400))\n"
                 }
                 FileHandle.standardError.write(Data(text.utf8))

@@ -274,6 +274,7 @@ extension GameWorld {
     }
 
     nonisolated(unsafe) static var probe919Off = false // DEBUG-7d1c
+    nonisolated(unsafe) static var probeFoulOff = false // DEBUG-7d1c
     nonisolated(unsafe) static var probeSeen: Set<String> = [] // DEBUG-7d1c
 
     /// HK-LATE-RUNS: how many crossovers `path` takes: edges that leave
