@@ -55,6 +55,10 @@ public enum WhatsNew {
                     chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
                 ),
                 Line(
+                    english: "Hong Kong's small stations are new station houses modelled on real ones.",
+                    chinese: "香港的小車站換上照真實車站做的新站房。"
+                ),
+                Line(
                     english: "Stations on the ground have footbridges or underpass stairs, and island platforms have transfer signs.",
                     chinese: "地面車站有了跨站天橋或地下道入口，島式月台有轉乘指示牌。"
                 ),
@@ -63,6 +67,10 @@ public enum WhatsNew {
                 Line(
                     english: "Tapping Arrange on the train roster no longer closes the app.",
                     chinese: "點車隊運用表的「編排」不再閃退。"
+                ),
+                Line(
+                    english: "Fukuoka's water towers stand properly on the ground, on open legs.",
+                    chinese: "福岡給水塔的底部改正，好好站在地上。"
                 ),
             ]
         ),

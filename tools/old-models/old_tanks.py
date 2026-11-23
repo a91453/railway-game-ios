@@ -36,7 +36,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, '..', 'landmarks'))
 import glb_to_swift as landmarks  # noqa: E402
 
-MATERIALS = ['tank', 'stand', 'shaft']
+MATERIALS = ['tank', 'stand']
 
 # Each model's name: the old file's argument index, and its scale.
 SIZES = {
@@ -129,23 +129,103 @@ def gas_holder(path):
     return near, far
 
 
+# A brace's width in the old model's metres (its texture draws them 4 to 6
+# pixels of a 6.5 m bay's 91).
+BRACE = 0.5
+
+
+def strip(a, b, side):
+    """A flat strip from `a` to `b`, reaching `side` to each side of
+    that line, seen from both sides (the old panels were)."""
+    p0, p1 = [a[k] - side[k] for k in range(3)], [a[k] + side[k] for k in range(3)]
+    p2, p3 = [b[k] + side[k] for k in range(3)], [b[k] - side[k] for k in range(3)]
+    return [([p0, p1, p2], 'stand'), ([p0, p2, p3], 'stand'), ([p0, p2, p1], 'stand'), ([p0, p3, p2], 'stand')]
+
+
+def brace(a, b, normal):
+    """A brace from `a` to `b` in the bay whose plane `normal` stands
+    on: one strip in the plane, cut level at its ends, and one across
+    it, so the brace is as wide from along the bay as from in front (a
+    flat strip seen edge-on is a hair)."""
+    along = [b[k] - a[k] for k in range(3)]
+    if abs(along[1]) < 1e-6:
+        side = (0.0, BRACE / 2, 0.0)
+    else:
+        run = math.hypot(along[0], along[2])
+        grow = BRACE / 2 * math.sqrt(run * run + along[1] * along[1]) / abs(along[1])
+        side = (along[0] / run * grow, 0.0, along[2] / run * grow)
+    return strip(a, b, side) + strip(a, b, [n * BRACE / 2 for n in normal])
+
+
+def braces(panel):
+    """A bay between two legs: the old model draws it as a flat panel
+    textured with cross braces on black (see-through in spirit); here
+    each tier of the panel is its two diagonals and the beam on top of
+    it, and nothing in between."""
+    levels = {}
+    for pts, _ in panel:
+        for p in pts:
+            levels.setdefault(round(p[1], 1), set()).add(tuple(round(c, 2) for c in p))
+    rows = [sorted(levels[y]) for y in sorted(levels)]
+    assert all(len(r) == 2 for r in rows), rows
+    # The same end of the bay first at every level.
+    for r in rows[1:]:
+        if math.dist(r[0], rows[0][0]) > math.dist(r[1], rows[0][0]):
+            r.reverse()
+    out = []
+    for low, high in zip(rows, rows[1:]):
+        u, v = [low[1][k] - low[0][k] for k in range(3)], [high[0][k] - low[0][k] for k in range(3)]
+        n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+        size = math.sqrt(sum(c * c for c in n))
+        normal = [c / size for c in n]
+        out += brace(low[0], high[1], normal) + brace(low[1], high[0], normal) + brace(high[0], high[1], normal)
+    return out
+
+
+def leg(group):
+    """A leg as four plain sides from its foot to its top (the far
+    model's)."""
+    pts = [p for t, _ in group for p in t]
+    low, high = min(p[1] for p in pts), max(p[1] for p in pts)
+    ends = []
+    for y in (low, high):
+        ring = [p for p in pts if abs(p[1] - y) < 0.05]
+        x0, x1 = min(p[0] for p in ring), max(p[0] for p in ring)
+        z0, z1 = min(p[2] for p in ring), max(p[2] for p in ring)
+        cx, cz, h = (x0 + x1) / 2, (z0 + z1) / 2, 0.35
+        ends.append([(cx - h, y, cz - h), (cx + h, y, cz - h), (cx + h, y, cz + h), (cx - h, y, cz + h)])
+    out = []
+    for i in range(4):
+        a, b = ends[0][i], ends[0][(i + 1) % 4]
+        c, d = ends[1][(i + 1) % 4], ends[1][i]
+        out += [([a, c, b], 'stand'), ([a, d, c], 'stand')]
+    return out
+
+
 def water_tower(path):
     """The tank (material 1 above the catwalk, 17.5 m) is ``tank``, the
-    pale panels round the legs (material 0) ``shaft``, the rest (legs,
-    catwalk, ladder) ``stand``. The far model keeps the tank, the
-    catwalk, the ladder and the panels, and leaves out the legs and the
-    small pieces (the middle pipe, the fittings)."""
+    rest ``stand``: legs, catwalk, ladder, and the bays between the legs
+    as open cross braces (``braces``; decision 924's later note: the old
+    model's textured panels, once given one colour, were a pale skirt
+    hanging half a metre off the ground). The far model keeps the tank
+    and the catwalk and draws each leg as four sides; no braces, ladder,
+    middle pipe or fittings."""
     tris = old_triangles(path)
 
     def colour(pts, material):
-        if material == 1 and sum(p[1] for p in pts) / 3 >= 17.5:
-            return 'tank'
-        return 'shaft' if material == 0 else 'stand'
-    near = [(pts, colour(pts, m)) for pts, m in tris]
-    far = []
+        return 'tank' if material == 1 and sum(p[1] for p in pts) / 3 >= 17.5 else 'stand'
+    near, far = [], []
     for g in components(tris):
         materials = {m for _, m in g}
-        if materials in ({0}, {1}, {2}) and len(g) >= 8:
+        low = min(p[1] for pts, _ in g for p in pts)
+        if materials == {0} and len(g) == 8 and 0.1 < low < 1:
+            near += braces(g)  # a bay's panel
+            continue
+        near += [(pts, colour(pts, m)) for pts, m in g]
+        high = max(p[1] for pts, _ in g for p in pts)
+        if low < 0.05 and len(g) == 32 and high < 18:
+            far += leg(g)
+        elif len(materials) == 1 and len(g) >= 8 and low > 15:
             far += [(pts, colour(pts, m)) for pts, m in g]
     return near, far
 
