@@ -16,7 +16,9 @@ import GameCore
 // cells, so a save does not depend on the file.
 //
 // Since decision 115 the same file marks the steep slopes (`"steep"`, from
-// the Copernicus DEM by `tools/real-world-population/build_slope_grid.py`),
+// the heights `tools/real-world-population/build_slope_grid.py` reads:
+// since decision 943 the Ministry of the Interior's terrain model where
+// it reaches, the Copernicus DEM elsewhere),
 // the hillsides of more than 30 % where nothing new is built: one file, so
 // the app's resources (and its Xcode project) do not change.
 
