@@ -2,7 +2,7 @@
 
 ## 進度
 
-- 做到哪：#2628（決策 947，選項 1：畫面層照車種推得軌道梁）已開，等 CI 與協調者看總覽；這個 session 壓縮過 1 次，不再接新工作。
+- 做到哪：#2628（決策 947，選項 1：畫面層照車種推得軌道梁）已開。2026-11-23 21:30 UTC：`325c724` 的 Swift CI (gate) 與 iOS App Build 都綠；截圖 run 開模擬器逾時，照一次就好不重跑。等協調者第 3 任看總覽，並在 #2628 回一句「合（當選項 2 的外觀層）」或「擱著」。這個 session 壓縮過 2 次，已停手；接手的人看到回覆後：併 `origin/main`、等新 head 綠、合併、在 #2118 回報 merge SHA。
 - 已驗證：本機 `swift build --build-tests -Xswiftc -warnings-as-errors`；Map3DGuidewayTests 7 個與 12 個相關 Map3D 類別共 112 個測試全過。
 - 下一步：TRACK-SYSTEM（選項 2）另派一個 session，從下面「接手」開始。
 
