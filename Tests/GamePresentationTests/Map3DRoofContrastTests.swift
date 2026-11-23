@@ -49,6 +49,10 @@ final class Map3DRoofContrastTests: XCTestCase {
         "station-study/b2-tainan", "station-study/hsr-hsinchu", "station-study/hsr-taichung", "station-study/hsr-tainan",
         "station-study/hsr-taoyuan", "station-study/hsr-zuoying", "station-study/tra-banqiao", "station-study/tra-hualien",
         "station-study/tra-taichung",
+        // Decision 929: the studio's high-speed Miaoli, its wide pale roof
+        // (`tankSteel`) on the forecourt; a follow-up for the studio, not
+        // recoloured here.
+        "station-study/studio-miaoli",
         "landmark/chiangKaiShekMemorialHall", "landmark/greatHarborBridge", "landmark/gushanFerryTerminal", "landmark/kaohsiung85SkyTower",
         "landmark/kaohsiungMainStation", "landmark/kaohsiungMusicCenter", "landmark/nationalConcertHall", "landmark/nationalTheater",
         "landmark/shinKongLifeTower", "landmark/sunYatSenMemorialHall", "landmark/taipei101",

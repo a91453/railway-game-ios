@@ -38,8 +38,28 @@ public enum WhatsNew {
                     english: "Fukuoka's pedestrian signal boxes are dark, like the real ones.",
                     chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
                 ),
+                Line(
+                    english: "The high-speed stations at Miaoli, Changhua, Yunlin and Chiayi have their own buildings.",
+                    chinese: "高鐵苗栗、彰化、雲林、嘉義站有了自己的站房。"
+                ),
+                Line(
+                    english: "Pingxi and Rinan stations are drawn as their own timber station houses.",
+                    chinese: "平溪站與日南站畫成各自的木造站房。"
+                ),
+                Line(
+                    english: "Small stations on the Nordic map are yellow timber station houses.",
+                    chinese: "北歐地圖的小站改成黃色的木造站房。"
+                ),
+                Line(
+                    english: "Level crossings have barrier machines with striped arms and warning lights.",
+                    chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
+                ),
             ],
             fixes: [
+                Line(
+                    english: "Tapping Arrange on the train roster no longer closes the app.",
+                    chinese: "點車隊運用表的「編排」不再閃退。"
+                ),
                 Line(
                     english: "Fukuoka's water towers stand properly on the ground, on open legs.",
                     chinese: "福岡給水塔的底部改正，好好站在地上。"

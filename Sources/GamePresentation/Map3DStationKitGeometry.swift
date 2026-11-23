@@ -12,6 +12,9 @@ struct StationKitBuilder {
     /// station is the earlier version's wooden one
     /// (``genericHouse(_:expansion:far:)``).
     var japanese = false
+    /// Decision 929: whether the station stands in Finland, where a small
+    /// station is the studio's Finnish country station.
+    var finnish = false
     static let forward=Map3DPoint(1,0,0)
     static let glass=Map3DPalette.glazing
     static let steel=Map3DPalette.tankStand
