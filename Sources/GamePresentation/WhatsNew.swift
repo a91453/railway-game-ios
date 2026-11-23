@@ -62,6 +62,10 @@ public enum WhatsNew {
                     english: "Hong Kong's small stations are new station houses modelled on real ones.",
                     chinese: "香港的小車站換上照真實車站做的新站房。"
                 ),
+                Line(
+                    english: "The Tian Tan Buddha and Po Lin Monastery stand at Ngong Ping, where the cable car ends.",
+                    chinese: "昂坪纜車終點旁多了天壇大佛與寶蓮禪寺。"
+                ),
             ],
             fixes: [
                 Line(
