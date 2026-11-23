@@ -91,6 +91,10 @@ public enum WhatsNew {
                     chinese: "平溪線菁桐、集集線車埕換上照真實站房做的木造車站。"
                 ),
                 Line(
+                    english: "Shanjia on the Western Line and Shifen on the Pingxi Line have stations modelled on their real buildings.",
+                    chinese: "台鐵山佳、平溪線十分換上照真實站房做的車站。"
+                ),
+                Line(
                     english: "Small stations on the Nordic map are yellow timber station houses.",
                     chinese: "北歐地圖的小站改成黃色的木造站房。"
                 ),
@@ -101,6 +105,10 @@ public enum WhatsNew {
                 Line(
                     english: "Hong Kong's small stations are new station houses modelled on real ones.",
                     chinese: "香港的小車站換上照真實車站做的新站房。"
+                ),
+                Line(
+                    english: "The back stays of Rovaniemi's Lumberjack's Candle bridge are separate cables, anchored on the abutment.",
+                    chinese: "羅瓦涅米蠟燭橋的背索拆成一根一根，落在橋台上。"
                 ),
                 Line(
                     english: "Night markets have strings of bulbs that light up after dark, striped canopies and snack carts, and temples have a Tiangong burner and a pair of stone lions.",
