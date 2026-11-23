@@ -107,6 +107,10 @@ public enum WhatsNew {
                     chinese: "香港的小車站換上照真實車站做的新站房。"
                 ),
                 Line(
+                    english: "The back stays of Rovaniemi's Lumberjack's Candle bridge are separate cables, anchored on the abutment.",
+                    chinese: "羅瓦涅米蠟燭橋的背索拆成一根一根，落在橋台上。"
+                ),
+                Line(
                     english: "Night markets have strings of bulbs that light up after dark, striped canopies and snack carts, and temples have a Tiangong burner and a pair of stone lions.",
                     chinese: "夜市有了入夜會亮的燈泡串、紅白帆布棚與小吃推車，廟前多了天公爐與一對石獅。"
                 ),
