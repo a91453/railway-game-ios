@@ -73,7 +73,8 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
 
     /// Its size, metres: along its +x, across (+y) and up, the size the
     /// file's model comes in (`tools/kenney-props/`, `tools/meshy-props/`),
-    /// which both it and the stand-in are fitted to.
+    /// which both it and the stand-in are fitted to (the post boxes'
+    /// from `tools/tw-post-boxes/`, decision 940).
     public var size: (length: Float, width: Float, height: Float) {
         switch self {
         case .pineTall: (3.1, 3.14, 12.48)
@@ -89,11 +90,10 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
     }
 
     /// Decision 467: the colours `tools/meshy-props/` writes and the
-    /// stand-ins use (the post boxes' red and green, their slot and feet;
-    /// the sign's face, frame and post).
+    /// stand-ins use (the post boxes' red and green, decision 940's
+    /// `tools/tw-post-boxes/` too; the sign's face, frame and post).
     static let postRed = Map3DColor.rgb(0xC8382E)
     static let postGreen = Map3DColor.rgb(0x2E8B4E)
-    static let postFoot = Map3DColor.rgb(0x4A4F57)
     static let signWhite = Map3DColor.rgb(0xF2F3F1)
     static let signFrame = Map3DColor.rgb(0x3F6FA8)
     static let poleSteel = Map3DColor.rgb(0x9AA0A8)
@@ -151,13 +151,18 @@ public enum Map3DSceneryProp: String, CaseIterable, Sendable {
             mesh.addBox(base: Map3DPoint(0, 0.5, 0), forward: Map3DPoint(1, 0, 0), length: size.length * 0.85, width: 2.8, height: size.height - 0.5,
                         top: Map3DPalette.tankWhite, side: Map3DPalette.tankWhite)
         case .postBoxes:
-            // Two pillars on dark feet, a dark slot on each one's front
-            // (toward the road, scene −z).
-            for (x, body) in [(Float(-0.3), Self.postRed), (0.3, Self.postGreen)] {
-                mesh.addCylinder(base: Map3DPoint(x, 0, 0), radius: 0.21, height: 0.1, sides: 8, top: Self.postFoot, side: Self.postFoot)
-                mesh.addCylinder(base: Map3DPoint(x, 0.1, 0), radius: 0.19, height: 1.05, sides: 8, top: body, side: body)
-                mesh.addBox(base: Map3DPoint(x, 0.78, -0.19), forward: Map3DPoint(1, 0, 0), length: 0.2, width: 0.04, height: 0.04,
-                            top: Self.postFoot, side: Self.postFoot)
+            // Decision 940: the studio's shape, a square box on a short
+            // post on a flat foot, all in the body's colour, under a
+            // wider lid; a dark slot on each one's front (toward the
+            // road, scene −z).
+            let along = Map3DPoint(1, 0, 0)
+            for (x, body) in [(Float(-0.29), Self.postRed), (0.29, Self.postGreen)] {
+                mesh.addBox(base: Map3DPoint(x, 0, 0), forward: along, length: 0.26, width: 0.26, height: 0.02, top: body, side: body)
+                mesh.addBox(base: Map3DPoint(x, 0.02, 0), forward: along, length: 0.09, width: 0.09, height: 0.49, top: body, side: body)
+                mesh.addBox(base: Map3DPoint(x, 0.51, 0), forward: along, length: 0.42, width: 0.36, height: 0.58, top: body, side: body)
+                mesh.addBox(base: Map3DPoint(x, 1.09, 0), forward: along, length: 0.46, width: 0.43, height: 0.06, top: body, side: body)
+                mesh.addBox(base: Map3DPoint(x, 0.95, -0.185), forward: along, length: 0.32, width: 0.02, height: 0.05,
+                            top: Self.signWhite, side: Map3DPalette.dark)
             }
         case .busStopPole:
             // A post on a round foot, the tall board on it.

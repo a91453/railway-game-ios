@@ -62,6 +62,14 @@ public enum WhatsNew {
                     english: "Hong Kong's small stations are new station houses modelled on real ones.",
                     chinese: "香港的小車站換上照真實車站做的新站房。"
                 ),
+                Line(
+                    english: "The red and green post boxes on the pavements are new, with a slot frame on each and a lid over the box.",
+                    chinese: "人行道上的紅綠郵筒換新：投信口有白框，方箱上加頂蓋。"
+                ),
+                Line(
+                    english: "The stations you build have a dark edge along the roof.",
+                    chinese: "自己蓋的車站屋頂加了一圈深色邊。"
+                ),
             ],
             fixes: [
                 Line(

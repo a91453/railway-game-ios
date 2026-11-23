@@ -43,22 +43,9 @@ function hsl([r, g, b]) {
 // Each prop: its source, how it stands, its size, budget and limit, and
 // which game colour each baked colour becomes.
 const recipes = [
-  {
-    // Taiwan's post boxes stand in pairs, red (prompt mail) and green
-    // (ordinary mail), one shape: the green one's pillar, twice.
-    id: 'meshy-post-boxes', source: 'mailbox-green', height: 1.15, triangles: 520, maxError: 0.006,
-    face: 'slot', pair: { gap: 0.18, recolour: { postGreen: 'postRed', slot: 'slotRed' } }, edge: { slot: true },
-    // The batch's box: green all over, a dark grey slot and door on one
-    // side (z 0.4–0.68 of its height), a dark foot; the dark ring under
-    // its dome is the body's.
-    classify(c, z) {
-      const { light, sat, green } = hsl(c);
-      if (z < 0.1 && light < 0.4) return 'foot';
-      if (sat < 0.2 && light < 0.4) return z >= 0.4 && z <= 0.68 ? 'slot' : 'postGreen';
-      if (sat < 0.15 && light > 0.4) return 'door';
-      return green || sat >= 0.2 ? 'postGreen' : 'foot';
-    },
-  },
+  // Decision 940: the post boxes (meshy-post-boxes) are the local studio's
+  // now, written by tools/tw-post-boxes/build.py; this recipe is gone (it
+  // is in git history before decision 940).
   {
     // A stop's sign on its own pole, where the pavement has no room for a
     // shelter: a tall board on a short post, its light grey face (white in
