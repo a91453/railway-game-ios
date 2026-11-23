@@ -536,14 +536,7 @@ private struct TutorialCard: View {
             HStack(spacing: 8) {
                 // Decision 118: the station master gives the tutorial.
                 StationMasterAvatar(size: isCompact ? 24 : 28, mood: session.isTutorialStepDone ? .happy : .normal)
-                HStack(spacing: 0) {
-                    Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
-                        .monospacedDigit()
-                        .accessibilityIdentifier("tutorial.progress")
-                    Text(verbatim: " · " + tutorial.step.chapter.title(in: session.language))
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                }
+                TutorialProgressLine(session: session, tutorial: tutorial, progressIdentifier: "tutorial.progress")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(Theme.primary)
                 .padding(.horizontal, 8)
@@ -696,6 +689,43 @@ private struct TutorialCard: View {
     }
 }
 
+/// "Step 6 of 15 · chapter" over a tutorial card. The step's number is
+/// never cut short: the chapter gives way to it, and at an accessibility
+/// text size it goes on a line of its own (AI testers, round 1,
+/// 2026-11-23: "第 6 步，共 15…" was cut off).
+private struct TutorialProgressLine: View {
+    let session: GameSession
+    let tutorial: Tutorial
+    var progressIdentifier: String?
+    /// Marked when something is wrong (the folded card).
+    var showsProblem = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        layout {
+            HStack(spacing: 0) {
+                Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier(progressIdentifier ?? "")
+                if showsProblem {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(Theme.warning)
+                        .padding(.leading, 4)
+                }
+            }
+            .layoutPriority(1)
+            Text(verbatim: (stacked ? "" : " · ") + tutorial.step.chapter.title(in: session.language))
+                .lineLimit(1)
+            if !stacked {
+                Spacer(minLength: 0)
+            }
+        }
+    }
+}
+
 /// The tutorial's step, its number and title, at the top of a card that
 /// covers the tutorial's own (decision 643): the new line's card at
 /// "Tap ✓, then Open Line". Only read; the card's own buttons do the step.
@@ -707,14 +737,9 @@ struct TutorialStepNote: View {
         HStack(spacing: 8) {
             StationMasterAvatar(size: 24, mood: .normal)
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 0) {
-                    Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
-                        .monospacedDigit()
-                    Text(verbatim: " · " + tutorial.step.chapter.title(in: session.language))
-                }
+                TutorialProgressLine(session: session, tutorial: tutorial)
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(Theme.primary)
-                .lineLimit(1)
                 Text(verbatim: tutorial.step.title(in: session.language))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
@@ -753,20 +778,10 @@ private struct FoldedTutorialCard: View {
                 HStack(spacing: 8) {
                     StationMasterAvatar(size: 24, mood: session.isTutorialStepDone ? .happy : .normal)
                     VStack(alignment: .leading, spacing: 0) {
-                        HStack(spacing: 0) {
-                            Text("Step \(tutorial.index + 1) of \(tutorial.steps.count)")
-                                .monospacedDigit()
-                                .accessibilityIdentifier("tutorial.progress")
-                            Text(verbatim: " · " + tutorial.step.chapter.title(in: session.language))
-                            if hint?.isProblem == true {
-                                Image(systemName: "exclamationmark.circle.fill")
-                                    .foregroundStyle(Theme.warning)
-                                    .padding(.leading, 4)
-                            }
-                        }
+                        TutorialProgressLine(session: session, tutorial: tutorial, progressIdentifier: "tutorial.progress",
+                                             showsProblem: hint?.isProblem == true)
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(Theme.primary)
-                        .lineLimit(1)
                         // Two lines where it is narrow, rather than cut
                         // short (Mac playtest 2026-11-08, A2: step 8).
                         Text(verbatim: tutorial.step.title(in: session.language))
