@@ -85,4 +85,13 @@ public enum DetailsCardLayout: Equatable, Sendable {
     public static func placesTrain(tool: ConstructionTool, trainIsSelected: Bool, trainIsOnTrack: Bool) -> Bool {
         tool == .train && trainIsSelected && !trainIsOnTrack
     }
+
+    /// Whether the card's foot holds the number of sidings over Lay Depot
+    /// Sidings, as it holds a train's cars over Place (DEPOT-SIDINGS-HIT):
+    /// the network tool's Depot mode, whose only option it is. Among the
+    /// options, on a phone held on its side, the mode row pinned on top
+    /// (#2614), the inspector and the button left it below the card's edge.
+    public static func laysDepot(tool: ConstructionTool, networkMode: NetworkToolMode) -> Bool {
+        tool == .network && networkMode == .depot
+    }
 }

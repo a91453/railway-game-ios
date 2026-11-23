@@ -174,4 +174,14 @@ final class DetailsCardLayoutTests: XCTestCase {
         XCTAssertEqual(DetailsCardLayout.optionsMinimum(under: 50) + 50, DetailsCardLayout.optionsHeight)
         XCTAssertEqual(DetailsCardLayout.optionsMinimum(under: 200), 0)
     }
+
+    /// DEPOT-SIDINGS-HIT: the Depot mode's sidings stand in the foot, kept
+    /// in view, over the button that lays them; no other mode or tool.
+    func testOnlyTheDepotModeChoosesInTheFoot() {
+        for tool in ConstructionTool.allCases {
+            for mode in NetworkToolMode.allCases {
+                XCTAssertEqual(DetailsCardLayout.laysDepot(tool: tool, networkMode: mode), tool == .network && mode == .depot, "\(tool), \(mode)")
+            }
+        }
+    }
 }

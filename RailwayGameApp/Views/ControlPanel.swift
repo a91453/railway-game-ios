@@ -111,10 +111,14 @@ struct ControlPanel: View {
                 .frame(minHeight: CGFloat(DetailsCardLayout.optionsMinimum(under: Double(rowAbove))), alignment: .topLeading)
         case .action:
             // Decision 588: a train being placed has its cars and platform
-            // chosen over the button that places it.
+            // chosen over the button that places it; DEPOT-SIDINGS-HIT: a
+            // depot its sidings, over the button that lays them.
             VStack(alignment: .leading, spacing: 12) {
                 if TrainPlacementChoices.shows(session) {
                     TrainPlacementChoices(session: session)
+                }
+                if DepotSidingsChoice.shows(session) {
+                    DepotSidingsChoice(session: session)
                 }
                 ActionButton(session: session)
             }
