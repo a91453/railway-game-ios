@@ -3,8 +3,8 @@
 /// columns a third of the way along, a fan of stays each side and a lamp
 /// on each column's top. Modelled by the local studio from photographs
 /// (`a91453/railway-assets-private-2`
-/// `game-art-previews/docs/art/rovaniemi-landmarks-2026-11/revision-4`,
-/// #226; lessons in `docs/studio/lessons/rovaniemi-landmarks.md`), turned
+/// `game-art-previews/docs/art/rovaniemi-landmarks-2026-11/revision-6`,
+/// #356, decision 939: the back stays one by one on the abutment; lessons in `docs/studio/lessons/rovaniemi-landmarks.md`), turned
 /// 155.5° as OpenStreetMap's outline (way `man_made=bridge`), the pylon
 /// toward the town's (north-west) bank, and written here by
 /// `tools/landmarks/glb_to_swift.py` (``encoded``). Its z 0 is the river's

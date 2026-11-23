@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark hk-tiantan-buddha: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "hk-tiantan-buddha" : {
+      "hash" : "db555b4ed1b1a5f6",
+      "triangles" : 2952
+    },
+    "hk-tiantan-buddha-far" : {
+      "hash" : "0ea79fa910c4a792",
+      "triangles" : 1320
+    }
+  }
+}

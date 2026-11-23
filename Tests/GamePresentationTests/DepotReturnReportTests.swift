@@ -102,6 +102,11 @@ final class DepotReturnReportTests: XCTestCase {
 
     func testTheTaoyuanAirportLineRebuilt() throws {
         try wanted("tymc-rebuilt")
+        // The world after the rebuild, saved by `DEPOT_RETURN_SAVE`.
+        if let world = try Self.resumed() {
+            try report("tymc-rebuilt", world)
+            return
+        }
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         let (session, id) = try Self.taoyuanAirportBoughtBefore(simple: simple)
         session.selectLine(id)

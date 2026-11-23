@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark hk-po-lin-hall: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "hk-po-lin-hall" : {
+      "hash" : "5a3f6685a1fe69a9",
+      "triangles" : 3156
+    },
+    "hk-po-lin-hall-far" : {
+      "hash" : "77a2f0d761281284",
+      "triangles" : 1112
+    }
+  }
+}

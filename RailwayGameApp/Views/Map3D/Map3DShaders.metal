@@ -787,6 +787,9 @@ struct Map3DSkyUniforms {
     // Decision 813's later part (AURORA): how much of the aurora shows and
     // the seconds that move it.
     float4 aurora;
+    // Decision 942: the way from the moon toward the sun, and the share of
+    // its disc lit.
+    float4 moonLit;
 };
 
 struct Map3DSkyOut {
@@ -817,8 +820,14 @@ fragment float4 map3dSkyFragment(Map3DSkyOut in [[stage_in]], constant Map3DSkyU
     colour += float3(1.0, 0.82, 0.6) * ((pow(towardSun, 12.0) * 0.18 + pow(towardSun, 180.0) * 0.5) * sky.sun.w);
     colour = mix(colour, float3(1.0, 0.97, 0.9), smoothstep(0.9994, 0.9998, towardSun) * sky.sun.w);
     float towardMoon = max(dot(d, sky.moon.xyz), 0.0);
-    colour += float3(0.6, 0.65, 0.75) * (pow(towardMoon, 80.0) * 0.12 * sky.moon.w);
-    colour = mix(colour, float3(0.93, 0.92, 0.86), smoothstep(0.9990, 0.9994, towardMoon) * sky.moon.w);
+    colour += float3(0.6, 0.65, 0.75) * (pow(towardMoon, 80.0) * 0.12 * sky.moon.w * sky.moonLit.w);
+    // Decision 942: the moon's phase (Map3DSky.moonPhase): the disc as a
+    // ball lit from the sun's side, its dark side faint.
+    float3 across = (d - sky.moon.xyz * dot(d, sky.moon.xyz)) / 0.04;
+    float3 normal = across - sky.moon.xyz * sqrt(max(1.0 - dot(across, across), 0.0));
+    float phase = 0.06 + 0.94 * smoothstep(-0.1, 0.1, dot(normal, sky.moonLit.xyz));
+    float disc = smoothstep(0.9990, 0.9994, towardMoon) * sky.moon.w;
+    colour = mix(colour, float3(0.93, 0.92, 0.86), disc * phase);
     // A cell that holds a star (Map3DSky.star) shows it as a round point
     // about a pixel across somewhere in the cell, not the whole cell: the
     // cells come to several pixels in the cab's wide lens.
@@ -828,7 +837,7 @@ fragment float4 map3dSkyFragment(Map3DSkyOut in [[stage_in]], constant Map3DSkyU
     float2 centre = grid + 0.25 + 0.5 * float2(map3dSkyHash(grid + 7.1), map3dSkyHash(grid + 3.7));
     float pixel = max(length(fwidth(cells)), 1e-4);
     float spot = 1.0 - smoothstep(0.6, 1.4, length(cells - centre) / pixel);
-    colour += float3(0.8, 0.85, 1.0) * (star * spot * 0.5 * sky.stars.x);
+    colour += float3(0.8, 0.85, 1.0) * (star * spot * 0.5 * sky.stars.x * (1.0 - disc));
     // Decision 813's later part (AURORA): a curtain over the northern sky,
     // worked as Map3DSky.auroraLight (the owner's geo-scene aurora ribbon).
     if (sky.aurora.x > 0.0 && d.y > 0.0) {

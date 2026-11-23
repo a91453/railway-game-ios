@@ -2,11 +2,11 @@
   "comment" : "Decision 895: the models of the registered landmark rovaniemi-candle-bridge: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
   "models" : {
     "rovaniemi-candle-bridge" : {
-      "hash" : "9dfc6f51e2c67613",
+      "hash" : "ec5bd758c6654d19",
       "triangles" : 1408
     },
     "rovaniemi-candle-bridge-far" : {
-      "hash" : "4db0b5cada199beb",
+      "hash" : "5353dcecf45c06fc",
       "triangles" : 376
     }
   }
