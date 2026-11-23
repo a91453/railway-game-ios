@@ -374,6 +374,13 @@ final class DepotReturnReportTests: XCTestCase {
     @discardableResult
     private func report(_ name: String, _ opened: GameWorld) throws -> GameWorld {
         var world = opened
+        if let path = ProcessInfo.processInfo.environment["PROBE_TOPOLOGY"] { // DEBUG-7d1c
+            var text = ""
+            for edge in world.network.edges { text += "E \(edge.id) \(edge.from) \(edge.to) \(edge.length)\n" }
+            for platform in world.network.platforms { text += "P \(platform.edge) \(platform.start) \(platform.end) \(world.station(id: platform.station)?.name ?? "?")\n" }
+            for line in world.lines { for route in line.routes { text += "R \(route.from) \(route.to) \(route.platform.edge) tracks \(route.tracks.count)\n" } }
+            try text.write(toFile: path, atomically: true, encoding: .utf8)
+        }
         // The demos open under traffic control; with DEPOT_RETURN_SIMPLE
         // they play without, as the bought lines then do.
         // Decision 549: `DEPOT_RETURN_CONTROLLED=1` keeps it on under

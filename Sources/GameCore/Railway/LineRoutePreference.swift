@@ -246,6 +246,9 @@ extension GameWorld {
                   let kept = path(from: start, toStation: platform.station, length: length, eligible: fitting, keepingLeft: true, memo: &memo),
                   kept.traversals != shortest.traversals,
                   crossovers(on: kept) < crossovers(on: shortest) else { return shortest }
+            if case .onEdge(let t, _) = start, GameWorld.probeSeen.insert("\(t)|\(platform.edge)").inserted { // DEBUG-7d1c
+                print("[DEBUG-7d1c] 919 from \(t.edge)\(t.direction == .forward ? "+" : "-") to platform \(platform.edge) of \(station(id: platform.station)?.name ?? "?") shortest(\(crossovers(on: shortest)) x, \(shortest.distance)) \(shortest.traversals.map { "\($0.edge)".dropFirst(5).dropLast() + ($0.direction == .forward ? "+" : "-") }.joined(separator: ",")) kept(\(crossovers(on: kept)) x, \(kept.distance)) \(kept.traversals.map { "\($0.edge)".dropFirst(5).dropLast() + ($0.direction == .forward ? "+" : "-") }.joined(separator: ","))")
+            }
             return kept
         }
         // A train returning from a passing place may rejoin later in the
@@ -271,6 +274,7 @@ extension GameWorld {
     }
 
     nonisolated(unsafe) static var probe919Off = false // DEBUG-7d1c
+    nonisolated(unsafe) static var probeSeen: Set<String> = [] // DEBUG-7d1c
 
     /// HK-LATE-RUNS: how many crossovers `path` takes: edges that leave
     /// both their nodes beside another edge, the way the branch of a
