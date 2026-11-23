@@ -16,7 +16,7 @@
 
 ## 還留下什麼
 
-- HEALTH-144 另外兩格沒有變好：`tymc` 新局 12/333（修之前之後雜湊相同，是 TYMC-QINGPU-FULL，見 `docs/handoff/TYMC-QINGPU-FULL.md`）；`tymc-old` 修之後 6/333、0 卡死。
+- HEALTH-144 另外兩格沒有變好：`tymc` 新局 12/333（修之前之後雜湊相同，是 TYMC-QINGPU-FULL，見 `docs/handoff/TYMC-QINGPU-FULL.md`）；`tymc-old` 6/333、0 卡死，修之前之後雜湊也相同；香港 `hk-sil-tcl` 也相同。
 - 決策 577 的解死結為什麼不認得「兩列車互相被 claim 綁住」的循環，沒有查。之後再出現沒有人佔軌道卻互等的死結，先看這個。
 - 量測用的暫時開關（關掉 919、關掉這條規則、印每列車佔哪幾段）沒有合進來；在分支 `claude/tymc-rebuilt-deadlock` 的 `442830b` 還看得到。
 
