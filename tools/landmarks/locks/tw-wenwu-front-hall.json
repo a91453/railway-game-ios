@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-wenwu-front-hall: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-wenwu-front-hall" : {
+      "hash" : "21b2c61dc2637ba5",
+      "triangles" : 3536
+    },
+    "tw-wenwu-front-hall-far" : {
+      "hash" : "831ce500e0a8aea7",
+      "triangles" : 672
+    }
+  }
+}

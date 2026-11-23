@@ -100,8 +100,9 @@ struct Map3DSunMoonLandmark: Sendable, Equatable {
     ///   terraces and the stairs down its front on the slope. It takes
     ///   the middle hall's place (its footprint is not drawn again,
     ///   ``Map3DScene/Builder/replacedPlots``); the real temple's front
-    ///   and rear halls, 27 m and 29 m from its middle, stay as the map's
-    ///   real buildings draw them, so the three halls stand in a row up
+    ///   and rear halls, 27 m and 29 m from its middle, are registered
+    ///   landmarks since decision 928 (``Map3DWenwuFrontHall``,
+    ///   ``Map3DWenwuRearHall``), so the three halls stand in a row up
     ///   the hill as the real ones do.
     /// - The pavilion: at 梅荷園 on the shore west of the pier
     ///   (OpenStreetMap's node 3605024438), as the earlier scene's stood

@@ -91,6 +91,10 @@ public enum WhatsNew {
                     chinese: "平溪線菁桐、集集線車埕換上照真實站房做的木造車站。"
                 ),
                 Line(
+                    english: "Hexing and Neiwan on the Neiwan Line have stations modelled on their real buildings.",
+                    chinese: "內灣線合興、內灣換成照真實站房做的樣子。"
+                ),
+                Line(
                     english: "Shanjia on the Western Line and Shifen on the Pingxi Line have stations modelled on their real buildings.",
                     chinese: "台鐵山佳、平溪線十分換上照真實站房做的車站。"
                 ),
@@ -145,6 +149,10 @@ public enum WhatsNew {
                 Line(
                     english: "People seen close up now differ: office workers, students, elders, travellers with suitcases, someone under an umbrella.",
                     chinese: "近看街上與月台的人不再都一樣：有上班族、學生、長者、拉行李的旅客和撐傘的人。"
+                ),
+                Line(
+                    english: "New landmarks: Ci'en Pagoda, Lalu Island and the front and rear halls of Wenwu Temple at Sun Moon Lake, the National Taichung Theater and Luce Chapel in Taichung, Weiwuying in Kaohsiung and Chihkan Tower in Tainan.",
+                    chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
                 ),
             ],
             fixes: [
