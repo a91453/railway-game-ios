@@ -132,6 +132,11 @@ extension StationKitBuilder {
     /// only entrances (``Map3DStationKit/hasHouse(_:)``). The kit's own
     /// recipes (`station(_:)`), each rail court left out.
     mutating func house(_ station: Map3DStationKit.Station, expansion: StationExpansion? = nil) {
+        // Decision 929: a station with the studio's own model of it.
+        if let own = Map3DStudioStation(rawValue: station.id) {
+            studioStation(own)
+            return
+        }
         let p = station.profile, v = Int(station.seed % 7)
         switch p {
         case .taipei: taipei()
@@ -555,6 +560,7 @@ extension Map3DScene.Builder {
         // Review L19, P3-17: its name boards say the game's station's name.
         kit.gameName = world.station(id: id)?.name
         kit.japanese = look.buildings == .japan
+        kit.finnish = look.buildings == .nordic
         kit.house(station, expansion: world.station(id: id)?.expansion)
         guard let bounds = kit.mesh.bounds else { return [] }
         let depth = bounds.max.x - bounds.min.x, wide = bounds.max.z - bounds.min.z
@@ -574,7 +580,15 @@ extension Map3DScene.Builder {
             // Decision 899: the studio's far versions, placed as the near.
             var farKit = StationKitBuilder()
             farKit.japanese = kit.japanese
+            farKit.finnish = kit.finnish
             farKit.genericHouse(station, expansion: world.station(id: id)?.expansion, far: true)
+            var farMoved = Map3DMesh()
+            farMoved.append(farKit.mesh, at: shift, forward: Map3DPoint(1, 0, 0))
+            far.append(farMoved, at: foot, forward: forward)
+        } else if let own = Map3DStudioStation(rawValue: station.id) {
+            // Decision 929: its own far version, placed as the near.
+            var farKit = StationKitBuilder()
+            farKit.studioStation(own, far: true)
             var farMoved = Map3DMesh()
             farMoved.append(farKit.mesh, at: shift, forward: Map3DPoint(1, 0, 0))
             far.append(farMoved, at: foot, forward: forward)
