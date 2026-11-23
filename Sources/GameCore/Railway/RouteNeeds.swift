@@ -1359,12 +1359,10 @@ extension GameWorld {
             // route itself (``TrackHolders/holdsAny(of:_:)``), and bound,
             // could not leave the track the claim's train waits for it to
             // leave.
-            if !GameWorld.probeFoulOff { // DEBUG-7d1c
             for (other, spans) in holders.fouling.enumerated() where other != place && !spans.isEmpty {
                 if spans.contains(where: { network.foulingSpans[$0]!.contains { claim.routeContains(.span($0)) } }) {
                     released[train.id, default: []].insert(trains[other].id)
                 }
-            }
             }
             // Decision 881, later (SANYING-0632): an empty run's claim
             // does not bind a train standing at an end of a line where the

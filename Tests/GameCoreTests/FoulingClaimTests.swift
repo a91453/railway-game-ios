@@ -1,4 +1,3 @@
-import Foundation // DEBUG-7d1c
 @testable import GameCore
 import XCTest
 
@@ -21,8 +20,6 @@ import XCTest
 /// more.) Now A, ahead as surely as a train on B's route, goes on, and B
 /// after it.
 final class FoulingClaimTests: XCTestCase {
-    override func setUp() { GameWorld.probeFoulOff = ProcessInfo.processInfo.environment["PROBE_FOUL_OFF"] != nil } // DEBUG-7d1c
-
     private func makeWorld() throws -> (world: GameWorld, a: TrainID, b: TrainID, stations: [String: StationID]) {
         var world = try GameWorld(bounds: WorldBounds(width: 462_848, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
                                   clock: GameClock(speed: .normal))
