@@ -401,6 +401,7 @@ extension Map3DScene.Builder {
                 outlined.formUnion(outlining { $0.addTaipeiMRTShell(shell.station, at: shell.placement) })
             } else if let study = exterior(for: id, profile: station.profile, at: anchors[id] ?? middle.point) {
                 // Decision 625: the real building stands for it.
+                studiedStations.insert(id)
                 if let expansion = self.world.station(id: id)?.expansion, let frame {
                     cells.formUnion(addExpansionWings(expansion, beside: study, frame: frame, snapshot: snapshot))
                 }

@@ -54,6 +54,10 @@ public enum WhatsNew {
                     english: "Level crossings have barrier machines with striped arms and warning lights.",
                     chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
                 ),
+                Line(
+                    english: "Stations on the ground have footbridges or underpass stairs, and island platforms have transfer signs.",
+                    chinese: "地面車站有了跨站天橋或地下道入口，島式月台有轉乘指示牌。"
+                ),
             ],
             fixes: [
                 Line(

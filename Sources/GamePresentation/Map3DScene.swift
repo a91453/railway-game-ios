@@ -654,6 +654,9 @@ public struct Map3DScene: Sendable {
             builder.boardSecondNames = Builder.boardSecondNames(world, railways, frame)
             builder.boardSigns = Builder.boardSigns(world, railways, frame)
         }
+        // Decision 936: the footbridges and underpass stairs, before the
+        // platforms' small things, which stand clear of them.
+        builder.addStationCrossings(snapshot)
         builder.addPlatformProps()
         // Decision 244: no street furniture where the track runs (nor
         // where a station's building or a landmark stands).
@@ -1250,6 +1253,12 @@ extension Map3DScene {
         /// Decision 874: the stations under a shell of their own
         /// (decision 827), with no kit canopy a sign could hang from.
         var shellRoofed: Set<StationID> = []
+        /// Decision 936: the stations a real building stands for
+        /// (decision 625), and where along each platform laid (by its
+        /// place in ``laidPlatforms``) a footbridge's tower or an
+        /// underpass's stairs stand (``addStationCrossings``).
+        var studiedStations: Set<StationID> = []
+        var crossingKeepOut: [Int: ClosedRange<Float>] = [:]
         var piers: [Map3DPoint] = []
         /// Decision 407: the viaducts laid and their piers, drawn together
         /// (``addViaducts()``) so the tracks of a pair share a pier and a
