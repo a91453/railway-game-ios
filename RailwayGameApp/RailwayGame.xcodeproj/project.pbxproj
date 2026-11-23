@@ -130,6 +130,7 @@
 		64FA884FFB9CAA078A0B8ACF /* tra_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = B80415091AAF98324FD6CDE1 /* tra_ridership.json */; };
 		6531280599255B09E99C7E41 /* LinesPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DDE7FD43D5C9514F89C9CA /* LinesPanel.swift */; };
 		65B04568A0BB91E5F70C0D7C /* TrainDiagramView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35B383D349E8080CFE435A11 /* TrainDiagramView.swift */; };
+		6619CA357EBBC334B2DF32EE /* TrainRosterArrangeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF3C541751B1B89DDF619A13 /* TrainRosterArrangeUITests.swift */; };
 		66CD628AEFF6AEC5001B87F0 /* track_lines.geojson in Resources */ = {isa = PBXBuildFile; fileRef = D8A3D706AFEA85A7941D8933 /* track_lines.geojson */; };
 		67082FEC0249F27345A32CDC /* thunder.caf in Resources */ = {isa = PBXBuildFile; fileRef = C51CA7B153E66D7649E1713A /* thunder.caf */; };
 		68C5B44129E827A4E417FB63 /* MapLibre-iOS-LICENSE.md in Resources */ = {isa = PBXBuildFile; fileRef = F093629816AA56C52D91E5B8 /* MapLibre-iOS-LICENSE.md */; };
@@ -629,6 +630,7 @@
 		CE177E709243BF5670A3607B /* StationCommerceSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationCommerceSection.swift; sourceTree = "<group>"; };
 		CF11EF43ACFDD9FA340D2081 /* FeatureUITestWorld.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureUITestWorld.swift; sourceTree = "<group>"; };
 		CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */ = {isa = PBXFileReference; path = taiwan_coverage.dat; sourceTree = "<group>"; };
+		CF3C541751B1B89DDF619A13 /* TrainRosterArrangeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainRosterArrangeUITests.swift; sourceTree = "<group>"; };
 		D0457A07A85DB26281EAE254 /* run-motor-brake-30.caf */ = {isa = PBXFileReference; path = "run-motor-brake-30.caf"; sourceTree = "<group>"; };
 		D129610F8191026E87FF4557 /* real_buses_HsinchuCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_HsinchuCounty.json; sourceTree = "<group>"; };
 		D2D657C1161282C2624EADB0 /* kenney-ui-confirm.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "kenney-ui-confirm.wav"; sourceTree = "<group>"; };
@@ -1131,6 +1133,7 @@
 				B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */,
 				A2C27C444707F74B8AF2F918 /* StoryCardUITests.swift */,
 				C62092ABB8C906B420B7E61B /* ToolbarSmokeTests.swift */,
+				CF3C541751B1B89DDF619A13 /* TrainRosterArrangeUITests.swift */,
 				01BEE1289DAE317B9E7290A0 /* TrainShowcaseUITests.swift */,
 				B79ADC872C8814C1468A48EA /* TutorialJourneyUITests.swift */,
 				3BA3B0B2889A228FC08F83B8 /* TutorialUITests.swift */,
@@ -1662,6 +1665,7 @@
 				CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */,
 				3D33656D59BCB77B82347CA8 /* StoryCardUITests.swift in Sources */,
 				A6BE3F0BE2C0F8D6B5BB4B23 /* ToolbarSmokeTests.swift in Sources */,
+				6619CA357EBBC334B2DF32EE /* TrainRosterArrangeUITests.swift in Sources */,
 				8AA825EB511ADB250AD7FEC6 /* TrainShowcaseUITests.swift in Sources */,
 				E185710E92BEBBD011BAA363 /* TutorialJourneyUITests.swift in Sources */,
 				4EE0D41AC5A9913840A83374 /* TutorialUITests.swift in Sources */,

@@ -391,18 +391,23 @@ struct TrainRosterView: View {
     /// renderer may call off the main thread (CRASH101). The rows wait for
     /// the first size, so the focused train is scrolled to at its height.
     private func table(_ roster: TrainRoster) -> some View {
-        ZStack(alignment: .topLeading) {
-            if tableSize != .zero {
-                tableRows(roster, size: tableSize)
+        // The rows lie over a clear colour that takes the room the page
+        // gives: built for the size measured last, they are for a moment
+        // wider than the table once the Arrange page's column comes in
+        // beside it, and in a stack they kept the table that wide, so the
+        // page reached past the screen's edges (ROSTERCRASH-2).
+        Color.clear
+            .overlay(alignment: .topLeading) {
+                if tableSize != .zero {
+                    tableRows(roster, size: tableSize)
+                }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { tableSize = $0 }
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.pageSpace)) } action: { tableFrame = $0 }
-        .background(Theme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.panelBorder))
-        .padding(.horizontal, 8)
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { tableSize = $0 }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.pageSpace)) } action: { tableFrame = $0 }
+            .background(Theme.panel)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.panelBorder))
+            .padding(.horizontal, 8)
     }
 
     @ViewBuilder
