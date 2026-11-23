@@ -54,6 +54,10 @@ public enum WhatsNew {
                     english: "Level crossings have barrier machines with striped arms and warning lights.",
                     chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
                 ),
+                Line(
+                    english: "Hong Kong's small stations are new station houses modelled on real ones.",
+                    chinese: "香港的小車站換上照真實車站做的新站房。"
+                ),
             ],
             fixes: [
                 Line(
