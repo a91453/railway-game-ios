@@ -64,6 +64,10 @@ public enum WhatsNew {
                     english: "Tapping Arrange on the train roster no longer closes the app.",
                     chinese: "點車隊運用表的「編排」不再閃退。"
                 ),
+                Line(
+                    english: "Fukuoka's water towers stand properly on the ground, on open legs.",
+                    chinese: "福岡給水塔的底部改正，好好站在地上。"
+                ),
             ]
         ),
         // 144.
