@@ -7,6 +7,8 @@ import GameCore
 /// (`a91453/railway-assets-private-2`
 /// `game-art-previews/docs/art/player-station-basic-2026-11/revision-2`,
 /// #182, and `player-station-generic-2026-11/extras/revision-2`, #186;
+/// decision 940: both revision-4, a dark edge along the roofs and no
+/// same-coloured faces on one plane, the two-floor one as it was;
 /// lessons in `docs/studio/lessons/player-station-basic.md` and
 /// `player-station-generic.md`), written in with
 /// `tools/train-models/glb_to_swift.py` (``Map3DGenericStationMesh``): a
@@ -90,6 +92,11 @@ extension StationKitBuilder {
             return
         }
         let model = Map3DGenericStation.building(profile: station.profile, tier: station.tier)
+        // Decision 933: in Hong Kong, the studio's new-town station.
+        if hongKong, Map3DHongKongStation.replaces(profile: station.profile, expansion: expansion) {
+            hongKongStation(model, back: 7, far: far)
+            return
+        }
         let depth = model == .halt ? Map3DGenericStation.haltDepth : Map3DGenericStation.bodyDepth
         let back: Float = 7, x = back + depth / 2
         genericStation(model, at: Map3DPoint(x, 0.25, 0), far: far)

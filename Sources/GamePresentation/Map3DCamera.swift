@@ -385,6 +385,12 @@ public struct Map3DLighting: Hashable, Sendable {
     /// where they stand, below the horizon too (``Map3DSky``).
     public let skySun: Map3DPoint
     public let skyMoon: Map3DPoint
+    /// Decision 942: the share of the moon's disc lit, 0 (new) to 1
+    /// (full), and the way from the moon toward the sun, one metre long:
+    /// the side of the disc that is lit (``Map3DSky``). Full, lit from
+    /// behind the eye, for a light with no date.
+    public var moonLit: Float = 1
+    public var moonSunward: Map3DPoint = .up
     /// Decision 813's later part (AURORA): how bright tonight's aurora is,
     /// 0 to 1, before the sky's darkness and the clouds (``Map3DSky/aurora``);
     /// 0 but far in the north (``aurora(at:latitude:)``).
@@ -473,6 +479,7 @@ public struct Map3DLighting: Hashable, Sendable {
         self.sunDirection = sunDirection
         self.skySun = skySun
         self.skyMoon = skyMoon
+        moonSunward = -skyMoon
     }
 
     /// The light at `minute` of the day (wrapped into a day), the sun up
@@ -507,6 +514,21 @@ public struct Map3DLighting: Hashable, Sendable {
     /// The moon's light by night: from overhead, a little to the south.
     static let moonLight = Map3DPoint(0.2, 1, 0.3).normalized ?? .up
 
+    /// Decision 942: how strong the night's light is under `moon`, as a
+    /// share of the full moon's (the keyframes' night, decision 229): all
+    /// of it under a full moon that is up, ``darkestNight`` with no moon
+    /// in the sky, the share between as the lit disc and its height (from
+    /// 2° under the horizon to 6° over it). Only the light from the moon's
+    /// side; the sky's ambient light stays, so a moonless night is not
+    /// black (the owner's 2026-10-16 note).
+    static func moonlight(_ moon: Map3DSunPath.Moon) -> Float {
+        let up = Map3DSeeThrough.smoothstep(-2, 6, Float(moon.elevation))
+        return darkestNight + (1 - darkestNight) * Float(moon.illuminated) * up
+    }
+
+    /// The light's share on a night with no moon up.
+    static let darkestNight: Float = 0.6
+
     /// Decision 813: the light at game time `time` over `place`, the sun
     /// where it stands there on the game's day (``Map3DSunPath``).
     ///
@@ -526,14 +548,21 @@ public struct Map3DLighting: Hashable, Sendable {
         let day = Map3DSunPath.realDayOfYear(gameDay: GameDate.floorDivide(time.seconds, GameTime.secondsPerDay))
         let position = Map3DSunPath.position(day: day, minute: minute, at: place)
         let keys = Self.keyHours(elevation: position.elevation)
-        let keyed = Keyed(hour: keys.morning).mixed(with: Keyed(hour: keys.evening), Self.eveningShare(hourAngle: position.hourAngle))
+        var keyed = Keyed(hour: keys.morning).mixed(with: Keyed(hour: keys.evening), Self.eveningShare(hourAngle: position.hourAngle))
             .mixed(with: Self.polarNoon, Self.polarNoonShare(elevation: position.elevation, highest: position.highest(atLatitude: place.latitude)))
         let toSun = Self.direction(elevation: position.elevation, azimuth: position.azimuth)
         let lit = Self.direction(elevation: max(position.elevation, Self.lowestLight), azimuth: position.azimuth)
         let sunShare = Float(min(max(0.5 + 0.5 * position.elevation / Self.lightTurnDegrees, 0), 1))
+        // Decision 942: the moon where it stands and as much of it lit as
+        // tonight's phase, and the night's light as strong as the moon
+        // (``moonlight(_:)``).
+        let moon = Map3DSunPath.moonPosition(date: time, place: place)
+        keyed.sunStrength *= 1 - (1 - Self.moonlight(moon)) * min(max(keyed.night, 0), 1)
         self.init(keyed: keyed, hour: Float(minute / 60),
                   sunDirection: (lit * sunShare + Self.moonLight * (1 - sunShare)).normalized ?? .up,
-                  skySun: toSun, skyMoon: -toSun)
+                  skySun: toSun, skyMoon: Self.direction(elevation: moon.elevation, azimuth: moon.azimuth))
+        moonLit = Float(moon.illuminated)
+        moonSunward = Map3DPoint(Float(moon.towardSun.x), Float(moon.towardSun.z), Float(-moon.towardSun.y)).normalized ?? .up
         aurora = Self.aurora(at: time, latitude: place.latitude)
     }
 

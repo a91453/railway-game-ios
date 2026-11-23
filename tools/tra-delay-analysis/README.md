@@ -5,15 +5,15 @@
 ## 輸入（都在私庫 `a91453/railway-reference-private`，不放進這個公開的 repository）
 
 - `Railway/tdx-snapshot-2026-10/data/TRA_LiveTrainDelay_*.jsonl.gz`：TDX 的台鐵歷史誤點，2025-11-20 到 2026-10-26，87 個檔、24,390,062 筆。授權：政府資料開放授權條款第 1 版，「交通部運輸資料流通服務平臺（TDX）」。
-- `Railway/taiwan-rail-reference-clean/source/data/tra_schedule.json` 與 `tra_station_info.json`：台鐵 2026-10-16 起 14 天的時刻表（臺鐵開放資料），用來把車次對到車種與停靠順序。
+- `Railway/rail-reference/regions/taiwan/source/data/tra_schedule.json` 與 `tra_station_info.json`：台鐵 2026-10-16 起 14 天的時刻表（臺鐵開放資料），用來把車次對到車種與停靠順序。
 
 只要 sparse checkout 這兩處：
 
 ```sh
 git clone --depth 1 --filter=blob:none --sparse https://github.com/a91453/railway-reference-private ref
 git -C ref sparse-checkout set --no-cone /Railway/tdx-snapshot-2026-10/ \
-  /Railway/taiwan-rail-reference-clean/source/data/tra_schedule.json \
-  /Railway/taiwan-rail-reference-clean/source/data/tra_station_info.json
+  /Railway/rail-reference/regions/taiwan/source/data/tra_schedule.json \
+  /Railway/rail-reference/regions/taiwan/source/data/tra_station_info.json
 ```
 
 ## 重跑
@@ -21,7 +21,7 @@ git -C ref sparse-checkout set --no-cone /Railway/tdx-snapshot-2026-10/ \
 ```sh
 python3 -I tools/tra-delay-analysis/analyze.py \
   --data ref/Railway/tdx-snapshot-2026-10/data \
-  --timetable ref/Railway/taiwan-rail-reference-clean/source/data \
+  --timetable ref/Railway/rail-reference/regions/taiwan/source/data \
   --out tools/tra-delay-analysis/results
 ```
 

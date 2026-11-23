@@ -116,14 +116,21 @@ public enum FerryCollection {
                 language.text("5.7 km · 2 stations and 2 angle stations", "全長 5.7 公里 · 2 個車站、2 個轉角站"),
                 language.text("Standard cabins and crystal cabins with a glass floor", "有一般車廂和玻璃地板的水晶車廂"),
             ]),
+            Entry(id: "wulai", title: language.text("Wulai Cable Car", "烏來空中纜車"), lines: [
+                language.text("New Taipei · opened August 1967, Taiwan's first passenger cable car", "新北 · 1967 年 8 月通車，臺灣第一座載客的觀光纜車"),
+                language.text("382 m, climbing 165 m · 2 stations", "斜長 382 公尺、高低差 165 公尺 · 2 個車站"),
+                language.text("Two large cabins: one goes up as the other comes down", "兩部大車廂對開：一部上山，另一部下山"),
+                language.text("Drawn in its green and red colours of about 2010; today's cabins are white and take 71",
+                              "畫的是 2010 年前後的綠車與紅車；現在的車廂是白色，一次載 71 人"),
+            ]),
         ]
     }
 
     /// Decision 632: the cable car page's note: how one comes into a game.
     public static func cablewayNote(in language: DisplayLanguage) -> String {
         language.text(
-            "Build a cable car with the building tools' Cable car mode: tap its stations, or lay a real one (Maokong, Sun Moon Lake, Wulai, Ngong Ping) where the map has it. Near Sun Moon Lake or Ngong Ping its cabins are that line's own.",
-            "用建造工具的「纜車」模式蓋纜車：點出各站，或在地圖上有真實纜車（貓空、日月潭、烏來、昂坪）的地方照真實路線拉。蓋在日月潭或昂坪附近，吊廂就是那條纜車自己的。"
+            "Build a cable car with the building tools' Cable car mode: tap its stations, or lay a real one (Maokong, Sun Moon Lake, Wulai, Ngong Ping) where the map has it. Near Sun Moon Lake, Wulai or Ngong Ping its cabins are that line's own.",
+            "用建造工具的「纜車」模式蓋纜車：點出各站，或在地圖上有真實纜車（貓空、日月潭、烏來、昂坪）的地方照真實路線拉。蓋在日月潭、烏來或昂坪附近，吊廂就是那條纜車自己的。"
         )
     }
 }

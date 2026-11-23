@@ -234,7 +234,11 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(Self.digest(before.map(\.name)), "45d52b8e433922ec")
         // Decision 891: the red commuter car's body and band in the
         // palette's colours (its three models in `hashes.lock.json`).
-        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "b4df6f4bda66e5b3")
+        // Decision 930: the Midsummer Formosa's locomotive and tender the
+        // studio's CT273, near and far (the same names and order; their
+        // four models and the head lamps are new, `hashes.lock.json`).
+        // Decision 940: the post boxes' stand-in in the studio's shape.
+        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "b092e00db735994e")
         XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
         XCTAssertEqual(Array(pack.models[firstCable + cable.count..<firstCable + cable.count + ferry.count].map(\.name)),
                        Map3DFerry.drawn.map(\.name))
@@ -279,8 +283,11 @@ final class Map3DModelPackLockTests: XCTestCase {
         // Moon Lake cabins (every model after them moves by 4).
         // Decision 921: and Japan's traffic signals after the yellow tit.
         // Decision 923: and Japan's poles, pedestrian signals and bus stop.
+        // Decision 930: and Hong Kong's outlying island catamaran, near
+        // and far, after its ferry's piers (every model after them moves
+        // by 2).
         // Decision 918: and the two bicycles and the ten people after them.
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "2f4fd37291867776")
+        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "cc1a97f27c595332")
         // Decision 840: and the studio's sleigh in the stand-in's place
         // (the same name and order; its model is new, `hashes.lock.json`);
         // its later amendment: dark brown antlers, the sleigh's team brown.
@@ -288,8 +295,9 @@ final class Map3DModelPackLockTests: XCTestCase {
         // hashes in `hashes.lock.json`).
         // Decision 923's later note: Japan's pedestrian signals' heads
         // dark (the studio's second round; the same triangles).
+        // Decision 940: the post boxes' stand-in in the studio's shape.
         // Decision 918: the two bicycles and the ten people join the pack.
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "90f60392fb308ced")
+        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "ca78bf8bf9774526")
         func lamps(movingBack moved: Int) -> [String] {
             pack.lights.keys.sorted().map { index -> String in
                 let car = pack.lights[index]!
@@ -303,13 +311,15 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(lamps(movingBack: 0).count, 373)
         XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count + winter.count
                                                           + santa.count + taiwanCars.count + herd.count + plain.count + finland.count + tits.count
-                                                          + japan.count + japanStreet.count + bicycles.count + pedestrians.count)), "5a0aba989e6893bf")
+                                                          + japan.count + japanStreet.count + bicycles.count + pedestrians.count)), "1f7966f965f380ab")
         // Decision 889: the windows after the cable car move by the
         // yellow tit's 4; decision 897: and by the Ngong Ping cabins' 4;
         // decision 921: and by Japan's traffic signals' 3; decision 923: and
         // by Japan's street furniture's 9; decision 918: and by the
         // bicycles' and people's 12.
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "9466be04feb4a533")
+        // Decision 930: the CT273's head lamp, and the windows after the
+        // ferries move by the catamaran's 2.
+        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "b382bd20ca48c3e9")
         XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "b693d447389ff604")
     }
 

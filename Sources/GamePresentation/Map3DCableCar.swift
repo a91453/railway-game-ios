@@ -56,7 +56,8 @@ public enum Map3DCableCar {
     /// ``Map3DModelPack/standard`` (last, so no model before them moves):
     /// the two cabins, the tower and the three halls, near and far, and a
     /// rope's metre (``rope``); decision 615: then the Sun Moon Lake cabins;
-    /// decision 897: then the Ngong Ping cabins.
+    /// decision 897: then the Ngong Ping cabins; decision 930: then
+    /// Wulai's two.
     public static var drawn: [Map3DModelPack.Model] {
         var made: [Map3DModelPack.Model] = []
         for far in [false, true] {
@@ -73,6 +74,12 @@ public enum Map3DCableCar {
         for far in [false, true] {
             for kind in Map3DNgongPingCabin.Kind.allCases {
                 if let cabin = Map3DNgongPingCabin.model(kind, far: far) { made.append(cabin) }
+            }
+        }
+        // Decision 930: Wulai's two cabins, near and far, after them.
+        for far in [false, true] {
+            for kind in Map3DWulaiCabin.Kind.allCases {
+                if let cabin = Map3DWulaiCabin.model(kind, far: far) { made.append(cabin) }
             }
         }
         return made

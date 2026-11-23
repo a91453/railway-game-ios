@@ -164,6 +164,118 @@
     "raw_sha256": "f4c5363cea28dcd5889eff54a6d6363c579850e08a873c7bf9d3d3855aac40a5",
     "raw_bytes": 5059460
   },
+  "nm-bulb-string": {
+    "note": "Decision 935. Made in the owner's batch meshy-batch-2026-10 (a91453/railway-assets-private, its generated.json's hq holds the prompts, each task's credits and times); copied from railway-assets-private-2 game-art-previews/docs/art/meshy-night-market-2026-11/SOURCE.md, which gives the hq credits but not the raw file's size. The game draws the local studio's rebuilt model (Map3DMeshyMarketTemple), which holds none of the raw file's triangles.",
+    "tasks": [
+      {
+        "id": "01a17bed-eb79-72c1-87c2-b30786061c88",
+        "type": "text-to-3d-preview",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a17bee-5981-73db-b6a2-b75c0dcf2bc1",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "7cd05a16ed6edfbedb2b73b3c9b85352981107653f79056aef6b9ce286779d38",
+    "raw_bytes": null
+  },
+  "nm-canopy": {
+    "note": "Decision 935. Made in the owner's batch meshy-batch-2026-10 (a91453/railway-assets-private, its generated.json's hq holds the prompts, each task's credits and times); copied from railway-assets-private-2 game-art-previews/docs/art/meshy-night-market-2026-11/SOURCE.md, which gives the hq credits but not the raw file's size. The game draws the local studio's rebuilt model (Map3DMeshyMarketTemple), which holds none of the raw file's triangles.",
+    "tasks": [
+      {
+        "id": "01a17bed-e943-77c4-8a60-d104a62c3709",
+        "type": "text-to-3d-preview",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a17bee-9389-769d-b400-2159462e45f3",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "c3749d453cbd331953b76b81a7b50908d0f9ad0629c97553d2f9d8caa91730cb",
+    "raw_bytes": null
+  },
+  "nm-stall-cart": {
+    "note": "Decision 935. Made in the owner's batch meshy-batch-2026-10 (a91453/railway-assets-private, its generated.json's hq holds the prompts, each task's credits and times); copied from railway-assets-private-2 game-art-previews/docs/art/meshy-night-market-2026-11/SOURCE.md, which gives the hq credits but not the raw file's size. The game draws the local studio's rebuilt model (Map3DMeshyMarketTemple), which holds none of the raw file's triangles.",
+    "tasks": [
+      {
+        "id": "01a17bed-e697-759e-b852-7aa7e82eb20b",
+        "type": "text-to-3d-preview",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a17bee-91ba-7149-b10d-e19d51828c19",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "c185bab1832f57a38160fd9459d56b006b259e1c01dbce9f2b8f8ec59ea17159",
+    "raw_bytes": null
+  },
+  "tiangong-burner": {
+    "note": "Decision 935. Made in the owner's batch meshy-batch-2026-10 (a91453/railway-assets-private, its generated.json's hq holds the prompts, each task's credits and times); copied from railway-assets-private-2 game-art-previews/docs/art/meshy-temple-front-2026-11/SOURCE.md, which gives the hq credits but not the raw file's size. The game draws the local studio's rebuilt model (Map3DMeshyMarketTemple), which holds none of the raw file's triangles.",
+    "tasks": [
+      {
+        "id": "01a17c0d-7692-736e-a95b-6a517372817c",
+        "type": "text-to-3d-preview",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      },
+      {
+        "id": "01a17c0e-3803-7599-9646-e629edbefcb6",
+        "type": "text-to-3d-refine",
+        "model_type": null,
+        "ai_model": null,
+        "prompt": null,
+        "texture_prompt": null,
+        "credits": null,
+        "finished": null
+      }
+    ],
+    "credits": 30,
+    "raw_sha256": "2bcb14997b9c510d0756a5c7d3b409328d73b1c890c08fa8795144f83237fed7",
+    "raw_bytes": null
+  },
   "bicycle": {
     "note": "Decision 918. Made in the owner's batch meshy-batch-2026-10 (a91453/railway-assets-private, its generated.json's hq holds the prompts, each task's credits and times); copied from railway-assets-private-2 game-art-previews/docs/art/meshy-bicycles-2026-11/SOURCE.md. The game draws the local studio's rebuilt model (Map3DBicycle), which holds none of the raw file's triangles.",
     "tasks": [
