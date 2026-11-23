@@ -130,6 +130,22 @@ public enum WhatsNew {
                     english: "Stations on the ground have footbridges or underpass stairs, and island platforms have transfer signs.",
                     chinese: "地面車站有了跨站天橋或地下道入口，島式月台有轉乘指示牌。"
                 ),
+                Line(
+                    english: "Hong Kong: M+ stands in West Kowloon beside Kowloon station, its tall slab on a long dark podium.",
+                    chinese: "香港西九文化區多了 M+：九龍站旁，長長的深色基座上立著一片高樓。"
+                ),
+                Line(
+                    english: "Hong Kong: the Hong Kong Palace Museum stands by the harbour in West Kowloon, wider at each storey up.",
+                    chinese: "香港西九文化區多了香港故宮文化博物館：在海邊，一層比一層往外挑。"
+                ),
+                Line(
+                    english: "Bicycles are parked by some bus stops; in Taiwan, rows of orange public bicycles too.",
+                    chinese: "有些公車站旁停著腳踏車；台灣還看得到一排橘色的公共自行車。"
+                ),
+                Line(
+                    english: "People seen close up now differ: office workers, students, elders, travellers with suitcases, someone under an umbrella.",
+                    chinese: "近看街上與月台的人不再都一樣：有上班族、學生、長者、拉行李的旅客和撐傘的人。"
+                ),
             ],
             fixes: [
                 Line(

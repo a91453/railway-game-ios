@@ -36,6 +36,8 @@ extension Map3DLandmarkRegistry {
         Map3DBaguashanBuddha.registration,
         Map3DDragonTigerPagodas.registration,
         Map3DHKObservationWheel.registration,
+        Map3DHKMPlus.registration,
+        Map3DHKPalaceMuseum.registration,
         Map3DTianTanBuddha.registration,
         Map3DPoLinMonastery.registration,
     ]

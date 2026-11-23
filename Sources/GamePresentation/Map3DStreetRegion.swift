@@ -102,6 +102,10 @@ public enum Map3DStreetRegion: Sendable, Equatable {
     /// post boxes beside them (decision 467): Taiwan's.
     var hasTaiwanPostBoxes: Bool { self == .taiwan }
 
+    /// Decision 918: whether rows of the orange public hire bicycles stand
+    /// by its bus stops: Taiwan's. Elsewhere only ordinary bicycles do.
+    var hasPublicBicycles: Bool { self == .taiwan }
+
     /// Decision 846: whether its signals stand on posts at the kerb, the
     /// head upright (``Map3DHongKongSignal``): Hong Kong's and Finland's.
     /// Taiwan's hang over the lanes from an arm (decision 355).

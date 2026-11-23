@@ -563,6 +563,15 @@ public struct Map3DStreetLife: Sendable {
         Map3DModelCatalog.standard.index(of: model.modelName).map { (model, $0) }
     })
 
+    /// Decision 918: the five more close-up people's places in
+    /// ``Map3DModelPack/standard``, by their names.
+    static let pedestrianModels: [String: Int] = Dictionary(uniqueKeysWithValues: Map3DPedestrian.Kind.allCases.flatMap { kind in
+        [false, true].compactMap { walking -> (String, Int)? in
+            let name = Map3DPedestrian.name(kind, walking: walking)
+            return Map3DModelCatalog.standard.index(of: name).map { (name, $0) }
+        }
+    })
+
     /// The figures' tops: bright and many, as a busy Taiwanese street's.
     public static let shirts: [UInt32] = [0xE8574A, 0x3B7DD8, 0x12A08F, 0xFFC86B, 0xF2F2EE, 0x8E6CC9, 0xF29BB0, 0x6FA85A, 0x2E3550, 0xF08A3C]
         .map(Map3DColor.rgb)
@@ -722,7 +731,13 @@ public struct Map3DStreetLife: Sendable {
             // nearest first, as many as the frame allows; the block farther.
             let close = frame.closeUps < closeUps && (eye * eye + away * away).squareRoot() < Map3DCommuterFigure.detailReach
             let drawn = close ? model.closeUp : model
-            guard size > 0, let index = Self.models[drawn] else { continue }
+            guard size > 0, var index = Self.models[drawn] else { continue }
+            // Decision 918: close up, one of six people, the same one
+            // every frame.
+            if close, drawn != model, let kind = Map3DPedestrian.kind(r(12)),
+               let other = Self.pedestrianModels[Map3DPedestrian.name(kind, walking: model == .walking)] {
+                index = other
+            }
             frame.instances.append(.prop(index, at: foot, forward: facing, scale: scale * size, tint: tint))
             frame.people += 1
             if drawn != model { frame.closeUps += 1 }
