@@ -32,17 +32,10 @@ struct NetworkControls: View {
     @AppStorage(Map3DQuality.key) private var map3DQuality: Map3DQuality = .forThisDevice
 
     var body: some View {
+        // The mode row is not here: the details card pins it at its top
+        // (``NetworkModeRow``), so it never scrolls away under a tall
+        // inspector at large text (AI tester round 1, 2026-11-23).
         VStack(alignment: .leading, spacing: 8) {
-            // Decision 574: six modes do not fit a phone's panel in
-            // English; then the row keeps its words whole and slides
-            // sideways instead of cutting them short. Its next step: the
-            // chosen mode is scrolled into view, and an end with more past
-            // it fades out.
-            ViewThatFits(in: .horizontal) {
-                modePicker
-                NetworkModeScrollRow(session: session, modes: modes)
-            }
-            .tutorialTarget(.networkModes)
             switch session.networkMode {
             case .build:
                 buildOptions
@@ -352,27 +345,6 @@ struct NetworkControls: View {
         }
     }
 
-    /// The modes the row shows. Decision 266: in a lesson, only the modes
-    /// it has unlocked.
-    private var modes: [NetworkToolMode] {
-        let session = session
-        return NetworkToolMode.allCases.filter { session.allows($0) }
-    }
-
-    /// The network tool's modes, one segment each. It stands in a
-    /// ViewThatFits, so its row closure is sendable and makes a view of
-    /// its own (CRASH101).
-    private var modePicker: some View {
-        let session = session
-        let modes = self.modes
-        let language = session.language
-        return Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
-            ForEach(modes, id: \.self) { @Sendable mode in
-                NetworkModeSegment(mode: mode, language: language)
-            }
-        }
-        .pickerStyle(.segmented)
-    }
 
     // MARK: - Cable car
 
@@ -814,6 +786,45 @@ private struct TracedSaleRow: View {
             .accessibilityIdentifier("network.forSale.buy")
         }
         .padding(.top, 2)
+    }
+}
+
+/// The network tool's modes (decision 574): segments where they fit,
+/// else a row of chips that slides sideways. The details card pins it at
+/// its top, above the inspector, so a tall inspector at a large text size
+/// cannot push it out of reach (AI tester round 1, 2026-11-23: tutorial
+/// step 5's Station was below the card's fold).
+struct NetworkModeRow: View {
+    let session: GameSession
+
+    /// The modes the row shows. Decision 266: in a lesson, only the modes
+    /// it has unlocked.
+    private var modes: [NetworkToolMode] {
+        let session = session
+        return NetworkToolMode.allCases.filter { session.allows($0) }
+    }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            modePicker
+            NetworkModeScrollRow(session: session, modes: modes)
+        }
+        .tutorialTarget(.networkModes)
+    }
+
+    /// The network tool's modes, one segment each. It stands in a
+    /// ViewThatFits, so its row closure is sendable and makes a view of
+    /// its own (CRASH101).
+    private var modePicker: some View {
+        let session = session
+        let modes = self.modes
+        let language = session.language
+        return Picker("Network mode", selection: Binding(get: { session.networkMode }, set: { session.setNetworkMode($0) })) {
+            ForEach(modes, id: \.self) { @Sendable mode in
+                NetworkModeSegment(mode: mode, language: language)
+            }
+        }
+        .pickerStyle(.segmented)
     }
 }
 

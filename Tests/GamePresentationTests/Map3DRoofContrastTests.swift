@@ -162,9 +162,12 @@ final class Map3DRoofContrastTests: XCTestCase {
         let own: @Sendable (UInt32) -> UInt32 = { $0 }
         let house: @Sendable (UInt32) -> UInt32 = { Map3DLook.colour($0, strength: Map3DStationKit.houseLook) }
         // Station kit: the building depends on the profile, the seed's
-        // variant and, for the regional ones, the tier.
+        // variant and, for the regional ones, the tier. Not the stations
+        // with the studio's own model (decision 929), which are not their
+        // profile's recipe (decision 945: Neiwan was `halt-v0`'s first).
         var houses: [String: (station: Map3DStationKit.Station, count: Int)] = [:], order: [String] = []
-        for station in Map3DStationKit.stations where Map3DStationKit.hasHouse(station.profile) {
+        for station in Map3DStationKit.stations
+        where Map3DStationKit.hasHouse(station.profile) && Map3DStudioStation(rawValue: station.id) == nil {
             let varies: Set<Map3DStationKit.Profile> = [.hsinchu, .tainan, .chiayi, .heritage, .timber, .regional, .halt, .zuoying, .hsrTaichung, .hsrTaoyuan, .hsrHsinchu, .hsrTainan, .highSpeed]
             let key = station.profile.rawValue + (varies.contains(station.profile) ? "-v\(station.seed % 7)" : "") + (station.profile == .regional ? "-t\(station.tier)" : "")
             if houses[key] == nil { order.append(key) }

@@ -1410,6 +1410,7 @@ private struct DetailsCard: View {
     @State private var headHeight: CGFloat = 0
     @State private var middleHeight: CGFloat = 0
     @State private var footHeight: CGFloat = 0
+    @State private var topHeight: CGFloat = 0
     /// The layout the card keeps for what it shows (``layout``); `nil`
     /// until its heights have changed since it began to show it.
     @State private var kept: DetailsCardLayout?
@@ -1427,6 +1428,16 @@ private struct DetailsCard: View {
     private var hasFoot: Bool {
         ControlPanel.showsAction(session)
     }
+
+    /// The network tool's mode row, pinned above everything else in the
+    /// card: under a tall inspector (a large text size on a phone held
+    /// sideways) it scrolled out of the card, and the AI testers' player
+    /// could not find Station (round 1, 2026-11-23).
+    private var hasTop: Bool {
+        session.tool == .network
+    }
+
+    private var shownTop: CGFloat { hasTop ? topHeight : 0 }
 
     private var selectedStation: Station? {
         session.tool == .select ? session.selectedStation : nil
@@ -1449,7 +1460,7 @@ private struct DetailsCard: View {
     }
 
     private func choose(_ current: DetailsCardLayout?) -> DetailsCardLayout {
-        DetailsCardLayout.layout(head: Double(shownHead), foot: Double(shownFoot), maxHeight: Double(maxHeight), current: current)
+        DetailsCardLayout.layout(head: Double(shownHead), foot: Double(shownFoot), maxHeight: Double(maxHeight - shownTop), current: current)
     }
 
     /// The scrolled part fades into the pinned parts instead of being cut
@@ -1465,6 +1476,33 @@ private struct DetailsCard: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+            if hasTop { top }
+            parts
+        }
+        .frame(height: min(max(shownTop + ends + middleHeight, 1), maxHeight), alignment: .top)
+        .onChange(of: [shownHead, shownFoot, maxHeight, shownTop]) {
+            kept = choose(kept)
+        }
+        .onChange(of: ControlDetails.Subject(session, foldsWhileDrawing: verticalSizeClass == .compact)) {
+            kept = nil
+        }
+        .glassBackground(cornerRadius: 24)
+        .hudFrameMark("hud.card")
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("details.card")
+    }
+
+    /// The network tool's mode row, which never scrolls.
+    private var top: some View {
+        NetworkModeRow(session: session)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding([.top, .horizontal], Self.padding)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { topHeight = $0 }
+    }
+
+    /// The head, middle and foot, in the layout the room allows.
+    private var parts: some View {
         Group {
             switch layout {
             case .pinned:
@@ -1516,17 +1554,6 @@ private struct DetailsCard: View {
                 .accessibilityIdentifier("details.scroll.whole")
             }
         }
-        .frame(height: min(max(ends + middleHeight, 1), maxHeight), alignment: .top)
-        .onChange(of: [shownHead, shownFoot, maxHeight]) {
-            kept = choose(kept)
-        }
-        .onChange(of: ControlDetails.Subject(session, foldsWhileDrawing: verticalSizeClass == .compact)) {
-            kept = nil
-        }
-        .glassBackground(cornerRadius: 24)
-        .hudFrameMark("hud.card")
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("details.card")
     }
 
     /// The selection, or what the network tool's taps picked.

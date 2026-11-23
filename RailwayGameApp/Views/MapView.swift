@@ -1100,6 +1100,16 @@ struct MapView: View {
             // panel leaves.
             // TestFlight 59.1: only the lines panel's own choice; a line
             // that building makes or picks stays where the player looks.
+            // Something just built under the details card or a panel moves
+            // into the map they leave: the AI testers' players lost the
+            // station and track they had just put up under the building
+            // card (round 1, 2026-11-23). Only when it is hidden; not
+            // while a train is followed.
+            .onChange(of: session.buildPulse) { _, pulse in
+                guard let pulse, !session.isFollowingTrain,
+                      let moved = projection.keepingClear(WorldCoordinate(x: pulse.location.x, y: pulse.location.y), of: cover) else { return }
+                camera = moved
+            }
             .onChange(of: session.selectedLineID) { _, _ in
                 guard screen.panel == .lines else { return }
                 keepSelectionClear(projection: projection, cover: cover, line: true)
@@ -3293,6 +3303,15 @@ private struct MapMarkOverlays: ViewModifier {
             .overlay(alignment: .topLeading) {
                 MapStationTagView(session: session, camera: projection, viewport: viewport, insets: clear,
                                   clearTop: max(clear.top, topColumnDepth))
+            }
+            // The towns a lesson's first steps look for and link (AI
+            // tester round 1, 2026-11-23).
+            .overlay(alignment: .topLeading) {
+                let marks = session.tutorialPlaceMarks
+                if !marks.isEmpty {
+                    TutorialPlaceMarks(marks: marks, camera: projection)
+                        .mask { attribution.fill() }
+                }
             }
             // Decision 117: something just put up.
             .overlay(alignment: .topLeading) {
