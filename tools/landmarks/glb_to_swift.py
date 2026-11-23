@@ -152,13 +152,16 @@ def primitives(path, gltf, nodes):
 
 
 def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 1), unsigned_z=True, centre=False, turn=0.0,
-           lift=0.0, mid=None):
+           lift=0.0, mid=None, south=None):
     """The GLB at `path` encoded; its vertex and triangle counts, and its
     bounds in metres. With `centre`, `mid` (centimetres east and north) is
-    the shift to take off rather than this model's own footprint middle."""
+    the shift to take off rather than this model's own footprint middle.
+    With `south` (metres, the studio's own north before any turn), every
+    part that reaches south of it is left out: a part is the triangles of
+    one material joined through their welded vertices."""
     aliases = aliases or {}
     gltf, blob = read_glb(path)
-    keys, points, triangles = {}, [], []
+    keys, points, triangles, norths = {}, [], [], []
     # `turn`: degrees anticlockwise seen from above, about the GLB's origin.
     turn_cos, turn_sin = math.cos(math.radians(turn)), math.sin(math.radians(turn))
     for prim, place in primitives(path, gltf, nodes):
@@ -189,6 +192,7 @@ def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 
             if key not in keys:
                 keys[key] = len(points)
                 points.append(key)
+                norths.append(-z if axes == "enu" else y)
             local.append(keys[key])
         for k in range(0, len(idx), 3):
             a, b, c = local[idx[k]], local[idx[k + 1]], local[idx[k + 2]]
@@ -196,6 +200,12 @@ def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 
                 b, c = c, b
             if a != b and b != c and a != c:
                 triangles.append((a, b, c, paint))
+    if south is not None:
+        triangles = without_parts_south_of(south, points, norths, triangles)
+        used = sorted({i for t in triangles for i in t[:3]})
+        index = {old: new for new, old in enumerate(used)}
+        points = [points[i] for i in used]
+        triangles = [(index[a], index[b], index[c], paint) for a, b, c, paint in triangles]
     if centre:
         # Put the middle of the model's footprint at the origin (the studio's
         # origin is its outline's centroid); the shift is printed.
@@ -217,6 +227,30 @@ def encode(path, materials, aliases=None, axes="enu", nodes=False, scale=(1, 1, 
     low = [min(p[k] for p in points) / 100 for k in range(3)]
     high = [max(p[k] for p in points) / 100 for k in range(3)]
     return bytes(out), len(points), len(triangles), low, high
+
+
+def without_parts_south_of(south, points, norths, triangles):
+    """`triangles` without every part that reaches south of `south`
+    metres (decision 938: the Tian Tan Buddha's long flight of stairs down
+    a hillside the game's ground does not follow). A part is the triangles
+    of one material joined through shared vertices."""
+    parent = {}
+
+    def find(a):
+        parent.setdefault(a, a)
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    for a, b, c, paint in triangles:
+        parent[find((paint, b))] = find((paint, a))
+        parent[find((paint, c))] = find((paint, a))
+    lowest = {}
+    for node in list(parent):
+        root = find(node)
+        lowest[root] = min(lowest.get(root, math.inf), norths[node[1]])
+    return [t for t in triangles if lowest[find((t[3], t[0]))] >= south]
 
 
 def mesh_file(enum, materials, source, models, tool="tools/landmarks/glb_to_swift.py"):
@@ -270,6 +304,10 @@ def main():
     parser.add_argument("--raise", dest="lift", type=float, default=0.0,
                         help="raise the models this many metres, so a part the studio built below its ground (a plinth down a "
                              "hillside) stands at 0; the registration's `sink` lowers it again")
+    parser.add_argument("--without-parts-south-of", dest="south", type=float,
+                        help="leave out every part (the triangles of one material joined through shared vertices) that reaches "
+                             "south of this many metres north of the GLB's origin, before any turn: a flight of stairs down a "
+                             "hillside the game's ground does not follow (decision 938)")
     parser.add_argument("--legacy", choices=sorted(LEGACY), help="write a landmark file made before the registry")
     parser.add_argument("--assets", help="--legacy sunmoon: the folder of the Sun Moon Lake GLBs")
     parser.add_argument("--nodes", action="store_true",
@@ -306,9 +344,9 @@ def main():
     mid = None
     for path in a.glbs:
         if a.centre and mid is None:
-            _, _, _, low, high = encode(path, materials, nodes=a.nodes, turn=a.turn, lift=a.lift)
+            _, _, _, low, high = encode(path, materials, nodes=a.nodes, turn=a.turn, lift=a.lift, south=a.south)
             mid = tuple((round(high[k] * 100) + round(low[k] * 100)) // 2 for k in (0, 1))
-        data, v, t, _, _ = encode(path, materials, nodes=a.nodes, centre=a.centre, turn=a.turn, lift=a.lift, mid=mid)
+        data, v, t, _, _ = encode(path, materials, nodes=a.nodes, centre=a.centre, turn=a.turn, lift=a.lift, mid=mid, south=a.south)
         name = os.path.splitext(os.path.basename(path))[0]
         ground_plate.check(data, name, allow=a.allow_ground_plate)
         print(f"{name}: {v} vertices, {t} triangles, {len(data)} bytes")

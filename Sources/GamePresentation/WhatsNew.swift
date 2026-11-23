@@ -115,6 +115,10 @@ public enum WhatsNew {
                     chinese: "夜市有了入夜會亮的燈泡串、紅白帆布棚與小吃推車，廟前多了天公爐與一對石獅。"
                 ),
                 Line(
+                    english: "The Tian Tan Buddha and Po Lin Monastery stand at Ngong Ping, where the cable car ends.",
+                    chinese: "昂坪纜車終點旁多了天壇大佛與寶蓮禪寺。"
+                ),
+                Line(
                     english: "The red and green post boxes on the pavements are new, with a slot frame on each and a lid over the box.",
                     chinese: "人行道上的紅綠郵筒換新：投信口有白框，方箱上加頂蓋。"
                 ),
