@@ -126,6 +126,10 @@ public enum WhatsNew {
                     english: "The stations you build have a dark edge along the roof.",
                     chinese: "自己蓋的車站屋頂加了一圈深色邊。"
                 ),
+                Line(
+                    english: "Stations on the ground have footbridges or underpass stairs, and island platforms have transfer signs.",
+                    chinese: "地面車站有了跨站天橋或地下道入口，島式月台有轉乘指示牌。"
+                ),
             ],
             fixes: [
                 Line(
@@ -135,6 +139,10 @@ public enum WhatsNew {
                 Line(
                     english: "Fukuoka's water towers stand properly on the ground, on open legs.",
                     chinese: "福岡給水塔的底部改正，好好站在地上。"
+                ),
+                Line(
+                    english: "The Taoyuan Airport MRT no longer jams after it is rebuilt.",
+                    chinese: "機場捷運改建後不再卡車。"
                 ),
             ]
         ),
