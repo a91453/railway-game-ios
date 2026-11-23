@@ -47,12 +47,35 @@ public enum DetailsCardLayout: Equatable, Sendable {
     /// has one, or when it begins to show something new). Each layout is
     /// kept on less room than it takes to enter, by more than a head's or
     /// foot's line, so a line more or less keeps the layout.
-    public static func layout(head: Double, foot: Double, maxHeight: Double, current: DetailsCardLayout?) -> DetailsCardLayout {
-        let headRoom = current == .pinned ? leastMiddle : roomyMiddle
+    ///
+    /// `top` is a row pinned above the head, the network tool's modes
+    /// (#2614). It was the options' first row before, so it counts as
+    /// room the options have, not as room taken from them: counted
+    /// against them, a phone held on its side lost the pinned head, and
+    /// the inspector, scrolling above the options, pushed the Depot mode's
+    /// sidings below the card's edge (DEPOT-SIDINGS-HIT, full lane
+    /// `fcaa3f0`). The options below the row still keep a row of their
+    /// own, and entering a pinned head still takes more room than keeping
+    /// it, by more than a line.
+    public static func layout(top: Double = 0, head: Double, foot: Double, maxHeight: Double, current: DetailsCardLayout?) -> DetailsCardLayout {
+        let keep = max(leastMiddle, top + leastKept)
+        let enter = max(roomyMiddle, keep + leastFootKept)
+        let headRoom = current == .pinned ? keep : enter
         if head + foot + headRoom <= maxHeight { return .pinned }
         let footRoom = current == .whole || current == nil ? leastKept : leastFootKept
-        if foot + footRoom <= maxHeight { return .footPinned }
+        if top + foot + footRoom <= maxHeight { return .footPinned }
         return .whole
+    }
+
+    /// The options' steady height in the card, so it does not jump in
+    /// height between tools: about three rows.
+    public static let optionsHeight: Double = 116
+
+    /// The least height the options take under a pinned row of `top`
+    /// points: the row was one of the options (#2614 pinned it), so the
+    /// card is as tall as before rather than taller by the row.
+    public static func optionsMinimum(under top: Double) -> Double {
+        max(0, optionsHeight - top)
     }
 
     /// Whether the card's foot holds what is chosen for a train being
@@ -61,5 +84,14 @@ public enum DetailsCardLayout: Equatable, Sendable {
     /// train not on the track selected.
     public static func placesTrain(tool: ConstructionTool, trainIsSelected: Bool, trainIsOnTrack: Bool) -> Bool {
         tool == .train && trainIsSelected && !trainIsOnTrack
+    }
+
+    /// Whether the card's foot holds the number of sidings over Lay Depot
+    /// Sidings, as it holds a train's cars over Place (DEPOT-SIDINGS-HIT):
+    /// the network tool's Depot mode, whose only option it is. Among the
+    /// options, on a phone held on its side, the mode row pinned on top
+    /// (#2614), the inspector and the button left it below the card's edge.
+    public static func laysDepot(tool: ConstructionTool, networkMode: NetworkToolMode) -> Bool {
+        tool == .network && networkMode == .depot
     }
 }

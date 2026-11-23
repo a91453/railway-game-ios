@@ -36,6 +36,9 @@ struct ControlPanel: View {
 
     let session: GameSession
     let arrangement: Arrangement
+    /// The height of a row pinned above the options (the network tool's
+    /// modes, #2614), which takes the place of their first row.
+    var rowAbove: CGFloat = 0
     /// Whether the lines panel is open (decision 568's Undo); absent where
     /// the screen is not.
     @Environment(GameScreenState.self) private var screen: GameScreenState?
@@ -105,13 +108,17 @@ struct ControlPanel: View {
             }
         case .options:
             ToolOptions(session: session)
-                .frame(minHeight: ToolOptions.minimumHeight, alignment: .topLeading)
+                .frame(minHeight: CGFloat(DetailsCardLayout.optionsMinimum(under: Double(rowAbove))), alignment: .topLeading)
         case .action:
             // Decision 588: a train being placed has its cars and platform
-            // chosen over the button that places it.
+            // chosen over the button that places it; DEPOT-SIDINGS-HIT: a
+            // depot its sidings, over the button that lays them.
             VStack(alignment: .leading, spacing: 12) {
                 if TrainPlacementChoices.shows(session) {
                     TrainPlacementChoices(session: session)
+                }
+                if DepotSidingsChoice.shows(session) {
+                    DepotSidingsChoice(session: session)
                 }
                 ActionButton(session: session)
             }
@@ -332,9 +339,6 @@ private struct RedoButton: View {
 
 /// What the active tool needs besides a tap on the map.
 private struct ToolOptions: View {
-    /// Keeps the panel from jumping in height between tools.
-    static let minimumHeight = 116.0
-
     @Bindable var session: GameSession
 
     var body: some View {
