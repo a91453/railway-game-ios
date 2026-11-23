@@ -356,16 +356,16 @@ extension Lesson {
             step.retold(
                 title: ("Zoom out to see both towns", "縮小地圖，看到兩座城鎮"),
                 body: (
-                    "Pinch or tap − to zoom, drag to move. Blocks: green homes, blue shops, orange offices.",
-                    "兩指或按「−」縮放，拖曳移動。方塊是建物：綠住宅、藍商業、橘辦公。"
+                    "Pinch or tap − to zoom, drag to move, until both numbered rings show.",
+                    "兩指或按「−」縮放、拖曳移動，直到看見 1、2 兩個圓圈。"
                 )
             )
         case "track.draw":
             step.retold(
                 title: ("Tap one town, then the other", "點一座城鎮，再點另一座"),
                 body: (
-                    "Run the track from town to town, so a station fits in each.",
-                    "軌道從一座城鎮鋪到另一座，兩邊才都能蓋車站。"
+                    "The towns are ringed and numbered. Run the track from 1 to 2, so a station fits in each.",
+                    "城鎮用圓圈標了 1 和 2。軌道從 1 鋪到 2，兩邊才都能蓋車站。"
                 )
             )
         case "station.first.site":
