@@ -356,8 +356,8 @@ extension Lesson {
             step.retold(
                 title: ("Zoom out to see both towns", "縮小地圖，看到兩座城鎮"),
                 body: (
-                    "Pinch or tap − to zoom, drag to move, until both rings show. Blocks: green homes, blue shops, orange offices.",
-                    "兩指或按「−」縮放，拖曳移動，直到看見兩個圓圈。方塊是建物：綠住宅、藍商業、橘辦公。"
+                    "Pinch or tap − to zoom, drag to move, until both numbered rings show.",
+                    "兩指或按「−」縮放、拖曳移動，直到看見 1、2 兩個圓圈。"
                 )
             )
         case "track.draw":
