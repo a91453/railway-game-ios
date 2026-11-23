@@ -331,4 +331,42 @@ final class TrainRosterTests: XCTestCase {
         XCTAssertEqual(roster.only(line: first).waiting, roster.waiting, "every line's, on a line's roster too")
         XCTAssertFalse(roster.rows.contains { $0.train == three }, "no row of its own")
     }
+
+    /// ROSTERCRASH (0.6.0 (144): the app stopped when Arrange was tapped):
+    /// whatever the Arrange page reads of a roster is well formed through
+    /// a day and the next morning, with a line's train that never ran (a
+    /// row with no boxes) and a train on no line: no box ends before it
+    /// starts, no wait is shorter than a minute, each train has one row,
+    /// and a finger anywhere finds a row that is there or none.
+    func testWhatArrangeReadsIsWellFormedThroughADay() throws {
+        var world = try build()
+        let spare = try world.purchaseTrain(named: "Spare").id
+        try world.assignTrain(spare, to: first)
+        _ = try world.purchaseTrain(named: "Waiting")
+        var emptyRowSeen = false
+        for _ in 0..<30 {
+            try world.advance(ticks: 3_000)
+            for day in TrainRoster.Day.allCases {
+                for line in [nil, first, second] {
+                    let roster = TrainRoster(world: world, day: day).only(line: line)
+                    XCTAssertEqual(Set(roster.rows.map(\.id)).count, roster.rows.count)
+                    XCTAssertEqual(Set(roster.waiting.map(\.id)).count, roster.waiting.count)
+                    for row in roster.rows {
+                        emptyRowSeen = emptyRowSeen || row.cells.isEmpty
+                        XCTAssertTrue((0...100).contains(row.utilisation))
+                        XCTAssertTrue(row.cells.allSatisfy { $0.end >= $0.start })
+                        XCTAssertTrue(row.gaps.allSatisfy { $0.end - $0.start >= TrainRoster.Gap.shortest && $0.minutes >= 1 })
+                        XCTAssertEqual(row.revenueTexts(in: .traditionalChinese).count, 3)
+                    }
+                    for y in stride(from: -50.0, through: 2_000, by: 13) {
+                        let found = TrainRosterDrag.row(atY: y, axisHeight: 24, rowHeight: TrainRosterLayout.fullRowHeight, rows: roster.rows.count)
+                        XCTAssertTrue(found.map(roster.rows.indices.contains) ?? true)
+                    }
+                }
+            }
+        }
+        XCTAssertTrue(emptyRowSeen, "a row with no boxes was among them")
+        XCTAssertNil(TrainRosterDrag.row(atY: .nan, axisHeight: 24, rowHeight: 44, rows: 3))
+        XCTAssertNil(TrainRosterDrag.row(atY: 100, axisHeight: 24, rowHeight: 44, rows: 0))
+    }
 }

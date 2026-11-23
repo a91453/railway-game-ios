@@ -71,7 +71,12 @@ public enum WhatsNew {
                     chinese: "近看街上與月台的人不再都一樣：有上班族、學生、長者、拉行李的旅客和撐傘的人。"
                 ),
             ],
-            fixes: []
+            fixes: [
+                Line(
+                    english: "Tapping Arrange on the train roster no longer closes the app.",
+                    chinese: "點車隊運用表的「編排」不再閃退。"
+                ),
+            ]
         ),
         // 144.
         Entry(
