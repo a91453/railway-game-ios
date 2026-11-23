@@ -78,7 +78,8 @@ final class TrainRosterArrangeUITests: XCTestCase {
         XCTAssertEqual(app.state, .runningForeground, "The app closed as the rows scrolled")
         let card = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "trainRoster.waiting.")).firstMatch
         XCTAssertTrue(card.appears(within: 5), "A waiting train shows")
-        card.press(forDuration: 1.2, thenDragTo: table.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.6)))
+        card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 1.2, thenDragTo: table.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.6)))
         Thread.sleep(forTimeInterval: 2.5)
         XCTAssertEqual(app.state, .runningForeground, "The app closed as a waiting train was dropped on a row")
         XCTAssertTrue(arrange.exists, "The roster is still up")
