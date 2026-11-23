@@ -47,6 +47,10 @@ public enum WhatsNew {
                     chinese: "平溪站與日南站畫成各自的木造站房。"
                 ),
                 Line(
+                    english: "Shanjia on the Western Line and Shifen on the Pingxi Line have stations modelled on their real buildings.",
+                    chinese: "台鐵山佳、平溪線十分換上照真實站房做的車站。"
+                ),
+                Line(
                     english: "Small stations on the Nordic map are yellow timber station houses.",
                     chinese: "北歐地圖的小站改成黃色的木造站房。"
                 ),
