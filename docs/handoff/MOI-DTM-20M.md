@@ -23,6 +23,8 @@
 
 ## 3. 還沒做完
 
+> **2026-11-23 更新（第三手 session_01JMHz9YCD5pCNzyEdGEkn1y）**：第 1、2 步做完了。整天檢查只有桃園機捷變差。查下去，原因是尖峰時的連鎖延誤對鋪法很敏感，不是地面讓哪一段變慢（#2118 comment 7112006081）。主規劃 2 選 (b)：機捷的決策 844 基準和 HSR 第 10、15 列改成實測值，逐值理由寫在決策 943 §6；另開 bug 項目 assets-2 `docs/priorities/TYMC-PEAK-CASCADE.md`。接下來是第 3–6 步。
+
 - **`HighSpeedDemoTests.testWithCurveLimitsTheSetsKeepToTheRealDayAsWell` 是紅的，沒有放寬。** 已在 #2118 回報，等手動 ci.yml 的整天時刻表檢查與 main 比過再決定。
   - 新地面讓示範線的曲線較緩，三段從「不開限速」變成「開限速也趕得上」，所以照決策 217 保留限速。
   - 五站車 27 在站 2 附近因此變慢。第 10 列出站被擋約 1 分鐘（決策 228），照決策 306 補不回來，比關限速晚 120 s。第 15 列同理，晚 180 s 對 66 s。
