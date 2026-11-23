@@ -47,6 +47,10 @@ public enum WhatsNew {
                     chinese: "平溪站與日南站畫成各自的木造站房。"
                 ),
                 Line(
+                    english: "Jingtong on the Pingxi Line and Checheng on the Jiji Line have timber stations modelled on the real ones.",
+                    chinese: "平溪線菁桐、集集線車埕換上照真實站房做的木造車站。"
+                ),
+                Line(
                     english: "Shanjia on the Western Line and Shifen on the Pingxi Line have stations modelled on their real buildings.",
                     chinese: "台鐵山佳、平溪線十分換上照真實站房做的車站。"
                 ),
@@ -58,11 +62,19 @@ public enum WhatsNew {
                     english: "Level crossings have barrier machines with striped arms and warning lights.",
                     chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
                 ),
+                Line(
+                    english: "Hong Kong's small stations are new station houses modelled on real ones.",
+                    chinese: "香港的小車站換上照真實車站做的新站房。"
+                ),
             ],
             fixes: [
                 Line(
                     english: "Tapping Arrange on the train roster no longer closes the app.",
                     chinese: "點車隊運用表的「編排」不再閃退。"
+                ),
+                Line(
+                    english: "Fukuoka's water towers stand properly on the ground, on open legs.",
+                    chinese: "福岡給水塔的底部改正，好好站在地上。"
                 ),
             ]
         ),

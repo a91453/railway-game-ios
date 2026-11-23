@@ -90,6 +90,11 @@ extension StationKitBuilder {
             return
         }
         let model = Map3DGenericStation.building(profile: station.profile, tier: station.tier)
+        // Decision 933: in Hong Kong, the studio's new-town station.
+        if hongKong, Map3DHongKongStation.replaces(profile: station.profile, expansion: expansion) {
+            hongKongStation(model, back: 7, far: far)
+            return
+        }
         let depth = model == .halt ? Map3DGenericStation.haltDepth : Map3DGenericStation.bodyDepth
         let back: Float = 7, x = back + depth / 2
         genericStation(model, at: Map3DPoint(x, 0.25, 0), far: far)
