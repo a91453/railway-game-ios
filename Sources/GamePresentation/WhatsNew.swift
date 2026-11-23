@@ -55,7 +55,12 @@ public enum WhatsNew {
                     chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
                 ),
             ],
-            fixes: []
+            fixes: [
+                Line(
+                    english: "Tapping Arrange on the train roster no longer closes the app.",
+                    chinese: "點車隊運用表的「編排」不再閃退。"
+                ),
+            ]
         ),
         // 144.
         Entry(
