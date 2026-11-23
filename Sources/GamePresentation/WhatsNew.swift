@@ -54,6 +54,10 @@ public enum WhatsNew {
                     english: "Level crossings have barrier machines with striped arms and warning lights.",
                     chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
                 ),
+                Line(
+                    english: "Night markets have strings of bulbs that light up after dark, striped canopies and snack carts, and temples have a Tiangong burner.",
+                    chinese: "夜市有了入夜會亮的燈泡串、紅白帆布棚與小吃推車，廟前多了天公爐。"
+                ),
             ],
             fixes: [
                 Line(

@@ -6,6 +6,7 @@ import GameCore
 // civic kit's temples (#946's `Map3DCivicKit`, used as it is): a large one
 // for the hundred religious events' temples and the listed monuments, a
 // hall, gate and burner for the others, a side hall for a Tudigong shrine.
+// Decision 935: the burner before the hall the studio's Tiangong burner.
 // Close up only; from farther, a low box hidden inside the hall. The kits
 // are libraries: nothing in them changes.
 
@@ -34,20 +35,28 @@ extension Map3DScene.Builder {
         func part(_ part: Map3DCivicKit.Part, _ x: Float, into builder: inout StationKitBuilder) {
             builder.add(Map3DCivicKit.model(for: part), at: Map3DPoint(x, 0.12, 0))
         }
-        // The kit's temple square, 30 m by 32 m, its main hall at -6.
+        // Decision 935: the studio's Tiangong burner (Meshy's shape) on
+        // the square's middle line, its front away from the hall.
+        func tiangong(_ x: Float, into builder: inout StationKitBuilder) {
+            guard let model = Map3DMeshyMarketTemple.tiangongBurner.model else { return }
+            builder.add(model, at: Map3DPoint(x, 0.12, 0))
+        }
+        // The kit's temple square, 30 m by 32 m, its main hall at -6, as
+        // it is: with the Tiangong burner it would pass 5,000 triangles,
+        // and two would no longer fit a chunk (``templeChunkTriangles``).
         var large = StationKitBuilder()
         large.add(Map3DCivicKit.model(for: .templePlaza), at: .zero)
-        // A main hall, a burner and a gate on a smaller square.
+        // A main hall, the Tiangong burner and a gate on a smaller square.
         var temple = StationKitBuilder()
         temple.box(0, 0, 0, 22, 16, 0.12, Map3DPalette.plaza)
         part(.templeHall, -5, into: &temple)
-        part(.incenseBurner, 2, into: &temple)
+        tiangong(2, into: &temple)
         part(.templeGate, 7, into: &temple)
-        // A side hall and a burner.
+        // A side hall and the Tiangong burner.
         var small = StationKitBuilder()
         small.box(0, 0, 0, 12, 11, 0.12, Map3DPalette.plaza)
         part(.templeSideHall, -1.5, into: &small)
-        part(.incenseBurner, 4.5, into: &small)
+        tiangong(4.5, into: &small)
         // The halls' walls (the kit's `templeHall` and `templeSideHall`):
         // 1.6 m shorter and 1 m narrower than the hall, 0.7 m back, 3.4 m
         // tall on its 0.35 m platform on the square; the box a little
