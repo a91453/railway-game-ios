@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-taichung-opera: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-taichung-opera" : {
+      "hash" : "544ccdbd096fcfe3",
+      "triangles" : 2848
+    },
+    "tw-taichung-opera-far" : {
+      "hash" : "488f246ea57f84d8",
+      "triangles" : 1150
+    }
+  }
+}

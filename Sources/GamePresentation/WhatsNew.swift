@@ -146,6 +146,10 @@ public enum WhatsNew {
                     english: "People seen close up now differ: office workers, students, elders, travellers with suitcases, someone under an umbrella.",
                     chinese: "近看街上與月台的人不再都一樣：有上班族、學生、長者、拉行李的旅客和撐傘的人。"
                 ),
+                Line(
+                    english: "New landmarks: Ci'en Pagoda, Lalu Island and the front and rear halls of Wenwu Temple at Sun Moon Lake, the National Taichung Theater and Luce Chapel in Taichung, Weiwuying in Kaohsiung and Chihkan Tower in Tainan.",
+                    chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
+                ),
             ],
             fixes: [
                 Line(
