@@ -21,7 +21,7 @@ final class TrainRosterArrangeUITests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = orientation
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW", "-screenshot-scene", "rosterFleet"]
+        app.launchArguments = ["-ui-testing", "-ui-test-stall-stacks", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW", "-screenshot-scene", "rosterFleet"]
         app.launch()
         defer { app.terminate() }
         XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
