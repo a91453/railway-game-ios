@@ -118,6 +118,10 @@ public enum WhatsNew {
                     english: "The Tian Tan Buddha and Po Lin Monastery stand at Ngong Ping, where the cable car ends.",
                     chinese: "昂坪纜車終點旁多了天壇大佛與寶蓮禪寺。"
                 ),
+                Line(
+                    english: "Stations on the ground have footbridges or underpass stairs, and island platforms have transfer signs.",
+                    chinese: "地面車站有了跨站天橋或地下道入口，島式月台有轉乘指示牌。"
+                ),
             ],
             fixes: [
                 Line(
