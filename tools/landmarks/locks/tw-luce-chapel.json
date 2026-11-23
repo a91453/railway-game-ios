@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-luce-chapel: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-luce-chapel" : {
+      "hash" : "3871bc77a0d1d5e2",
+      "triangles" : 2080
+    },
+    "tw-luce-chapel-far" : {
+      "hash" : "5decb3f5e0efd619",
+      "triangles" : 564
+    }
+  }
+}

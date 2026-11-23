@@ -91,6 +91,10 @@ public enum WhatsNew {
                     chinese: "平溪線菁桐、集集線車埕換上照真實站房做的木造車站。"
                 ),
                 Line(
+                    english: "Shanjia on the Western Line and Shifen on the Pingxi Line have stations modelled on their real buildings.",
+                    chinese: "台鐵山佳、平溪線十分換上照真實站房做的車站。"
+                ),
+                Line(
                     english: "Small stations on the Nordic map are yellow timber station houses.",
                     chinese: "北歐地圖的小站改成黃色的木造站房。"
                 ),
@@ -103,8 +107,48 @@ public enum WhatsNew {
                     chinese: "香港的小車站換上照真實車站做的新站房。"
                 ),
                 Line(
+                    english: "The back stays of Rovaniemi's Lumberjack's Candle bridge are separate cables, anchored on the abutment.",
+                    chinese: "羅瓦涅米蠟燭橋的背索拆成一根一根，落在橋台上。"
+                ),
+                Line(
                     english: "Night markets have strings of bulbs that light up after dark, striped canopies and snack carts, and temples have a Tiangong burner and a pair of stone lions.",
                     chinese: "夜市有了入夜會亮的燈泡串、紅白帆布棚與小吃推車，廟前多了天公爐與一對石獅。"
+                ),
+                Line(
+                    english: "The Tian Tan Buddha and Po Lin Monastery stand at Ngong Ping, where the cable car ends.",
+                    chinese: "昂坪纜車終點旁多了天壇大佛與寶蓮禪寺。"
+                ),
+                Line(
+                    english: "The red and green post boxes on the pavements are new, with a slot frame on each and a lid over the box.",
+                    chinese: "人行道上的紅綠郵筒換新：投信口有白框，方箱上加頂蓋。"
+                ),
+                Line(
+                    english: "The stations you build have a dark edge along the roof.",
+                    chinese: "自己蓋的車站屋頂加了一圈深色邊。"
+                ),
+                Line(
+                    english: "Stations on the ground have footbridges or underpass stairs, and island platforms have transfer signs.",
+                    chinese: "地面車站有了跨站天橋或地下道入口，島式月台有轉乘指示牌。"
+                ),
+                Line(
+                    english: "Hong Kong: M+ stands in West Kowloon beside Kowloon station, its tall slab on a long dark podium.",
+                    chinese: "香港西九文化區多了 M+：九龍站旁，長長的深色基座上立著一片高樓。"
+                ),
+                Line(
+                    english: "Hong Kong: the Hong Kong Palace Museum stands by the harbour in West Kowloon, wider at each storey up.",
+                    chinese: "香港西九文化區多了香港故宮文化博物館：在海邊，一層比一層往外挑。"
+                ),
+                Line(
+                    english: "Bicycles are parked by some bus stops; in Taiwan, rows of orange public bicycles too.",
+                    chinese: "有些公車站旁停著腳踏車；台灣還看得到一排橘色的公共自行車。"
+                ),
+                Line(
+                    english: "People seen close up now differ: office workers, students, elders, travellers with suitcases, someone under an umbrella.",
+                    chinese: "近看街上與月台的人不再都一樣：有上班族、學生、長者、拉行李的旅客和撐傘的人。"
+                ),
+                Line(
+                    english: "New landmarks: Ci'en Pagoda, Lalu Island and the front and rear halls of Wenwu Temple at Sun Moon Lake, the National Taichung Theater and Luce Chapel in Taichung, Weiwuying in Kaohsiung and Chihkan Tower in Tainan.",
+                    chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
                 ),
             ],
             fixes: [
@@ -115,6 +159,10 @@ public enum WhatsNew {
                 Line(
                     english: "Fukuoka's water towers stand properly on the ground, on open legs.",
                     chinese: "福岡給水塔的底部改正，好好站在地上。"
+                ),
+                Line(
+                    english: "The Taoyuan Airport MRT no longer jams after it is rebuilt.",
+                    chinese: "機場捷運改建後不再卡車。"
                 ),
             ]
         ),

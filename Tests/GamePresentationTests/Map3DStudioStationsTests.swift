@@ -3,10 +3,21 @@ import GameCore
 import XCTest
 
 /// Decision 929: Pingxi's and Rinan's stations are the studio's own models;
-/// decision 932: Jingtong's and Checheng's too.
+/// decision 932: Jingtong's and Checheng's too; decision 937: Shanjia's and
+/// Shifen's too.
 final class Map3DStudioStationsTests: XCTestCase {
     private func station(_ id: String) throws -> Map3DStationKit.Station {
         try XCTUnwrap(Map3DStationKit.stations.first { $0.id == id })
+    }
+
+    /// The same station under another id, so drawn by its profile's
+    /// recipe: since decision 937 every `heritage` station of the catalog
+    /// has the studio's model.
+    private func recipeTwin(of id: String) throws -> Map3DStationKit.Station {
+        let s = try station(id)
+        return Map3DStationKit.Station(id: s.id + "-recipe", name: s.name, system: s.system, latitude: s.latitude,
+                                       longitude: s.longitude, lines: s.lines, profile: s.profile, tier: s.tier,
+                                       seed: s.seed, planned: s.planned, isLandmark: s.isLandmark)
     }
 
     /// Each model decodes at the studio's triangle counts and bounds, on
@@ -14,6 +25,7 @@ final class Map3DStudioStationsTests: XCTestCase {
     func testTheModelsDecode() throws {
         let expected: [Map3DStudioStation: (near: Int, far: Int, length: Float, height: Float)] = [
             .pingxi: (3452, 592, 26, 7.4), .rinan: (2956, 864, 16.4, 6.66),
+            .shanjia: (3140, 476, 41.75, 18.5), .shifen: (2132, 640, 45, 6.25),
             .jingtong: (1612, 736, 19.02, 5.85), .checheng: (2980, 724, 25.68, 8.8),
         ]
         for own in Map3DStudioStation.allCases {
@@ -39,6 +51,8 @@ final class Map3DStudioStationsTests: XCTestCase {
     func testOnlyTheirStationsDrawThem() throws {
         XCTAssertEqual(try station("station-tra_sched-a5dcd0a9").name, "平溪")
         XCTAssertEqual(try station("station-tra_sched-333125bf").name, "日南")
+        XCTAssertEqual(try station("station-tra_sched-6dd93a9d").name, "山佳")
+        XCTAssertEqual(try station("station-tra_sched-683ebb50").name, "十分")
         XCTAssertEqual(try station("station-tra_sched-b2e8d7d9").name, "菁桐")
         XCTAssertEqual(try station("station-tra_sched-49f63912").name, "車埕")
         for own in Map3DStudioStation.allCases {
@@ -46,11 +60,49 @@ final class Map3DStudioStationsTests: XCTestCase {
             kit.house(try station(own.rawValue))
             XCTAssertEqual(kit.mesh.triangleCount, try XCTUnwrap(own.model()).triangleCount, own.name)
         }
-        let others = Map3DStationKit.stations.filter { $0.profile == .heritage && Map3DStudioStation(rawValue: $0.id) == nil }
-        let other = try XCTUnwrap(others.first)
-        var kit = StationKitBuilder()
-        kit.house(other)
-        XCTAssertFalse(Map3DStudioStation.allCases.contains { $0.model()?.triangleCount == kit.mesh.triangleCount })
+        for own in Map3DStudioStation.allCases {
+            var kit = StationKitBuilder()
+            kit.house(try recipeTwin(of: own.rawValue))
+            XCTAssertFalse(Map3DStudioStation.allCases.contains { $0.model()?.triangleCount == kit.mesh.triangleCount }, own.name)
+        }
+    }
+
+    /// Decision 937: Shanjia and Shifen are no longer the kit's brick
+    /// `heritage` recipe, which its other stations keep. Shanjia has the
+    /// green glass clock tower far above the rest, the ochre old house in
+    /// front; Shifen is long and low, the red brick gateway, the red-edged
+    /// canopy and the grey-pink stone house its own; in the far versions
+    /// too.
+    func testShanjiaAndShifenAreNotTheHeritageRecipe() throws {
+        for own in [Map3DStudioStation.shanjia, .shifen] {
+            var recipe = StationKitBuilder()
+            recipe.house(try recipeTwin(of: own.rawValue))
+            let recipeBounds = try XCTUnwrap(recipe.mesh.bounds)
+            XCTAssertEqual(try station(own.rawValue).profile, .heritage, own.name)
+            var kit = StationKitBuilder()
+            kit.house(try station(own.rawValue))
+            XCTAssertNotEqual(kit.mesh.triangleCount, recipe.mesh.triangleCount, own.name)
+            XCTAssertNotEqual(try XCTUnwrap(kit.mesh.bounds).max.y, recipeBounds.max.y, own.name)
+        }
+        for far in [false, true] {
+            let shanjia = try XCTUnwrap(Map3DStudioStation.shanjia.model(far: far))
+            let shifen = try XCTUnwrap(Map3DStudioStation.shifen.model(far: far))
+            for colour in [Map3DPalette.gymGreen, Map3DPalette.plaza, Map3DPalette.counters[1]] {
+                XCTAssertTrue(shanjia.vertices.contains { $0.color == colour }, "far \(far)")
+            }
+            for colour in [Map3DPalette.templeRidge, Map3DScene.Builder.barrierRed, Map3DPalette.stonePink] {
+                XCTAssertTrue(shifen.vertices.contains { $0.color == colour }, "far \(far)")
+            }
+            XCTAssertFalse(shanjia.vertices.contains { $0.color == Map3DPalette.stonePink })
+            XCTAssertFalse(shifen.vertices.contains { $0.color == Map3DPalette.schoolWalls })
+            XCTAssertGreaterThan(shanjia.maximum.z, shifen.maximum.z * 2.5)
+            // The tower's green glass runs from the ground to the fourth
+            // floor, far above the old house's ridge.
+            let green = shanjia.vertices.filter { $0.color == Map3DPalette.gymGreen }
+            XCTAssertGreaterThan(green.map(\.z).max() ?? 0, 14)
+            let ochre = shanjia.vertices.filter { $0.color == Map3DPalette.plaza }
+            XCTAssertLessThan(ochre.map(\.z).max() ?? 99, 7)
+        }
     }
 
     /// Decision 932: Jingtong and Checheng are no longer the Alishan

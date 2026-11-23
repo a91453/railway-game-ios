@@ -1354,6 +1354,16 @@ extension GameWorld {
         var paths = PathMemo()
         for (place, train) in trains.enumerated() {
             guard let claim = claims[train.id] else { continue }
+            // TYMC-REBUILT-DEADLOCK: nor a train holding track that fouls
+            // the claim's route: it is ahead as surely as one holding the
+            // route itself (``TrackHolders/holdsAny(of:_:)``), and bound,
+            // could not leave the track the claim's train waits for it to
+            // leave.
+            for (other, spans) in holders.fouling.enumerated() where other != place && !spans.isEmpty {
+                if spans.contains(where: { network.foulingSpans[$0]!.contains { claim.routeContains(.span($0)) } }) {
+                    released[train.id, default: []].insert(trains[other].id)
+                }
+            }
             // Decision 881, later (SANYING-0632): an empty run's claim
             // does not bind a train standing at an end of a line where the
             // empty run ends, its departure due: leaving, it frees a

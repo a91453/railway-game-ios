@@ -15,7 +15,7 @@
 | `Railway/geo-scene-reference-clean/source/scripts/preprocess/preprocess-bus-routes.py` | 把 TDX 的形狀、站序、班表做成路線檔；`CITY_PRESETS` 有 `intercity`（公路客運） | 做法已經在 `tools/real-buses/build_real_buses.py`（三層找站牌、投影、算班距），這裡沿用它的幾何函式 |
 | `…/geo-scene…/source/public/bus/` | 20 個縣市的路線檔 | 沒有 `intercity_bus_routes.json`（`BUY_ONLY_AND_BUSES_2026-10-24.md` §3.1 已記），所以直接向 TDX 抓 |
 | `…/geo-scene…/source/src/hooks/useBusIntercityLayer.ts`、`engines/BusEngine.ts` | 公路客運圖層：讀即時 GPS、貼到路線上 | 沒有搬：要後端的即時資料，不是照班表跑 |
-| `Railway/taiwan-rail-reference-clean/source/data/bus-transfer/`、`bus_stops_index.tsv` | 542 個鐵道車站 600 m 內的站牌與經過的路線（含公路客運 1,530 個方向，只有車站附近那幾站），沒有班次 | 沒有用：TDX 的 `StopOfRoute` 有整條路線的站序 |
+| `Railway/rail-reference/regions/taiwan/source/data/bus-transfer/`、`bus_stops_index.tsv` | 542 個鐵道車站 600 m 內的站牌與經過的路線（含公路客運 1,530 個方向，只有車站附近那幾站），沒有班次 | 沒有用：TDX 的 `StopOfRoute` 有整條路線的站序 |
 | `Railway/tdx-bus-history-2026-10/`、`Railway/tdx-snapshot-2026-10/` | 臺北、高雄市區公車的歷史位置；軌道線形與誤點 | 沒有公路客運 |
 
 外部開源：沒有另外找；TDX 就是原始資料，程式是本專案自己的。沒有新增依賴。

@@ -87,9 +87,15 @@ final class Map3DWinterLightsTests: XCTestCase {
                     XCTAssertFalse(strings.isEmpty, name)
                     XCTAssertLessThanOrEqual(strings.count, Map3DWinterLights.mostStringsAFront, name)
                     let middle = (bounds.min.z + bounds.max.z) / 2, half = (bounds.max.z - bounds.min.z) / 2
+                    // The kit's recipes leave a forecourt and the ends; a
+                    // studio's own model (decisions 929, 937) is the
+                    // building to its bounds: its gateway or porch is the
+                    // front.
+                    let own = Map3DStudioStation(rawValue: station.id) != nil
+                    let forecourt: Float = own ? 0 : 6, ends: Float = own ? 0 : 4
                     for string in strings {
-                        XCTAssertLessThanOrEqual(string.x, bounds.max.x - 6 + Map3DWinterLights.stringOut + 0.01, "\(name): over the forecourt")
-                        XCTAssertLessThanOrEqual(abs(string.z - middle) + Map3DWinterLights.stringLength / 2, half - 4 + 0.26, "\(name): past the building's end")
+                        XCTAssertLessThanOrEqual(string.x, bounds.max.x - forecourt + Map3DWinterLights.stringOut + 0.01, "\(name): over the forecourt")
+                        XCTAssertLessThanOrEqual(abs(string.z - middle) + Map3DWinterLights.stringLength / 2, half - ends + 0.26, "\(name): past the building's end")
                         XCTAssertGreaterThanOrEqual(string.y, Map3DWinterLights.lowestString, name)
                         XCTAssertLessThanOrEqual(string.y, Map3DWinterLights.highestString + 0.01, name)
                         // Something of the building within half a metre behind the line, at its middle.
@@ -205,9 +211,12 @@ final class Map3DWinterLightsTests: XCTestCase {
         let japanStreet = Map3DJapanStreet.Unit.allCases.map(\.rawValue)
         let firstJapanStreet = firstJapan + japan.count
         XCTAssertEqual(Array(names[firstJapanStreet..<firstJapanStreet + japanStreet.count]), japanStreet)
+        // Decision 918: then the parked bicycles.
+        let bicycles = Map3DBicycle.Unit.allCases.map(\.rawValue) + Map3DPedestrian.drawn.map(\.name)
+        XCTAssertEqual(Array(names[firstJapanStreet + japanStreet.count..<firstJapanStreet + japanStreet.count + bicycles.count]), bicycles)
         // Decision 941: then the level crossings' boom.
-        XCTAssertEqual(names[firstJapanStreet + japanStreet.count], Map3DCrossingGate.boomName)
-        XCTAssertEqual(names[firstJapanStreet + japanStreet.count + 1], Map3DLowFloorBus.routeModel().name)
+        XCTAssertEqual(names[firstJapanStreet + japanStreet.count + bicycles.count], Map3DCrossingGate.boomName)
+        XCTAssertEqual(names[firstJapanStreet + japanStreet.count + bicycles.count + 1], Map3DLowFloorBus.routeModel().name)
         for decor in Map3DWinterDecor.allCases {
             XCTAssertEqual(pack.models[first + decor.index].triangleCount, try XCTUnwrap(decor.model).triangleCount)
         }

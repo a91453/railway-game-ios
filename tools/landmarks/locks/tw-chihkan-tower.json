@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-chihkan-tower: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-chihkan-tower" : {
+      "hash" : "ee6a1868b9defb78",
+      "triangles" : 4328
+    },
+    "tw-chihkan-tower-far" : {
+      "hash" : "9ddc8d552d7d241d",
+      "triangles" : 752
+    }
+  }
+}

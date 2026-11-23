@@ -24,6 +24,10 @@ public struct Map3DSky: Equatable, Sendable {
     public let sunShown: Float
     public let moon: Map3DPoint
     public let moonShown: Float
+    /// Decision 942: the share of the moon's disc lit and the way from it
+    /// toward the sun (``Map3DLighting/moonLit``, ``Map3DLighting/moonSunward``).
+    public let moonLit: Float
+    public let moonSunward: Map3DPoint
     /// How much the stars show, 0 to 1.
     public let stars: Float
     /// Decision 813's later part (AURORA): how much the aurora shows, 0 to
@@ -38,9 +42,11 @@ public struct Map3DSky: Equatable, Sendable {
         let clear = 1 - min(max(lighting.weather.skyMix / Map3DWeather.rain.skyMix, 0), 1)
         sun = lighting.skySun
         sunShown = clear * Map3DSeeThrough.smoothstep(-0.08, 0.04, sun.y)
-        // The moon (full, the one shape drawn) stands across the sky from
-        // the sun (decision 813; ``Map3DLighting/skyMoon``).
+        // Decision 942: the moon where it stands tonight, lit on the
+        // sun's side as much as its phase (``Map3DLighting/skyMoon``).
         moon = lighting.skyMoon
+        moonLit = lighting.moonLit
+        moonSunward = lighting.moonSunward
         moonShown = clear * min(max(lighting.night, 0), 1) * Map3DSeeThrough.smoothstep(-0.04, 0.08, moon.y)
         stars = clear * Map3DSeeThrough.smoothstep(0.5, 1, lighting.night)
         aurora = clear * lighting.aurora * Map3DSeeThrough.smoothstep(0.5, 1, lighting.night)
@@ -72,12 +78,32 @@ public struct Map3DSky: Equatable, Sendable {
         colour += Self.sunGlow * ((powf(towardSun, 12) * 0.18 + powf(towardSun, 180) * 0.5) * sunShown)
         colour = Map3DLighting.mix(colour, Self.sunDisc, Map3DSeeThrough.smoothstep(0.9994, 0.9998, towardSun) * sunShown)
         let towardMoon = max(d.dot(moon), 0)
-        colour += Self.moonGlow * (powf(towardMoon, 80) * 0.12 * moonShown)
-        colour = Map3DLighting.mix(colour, Self.moonDisc, Map3DSeeThrough.smoothstep(0.9990, 0.9994, towardMoon) * moonShown)
-        colour += Self.starLight * (Self.star(d) * 0.5 * stars)
+        colour += Self.moonGlow * (powf(towardMoon, 80) * 0.12 * moonShown * moonLit)
+        let disc = Map3DSeeThrough.smoothstep(0.9990, 0.9994, towardMoon) * moonShown
+        if disc > 0 { colour = Map3DLighting.mix(colour, Self.moonDisc, disc * moonPhase(d)) }
+        // Decision 942: the moon's dark side hides the stars behind it.
+        colour += Self.starLight * (Self.star(d) * 0.5 * stars * (1 - disc))
         if aurora > 0 { colour += Self.auroraLight(d, seconds: seconds) * aurora }
         return pointwiseMin(colour, SIMD3(repeating: 1))
     }
+
+    /// Decision 942: how much of the moon's disc toward `d` is lit, 0 to 1,
+    /// ``earthshine`` on its dark side: the disc taken as a ball lit from
+    /// ``moonSunward``, the point's normal from where it stands across the
+    /// disc (``moonRadius``) and toward the eye; the terminator soft over
+    /// a tenth of the radius. `map3dSkyFragment` works it the same way.
+    func moonPhase(_ d: Map3DPoint) -> Float {
+        let across = (d - moon * d.dot(moon)) * (1 / Self.moonRadius)
+        let toward = max(1 - across.dot(across), 0).squareRoot()
+        let normal = across - moon * toward
+        let lit = Map3DSeeThrough.smoothstep(-0.1, 0.1, normal.dot(moonSunward))
+        return Self.earthshine + (1 - Self.earthshine) * lit
+    }
+
+    /// The drawn disc's radius, as the sine of its angle (some 2.3°, the
+    /// middle of the disc's soft edge), and how bright its dark side is.
+    static let moonRadius: Float = 0.04
+    static let earthshine: Float = 0.06
 
     /// 1 where a star is, 0 elsewhere: one in 400 squares of a grid over
     /// the sky (sky.js's), none low down. The shader draws each as a round
@@ -157,7 +183,8 @@ public struct Map3DSky: Equatable, Sendable {
     /// the stars, then (decision 349) the eye's height and the haze's
     /// density and height (``Map3DGrade``), then how much of the aurora
     /// shows and the seconds that move it (0 under Reduce Motion, so it
-    /// stands still).
+    /// stands still), then (decision 942) the way from the moon toward the
+    /// sun and the share of its disc lit.
     public func floats(camera: Map3DCamera, seconds: Float = 0) -> [Float] {
         let view = camera.view.columns
         let tall = tanf(camera.fieldOfViewTall / 2), wide = tall * camera.viewport.width / max(camera.viewport.height, 1)
@@ -165,7 +192,8 @@ public struct Map3DSky: Equatable, Sendable {
                 horizon.x, horizon.y, horizon.z, 0, zenith.x, zenith.y, zenith.z, 0,
                 sun.x, sun.y, sun.z, sunShown, moon.x, moon.y, moon.z, moonShown,
                 stars, camera.eye.y, Map3DGrade.hazeDensity, Map3DGrade.hazeHeight,
-                aurora, seconds, 0, 0]
+                aurora, seconds, 0, 0,
+                moonSunward.x, moonSunward.y, moonSunward.z, moonLit]
     }
 }
 

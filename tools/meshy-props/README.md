@@ -8,9 +8,10 @@ node tools/meshy-props/build.mjs <meshy-batch-2026-10 資料夾> <輸出資料�
 cp <輸出資料夾>/meshy-*.m3dmodel RailwayGameApp/Resources/Models/
 ```
 
+郵筒（`meshy-post-boxes`）從決策 940 起改用本地工作室的模型，由 `tools/tw-post-boxes/build.py` 寫，不再由這裡產生（配方在決策 940 之前的 git 歷史裡）。
+
 | 檔案（`Map3DSceneryProp`） | 原件 | 原件三角形 | 遊戲裡 | 誤差上限 | 長×寬×高（m） |
 |---|---|--:|--:|--:|---|
-| `meshy-post-boxes`（`postBoxes`） | `mailbox-green` | 433,504 | 1,724（一支 862，兩支） | 6 mm | 1.04 × 0.43 × 1.15 |
 | `meshy-bus-stop-pole`（`busStopPole`） | `bus-stop-pole` | 84,268 | 300 | 10 mm | 0.59 × 0.58 × 2.80 |
 | `garbage-truck`（`Map3DStreetModel.garbageTruck`，決策 437） | `garbage-truck` | 97,281 | 2,704 | 6 cm | App 讀檔時縮成 6.5 × 2.3 × 2.8 |
 | `recycling-truck`（`Map3DStreetModel.recyclingTruck`，決策 437） | `recycling-truck` | 99,059 | 2,949 | 6 cm | App 讀檔時縮成 6.5 × 2.3 × 2.6 |
