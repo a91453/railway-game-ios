@@ -3,7 +3,7 @@
 timetables (ARCHITECTURE decision 650), for `extract_tra_schedule.py`.
 
     python3 -I tools/real-timetables/rebuild_tra_schedule.py \\
-        <reference>/Railway/taiwan-rail-reference-clean/source \\
+        <reference>/Railway/rail-reference/regions/taiwan/source \\
         <dir> 2026-11-08 <out>/tra_schedule_dense.json [--skip 2026-11-09 ...]
 
 The reference site makes the file in two steps, `scripts/fetch_tra_schedule.py`

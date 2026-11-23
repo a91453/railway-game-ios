@@ -36,6 +36,6 @@ python3 tools/three-car-urban/bundle.py /outside/public/repo/urban ACTUAL_PRODUC
 
 全部單元不旋轉、不鏡射。車體名義長 15 m，寬 2.65 m，屋頂 3.34 m、空調頂 3.606 m；兩車殼間距 0.28 m。轉向架中心 x=±4.98 m、每架兩軸 x=centre±0.84 m、輪徑 0.68 m。原生 +x 前／+y 左／+z 上，輪底 z=0。作者座標 x 前／y 上／z 右只透過 `Model.flat` 轉換一次。門、燈、輪及空調為靜態幾何。
 
-參考為本輪五張聊天附圖，均目視檢查；沒有本地原圖檔，因此不做像素疊圖或工程尺寸宣稱。私有參考庫 `taiwan-rail-reference-clean/source/rail-3d/README.md` 的模型／編組機制已檢查，但無法從此次無型號圖片唯一匹配真車尺寸，沒有搬用 mesh。`Map3DGreenCommuter` 僅作色票、霧面質感和細節密度比較；車體、底盤、車頭、門窗配置與編組全新編寫。通用封閉 box／tube／facet、native exporter 和 WebGL renderer 沿用專案工具；無新 runtime 或建置依賴。
+參考為本輪五張聊天附圖，均目視檢查；沒有本地原圖檔，因此不做像素疊圖或工程尺寸宣稱。私有參考庫 `rail-reference/regions/taiwan/source/rail-3d/README.md` 的模型／編組機制已檢查，但無法從此次無型號圖片唯一匹配真車尺寸，沒有搬用 mesh。`Map3DGreenCommuter` 僅作色票、霧面質感和細節密度比較；車體、底盤、車頭、門窗配置與編組全新編寫。通用封閉 box／tube／facet、native exporter 和 WebGL renderer 沿用專案工具；無新 runtime 或建置依賴。
 
 完整素材只放私有庫 `Railway/game-art-previews/docs/art/three-car-urban-2026-10-22/`。公開庫保留配方、工具、必要測試、文件、一張總覽。詳細外觀驗收見對應 docs/art README；技術與美術結論分開。Linux WebGL／Blender 匯入不等同真機 Metal、效能或動畫驗證。
