@@ -10,7 +10,7 @@ The station order and the Chinese and English names are MTR Corporation's
 own (`mtr_lines_and_stations.csv`, DATA.GOV.HK); the tracks, the stopping
 points and the bridges and tunnels are OpenStreetMap's (the whole extract,
 read with pyosmium, never Overpass). The method is the reference website's
-for Singapore (`world-rail-reference-clean/source/tools/build_singapore.mjs`:
+for Singapore (`rail-reference/regions/world/source/tools/build_singapore.mjs`:
 the operator fixes the network, OSM's route relations give the geometry and
 the ordered stops), and its `headway2sched.mjs` for the day's trips.
 

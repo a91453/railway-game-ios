@@ -13,7 +13,7 @@
 
 資料來源畫面的「公車路線」寫出處與授權（`DataSourceCredits`，`realBuses`）。
 
-參考庫裡的 `Railway/taiwan-rail-reference-clean/source/data/bus_stops_index.tsv`（43,363 個站牌，沒有站序）與 `bus-transfer/`（542 個鐵道車站各自 600 m 內的站牌與路線站序，只有車站附近那幾站）讀過、沒有用：臺北市的站序與站牌位置直接用 TDX 的 `StopOfRoute`，比只有車站附近的幾站完整。
+參考庫裡的 `Railway/rail-reference/regions/taiwan/source/data/bus_stops_index.tsv`（43,363 個站牌，沒有站序）與 `bus-transfer/`（542 個鐵道車站各自 600 m 內的站牌與路線站序，只有車站附近那幾站）讀過、沒有用：臺北市的站序與站牌位置直接用 TDX 的 `StopOfRoute`，比只有車站附近的幾站完整。
 
 ## 怎麼重跑
 

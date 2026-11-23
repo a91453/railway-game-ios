@@ -110,4 +110,4 @@ swift test --skip-build --filter "HongKongLandCoverTests|HongKongRailwaysTests"
 
 港鐵沒有公開：正式時刻表、各站進出人次（只有全綫月總數）、車廠的位置與軌道配置、列車的編組資料。清單與之後可以怎麼補在 `docs/research/HK_MAP_2026-11-12.md` §3.5。
 
-參考庫 `Railway/world-rail-reference-clean/` 沒有香港；這裡移植的是它的做法（`source/tools/build_singapore.mjs` 用營運者的站序定範圍、OSM 路線關係給綫形；`headway2sched.mjs` 用班距排出一天的車），沒有複製它的資料。
+參考庫 `Railway/rail-reference/regions/world/` 沒有香港；這裡移植的是它的做法（`source/tools/build_singapore.mjs` 用營運者的站序定範圍、OSM 路線關係給綫形；`headway2sched.mjs` 用班距排出一天的車），沒有複製它的資料。
