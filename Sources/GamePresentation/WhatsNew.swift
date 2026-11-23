@@ -154,6 +154,10 @@ public enum WhatsNew {
                     english: "New landmarks: Ci'en Pagoda, Lalu Island and the front and rear halls of Wenwu Temple at Sun Moon Lake, the National Taichung Theater and Luce Chapel in Taichung, Weiwuying in Kaohsiung and Chihkan Tower in Tainan.",
                     chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
                 ),
+                Line(
+                    english: "Guandu Bridge spans the Tamsui River: three red arches, the middle one highest, with cars crossing on top.",
+                    chinese: "淡水河上多了關渡大橋：三座紅色拱橋，中間最高，車子從橋上開過。"
+                ),
             ],
             fixes: [
                 Line(

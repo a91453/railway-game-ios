@@ -1382,6 +1382,9 @@ extension Map3DScene {
         /// Decision 869: the suspension bridges round the scene, once found
         /// (``suspensionBridges()``).
         var placedSuspensionBridges: [Map3DSuspensionBridge.Placed]?
+        /// Decision 944: the landmark bridges carrying a road round the
+        /// scene, once found (``archBridges()``).
+        var placedArchBridges: [Map3DArchBridgeDeck.Placed]?
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 455: whether the simplified city's boxes are kept as
         /// instances (the city's lots), not vertices.

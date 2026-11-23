@@ -10,7 +10,7 @@
 
 ## 還留下什麼
 
-1. **關渡大橋**（素材庫 `railway-assets-private-2` #299，`game-art-previews/docs/art/tw-landmark-guandu-bridge-2026-11/revision-2`，經驗檔 `docs/studio/lessons/tw-guandu-bridge.md`）。已查好的：
+1. （已做，決策 944，`claude/guandu-bridge`：公路橋面照決策 873 抬到拱橋橋面上）**關渡大橋**（素材庫 `railway-assets-private-2` #299，`game-art-previews/docs/art/tw-landmark-guandu-bridge-2026-11/revision-2`，經驗檔 `docs/studio/lessons/tw-guandu-bridge.md`）。已查好的：
    - GLB 外框 E ±269.5、N ±10.3、Z −1…36.1（近景 3,168、遠景 988 個三角形）；材質 `archRed,hanger,deck,pier` = `mtrRed`、`tankSteel`、`portal`、`concrete`。橋面頂 Z = 16.0，水面 Z = 0，墩座入水 1 m → `--raise 1` 加 `sink: 1`。
    - OSM way 250500239：直線 534 m，方位 57.8°，中心 25.1255488, 121.4572397 → `--turn 32.2`。x 用 Int16 公分（±327 m），轉完半長 270 m 放得下。
    - **沒定的**：遊戲那裡的公路橋照決策 391 貼在河面，模型橋面在水面上 16 m。要嘛照決策 873 淡江大橋的做法（`Map3DRoadBridge.swift` 的 `Bound.flat`、`Map3DSuspensionBridge.all`、`hangsFromCables`）把這 539 m 的路面抬到 16 m、模型橋面比路面低 15 cm；要嘛那一段公路橋不畫、讓給模型。決策要寫用哪一種（工作室 README §9）。登錄地標只避開軌道，不管道路。
