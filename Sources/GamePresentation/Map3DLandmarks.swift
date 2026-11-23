@@ -118,12 +118,16 @@ extension Map3DScene.Builder {
         for temple in near {
             guard let model = Self.templeModels[temple.size], triangles + model.triangles <= Self.templeTriangles else { continue }
             let centre = point(x: temple.place.x, y: temple.place.y, height: 0)
+            // REVIEW-L33: not inside a registered landmark (decision 928's
+            // Wen Wu Temple stands on a mapped temple's point).
+            guard !underLandmark(centre) else { continue }
             let chunk = key(of: centre)
             guard chunkTriangles[chunk, default: 0] + model.triangles <= Self.templeChunkTriangles else { continue }
             for facing in Self.templeFacings {
                 let footprint = Self.templeFootprint(model, centre: centre, facing: facing)
                 let cells = cells(under: footprint)
-                guard cleared.isDisjoint(with: cells), taken.isDisjoint(with: cells), !onPlacedGround(footprint), isClear(footprint, facing: facing)
+                guard cleared.isDisjoint(with: cells), taken.isDisjoint(with: cells), !onPlacedGround(footprint),
+                      !underLandmark(outline: footprint), isClear(footprint, facing: facing)
                 else { continue }
                 let foot = Map3DPoint(centre.x, footprint.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0, centre.z)
                 target = .close
