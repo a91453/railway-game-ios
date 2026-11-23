@@ -79,7 +79,7 @@ struct TrainRosterView: View {
     }
 
     /// The roster's two pages (decision 777).
-    private enum Page: Hashable, CaseIterable {
+    private enum Page: Hashable {
         case roster, arrange
 
         func title(in language: DisplayLanguage) -> String {
@@ -100,8 +100,7 @@ struct TrainRosterView: View {
 
     /// How often the roster is built again, in real seconds.
     private static let refresh: Duration = .seconds(1)
-    private static let axisHeight: CGFloat = 24
-    private static let rowGap: CGFloat = 4
+    private static let axisHeight = TrainRosterChart.axisHeight
     private static let table = "trainRoster.table"
     nonisolated private static let pageSpace = "trainRoster.page"
 
@@ -157,9 +156,10 @@ struct TrainRosterView: View {
                 // screen's pages.
                 ToolbarItem(placement: .principal) {
                     Picker(selection: $page) {
-                        ForEach(Page.allCases, id: \.self) { page in
-                            Text(verbatim: page.title(in: language)).tag(page)
-                        }
+                        // Written out, not a ForEach: its rows' closure
+                        // would be main-actor code SwiftUI keeps (ROSTERCRASH).
+                        Text(verbatim: Page.roster.title(in: language)).tag(Page.roster)
+                        Text(verbatim: Page.arrange.title(in: language)).tag(Page.arrange)
                     } label: {
                         Text(verbatim: language.text("Page", "分頁"))
                     }
@@ -245,9 +245,8 @@ struct TrainRosterView: View {
                     .accessibilityIdentifier("trainRoster.summary")
                 Spacer(minLength: 8)
                 Picker(selection: $day) {
-                    ForEach(TrainRoster.Day.allCases, id: \.self) { day in
-                        Text(verbatim: day.title(in: language)).tag(day)
-                    }
+                    Text(verbatim: TrainRoster.Day.today.title(in: language)).tag(TrainRoster.Day.today)
+                    Text(verbatim: TrainRoster.Day.yesterday.title(in: language)).tag(TrainRoster.Day.yesterday)
                 } label: {
                     Text(verbatim: language.text("Day", "日期"))
                 }
@@ -418,7 +417,11 @@ struct TrainRosterView: View {
                 HStack(alignment: .top, spacing: 0) {
                     VStack(spacing: 0) {
                         Color.clear.frame(height: Self.axisHeight)
-                        ForEach(Array(roster.rows.enumerated()), id: \.element.id) { index, row in
+                        // Built here, in `body`, not in a closure the
+                        // ForEach keeps: arranging turns short rows into
+                        // full ones, and SwiftUI may build the new rows off
+                        // the main thread (ROSTERCRASH, as CRASH101).
+                        TrainRosterBuiltRows(Array(roster.rows.enumerated()), id: \.element.id) { index, row in
                             nameCell(row, compact: compact)
                                 .frame(width: nameWidth, height: rowHeight)
                                 .background(index.isMultiple(of: 2) ? Theme.chip : Color.clear)
@@ -516,13 +519,18 @@ struct TrainRosterView: View {
         let width = hourWidth * 24
         let height = Self.axisHeight + rowHeight * CGFloat(roster.rows.count)
         let nowX = x(roster.now, in: roster)
+        // The drawing is a sendable value's, not this view's main-actor
+        // code: the rows' height, and so the canvas, changes as arranging
+        // starts and ends (ROSTERCRASH, as CRASH101).
+        let chart = TrainRosterChart(
+            roster: roster, rowHeight: rowHeight, compact: compact, language: language, hourWidth: hourWidth,
+            moved: shiftDrag.map { TrainRosterChart.Moved(row: $0.row, seconds: $0.seconds, drops: $0.shift?.drops == true) }
+        )
         return ScrollViewReader { reader in
             ScrollView(.horizontal, showsIndicators: false) {
                 ZStack(alignment: .topLeading) {
-                    let moving = shiftDrag
-                    Canvas { context, _ in
-                        draw(roster, rowHeight: rowHeight, compact: compact, context: &context)
-                        if let moving { drawMoved(moving, in: roster, rowHeight: rowHeight, context: &context) }
+                    Canvas { @Sendable context, _ in
+                        chart.draw(in: &context)
                     }
                     .frame(width: width, height: height)
                     .gesture(boxDrag(roster, rowHeight: rowHeight), including: arranging ? .all : .subviews)
@@ -544,151 +552,12 @@ struct TrainRosterView: View {
     private static let anchor = "trainRoster.anchor"
 
     private func x(_ time: Int64, in roster: TrainRoster) -> CGFloat {
-        CGFloat(Double(time - roster.dayStart) / Double(GameTime.secondsPerHour)) * hourWidth
+        TrainRosterChart.x(time, dayStart: roster.dayStart, hourWidth: hourWidth)
     }
 
     private func firstTripX(_ roster: TrainRoster) -> CGFloat {
         let first = roster.rows.compactMap { $0.cells.first?.start }.min() ?? roster.dayStart
         return max(0, x(first, in: roster))
-    }
-
-    private func draw(_ roster: TrainRoster, rowHeight: CGFloat, compact: Bool, context: inout GraphicsContext) {
-        let width = hourWidth * 24
-        let height = Self.axisHeight + rowHeight * CGFloat(roster.rows.count)
-
-        // Every other row on the faint chip, as the names beside them.
-        for index in roster.rows.indices where index.isMultiple(of: 2) {
-            let band = CGRect(x: 0, y: Self.axisHeight + rowHeight * CGFloat(index), width: width, height: rowHeight)
-            context.fill(Path(band), with: .color(Theme.chip))
-        }
-
-        // The hours: a label and a faint rule each.
-        for hour in 0..<24 {
-            let hourX = hourWidth * CGFloat(hour)
-            var rule = Path()
-            rule.move(to: CGPoint(x: hourX, y: Self.axisHeight))
-            rule.addLine(to: CGPoint(x: hourX, y: height))
-            context.stroke(rule, with: .color(Theme.panelBorder), lineWidth: 1)
-            let label = Text(verbatim: GameTime(seconds: roster.dayStart + Int64(hour) * GameTime.secondsPerHour).clockText)
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(Theme.textSecondary)
-            context.draw(label, at: CGPoint(x: hourX + 3, y: Self.axisHeight / 2), anchor: .leading)
-        }
-
-        // The trips, and the waits between them (decision 777).
-        for (index, row) in roster.rows.enumerated() {
-            let top = Self.axisHeight + rowHeight * CGFloat(index) + Self.rowGap
-            let boxHeight = rowHeight - 2 * Self.rowGap
-            for gap in row.gaps {
-                draw(gap, in: CGRect(x: x(gap.start, in: roster), y: top, width: x(gap.end, in: roster) - x(gap.start, in: roster), height: boxHeight),
-                     context: &context)
-            }
-            for cell in row.cells {
-                let left = x(cell.start, in: roster)
-                let right = max(left + 4, x(cell.end, in: roster))
-                let box = CGRect(x: left, y: top, width: right - left, height: boxHeight)
-                draw(cell, in: box, compact: compact, context: &context)
-            }
-        }
-
-        // Now, with its time on a tag.
-        if roster.day == .today {
-            let nowX = x(roster.now, in: roster)
-            var line = Path()
-            line.move(to: CGPoint(x: nowX, y: Self.axisHeight - 4))
-            line.addLine(to: CGPoint(x: nowX, y: height))
-            context.stroke(line, with: .color(Palette.ink), lineWidth: 2)
-            let tag = context.resolve(Text(verbatim: GameTime(seconds: roster.now).clockText)
-                .font(.caption2.weight(.bold).monospacedDigit())
-                .foregroundStyle(Palette.markerFill))
-            let size = tag.measure(in: CGSize(width: 80, height: Self.axisHeight))
-            let tagRect = CGRect(x: nowX - size.width / 2 - 4, y: 2, width: size.width + 8, height: Self.axisHeight - 6)
-            context.fill(Path(roundedRect: tagRect, cornerRadius: 4), with: .color(Palette.ink))
-            context.draw(tag, at: CGPoint(x: tagRect.midX, y: tagRect.midY), anchor: .center)
-        }
-    }
-
-    /// A wait between two trips: a hatched block, a little narrower than
-    /// the wait so the trips beside it stay apart, with how long it is
-    /// where it fits (decision 777).
-    private func draw(_ gap: TrainRoster.Gap, in span: CGRect, context: inout GraphicsContext) {
-        let block = span.insetBy(dx: 2, dy: 0)
-        guard block.width >= 4 else { return }
-        TrainRosterHatch.draw(in: block, context: &context, colors: TrainRosterHatch.Colors())
-        let label = context.resolve(Text(verbatim: gap.text(in: language))
-            .font(.caption2.weight(.semibold).monospacedDigit())
-            .foregroundStyle(Theme.textPrimary))
-        let size = label.measure(in: CGSize(width: block.width, height: block.height))
-        let tag = CGRect(x: block.midX - size.width / 2 - 5, y: block.midY - size.height / 2 - 2,
-                         width: size.width + 10, height: size.height + 4)
-        guard tag.width + 4 <= block.width, tag.height <= block.height else { return }
-        let capsule = Path(roundedRect: tag, cornerRadius: tag.height / 2)
-        context.fill(capsule, with: .color(Theme.panel))
-        context.stroke(capsule, with: .color(Theme.panelBorder), lineWidth: 1)
-        context.draw(label, at: CGPoint(x: tag.midX, y: tag.midY), anchor: .center)
-    }
-
-    private func draw(_ cell: TrainRoster.Cell, in box: CGRect, compact: Bool, context: inout GraphicsContext) {
-        let shape = Path(roundedRect: box, cornerRadius: 4)
-        let fill: Color?
-        let text: Color
-        switch cell.state {
-        case .onTime:
-            fill = Theme.success
-            text = Theme.onPrimary
-        case .late:
-            fill = Theme.warning
-            text = Theme.onPrimary
-        case .running:
-            fill = cell.isLate ? Theme.warning : Theme.success
-            text = Theme.onPrimary
-        case .interrupted:
-            fill = Theme.chip
-            text = Theme.textSecondary
-        case .planned:
-            fill = nil
-            text = Theme.textSecondary
-        }
-        if let fill {
-            context.fill(shape, with: .color(cell.isEmptyRun ? Theme.chip : fill))
-        }
-        switch cell.state {
-        case .running:
-            context.stroke(shape, with: .color(Palette.ink), lineWidth: 2)
-        case .planned:
-            context.stroke(shape, with: .color(Theme.textSecondary), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-        case .interrupted:
-            context.stroke(shape, with: .color(Theme.textSecondary), lineWidth: 1)
-        default:
-            if cell.isEmptyRun { context.stroke(shape, with: .color(Theme.textSecondary), lineWidth: 1) }
-        }
-        // A late trip's navy corner: grey alone cannot tell late from on
-        // time (decision 223, point 4).
-        if cell.isLate {
-            var corner = Path()
-            corner.move(to: CGPoint(x: box.maxX - 8, y: box.minY))
-            corner.addLine(to: CGPoint(x: box.maxX, y: box.minY))
-            corner.addLine(to: CGPoint(x: box.maxX, y: box.minY + 8))
-            corner.closeSubpath()
-            context.fill(corner, with: .color(Palette.ink))
-        }
-
-        // The words, where the box is wide enough.
-        guard box.width >= 28 else { return }
-        let color = cell.isEmptyRun ? Theme.textSecondary : text
-        var layer = context
-        layer.clip(to: shape)
-        let late = cell.lateText.map { " " + $0 } ?? ""
-        if compact {
-            let line = cell.isLate ? (cell.lateText ?? "") : cell.state == .planned ? "" : TrainRoster.shortMoney(cell.fare, in: language)
-            layer.draw(Text(verbatim: line).font(.caption2.weight(.bold).monospacedDigit()).foregroundStyle(color),
-                       at: CGPoint(x: box.minX + 4, y: box.midY), anchor: .leading)
-        } else {
-            layer.draw(Text(verbatim: cell.routeText + late).font(.caption2.weight(.bold)).foregroundStyle(color),
-                       at: CGPoint(x: box.minX + 4, y: box.minY + 2), anchor: .topLeading)
-            layer.draw(Text(verbatim: cell.detailText(in: language)).font(.caption2.monospacedDigit()).foregroundStyle(color),
-                       at: CGPoint(x: box.minX + 4, y: box.maxY - 2), anchor: .bottomLeading)
-        }
     }
 
     // MARK: Arranging (decision 512)
@@ -787,7 +656,7 @@ struct TrainRosterView: View {
                     // A plain stack: a lazy one builds its cells as it
                     // lays them out, off the main thread (CRASHSWEEP-2).
                     VStack(spacing: 6) {
-                        ForEach(roster.waiting) { waiting in
+                        TrainRosterBuiltRows(roster.waiting, id: \.id) { waiting in
                             waitingCard(waiting, rows: rows)
                         }
                     }
@@ -830,7 +699,7 @@ struct TrainRosterView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: waiting.name + "，" + waiting.detailText(in: language)))
         .accessibilityActions {
-            ForEach(session.world.lines, id: \.id) { line in
+            TrainRosterBuiltRows(session.world.lines, id: \.id) { line in
                 Button(language.text("Run on \(line.name)", "派到\(line.name)")) {
                     rosterEdit { session.moveTrain(waiting.train, toLine: line.id) }
                 }
@@ -932,36 +801,21 @@ struct TrainRosterView: View {
             }
     }
 
-    /// The planned boxes of the row being dragged, where they would go:
-    /// see-through, outlined in ink (no shadows in the art style).
-    private func drawMoved(_ moving: ShiftDrag, in roster: TrainRoster, rowHeight: CGFloat, context: inout GraphicsContext) {
-        guard roster.rows.indices.contains(moving.row) else { return }
-        let ok = moving.shift?.drops == true
-        let top = Self.axisHeight + rowHeight * CGFloat(moving.row) + Self.rowGap
-        let dx = CGFloat(Double(moving.seconds) / Double(GameTime.secondsPerHour)) * hourWidth
-        for cell in roster.rows[moving.row].cells where cell.state == .planned {
-            let left = x(cell.start, in: roster) + dx
-            let right = max(left + 4, x(cell.end, in: roster) + dx)
-            let shape = Path(roundedRect: CGRect(x: left, y: top, width: right - left, height: rowHeight - 2 * Self.rowGap), cornerRadius: 4)
-            context.fill(shape, with: .color((ok ? Theme.primary : Theme.warning).opacity(0.35)))
-            context.stroke(shape, with: .color(ok ? Palette.ink : Theme.warning), lineWidth: 2)
-        }
-    }
-
     /// The same moves for VoiceOver and Switch Control: to each other
     /// line, and five minutes either way for a train of its own timetable.
     @ViewBuilder
     private func arrangeActions(_ row: TrainRoster.Row) -> some View {
-        ForEach(session.world.lines.filter { $0.id != row.line }, id: \.id) { line in
+        TrainRosterBuiltRows(session.world.lines.filter { $0.id != row.line }, id: \.id) { line in
             Button(language.text("Move to \(line.name)", "改派到\(line.name)")) {
                 rosterEdit { session.moveTrain(row.train, toLine: line.id) }
             }
         }
         if row.cells.contains(where: { $0.state == .planned }) {
-            ForEach([-TrainRosterDrag.snap, TrainRosterDrag.snap], id: \.self) { seconds in
-                Button(seconds < 0 ? language.text("5 min earlier", "提前 5 分") : language.text("5 min later", "延後 5 分")) {
-                    rosterEdit { session.shiftTrainTimetable(row.train, by: seconds) }
-                }
+            Button(language.text("5 min earlier", "提前 5 分")) {
+                rosterEdit { session.shiftTrainTimetable(row.train, by: -TrainRosterDrag.snap) }
+            }
+            Button(language.text("5 min later", "延後 5 分")) {
+                rosterEdit { session.shiftTrainTimetable(row.train, by: TrainRosterDrag.snap) }
             }
         }
     }
@@ -981,6 +835,218 @@ struct TrainRosterView: View {
         parts += row.cells.map { $0.spokenText(in: language) }
         return parts.joined(separator: "；")
     }
+}
+
+/// What the roster's hours draw (decision 223, layout C; the waits of
+/// decision 777): a sendable value, so the canvas's closure is not
+/// main-actor code. SwiftUI draws the canvas again when the rows' height
+/// changes, as it does when arranging starts and ends, and may do so off
+/// the main thread, where main-actor code stops the app (ROSTERCRASH, the
+/// kind of CRASH101).
+private struct TrainRosterChart: Sendable {
+    /// The planned boxes of a row dragged sideways.
+    struct Moved: Sendable {
+        let row: Int
+        let seconds: Int64
+        /// Whether letting go would move them.
+        let drops: Bool
+    }
+
+    static let axisHeight: CGFloat = 24
+    static let rowGap: CGFloat = 4
+
+    let roster: TrainRoster
+    let rowHeight: CGFloat
+    let compact: Bool
+    let language: DisplayLanguage
+    /// Points an hour takes across.
+    let hourWidth: CGFloat
+    let moved: Moved?
+
+    static func x(_ time: Int64, dayStart: Int64, hourWidth: CGFloat) -> CGFloat {
+        CGFloat(Double(time - dayStart) / Double(GameTime.secondsPerHour)) * hourWidth
+    }
+
+    private func x(_ time: Int64) -> CGFloat {
+        Self.x(time, dayStart: roster.dayStart, hourWidth: hourWidth)
+    }
+
+    func draw(in context: inout GraphicsContext) {
+        let width = hourWidth * 24
+        let height = Self.axisHeight + rowHeight * CGFloat(roster.rows.count)
+
+        // Every other row on the faint chip, as the names beside them.
+        for index in roster.rows.indices where index.isMultiple(of: 2) {
+            let band = CGRect(x: 0, y: Self.axisHeight + rowHeight * CGFloat(index), width: width, height: rowHeight)
+            context.fill(Path(band), with: .color(Theme.chip))
+        }
+
+        // The hours: a label and a faint rule each.
+        for hour in 0..<24 {
+            let hourX = hourWidth * CGFloat(hour)
+            var rule = Path()
+            rule.move(to: CGPoint(x: hourX, y: Self.axisHeight))
+            rule.addLine(to: CGPoint(x: hourX, y: height))
+            context.stroke(rule, with: .color(Theme.panelBorder), lineWidth: 1)
+            let label = Text(verbatim: GameTime(seconds: roster.dayStart + Int64(hour) * GameTime.secondsPerHour).clockText)
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(Theme.textSecondary)
+            context.draw(label, at: CGPoint(x: hourX + 3, y: Self.axisHeight / 2), anchor: .leading)
+        }
+
+        // The trips, and the waits between them (decision 777).
+        for (index, row) in roster.rows.enumerated() {
+            let top = Self.axisHeight + rowHeight * CGFloat(index) + Self.rowGap
+            let boxHeight = rowHeight - 2 * Self.rowGap
+            for gap in row.gaps {
+                draw(gap, in: CGRect(x: x(gap.start), y: top, width: x(gap.end) - x(gap.start), height: boxHeight),
+                     context: &context)
+            }
+            for cell in row.cells {
+                let left = x(cell.start)
+                let right = max(left + 4, x(cell.end))
+                let box = CGRect(x: left, y: top, width: right - left, height: boxHeight)
+                draw(cell, in: box, context: &context)
+            }
+        }
+        if let moved { draw(moved, context: &context) }
+
+        // Now, with its time on a tag.
+        if roster.day == .today {
+            let nowX = x(roster.now)
+            var line = Path()
+            line.move(to: CGPoint(x: nowX, y: Self.axisHeight - 4))
+            line.addLine(to: CGPoint(x: nowX, y: height))
+            context.stroke(line, with: .color(Palette.ink), lineWidth: 2)
+            let tag = context.resolve(Text(verbatim: GameTime(seconds: roster.now).clockText)
+                .font(.caption2.weight(.bold).monospacedDigit())
+                .foregroundStyle(Palette.markerFill))
+            let size = tag.measure(in: CGSize(width: 80, height: Self.axisHeight))
+            let tagRect = CGRect(x: nowX - size.width / 2 - 4, y: 2, width: size.width + 8, height: Self.axisHeight - 6)
+            context.fill(Path(roundedRect: tagRect, cornerRadius: 4), with: .color(Palette.ink))
+            context.draw(tag, at: CGPoint(x: tagRect.midX, y: tagRect.midY), anchor: .center)
+        }
+    }
+
+    /// A wait between two trips: a hatched block, a little narrower than
+    /// the wait so the trips beside it stay apart, with how long it is
+    /// where it fits (decision 777).
+    private func draw(_ gap: TrainRoster.Gap, in span: CGRect, context: inout GraphicsContext) {
+        let block = span.insetBy(dx: 2, dy: 0)
+        guard block.width >= 4 else { return }
+        TrainRosterHatch.draw(in: block, context: &context, colors: TrainRosterHatch.Colors())
+        let label = context.resolve(Text(verbatim: gap.text(in: language))
+            .font(.caption2.weight(.semibold).monospacedDigit())
+            .foregroundStyle(Theme.textPrimary))
+        let size = label.measure(in: CGSize(width: block.width, height: block.height))
+        let tag = CGRect(x: block.midX - size.width / 2 - 5, y: block.midY - size.height / 2 - 2,
+                         width: size.width + 10, height: size.height + 4)
+        guard tag.width + 4 <= block.width, tag.height <= block.height else { return }
+        let capsule = Path(roundedRect: tag, cornerRadius: tag.height / 2)
+        context.fill(capsule, with: .color(Theme.panel))
+        context.stroke(capsule, with: .color(Theme.panelBorder), lineWidth: 1)
+        context.draw(label, at: CGPoint(x: tag.midX, y: tag.midY), anchor: .center)
+    }
+
+    private func draw(_ cell: TrainRoster.Cell, in box: CGRect, context: inout GraphicsContext) {
+        let shape = Path(roundedRect: box, cornerRadius: 4)
+        let fill: Color?
+        let text: Color
+        switch cell.state {
+        case .onTime:
+            fill = Theme.success
+            text = Theme.onPrimary
+        case .late:
+            fill = Theme.warning
+            text = Theme.onPrimary
+        case .running:
+            fill = cell.isLate ? Theme.warning : Theme.success
+            text = Theme.onPrimary
+        case .interrupted:
+            fill = Theme.chip
+            text = Theme.textSecondary
+        case .planned:
+            fill = nil
+            text = Theme.textSecondary
+        }
+        if let fill {
+            context.fill(shape, with: .color(cell.isEmptyRun ? Theme.chip : fill))
+        }
+        switch cell.state {
+        case .running:
+            context.stroke(shape, with: .color(Palette.ink), lineWidth: 2)
+        case .planned:
+            context.stroke(shape, with: .color(Theme.textSecondary), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        case .interrupted:
+            context.stroke(shape, with: .color(Theme.textSecondary), lineWidth: 1)
+        default:
+            if cell.isEmptyRun { context.stroke(shape, with: .color(Theme.textSecondary), lineWidth: 1) }
+        }
+        // A late trip's navy corner: grey alone cannot tell late from on
+        // time (decision 223, point 4).
+        if cell.isLate {
+            var corner = Path()
+            corner.move(to: CGPoint(x: box.maxX - 8, y: box.minY))
+            corner.addLine(to: CGPoint(x: box.maxX, y: box.minY))
+            corner.addLine(to: CGPoint(x: box.maxX, y: box.minY + 8))
+            corner.closeSubpath()
+            context.fill(corner, with: .color(Palette.ink))
+        }
+
+        // The words, where the box is wide enough.
+        guard box.width >= 28 else { return }
+        let color = cell.isEmptyRun ? Theme.textSecondary : text
+        var layer = context
+        layer.clip(to: shape)
+        let late = cell.lateText.map { " " + $0 } ?? ""
+        if compact {
+            let line = cell.isLate ? (cell.lateText ?? "") : cell.state == .planned ? "" : TrainRoster.shortMoney(cell.fare, in: language)
+            layer.draw(Text(verbatim: line).font(.caption2.weight(.bold).monospacedDigit()).foregroundStyle(color),
+                       at: CGPoint(x: box.minX + 4, y: box.midY), anchor: .leading)
+        } else {
+            layer.draw(Text(verbatim: cell.routeText + late).font(.caption2.weight(.bold)).foregroundStyle(color),
+                       at: CGPoint(x: box.minX + 4, y: box.minY + 2), anchor: .topLeading)
+            layer.draw(Text(verbatim: cell.detailText(in: language)).font(.caption2.monospacedDigit()).foregroundStyle(color),
+                       at: CGPoint(x: box.minX + 4, y: box.maxY - 2), anchor: .bottomLeading)
+        }
+    }
+
+    /// The planned boxes of the row being dragged, where they would go:
+    /// see-through, outlined in ink (no shadows in the art style).
+    private func draw(_ moved: Moved, context: inout GraphicsContext) {
+        guard roster.rows.indices.contains(moved.row) else { return }
+        let top = Self.axisHeight + rowHeight * CGFloat(moved.row) + Self.rowGap
+        let dx = CGFloat(Double(moved.seconds) / Double(GameTime.secondsPerHour)) * hourWidth
+        for cell in roster.rows[moved.row].cells where cell.state == .planned {
+            let left = x(cell.start) + dx
+            let right = max(left + 4, x(cell.end) + dx)
+            let shape = Path(roundedRect: CGRect(x: left, y: top, width: right - left, height: rowHeight - 2 * Self.rowGap), cornerRadius: 4)
+            context.fill(shape, with: .color((moved.drops ? Theme.primary : Theme.warning).opacity(0.35)))
+            context.stroke(shape, with: .color(moved.drops ? Palette.ink : Theme.warning), lineWidth: 2)
+        }
+    }
+}
+
+/// Rows built at once, where the view's `body` runs, for a `ForEach` to
+/// hand out. A `ForEach`'s own closure is kept and called when SwiftUI
+/// needs a row, which its asynchronous renderer may do off the main
+/// thread; written in a view it is main-actor code, and stops the app
+/// there (CRASH101). Here the kept closure only returns what was built.
+private struct TrainRosterBuiltRows<ID: Hashable>: View {
+    private let rows: [TrainRosterBuiltRow<ID>]
+
+    init<Data: Sequence, Content: View>(_ data: Data, id: KeyPath<Data.Element, ID>, @ViewBuilder content: (Data.Element) -> Content) {
+        rows = data.map { TrainRosterBuiltRow(id: $0[keyPath: id], view: AnyView(content($0))) }
+    }
+
+    var body: some View {
+        ForEach(rows) { @Sendable row in row.view }
+    }
+}
+
+private struct TrainRosterBuiltRow<ID: Hashable>: Identifiable {
+    let id: ID
+    let view: AnyView
 }
 
 /// A roster row's day of running (``TrainRoster/Row/utilisation``, in
