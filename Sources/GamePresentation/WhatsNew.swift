@@ -103,8 +103,12 @@ public enum WhatsNew {
                     chinese: "北歐地圖的小站改成黃色的木造站房。"
                 ),
                 Line(
-                    english: "Level crossings have barrier machines with striped arms and warning lights.",
-                    chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
+                    english: "Level crossings have barrier machines with striped arms and warning lights; the arms come down before a train arrives and rise once it has passed, over a yellow-hatched road.",
+                    chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈，列車快到時放下、過了才升起，路面畫上黃色網狀線。"
+                ),
+                Line(
+                    english: "The moon in the night sky shows its real phase and stands where the real moon is.",
+                    chinese: "夜空的月亮照真實的月相與位置出現，有圓有缺。"
                 ),
                 Line(
                     english: "Hong Kong's small stations are new station houses modelled on real ones.",
@@ -175,6 +179,26 @@ public enum WhatsNew {
                 Line(
                     english: "The Taoyuan Airport MRT no longer jams after it is rebuilt.",
                     chinese: "機場捷運改建後不再卡車。"
+                ),
+                Line(
+                    english: "At large text sizes, the Build, Station and Remove row stays at the top of the network tool's card instead of being pushed out of reach.",
+                    chinese: "字放大時，建設工具上排的「建造、車站、拆除」不再被擠出畫面。"
+                ),
+                Line(
+                    english: "Something you have just built that lies under the details card or a panel moves into view.",
+                    chinese: "剛蓋好的東西若被資訊卡或面板蓋住，地圖會移過去讓你看到。"
+                ),
+                Line(
+                    english: "Lessons ring and number the towns to link on the map, so you can find them while zooming out.",
+                    chinese: "教學課會在地圖上圈出要連的城鎮並標上號碼，拉遠時找得到。"
+                ),
+                Line(
+                    english: "Station names near the bottom of the map no longer cover their station, and tutorial step counts and panel titles are no longer cut off.",
+                    chinese: "地圖下方的站名不再蓋住車站，教學的步數與面板標題也不再被切掉。"
+                ),
+                Line(
+                    english: "On iPad, the start screen's menu stands near the middle instead of the top half.",
+                    chinese: "iPad 開始畫面的選單站在畫面中間，不再擠在上半部。"
                 ),
             ]
         ),
