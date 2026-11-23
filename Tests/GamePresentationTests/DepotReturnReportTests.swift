@@ -32,6 +32,7 @@ import XCTest
 @MainActor
 final class DepotReturnReportTests: XCTestCase {
     private func wanted(_ name: String) throws {
+        GameWorld.probe919Off = ProcessInfo.processInfo.environment["PROBE_919_OFF"] != nil // DEBUG-7d1c
         guard ProcessInfo.processInfo.environment["DEPOT_RETURN_REPORT"] != nil else {
             throw XCTSkip("Set DEPOT_RETURN_REPORT=1 to measure the depots (decision 535).")
         }
@@ -102,6 +103,11 @@ final class DepotReturnReportTests: XCTestCase {
 
     func testTheTaoyuanAirportLineRebuilt() throws {
         try wanted("tymc-rebuilt")
+        // The world after the rebuild, saved by `DEPOT_RETURN_SAVE`.
+        if let world = try Self.resumed() {
+            try report("tymc-rebuilt", world)
+            return
+        }
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         let (session, id) = try Self.taoyuanAirportBoughtBefore(simple: simple)
         session.selectLine(id)

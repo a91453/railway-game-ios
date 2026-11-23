@@ -242,7 +242,7 @@ extension GameWorld {
             // one can cross over to the other track of a double line and
             // back, against its traffic, a few metres shorter.
             let shortest = path(from: start, toStation: platform.station, length: length, eligible: fitting, memo: &memo)
-            guard keepLeft, let shortest,
+            guard !GameWorld.probe919Off, keepLeft, let shortest,
                   let kept = path(from: start, toStation: platform.station, length: length, eligible: fitting, keepingLeft: true, memo: &memo),
                   kept.traversals != shortest.traversals,
                   crossovers(on: kept) < crossovers(on: shortest) else { return shortest }
@@ -269,6 +269,8 @@ extension GameWorld {
         }
         return nil
     }
+
+    nonisolated(unsafe) static var probe919Off = false // DEBUG-7d1c
 
     /// HK-LATE-RUNS: how many crossovers `path` takes: edges that leave
     /// both their nodes beside another edge, the way the branch of a
