@@ -1117,23 +1117,21 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
-    /// IPAD-HOME-HALF: the start screen on its side and upright, to see
-    /// that on an iPad the menu stands near the middle rather than in the
-    /// top half (on an iPhone it stays at the top).
-    func testStartScreen() {
+    /// IPAD-HOME-HALF: the start screen upright, to see that on an iPad
+    /// the menu stands near the middle rather than in the top half (on its
+    /// side: testStartScreen; on an iPhone it stays at the top).
+    func testStartScreenUpright() {
         defer { XCUIDevice.shared.orientation = .landscapeLeft }
-        for upright in [false, true] {
-            // Upright from before the launch, as testBuildingCardNames.
-            continueAfterFailure = false
-            XCUIDevice.shared.orientation = upright ? .portrait : .landscapeLeft
-            let app = XCUIApplication()
-            app.launchArguments = ["-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"]
-            app.launch()
-            XCTAssertTrue(app.buttons["start.settings"].appears(within: 60), "Missing start.settings")
-            settle()
-            keep("start-screen\(upright ? "-portrait" : "")", app)
-            app.terminate()
-        }
+        // Upright from before the launch, as testBuildingCardNames.
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"]
+        app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.buttons["start.newGame"].appears(within: 15), "The start screen shows")
+        settle(seconds: 2)
+        keep("start-screen-portrait", app)
     }
 
     /// GLASS-POLISH (museum-title): the building tool's cards with the
