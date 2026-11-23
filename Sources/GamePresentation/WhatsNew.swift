@@ -150,6 +150,10 @@ public enum WhatsNew {
                     english: "New landmarks: Ci'en Pagoda, Lalu Island and the front and rear halls of Wenwu Temple at Sun Moon Lake, the National Taichung Theater and Luce Chapel in Taichung, Weiwuying in Kaohsiung and Chihkan Tower in Tainan.",
                     chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
                 ),
+                Line(
+                    english: "The big welcome canopy in front of Hualien station is a waved timber canopy like the real one.",
+                    chinese: "花蓮車站前的迎客大傘換成照真實做的木構波浪雨棚。"
+                ),
             ],
             fixes: [
                 Line(
