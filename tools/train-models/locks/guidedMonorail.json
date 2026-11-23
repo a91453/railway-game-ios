@@ -1,0 +1,55 @@
+{
+  "comment" : "Decision 782: the models of the registered train guidedMonorail (Map3DGuidedMonorail): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 6,
+  "lamps" : "eae2f9d6ae180bd1",
+  "models" : {
+    "light-set-MONORAIL-car" : {
+      "hash" : "4bad24aaec55fe12",
+      "triangles" : 208
+    },
+    "light-set-MONORAIL-head" : {
+      "hash" : "a1a06125dbf26e2d",
+      "triangles" : 172
+    },
+    "light-set-MONORAIL-tail" : {
+      "hash" : "5d4ed85851d3c42d",
+      "triangles" : 172
+    },
+    "light-set-MONORAILFar-car" : {
+      "hash" : "95385731ddd5a2cd",
+      "triangles" : 48
+    },
+    "light-set-MONORAILFar-head" : {
+      "hash" : "bae1cdbddf57d909",
+      "triangles" : 44
+    },
+    "light-set-MONORAILFar-tail" : {
+      "hash" : "4c4770b86bccc109",
+      "triangles" : 44
+    },
+    "set-MONORAIL-car" : {
+      "hash" : "19540cafa227ab6f",
+      "triangles" : 1960
+    },
+    "set-MONORAIL-head" : {
+      "hash" : "27f8a6c6868f913d",
+      "triangles" : 2594
+    },
+    "set-MONORAIL-tail" : {
+      "hash" : "38f50eb2870a1831",
+      "triangles" : 2594
+    },
+    "set-MONORAILFar-car" : {
+      "hash" : "487a2734d2b3c224",
+      "triangles" : 888
+    },
+    "set-MONORAILFar-head" : {
+      "hash" : "7da4e770956ddf4e",
+      "triangles" : 1186
+    },
+    "set-MONORAILFar-tail" : {
+      "hash" : "ce6d633449e78afa",
+      "triangles" : 1186
+    }
+  }
+}
