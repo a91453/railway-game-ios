@@ -30,6 +30,28 @@ final class TrainPortraitTests: XCTestCase {
         XCTAssertGreaterThan(pictured, TrainType.allCases.count / 2)
     }
 
+    /// REVIEW-L32: the app asks for one to three cars, and for the trains
+    /// with no type by their performance's key; each has a picture
+    /// whenever three cars of it do, the same size, the train in it.
+    func testEveryKeyTheAppAsksForPaintsAtEveryLength() throws {
+        var keys = Set(TrainType.allCases.map { TrainPortrait.key(of: $0) })
+        for preset in PerformancePreset.allCases {
+            keys.insert(TrainPortrait.key(type: nil, performance: preset.performance))
+        }
+        for key in keys.sorted() {
+            let three = TrainPortrait.make(key: key, cars: 3)
+            for cars in 1...2 {
+                let portrait = TrainPortrait.make(key: key, cars: cars)
+                XCTAssertEqual(portrait == nil, three == nil, "\(key) x\(cars)")
+                guard let portrait else { continue }
+                XCTAssertEqual(portrait.width, TrainPortrait.pixelWidth, "\(key) x\(cars)")
+                XCTAssertGreaterThan(portrait.height, 0, "\(key) x\(cars)")
+                XCTAssertEqual(portrait.rgba.count, portrait.width * portrait.height * 4, "\(key) x\(cars)")
+                XCTAssertTrue(stride(from: 3, to: portrait.rgba.count, by: 4).contains { portrait.rgba[$0] == 255 }, "\(key) x\(cars)")
+            }
+        }
+    }
+
     /// The same picture each time.
     func testThePictureIsTheSameEachTime() throws {
         let a = try XCTUnwrap(TrainPortrait.make(key: "E500CK", cars: 2))

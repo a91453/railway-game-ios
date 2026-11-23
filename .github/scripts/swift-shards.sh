@@ -720,9 +720,16 @@ set -euo pipefail
 # KaohsiungLightRailDayTests (95.5 s there) went from -5 to -9 and
 # HongKongEveryLineTests (92.3 s) from -4 to -12: about 563, 523, 346 and
 # 349 s, so rest-2's 603 s is the longest.
+# 2026-11-22 (CIOPT-13, after 144): the nightly run 44956141155 (53b6da1,
+# after CIOPT-12) had rest-2 at 734 s of tests and rest-1 at 600, against
+# campaigns-1 at 244, the lightest (-10 301, -7 327; -5 543, the longest
+# campaign). HongKongBoughtAgainTests (91.2 s there, in rest-2) went
+# from rest to -1 beside the other Hong Kong classes: about 336 s there,
+# and rest's two parts deal to about 605 and 638 s. It weighs its 91 s
+# (was 69), and PlatformNameBoardStylesTests, new and unweighted, its 48.
 classes_of() {
   case "$1" in
-    campaigns-1) echo "Map3DSceneMemoryTests KernelDifferentialTests ScheduledOvertakeTrackLastPropertyTests BusReadAheadTests RoadDrawRealMapTests NightSkipTests RoadsTurnOnTests CityRequestsTests TraceDragCostTests BusRouteTests HongKongMapTests RovaniemiRailwaysTests HongKongBuildingsTests HongKongRailwaysTests" ;;
+    campaigns-1) echo "Map3DSceneMemoryTests KernelDifferentialTests ScheduledOvertakeTrackLastPropertyTests BusReadAheadTests RoadDrawRealMapTests NightSkipTests RoadsTurnOnTests CityRequestsTests TraceDragCostTests BusRouteTests HongKongMapTests RovaniemiRailwaysTests HongKongBuildingsTests HongKongRailwaysTests HongKongBoughtAgainTests" ;;
     campaigns-2) echo "SaveMutationSecondHalfTests Map3DBuildingsTests Map3DSurfaceTests Map3DRealBuildingsTests ScheduledOvertakeTrackMiddlePropertyTests VerticalRailwayPropertyTests OnboardingTests Map3DChuKuangPassengerTests Map3DPPIntegrationTests Map3DStationsTests SingleTrackCapacityPropertyTests PolicyTests PingxiChallengeTests RealLineRebuildTests Map3DStationExteriorsTests" ;;
     campaigns-3) echo "DemoRealLinesTrackTests ScheduledTrafficSecondHalfPropertyTests Map3DBoxInstanceTests EconomySecondHalfPropertyTests Map3DPropsTests RealWorldDataLoadTests FlexDispatchPropertyTests Map3DC341Tests LessonGuideTests RealRoadCellsTests RealWorldExpansionTests Map3DTEMU2000Tests CityGrowthTests WenhuLineTests Map3DSceneRebuildTests HongKongDepotTests" ;;
     campaigns-4) echo "NetworkServicePropertyTests TrafficFollowingPropertyTests Map3DRealTracksTests Map3DC341IntegrationTests TRADemoTests Map3DSignTests RealBusesTests NetworkSectionPropertyTests Map3DEMU500Tests RealWorldDemoRoadsTests Map3DRoadBridgeTests CoverageGridTests Map3DLandmarksTests Map3DModelPackLockTests RealLineBoughtAgainTests" ;;
@@ -885,7 +892,8 @@ selected_pattern() {
 # about 1,316 s of tests, some 660 in each part, beside campaigns-3's 682.
 CLASS_WEIGHTS="HongKongSharedTrackBuyOrderTests:320
   SharedStationLayoutTests:281 RealLineBoughtAgainTests:270
-  RealLineBundleTests:101 HongKongBoughtAgainTests:69
+  RealLineBundleTests:101 HongKongBoughtAgainTests:91
+  PlatformNameBoardStylesTests:48
   FukuokaRailwaysTests:68 RealUndergroundTests:64
   TimetableCheckupTests:100 TimetableCheckupTaiwanTests:75
   HongKongDepotTests:110 RovaniemiRailwaysTests:30
