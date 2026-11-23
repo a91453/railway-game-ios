@@ -549,7 +549,8 @@ struct MapView: View {
                             linePalette: linePalette,
                             network: networkOverlay,
                             routePreview: routePreview,
-                            edges: edges
+                            edges: edges,
+                            clearBottom: viewport.height - Double(clear.bottom)
                         )
                         .equatable()
                         .colorMultiply(Palette.dimming(tint))
@@ -2536,9 +2537,13 @@ private struct MapLabelCanvas: View, Equatable {
     let network: NetworkOverlay?
     let routePreview: RoutePreview?
     let edges: [TrackEdgeID: MapEdgeDrawing]
+    /// Where the bottom bar or the screen's edge begins: a name that would
+    /// reach past it goes over its station (AI testers, round 1).
+    let clearBottom: Double
 
     nonisolated static func == (lhs: MapLabelCanvas, rhs: MapLabelCanvas) -> Bool {
-        guard lhs.part == rhs.part, lhs.camera == rhs.camera, lhs.layers == rhs.layers else { return false }
+        guard lhs.part == rhs.part, lhs.camera == rhs.camera, lhs.layers == rhs.layers,
+              lhs.part != .names || lhs.clearBottom == rhs.clearBottom else { return false }
         switch lhs.part {
         case .names:
             return MapRedraw.sameNames(lhs.world, rhs.world)
@@ -2558,7 +2563,7 @@ private struct MapLabelCanvas: View, Equatable {
     var body: some View {
         let world = world, camera = camera, layers = layers, waitingCounts = waitingCounts, part = part
         let labels = labels, lineCodes = lineCodes, latitude = world.geoAnchor?.latitudeDegrees ?? 0
-        let network = network, routePreview = routePreview, edges = edges
+        let network = network, routePreview = routePreview, edges = edges, clearBottom = clearBottom
         return Canvas { context, size in
             FrameCostMeter.shared.measure(.labels) {
                 context.clip(to: Path(CGRect(origin: .zero, size: size)))
@@ -2568,7 +2573,8 @@ private struct MapLabelCanvas: View, Equatable {
                 } else {
                     MapArt.drawStationLabels(
                         world, layers: layers, waitingCounts: waitingCounts, labels: labels, latitude: latitude,
-                        lineCodes: lineCodes, projection: camera, names: part == .names, counts: part == .counts, in: context
+                        lineCodes: lineCodes, projection: camera, names: part == .names, counts: part == .counts,
+                        clearBottom: clearBottom, in: context
                     )
                 }
             }

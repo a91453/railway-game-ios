@@ -28,6 +28,8 @@ final class MapFocusTests: XCTestCase {
     func testAPanelTitleStandsUnderTheBarOnAPhoneOnItsSide() {
         XCTAssertEqual(PanelTitlePlacement.place(compactHeight: true), .belowBar)
         XCTAssertEqual(PanelTitlePlacement.place(compactHeight: false), .bar)
+        XCTAssertEqual(PanelTitlePlacement.place(compactHeight: false, accessibilitySize: true), .belowBar)
+        XCTAssertEqual(PanelTitlePlacement.place(compactHeight: true, accessibilitySize: true), .belowBar)
         XCTAssertEqual(PanelTitlePlacement.lineLimit, 2)
     }
 

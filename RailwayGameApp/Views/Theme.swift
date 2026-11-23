@@ -438,9 +438,11 @@ extension View {
 private struct PanelTitle: ViewModifier {
     let title: String
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     func body(content: Content) -> some View {
-        let placement = PanelTitlePlacement.place(compactHeight: verticalSizeClass == .compact)
+        let placement = PanelTitlePlacement.place(compactHeight: verticalSizeClass == .compact,
+                                                  accessibilitySize: dynamicTypeSize.isAccessibilitySize)
         content
             .modifier(PanelSound())
             // Kept in both places: the back button of the page pushed

@@ -57,6 +57,10 @@ struct StartView: View {
                         .padding(.vertical, 16)
                         .frame(maxWidth: .infinity)
                     }
+                    // A card cut by the screen's bottom edge reads as more
+                    // to scroll to, not as cut off (AI testers, round 1,
+                    // 2026-11-23: New Game's card at a large text size).
+                    .scrollIndicatorsFlash(onAppear: true)
                     .frame(maxWidth: .infinity)
                 }
             } else {
@@ -94,6 +98,7 @@ struct StartView: View {
                     .padding(.bottom, StartMenuPlacement.margin)
                     .frame(maxWidth: .infinity)
                 }
+                .scrollIndicatorsFlash(onAppear: true)
                 // The room for the buttons: the width less the padding.
                 .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
                     menuWidth = size.width - 32
