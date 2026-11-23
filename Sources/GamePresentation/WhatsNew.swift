@@ -135,8 +135,8 @@ public enum WhatsNew {
                     chinese: "地面車站有了跨站天橋或地下道入口，島式月台有轉乘指示牌。"
                 ),
                 Line(
-                    english: "Hong Kong: M+ stands in West Kowloon beside Kowloon station, its tall slab on a long dark podium.",
-                    chinese: "香港西九文化區多了 M+：九龍站旁，長長的深色基座上立著一片高樓。"
+                    english: "Hong Kong: M+ stands in West Kowloon beside Kowloon station, a thin tall slab across the middle of its long dark podium, as surveyed.",
+                    chinese: "香港西九文化區多了 M+：九龍站旁，長長的深色基座正中立著一片薄薄的高樓，大小與位置照實測。"
                 ),
                 Line(
                     english: "Hong Kong: the Hong Kong Palace Museum stands by the harbour in West Kowloon, wider at each storey up.",

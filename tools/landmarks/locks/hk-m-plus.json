@@ -2,11 +2,11 @@
   "comment" : "Decision 895: the models of the registered landmark hk-m-plus: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
   "models" : {
     "hk-m-plus" : {
-      "hash" : "d44a345e96426398",
+      "hash" : "5b1f501124b28433",
       "triangles" : 3832
     },
     "hk-m-plus-far" : {
-      "hash" : "e0ca1ea8b4b07f76",
+      "hash" : "b87a917376ef9bf0",
       "triangles" : 752
     }
   }
