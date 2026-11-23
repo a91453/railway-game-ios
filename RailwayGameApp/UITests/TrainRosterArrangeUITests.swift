@@ -61,11 +61,13 @@ final class TrainRosterArrangeUITests: XCTestCase {
             XCTAssertTrue(waiting.appears(within: 5), "The waiting trains show (round \(round))")
             Thread.sleep(forTimeInterval: 2.5)
             XCTAssertEqual(app.state, .runningForeground, "The app closed on Arrange (round \(round))")
-            // The page fits the screen: neither the hint nor the waiting
-            // trains reach past its edges.
+            // The page fits the screen: the hint keeps its margin on the
+            // left and the waiting trains theirs on the right. (Wider than
+            // the screen, the page is centred, and both reach out.)
             let screen = app.windows.firstMatch.frame
-            XCTAssertGreaterThanOrEqual(hint.frame.minX, screen.minX, "The hint starts on the screen (round \(round))")
-            XCTAssertLessThanOrEqual(waiting.frame.maxX, screen.maxX + 0.5, "The waiting trains end on the screen (round \(round)): \(waiting.frame) in \(screen)")
+            let frames = "hint \(hint.frame), waiting \(waiting.frame), screen \(screen)"
+            XCTAssertGreaterThanOrEqual(hint.frame.minX - screen.minX, 15.5, "The hint keeps its left margin (round \(round)): \(frames)")
+            XCTAssertGreaterThanOrEqual(screen.maxX - waiting.frame.maxX, 7.5, "The waiting trains keep their right margin (round \(round)): \(frames)")
             roster.tap()
             XCTAssertTrue(hint.disappears(within: 10), "Back to the roster (round \(round)); the app is \(app.state.rawValue)")
             Thread.sleep(forTimeInterval: 1.5)
