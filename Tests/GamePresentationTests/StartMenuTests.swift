@@ -68,7 +68,11 @@ final class DataSourcesEntryTests: XCTestCase {
         XCTAssertFalse(DataSourcesEntry.shows(matching: "票價"))
         XCTAssertNotEqual(DataSourcesEntry.helpIdentifier, DataSourcesEntry.settingsIdentifier)
     }
+}
 
+/// IPAD-HOME-HALF: where the start screen's menu stands in the screen's
+/// height (`StartMenuPlacement`).
+final class StartMenuPlacementTests: XCTestCase {
     /// IPAD-HOME-HALF: an iPhone keeps the menu at the top, 40 points
     /// down, whatever its height, as before.
     func testAPhoneKeepsTheMenuAtTheTop() {
