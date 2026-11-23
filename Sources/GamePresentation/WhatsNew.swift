@@ -58,6 +58,10 @@ public enum WhatsNew {
                     english: "Hong Kong's small stations are new station houses modelled on real ones.",
                     chinese: "香港的小車站換上照真實車站做的新站房。"
                 ),
+                Line(
+                    english: "The back stays of Rovaniemi's Lumberjack's Candle bridge are separate cables, anchored on the abutment.",
+                    chinese: "羅瓦涅米蠟燭橋的背索拆成一根一根，落在橋台上。"
+                ),
             ],
             fixes: [
                 Line(
