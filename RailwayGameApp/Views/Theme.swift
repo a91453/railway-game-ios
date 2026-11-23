@@ -547,12 +547,20 @@ private struct NotchClearance: ViewModifier {
     @State private var trailing: CGFloat = 0
 
     func body(content: Content) -> some View {
-        content
-            .padding(.leading, leading)
-            .padding(.trailing, trailing)
-            // The measured frame is the space offered, not the padded
-            // content, so the padding never moves what it is measured from.
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // The measured frame is the space offered: a clear colour takes
+        // exactly that, and the padded content lies over it. Content that
+        // is for a moment wider than the space (the roster's table as the
+        // Arrange page's column comes in) cannot widen what is measured.
+        // Measured on a frame around the padded content, it did: more
+        // padding made the content wider, the frame reach further out and
+        // the padding grow again, without end, and the app stopped
+        // answering (ROSTERCRASH-2).
+        Color.clear
+            .overlay {
+                content
+                    .padding(.leading, leading)
+                    .padding(.trailing, trailing)
+            }
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
                 let window = UIApplication.shared.connectedScenes
                     .compactMap { ($0 as? UIWindowScene)?.keyWindow }

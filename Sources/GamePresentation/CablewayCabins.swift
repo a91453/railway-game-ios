@@ -168,6 +168,14 @@ public enum CablewayCabins {
         number % 9 < 2
     }
 
+    /// REVIEW-L33: whether cabin `number` is a crystal cabin on a line
+    /// that runs `pair` (an aerial tramway, ``numbers(of:pair:)``): never
+    /// there, since Wulai's two cabins, 0 green and the other red, have no
+    /// glass floor.
+    static func isCrystal(_ number: Int, pair: Bool) -> Bool {
+        !pair && isCrystal(number)
+    }
+
     /// Where a cabin `at` seconds into the loop is.
     static func place(at: Int64, on cableway: Cableway) -> Place {
         var left = at
