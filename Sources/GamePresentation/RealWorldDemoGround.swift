@@ -105,6 +105,14 @@ extension RealWorldDemo {
     /// terminals, and where the Western Trunk Line leaves it west of Badu.
     static let runOn = 300.0 * metre
     static let baduJunction = 250.0 * metre
+    /// Beside another track (a branch leaving the main track, the Shenao
+    /// Line beside the Yilan Line, a passing loop) no edge is longer than
+    /// this, and the Pingxi Line and the main track are beside each other
+    /// this far past Sandiaoling's junction (decision 943: on the terrain
+    /// model's smoother ground the heights ask for fewer nodes, and the
+    /// longer edges they left swayed into each other there).
+    static let besideLongestEdge = 100.0 * metre
+    static let partingReach = 330.0 * metre
     /// The steepest grade the demo lays: the `Railway/` site's 25 in 1,000
     /// for the TRA's lines (`rail-3d/physical/level-profiles.json`'s
     /// `basis`), well under the game's 40 (``TrackProfile/maximumGrade``).
@@ -344,7 +352,7 @@ extension RealWorldDemo {
                 let loopSpans = loopEnds.map { $0.1...$0.2 }
                 let plan = TrackPlan(
                     path, forced: forced, avoiding: zones, looseUntil: looseUntil, close: close + loopSpans, start: startNode, rise: rise,
-                    structure: structure
+                    structure: structure, closeLongestEdge: besideLongestEdge
                 )
                 pieces.append(Piece(plan: plan, start: host, end: nil))
                 let index = pieces.count - 1
@@ -394,14 +402,17 @@ extension RealWorldDemo {
                 // and the first loop stay the Yilan Line's.
                 main, stops: routes.mainStops, loops: routes.mainLoops, secondLoops: routes.pingxiRuns == nil ? [] : ["瑞芳"],
                 junctions: [routes.trunkJunction, sandiaoling, ruifang],
-                close: [(ruifang - besideReach)...ruifang], spans: [badu.station.id: routes.trunkJunction...(mainZone.upperBound + platformMargin)]
+                close: [(ruifang - besideReach)...ruifang, sandiaoling...(sandiaoling + partingReach)], spans: [badu.station.id: routes.trunkJunction...(mainZone.upperBound + platformMargin)]
             )
             let trunkZone = platformZone(on: routes.trunk, at: badu.point)
             let trunk = lay(
                 routes.trunk, stops: routes.trunkStops, loops: routes.trunkLoops, from: (mainIndex, routes.trunkJunction), looseUntil: 120 * metre,
                 spans: [badu.station.id: 0...(trunkZone.upperBound + platformMargin)]
             )
-            let pingxi = lay(routes.pingxi, stops: routes.pingxiStops, loops: routes.pingxiLoops, from: (mainIndex, sandiaoling), looseUntil: 260 * metre)
+            let pingxi = lay(
+                routes.pingxi, stops: routes.pingxiStops, loops: routes.pingxiLoops, from: (mainIndex, sandiaoling), looseUntil: 260 * metre,
+                close: [0...partingReach]
+            )
             let shenao = lay(
                 routes.shenao, stops: routes.shenaoStops, loops: [], from: (mainIndex, ruifang), looseUntil: 300 * metre, close: [0...besideReach]
             )

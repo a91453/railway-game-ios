@@ -156,11 +156,11 @@ final class WaterGridTests: XCTestCase {
         // Ministry of the Interior's terrain model but Magong's (Penghu is
         // not on its sheet).
         let maps: [(String, Double, Double, Int, Int)] = [
-            ("Taipei", 25.047882, 121.517219, 2_706, 2_536),
-            ("Keelung", 25.1330324, 121.7392299, 7_367, 3_037),
-            ("Kaohsiung", 22.6395321, 120.3025585, 759, 759),
+            ("Taipei", 25.047882, 121.517219, 2_677, 2_500),
+            ("Keelung", 25.1330324, 121.7392299, 7_182, 2_958),
+            ("Kaohsiung", 22.6395321, 120.3025585, 734, 734),
             ("Magong", 23.5655, 119.5793, 20, 6),
-            ("Alishan", 23.5106, 120.8048, 52_279, 4_072),
+            ("Alishan", 23.5106, 120.8048, 52_388, 4_147),
         ]
         for (name, latitude, longitude, steepCells, landOnSteep) in maps {
             let frame = try Self.frame(latitude, longitude)

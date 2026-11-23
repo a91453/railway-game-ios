@@ -50,7 +50,7 @@ public enum DataSourceCredits {
     static let nlscMetroURL = "https://data.gov.tw/dataset/73222"
     static let odblURL = "https://opendatacommons.org/licenses/odbl/1-0/"
     static let worldPopURL = "https://www.worldpop.org"
-    static let moiTerrainURL = "https://data.gov.tw/dataset/169807"
+    static let moiTerrainURL = "https://data.gov.tw/dataset/178729"
     static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
     static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
     static let worldCoverURL = "https://doi.org/10.5281/zenodo.7254221"
@@ -1019,12 +1019,12 @@ public enum DataSourceCredits {
                         id: "moiTerrain",
                         title: language.text("Taiwan’s terrain", "台灣的地形"),
                         detail: language.text(
-                            "The lie of the land on Taiwan’s main island and the islets beside it: how high the ground is on real-world maps, the hillsides steeper than 30 % where nothing new can be built, and the shaded hills of Taiwan’s OSM base map.",
-                            "台灣本島與鄰近小島的地形：實景地圖的地面高低、坡度超過 30%、不能新蓋的山坡地，以及台灣 OSM 底圖上山的陰影。"
+                            "The lie of the land on Taiwan’s main island, the islets beside it and Kinmen: how high the ground is on real-world maps, the hillsides steeper than 30 % where nothing new can be built, and the shaded hills of Taiwan’s OSM base map.",
+                            "台灣本島、鄰近小島與金門的地形：實景地圖的地面高低、坡度超過 30%、不能新蓋的山坡地，以及台灣 OSM 底圖上山的陰影。"
                         ),
                         notice: language.text(
-                            "Department of Land Administration, Ministry of the Interior, 2024: the 2024 edition of the 20-metre grid digital terrain model (DTM) of the whole of Taiwan. ",
-                            "內政部地政司 2024 年「2024年版全臺灣20公尺網格數值地形模型DTM資料」"
+                            "Department of Land Administration, Ministry of the Interior, 2026: the 2026 edition of the 20-metre grid digital terrain model (DTM) of the whole of Taiwan. ",
+                            "內政部地政司 2026 年「2026年版全臺灣20公尺網格數值地形模型DTM資料」"
                         ) + openGovernmentAttribution(in: language),
                         links: [
                             DataSourceCredit.Link(title: language.text("The dataset", "資料集"), url: moiTerrainURL),
@@ -1041,8 +1041,8 @@ public enum DataSourceCredits {
                         id: "copernicusDEM",
                         title: "Copernicus DEM",
                         detail: language.text(
-                            "The lie of the land where Taiwan’s own terrain model does not reach: Penghu, Kinmen, Matsu, Green Island, Xiaoliuqiu and a patch of the mountains of Miaoli.",
-                            "台灣的地形模型沒有涵蓋的地方的地形：澎湖、金門、馬祖、綠島、小琉球，以及苗栗山區的一小塊。"
+                            "The lie of the land where Taiwan’s own terrain model does not reach: Penghu, Matsu, Green Island and a patch of the mountains of Miaoli.",
+                            "台灣的地形模型沒有涵蓋的地方的地形：澎湖、馬祖、綠島，以及苗栗山區的一小塊。"
                         ),
                         notice: "Copernicus DEM GLO-30 (Matsu: GLO-90). Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.",
                         links: [

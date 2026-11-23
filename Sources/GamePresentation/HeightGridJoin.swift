@@ -31,8 +31,8 @@ extension HeightGrid {
     /// block's heights; along any other edge, the file's plus what the
     /// edge's two ends were moved by, one fading into the other; inside,
     /// the four edges blended (a Coons patch), in whole numbers so every
-    /// platform joins alike. Two blocks joined apart give the edge between
-    /// them the same heights, whichever is read first.
+    /// platform joins alike. Blocks read in any order come out the same,
+    /// and the edge between two of them has one set of heights.
     static func joined(_ fresh: GroundBlock, to read: [LandBlock: GroundBlock]) -> GroundBlock {
         let side = GroundBlock.side, last = side - 1
         let block = fresh.block
@@ -63,7 +63,10 @@ extension HeightGrid {
                     let (itsRow, itsColumn) = its(index), (row, column) = mine(index)
                     return (height(block, itsRow, itsColumn) - height(fresh, row, column)) * last
                 }
-                return from * (last - index) + to * index
+                // To the whole metre, as the heights a neighbour read
+                // later will find here: so the order does not matter.
+                let move = from * (last - index) + to * index + last / 2
+                return (move >= 0 ? move / last : -((last - 1 - move) / last)) * last
             }
         }
         let northEdge = edge(north, from: northWest, to: northEast, its: { (last, $0) }, mine: { (0, $0) })

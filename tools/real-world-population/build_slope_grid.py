@@ -127,67 +127,58 @@ def heights_on_grid(data, folder):
     return grid, count
 
 
-MOI_URL = 'https://download.mapterhorn.com/sources/aatw.tar'
-MOI_MD5 = '1785de52c6ccf6469cc67c8547762c4b'
-MOI_BYTES = 150_374_400
-MOI_NO_DATA = -32767.0
-# TWD97 / TM2 zone 121 (EPSG:3826), the DTM's own grid: GRS80, central
-# meridian 121° E, scale 0.9999, false easting 250,000 m.
+MOI_NO_DATA = 65535
+MOI_CELL = 20.0
+# The files of the reference repository's `Railway/moi-dtm-2026/data/`
+# (decision 943): the whole island's three parts, north first, and Kinmen,
+# each with the central meridian of its TWD97 TM2 zone (EPSG:3826, 121° E;
+# EPSG:3825, 119° E).
+MOI_SHEETS = (
+    (('moi-dtm-2026-taiwan-part1of3.tif', 'moi-dtm-2026-taiwan-part2of3.tif', 'moi-dtm-2026-taiwan-part3of3.tif'), 121.0),
+    (('moi-dtm-2026-kinmen-tm2-119.tif',), 119.0),
+)
+# TWD97 / TM2: GRS80, scale 0.9999, false easting 250,000 m.
 TM2_A = 6_378_137.0
 TM2_INVERSE_FLATTENING = 298.257222101
-TM2_MERIDIAN = 121.0
 TM2_SCALE = 0.9999
 TM2_EASTING = 250_000.0
 
 
-def moi_dtm(path):
-    """The Ministry of the Interior's 20 m DTM (decision 943): its heights
-    (NaN where it has none: the sea, and everywhere off its sheet), the
-    easting of its west edge and the northing of its north edge, in TWD97
-    TM2 metres, and its cell size. `path` is the DTM's GeoTIFF (`tw.tif`);
-    where there is none yet, Mapterhorn's copy of the source archive is
-    downloaded beside it, checked against its size and MD5, and unpacked."""
-    if not os.path.exists(path):
-        import hashlib
-        import tarfile
-        import urllib.request
-        folder = os.path.dirname(os.path.abspath(path))
-        os.makedirs(folder, exist_ok=True)
-        archive = os.path.join(folder, 'aatw.tar')
-        if not os.path.exists(archive):
-            print(f'downloading {MOI_URL} ({MOI_BYTES} bytes)…', file=sys.stderr)
-            urllib.request.urlretrieve(MOI_URL, archive + '.part')
-            os.replace(archive + '.part', archive)
-        digest = hashlib.md5()
-        with open(archive, 'rb') as file:
-            for chunk in iter(lambda: file.read(1 << 20), b''):
-                digest.update(chunk)
-        if os.path.getsize(archive) != MOI_BYTES or digest.hexdigest() != MOI_MD5:
-            sys.exit(f'{archive}: not the archive this tool knows (size or MD5 differs)')
-        with tarfile.open(archive) as tar:
-            member = tar.getmember('files/tw.tif')
-            with tar.extractfile(member) as source, open(path, 'wb') as target:
-                for chunk in iter(lambda: source.read(1 << 20), b''):
-                    target.write(chunk)
+def moi_sheets(folder):
+    """The Ministry of the Interior's 20 m DTM (decision 943), sheet by
+    sheet: its heights in metres (NaN where it has none: the sea, and
+    everywhere off the sheet), the easting of its westmost nodes and the
+    northing of its northmost ones in TWD97 TM2 metres, and its zone's
+    central meridian. `folder` holds the reference repository's files: a
+    stored value v is v / 10 - 100 m, 65535 is no height, and a pixel is
+    a node of the 20 m grid (PixelIsPoint)."""
     import tifffile  # Only for the DEM's tiles.
-    with tifffile.TiffFile(path) as file:
-        page = file.pages[0]
-        scale = page.tags['ModelPixelScaleTag'].value
-        tie = page.tags['ModelTiepointTag'].value
-        parameters = page.tags['GeoDoubleParamsTag'].value
-        # The sheet is the grid `tm2` works in, or the heights would land
-        # somewhere else without a word.
-        assert tuple(parameters[1:4]) == (TM2_MERIDIAN, TM2_SCALE, TM2_EASTING), f'{path}: not TWD97 TM2 zone 121'
-        assert scale[0] == scale[1] and tie[:3] == (0.0, 0.0, 0.0), f'{path}: not a north-up grid'
-        heights = page.asarray().astype(np.float32)
-    heights[heights == MOI_NO_DATA] = np.nan
-    return heights, tie[3], tie[4], scale[0]
+    for names, meridian in MOI_SHEETS:
+        parts = []
+        west = north = None
+        for name in names:
+            path = os.path.join(folder, name)
+            with tifffile.TiffFile(path) as file:
+                page = file.pages[0]
+                scale = page.tags['ModelPixelScaleTag'].value
+                tie = page.tags['ModelTiepointTag'].value
+                assert scale[0] == scale[1] == MOI_CELL and tie[:3] == (0.0, 0.0, 0.0), f'{path}: not a north-up 20 m grid'
+                stored = page.asarray()
+            assert stored.dtype == np.uint16, f'{path}: not the stored form this tool knows'
+            if west is None:
+                west, north = tie[3], tie[4]
+            # Each part goes on under the one before it.
+            assert tie[3] == west and tie[4] == north - MOI_CELL * sum(len(part) for part in parts), f'{path}: out of place'
+            heights = stored.astype(np.float32) / 10 - 100
+            heights[stored == MOI_NO_DATA] = np.nan
+            parts.append(heights)
+        yield np.concatenate(parts), west, north, meridian
 
 
-def tm2(latitudes, longitudes):
-    """TWD97 TM2 eastings and northings of places in degrees (Krüger's
-    series to the fourth order of the third flattening: under a millimetre
-    across Taiwan)."""
+def tm2(latitudes, longitudes, meridian):
+    """TWD97 TM2 eastings and northings of places in degrees, in the zone
+    of `meridian` (Krüger's series to the fourth order of the third
+    flattening: under a millimetre across Taiwan)."""
     f = 1 / TM2_INVERSE_FLATTENING
     n = f / (2 - f)
     radius = TM2_A / (1 + n) * (1 + n ** 2 / 4 + n ** 4 / 64)
@@ -199,7 +190,7 @@ def tm2(latitudes, longitudes):
     )
     e = math.sqrt(f * (2 - f))
     phi = np.radians(latitudes)
-    lam = np.radians(longitudes - TM2_MERIDIAN)
+    lam = np.radians(longitudes - meridian)
     sine = np.sin(phi)
     t = np.sinh(np.arctanh(sine) - e * np.arctanh(e * sine))
     xi = np.arctan2(t, np.cos(lam))
@@ -212,12 +203,9 @@ def tm2(latitudes, longitudes):
     return TM2_EASTING + TM2_SCALE * radius * easting, TM2_SCALE * radius * northing
 
 
-def moi_on_grid(data, path):
-    """The DTM's height at each grid cell (NaN where it has none): the mean
-    of the 3 × 3 of its 20 m cells round the grid cell's middle, some 60 m
-    a side, which is the grid cell's own ground (58 × 53 m); of those of
-    the nine it has, at the shore and the sheet's edge."""
-    heights, west_edge, north_edge, size = moi_dtm(path)
+def mean3(heights):
+    """Each node's mean with the eight round it, of those that have a
+    height (NaN where none has)."""
     padded = np.pad(heights, 1, constant_values=np.nan)
     total = np.zeros_like(heights)
     count = np.zeros(heights.shape, dtype=np.uint8)
@@ -227,21 +215,55 @@ def moi_on_grid(data, path):
             known = np.isfinite(part)
             total += np.where(known, part, 0)
             count += known
-    mean = np.where(count > 0, total / np.maximum(count, 1), np.nan).astype(np.float32)
+    return np.where(count > 0, total / np.maximum(count, 1), np.nan).astype(np.float32)
+
+
+def moi_at(sheet, latitudes, longitudes):
+    """A sheet's heights at places in degrees (arrays of one shape), between
+    its nodes: the blend of the four nodes round each place, of those that
+    have a height at the shore; NaN where none has or off the sheet."""
+    heights, west, north, meridian = sheet
+    easting, northing = tm2(latitudes, longitudes, meridian)
+    x = (easting - west) / MOI_CELL
+    y = (north - northing) / MOI_CELL
+    inside = (x >= 0) & (x <= heights.shape[1] - 1) & (y >= 0) & (y <= heights.shape[0] - 1)
+    out = np.full(x.shape, np.nan, dtype=np.float32)
+    x, y = x[inside], y[inside]
+    column = np.minimum(x.astype(np.int64), heights.shape[1] - 2)
+    row = np.minimum(y.astype(np.int64), heights.shape[0] - 2)
+    u, v = (x - column).astype(np.float32), (y - row).astype(np.float32)
+    total = np.zeros(x.shape, dtype=np.float32)
+    weight = np.zeros(x.shape, dtype=np.float32)
+    for dy, dx, w in ((0, 0, (1 - u) * (1 - v)), (0, 1, u * (1 - v)), (1, 0, (1 - u) * v), (1, 1, u * v)):
+        part = heights[row + dy, column + dx]
+        known = np.isfinite(part)
+        total += np.where(known, part * w, 0)
+        weight += np.where(known, w, 0)
+    out[inside] = np.where(weight > 0.25, total / np.maximum(weight, 1e-6), np.nan)
+    return out
+
+
+def moi_on_grid(data, sheets, spread):
+    """The DTM's height at each cell's middle of the grid `data` describes
+    (NaN where it has none). With `spread`, of the DTM's nodes each taken
+    with the eight round it, some 60 m a side, which is a 1.875″ cell's
+    own ground (58 × 53 m)."""
     rows, columns = data['rows'], data['columns']
     north, west, step = data['north'], data['west'], data['cellDegrees']
     longitudes = west + (np.arange(columns) + 0.5) * step
+    latitudes = north - (np.arange(rows) + 0.5) * step
     grid = np.full((rows, columns), np.nan, dtype=np.float32)
-    band = 256
-    for start in range(0, rows, band):
-        latitudes = north - (np.arange(start, min(rows, start + band)) + 0.5) * step
-        easting, northing = tm2(latitudes[:, None], longitudes[None, :])
-        x = np.floor((easting - west_edge) / size).astype(np.int64)
-        y = np.floor((north_edge - northing) / size).astype(np.int64)
-        inside = (x >= 0) & (x < mean.shape[1]) & (y >= 0) & (y < mean.shape[0])
-        values = np.full(x.shape, np.nan, dtype=np.float32)
-        values[inside] = mean[y[inside], x[inside]]
-        grid[start:start + len(latitudes)] = values
+    for heights, sheet_west, sheet_north, meridian in sheets:
+        sheet = (mean3(heights) if spread else heights, sheet_west, sheet_north, meridian)
+        # The sheet's own corner of the grid, generously: a zone is 2° wide.
+        columns_in = np.flatnonzero(np.abs(longitudes - meridian) < 1.2)
+        band = 256
+        for start in range(0, rows, band):
+            rows_in = np.arange(start, min(rows, start + band))
+            values = moi_at(sheet, latitudes[rows_in][:, None] + 0 * longitudes[columns_in][None, :],
+                            longitudes[columns_in][None, :] + 0 * latitudes[rows_in][:, None])
+            block = grid[np.ix_(rows_in, columns_in)]
+            grid[np.ix_(rows_in, columns_in)] = np.where(np.isfinite(values), values, block)
     return grid
 
 
@@ -256,8 +278,8 @@ def with_moi(data, water, surface, moi):
     round it (trees and buildings, some 6 m): that difference spreads into
     the gap a cell at a time, each cell the mean of its neighbours that
     have one, so the ground has no step where the two meet. Islands the
-    DTM has nothing of (Penghu, Kinmen, Matsu, Green Island, Xiaoliuqiu)
-    join none of its land and keep the surface model as it is."""
+    DTM has nothing of (Penghu, Matsu, Green Island) join none of its land
+    and keep the surface model as it is."""
     has = np.isfinite(moi)
     median = median3(np.nan_to_num(surface, nan=0.0))
     difference = np.where(has, moi - median, 0).astype(np.float32)
@@ -330,35 +352,48 @@ def encode(mask):
     return encoded
 
 
-def varint(value, out):
-    while value >= 0x80:
-        out.append((value & 0x7F) | 0x80)
-        value >>= 7
-    out.append(value)
+def varints(values):
+    """The varints of an array of numbers, one after another."""
+    values = values.astype(np.uint64)
+    sizes = 1 + (values >= 1 << 7).astype(np.int64) + (values >= 1 << 14) + (values >= 1 << 21) + (values >= 1 << 28)
+    ends = np.cumsum(sizes)
+    out = np.zeros(int(ends[-1]) if len(ends) else 0, dtype=np.uint8)
+    starts = ends - sizes
+    for byte in range(5):
+        has = sizes > byte
+        if not has.any():
+            break
+        last = sizes[has] == byte + 1
+        out[starts[has] + byte] = ((values[has] >> np.uint64(7 * byte)) & np.uint64(0x7F)).astype(np.uint8) | np.where(last, 0, 0x80).astype(np.uint8)
+    return out
 
 
 def encode_heights(heights, data, magic=b'TWHG'):
     """The heights file's bytes (see the module's docstring); another grid
     of whole numbers in the same form under another `magic`."""
     rows, columns = heights.shape
-    body = bytearray()
+    body = []
     offsets = [0]
     for row in heights:
         differences = np.diff(row.astype(np.int64), prepend=0)
-        # Where each run of equal (zero or not) differences starts.
         zero = differences == 0
-        starts = np.flatnonzero(np.concatenate(([True], zero[1:] != zero[:-1])))
-        ends = np.append(starts[1:], len(differences))
-        for start, end in zip(starts.tolist(), ends.tolist()):
-            if zero[start]:
-                body.append(0)
-                varint(end - start, body)
-            else:
-                for d in differences[start:end].tolist():
-                    varint((d << 1) ^ (d >> 31), body)
-        offsets.append(len(body))
+        # Each difference other than 0 is one number; each run of zeros is
+        # two, a 0 and its length, at the run's first cell.
+        first = zero & np.concatenate(([True], ~zero[:-1]))
+        kept = ~zero | first
+        slots = np.where(first, 2, 1)[kept]
+        at = np.cumsum(slots) - slots
+        numbers = np.zeros(int(slots.sum()), dtype=np.int64)
+        d = differences[kept]
+        numbers[at] = np.where(d == 0, 0, (d << 1) ^ (d >> 31))
+        starts = np.flatnonzero(first)
+        run_ends = np.flatnonzero(zero & np.concatenate((~zero[1:], [True]))) + 1
+        numbers[at[d == 0] + 1] = run_ends - starts
+        encoded = varints(numbers)
+        body.append(encoded.tobytes())
+        offsets.append(offsets[-1] + len(encoded))
     header = magic + struct.pack('<HHdddII', 1, 0, data['north'], data['west'], data['cellDegrees'], rows, columns)
-    return header + struct.pack(f'<{len(offsets)}I', *offsets) + bytes(body)
+    return header + struct.pack(f'<{len(offsets)}I', *offsets) + b''.join(body)
 
 
 def smoothed(grid, keep):
@@ -414,25 +449,26 @@ COPERNICUS_SOURCE = (
     '2014-2018 provided under COPERNICUS by the European Union and ESA'
 )
 MOI_SOURCE = (
-    'Ministry of the Interior, 2024 edition of the 20-metre grid digital terrain model of Taiwan (data.gov.tw 169807), '
+    'Ministry of the Interior, 2026 edition of the 20-metre grid digital terrain model of Taiwan (data.gov.tw 178729), '
     'Open Government Data License, version 1.0, where it reaches; elsewhere '
 )
 
 
-def main(water_path, folder, out, heights_out=None, moi_path=None):
+def main(water_path, folder, out, heights_out=None, moi_folder=None):
     data = json.load(open(water_path))
     rows, step = data['rows'], data['cellDegrees']
     water = water_mask(data)
     surface, count = heights_on_grid(data, folder)
     has = None
-    if moi_path:
+    if moi_folder:
         # Decision 943: the terrain model where it reaches, the surface
         # model elsewhere; the 3 × 3 median stays over both (without it
-        # the DTM's finer hillsides are steep cells 13 % more of the land).
-        surface, has = with_moi(data, water, surface, moi_on_grid(data, moi_path))
+        # the DTM's finer hillsides are steep cells 13 % more of the land,
+        # and the ground the game reads at its 64 m corners is rougher).
+        surface, has = with_moi(data, water, surface, moi_on_grid(data, list(moi_sheets(moi_folder)), True))
     steep, grid = steep_cells(data, water, surface)
     data['steep'] = encode(steep)
-    data['slopeSource'] = (MOI_SOURCE if moi_path else '') + COPERNICUS_SOURCE
+    data['slopeSource'] = (MOI_SOURCE if moi_folder else '') + COPERNICUS_SOURCE
     text = json.dumps(data, separators=(',', ':')) + '\n'
     open(out, 'w', encoding='utf-8').write(text)
     latitudes = data['north'] - (np.arange(rows) + 0.5) * step

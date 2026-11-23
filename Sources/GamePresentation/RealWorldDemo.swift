@@ -455,7 +455,8 @@ public enum RealWorldDemo {
             _ path: WorldPath, forced: [Double], avoiding: [ClosedRange<Double>], looseUntil: Double = 0, close: [ClosedRange<Double>] = [],
             start: (point: PlanPoint, direction: WorldVector)? = nil, end: (point: PlanPoint, direction: WorldVector)? = nil,
             rise: TrackRise? = nil, structure: TrackStructure = .surface,
-            tolerance: Double = RealWorldDemo.tolerance, longestEdge: Double = RealWorldDemo.longestEdge, heightFit: Double = TrackRise.fit
+            tolerance: Double = RealWorldDemo.tolerance, longestEdge: Double = RealWorldDemo.longestEdge, heightFit: Double = TrackRise.fit,
+            closeLongestEdge: Double? = nil
         ) {
             self.path = path
             self.structure = structure
@@ -475,10 +476,16 @@ public enum RealWorldDemo {
             func split(_ a: Double, _ b: Double) {
                 let length = b - a
                 let turn = tangent(at: a).angle(to: tangent(at: b))
-                let limit = close.contains { $0.overlaps(a...b) } ? closeTolerance : tolerance
+                let isClose = close.contains { $0.overlaps(a...b) }
+                let limit = isClose ? closeTolerance : tolerance
                 let near = b <= looseUntil || deviation(of: cubic(a, b), from: path, between: a, and: b) <= limit
                 let level = rise?.fits(from: a, to: b, within: heightFit) ?? true
-                if length <= longestEdge, turn <= sharpestTurn, near, level { return }
+                // Decision 943: beside another track an edge is no longer
+                // than `closeLongestEdge`, whatever the ground asks: a long
+                // cubic sways a little off its path, and two tracks a few
+                // centimetres apart past a junction would touch.
+                let longest = isClose ? min(longestEdge, closeLongestEdge ?? longestEdge) : longestEdge
+                if length <= longest, turn <= sharpestTurn, near, level { return }
                 guard length > 2 * shortestEdge else { return }
                 var cut = (a + b) / 2
                 if let zone = keepOut.first(where: { $0.contains(cut) }) {
