@@ -4780,6 +4780,10 @@
     "jp-bus-stop" : {
       "hash" : "70a16cb911c9d19b",
       "triangles" : 220
+    },
+    "crossing-warning-arm" : {
+      "hash" : "803535afcebb03cd",
+      "triangles" : 68
     }
   }
 }

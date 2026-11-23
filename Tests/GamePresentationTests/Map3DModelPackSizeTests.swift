@@ -112,8 +112,10 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // (the same 4 models, 55,356 vertices fewer, 2.2 MB a copy), and
         // Hong Kong's outlying island catamaran, near and far, after its
         // ferry's piers (2 models, 7,848 vertices more, 314 KB a copy).
-        XCTAssertEqual(models.count, 960)
-        XCTAssertEqual(vertices, 6_818_118)
+        // Decision 941: the level crossings' boom after Japan's street
+        // furniture (1 model, 204 vertices more, 8 KB a copy).
+        XCTAssertEqual(models.count, 961)
+        XCTAssertEqual(vertices, 6_818_322)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

@@ -286,6 +286,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 923: Japan's utility poles (the owner's old models) and
         // pedestrian signals, after them and before the route bus.
         groups.append { Map3DJapanStreet.drawn }
+        // Decision 941: the level crossings' boom, drawn where the trains
+        // put it, after them and before the route bus.
+        groups.append { Map3DCrossingGate.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

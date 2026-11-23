@@ -46,6 +46,8 @@ final class Map3DModelTests: XCTestCase {
         let japanSignals: Int = Map3DJapanSignal.Unit.allCases.count
         // Decision 923: Japan's utility poles and pedestrian signals.
         let japanStreet: Int = Map3DJapanStreet.Unit.allCases.count
+        // Decision 941: the level crossings' boom.
+        let crossingBoom: Int = Map3DCrossingGate.drawn.count
         // Decision 449: and after them, the running cars' windows. Decision
         // 575: the cable car; decision 585, PR-3: the ferries and their pier;
         // decision 699: the aircraft and the airfields' vehicles; decision
@@ -53,7 +55,7 @@ final class Map3DModelTests: XCTestCase {
         XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest
                        + Map3DCableCar.drawn.count + Map3DFerry.drawn.count + Map3DAircraft.drawn.count + Map3DCoaches.drawn.count + hongKongSignals + winterDecor
                        + santa + herd + plainWalks + finlandStreet + yellowTit + japanSignals
-                       + japanStreet)
+                       + japanStreet + crossingBoom)
         // One term per line, typed: as a single sum of 30 terms the type
         // checker took 213 s on it (decision 563).
         let studyModels: [Int] = [
@@ -200,7 +202,9 @@ final class Map3DModelTests: XCTestCase {
         // The eye over the first car.
         let all = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: nil, eye: nil)
         let first = try XCTUnwrap(all.boxes.vertices.first?.position)
-        let near = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: pack, eye: first + Map3DPoint(0, 100, 0))
+        var near = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: pack, eye: first + Map3DPoint(0, 100, 0))
+        // Decision 941: the level crossings' booms beside them, not cars.
+        near.instances.removeAll { $0.model == pack.index(of: Map3DCrossingGate.boomName) }
         XCTAssertEqual(near.instances.count, cars, "a four-car train within reach")
         XCTAssertTrue(near.boxes.isEmpty)
         // A commuter of no type four cars long is the owner's old red car

@@ -146,6 +146,9 @@ public enum Map3DTrains {
         /// it (the reference's watch view looks at the cars' average).
         public var middle: Map3DPoint?
         public var length: Float = 0
+        /// Decision 941: how fast it is drawn moving, metres a second (0
+        /// standing), for the level crossings' booms.
+        public var speed: Float = 0
 
         public init(train: TrainID, point: Map3DPoint, forward: Map3DPoint = Map3DPoint(0, 0, -1), nose: Map3DPoint? = nil,
                     ground: Float? = nil, inTunnel: Bool = false) {
@@ -231,6 +234,7 @@ public enum Map3DTrains {
                 if frame.heads.count > headIndex, !bases.isEmpty {
                     frame.heads[headIndex].middle = bases.reduce(Map3DPoint.zero, +) * (1 / Float(bases.count))
                     frame.heads[headIndex].length = zip(line, line.dropFirst()).reduce(0) { $0 + ($1.0 - $1.1).length }
+                    frame.heads[headIndex].speed = Float(run.lag / Double(WorldCoordinate.unitsPerMetre) / motion.duration)
                 }
             }
             for (index, car) in cars.enumerated() {
@@ -307,6 +311,11 @@ public enum Map3DTrains {
                                        width: carWidth + 0.04, height: 0.45, top: stripe, side: stripe)
                 }
             }
+        }
+        // Decision 941: the level crossings' booms, where the trains put
+        // them.
+        if let models, let eye {
+            frame.instances += Map3DCrossingBooms.instances(scene.levelCrossings, heads: frame.heads, pack: models, eye: eye)
         }
         return frame
     }
