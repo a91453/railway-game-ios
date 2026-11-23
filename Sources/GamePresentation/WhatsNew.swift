@@ -114,6 +114,10 @@ public enum WhatsNew {
                     english: "Night markets have strings of bulbs that light up after dark, striped canopies and snack carts, and temples have a Tiangong burner and a pair of stone lions.",
                     chinese: "夜市有了入夜會亮的燈泡串、紅白帆布棚與小吃推車，廟前多了天公爐與一對石獅。"
                 ),
+                Line(
+                    english: "The Tian Tan Buddha and Po Lin Monastery stand at Ngong Ping, where the cable car ends.",
+                    chinese: "昂坪纜車終點旁多了天壇大佛與寶蓮禪寺。"
+                ),
             ],
             fixes: [
                 Line(
