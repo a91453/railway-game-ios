@@ -152,13 +152,15 @@ final class WaterGridTests: XCTestCase {
     /// game takes them.
     func testTheBundledGridKnowsTheSteepSlopes() throws {
         let population = try Self.population(), places = try Self.places()
-        // (map, steep cells, land cells on them.)
+        // (map, steep cells, land cells on them.) Decision 943: from the
+        // Ministry of the Interior's terrain model but Magong's (Penghu is
+        // not on its sheet).
         let maps: [(String, Double, Double, Int, Int)] = [
-            ("Taipei", 25.047882, 121.517219, 2_959, 2_784),
-            ("Keelung", 25.1330324, 121.7392299, 7_628, 3_295),
-            ("Kaohsiung", 22.6395321, 120.3025585, 786, 785),
+            ("Taipei", 25.047882, 121.517219, 2_677, 2_500),
+            ("Keelung", 25.1330324, 121.7392299, 7_182, 2_958),
+            ("Kaohsiung", 22.6395321, 120.3025585, 734, 734),
             ("Magong", 23.5655, 119.5793, 20, 6),
-            ("Alishan", 23.5106, 120.8048, 51_912, 4_079),
+            ("Alishan", 23.5106, 120.8048, 52_388, 4_147),
         ]
         for (name, latitude, longitude, steepCells, landOnSteep) in maps {
             let frame = try Self.frame(latitude, longitude)

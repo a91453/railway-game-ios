@@ -2,7 +2,9 @@ import Foundation
 import GameCore
 
 // Taiwan's ground height on a real-world map (ARCHITECTURE decision 124):
-// the Copernicus DEM (GLO-30; GLO-90 where only that is released) on the
+// the Ministry of the Interior's 20 m terrain model where it reaches (the
+// main island and the islets on its sheet; decision 943) and elsewhere the
+// Copernicus DEM (GLO-30; GLO-90 where only that is released), on the
 // water file's grid (1.875″, some 58 × 53 m), the 3 × 3 median heights the
 // steep slopes are found from, in whole metres; rivers and lakes at their
 // surface and the open sea at 0 (decision 132; before it all water was 0,

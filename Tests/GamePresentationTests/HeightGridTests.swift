@@ -107,7 +107,11 @@ final class HeightGridTests: XCTestCase {
         XCTAssertEqual(grid.height(latitude: 23.5103, longitude: 120.8050), 2_216, accuracy: 30, "Alishan station, 2,216 m")
         XCTAssertEqual(grid.height(latitude: 24.1376, longitude: 121.2756), 3_275, accuracy: 30, "Wuling on Hehuanshan, 3,275 m")
         XCTAssertGreaterThan(grid.height(latitude: 23.4700, longitude: 120.9573), 3_800, "Yushan, 3,952 m, its top shaved by the median")
-        XCTAssertEqual(grid.height(latitude: 25.0478, longitude: 121.5170), 15, accuracy: 15, "Taipei Main Station, some 7 m, a city of a surface model")
+        // Decision 943: a terrain model's ground, not the roofs a surface
+        // model read here (some 18 m).
+        XCTAssertEqual(grid.height(latitude: 25.0478, longitude: 121.5170), 7, accuracy: 2, "Taipei Main Station, some 7 m")
+        XCTAssertEqual(grid.height(latitude: 22.6394, longitude: 120.3020), 9, accuracy: 4, "Kaohsiung Station, some 9 m")
+        XCTAssertGreaterThan(grid.height(latitude: 23.566, longitude: 119.566), 5, "Magong, off the terrain model's sheet: the surface model's")
         XCTAssertEqual(grid.height(latitude: 24.0, longitude: 119.9), 0, "the strait")
     }
 

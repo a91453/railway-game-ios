@@ -374,7 +374,12 @@ struct Map3DTrainRoom {
         var over: Map3DPoint?
     }
 
-    func outside(_ polygon: [Map3DVertex]) -> [Piece] {
+    /// `marking`: whether the pieces over the room are told apart (cut
+    /// along its sides and marked ``Piece/over``), for the share of a
+    /// part over the track; without it (a roof's ribs, decision 943) a
+    /// polygon wholly over a stretch's room stays whole, as nothing of it
+    /// is in the room.
+    func outside(_ polygon: [Map3DVertex], marking: Bool = true) -> [Piece] {
         let xs = polygon.map(\.x), zs = polygon.map(\.z)
         let x0 = Int((xs.min()! / Self.cell).rounded(.down)), x1 = Int((xs.max()! / Self.cell).rounded(.down))
         let z0 = Int((zs.min()! / Self.cell).rounded(.down)), z1 = Int((zs.max()! / Self.cell).rounded(.down))
@@ -388,14 +393,14 @@ struct Map3DTrainRoom {
             return (a.a.x, a.a.z, a.b.x, a.b.z, a.half) < (b.a.x, b.a.z, b.b.x, b.b.z, b.half)
         }
         for index in order {
-            pending = pending.flatMap { Self.outside($0, stretches[index]) }
+            pending = pending.flatMap { Self.outside($0, stretches[index], marking: marking) }
             if pending.isEmpty { break }
         }
         return pending
     }
 
     /// What of `polygon` is out of the one stretch `s`.
-    private static func outside(_ piece: Piece, _ s: Stretch) -> [Piece] {
+    private static func outside(_ piece: Piece, _ s: Stretch, marking: Bool) -> [Piece] {
         let polygon = piece.polygon
         let flat = Map3DPoint(s.b.x - s.a.x, 0, s.b.z - s.a.z), length = flat.length
         guard length > 1e-4 else { return [piece] }
@@ -419,6 +424,7 @@ struct Map3DTrainRoom {
             inside = cut(inside, by: plane).0
             if inside.count < 3 { return [piece] }
         }
+        if !marking, cut(inside, by: { $0.y - railsLinear($0) - s.above }).0.count < 3 { return [piece] }
         var kept: [[Map3DVertex]] = []
         let (left, rest) = cut(polygon) { d($0) + s.half }
         kept.append(left)
@@ -578,7 +584,7 @@ extension Map3DStationExterior {
                     guard v[0].ny > -0.3 else { continue }
                     for k in v.indices { v[k].color = Self.ribColour }
                     for rib in Map3DTrainRoom.frame(v, along: way, spacing: frameSpacing) where rib.count >= 3 {
-                        for piece in room.outside(rib) { triangles(piece.polygon, into: &pieces) }
+                        for piece in room.outside(rib, marking: false) { triangles(piece.polygon, into: &pieces) }
                     }
                 }
             } else {

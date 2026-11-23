@@ -5,15 +5,22 @@ extension TimetableCheckupBudgets {
     /// day from 2 not sent, 26 late, 11 late out of a depot and a peak
     /// gap of +10 min to 1, 19, 7 and +13 (one gap of 27.7 min against
     /// 15 at Airport Terminal 1 at 18:01); under a new game's rules it
-    /// is as it was.
+    /// is as it was. Decision 943 (the Ministry of the Interior's 20 m
+    /// terrain) moved it again: realistic 1, 9, 4, +5 to 1, 20, 6, +13
+    /// (27.7 min against 15 at Airport Terminal 1 at 18:01), simple 12,
+    /// 97, 10, +31 to 13, 92, 9, +31. The line is laid the same length
+    /// (871 edges to 803); with the curve limits off its realistic day
+    /// is 18 late on the old ground and 16 on the new, so its peaks'
+    /// knock-on delays (decision 228) swing with small changes in how it
+    /// is laid, not one stretch slower (TYMC-PEAK-CASCADE).
     static let taiwanFull: [String: TimetableCheckup.Budget] = [
         "ntalrt:K simple": .init(notSent: 0, late: 2, lateOutOfDepot: 0, peakGapMinutes: 0),
         "ntalrt:K realistic": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 0),
         "sanying:LB simple": .init(notSent: 0, late: 7, lateOutOfDepot: 0, peakGapMinutes: 5),
         "trtc:BR simple": .init(notSent: 6, late: 179, lateOutOfDepot: 30, peakGapMinutes: 10),
         "trtc:BR realistic": .init(notSent: 0, late: 149, lateOutOfDepot: 0, peakGapMinutes: 7),
-        "tymc:A simple": .init(notSent: 12, late: 97, lateOutOfDepot: 10, peakGapMinutes: 31),
-        "tymc:A realistic": .init(notSent: 1, late: 9, lateOutOfDepot: 4, peakGapMinutes: 5),
+        "tymc:A simple": .init(notSent: 13, late: 92, lateOutOfDepot: 9, peakGapMinutes: 31),
+        "tymc:A realistic": .init(notSent: 1, late: 20, lateOutOfDepot: 6, peakGapMinutes: 13),
     ]
 
     /// Taiwan's lines that share a station, bought together (2026-11-18).
