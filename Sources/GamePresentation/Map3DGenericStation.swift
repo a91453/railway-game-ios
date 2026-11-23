@@ -7,6 +7,8 @@ import GameCore
 /// (`a91453/railway-assets-private-2`
 /// `game-art-previews/docs/art/player-station-basic-2026-11/revision-2`,
 /// #182, and `player-station-generic-2026-11/extras/revision-2`, #186;
+/// decision 940: both revision-4, a dark edge along the roofs and no
+/// same-coloured faces on one plane, the two-floor one as it was;
 /// lessons in `docs/studio/lessons/player-station-basic.md` and
 /// `player-station-generic.md`), written in with
 /// `tools/train-models/glb_to_swift.py` (``Map3DGenericStationMesh``): a

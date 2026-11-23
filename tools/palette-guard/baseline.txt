@@ -192,7 +192,6 @@ Map3DSanying.swift 343D45
 Map3DSanying.swift E3E6E7
 Map3DSceneryProps.swift 2E8B4E
 Map3DSceneryProps.swift 3F6FA8
-Map3DSceneryProps.swift 4A4F57
 Map3DSceneryProps.swift 9AA0A8
 Map3DSceneryProps.swift C8382E
 Map3DSceneryProps.swift F2F3F1
