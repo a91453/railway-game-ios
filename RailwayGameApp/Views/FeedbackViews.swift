@@ -450,3 +450,41 @@ struct TownGrowthRings: View {
         }
     }
 }
+
+/// The places a lesson's first steps look for and lay track to
+/// (``GameSession/tutorialPlaceMarks``): a dashed ring as far as a station
+/// there would reach, and its number in a filled badge at the middle, so
+/// the towns stand out from the map's other blocks (AI tester round 1,
+/// 2026-11-23). Still, never looping (motion skill §3); at least 44 points
+/// across when zoomed far out, so a ring stays visible. Takes no touches.
+struct TutorialPlaceMarks: View {
+    let marks: [TutorialPlaceMark]
+    let camera: PlanCamera
+
+    var body: some View {
+        ZStack {
+            ForEach(marks, id: \.number) { mark in
+                let at = camera.screenPoint(of: mark.location)
+                let size = max(44, 2 * Double(mark.radius) * camera.pointsPerUnit)
+                ZStack {
+                    Circle()
+                        .fill(Theme.accent.opacity(0.12))
+                    Circle()
+                        .stroke(Theme.accent, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
+                    Text(verbatim: "\(mark.number)")
+                        .font(.headline.weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.onAccent)
+                        .frame(minWidth: 30, minHeight: 30)
+                        .background(Theme.accent, in: Circle())
+                        .overlay(Circle().stroke(Theme.onAccent, lineWidth: 2))
+                }
+                .frame(width: size, height: size)
+                .position(x: at.x, y: at.y)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
