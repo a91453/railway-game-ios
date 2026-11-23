@@ -1460,7 +1460,7 @@ private struct DetailsCard: View {
     }
 
     private func choose(_ current: DetailsCardLayout?) -> DetailsCardLayout {
-        DetailsCardLayout.layout(head: Double(shownHead), foot: Double(shownFoot), maxHeight: Double(maxHeight - shownTop), current: current)
+        DetailsCardLayout.layout(top: Double(shownTop), head: Double(shownHead), foot: Double(shownFoot), maxHeight: Double(maxHeight), current: current)
     }
 
     /// The scrolled part fades into the pinned parts instead of being cut
@@ -1576,7 +1576,7 @@ private struct DetailsCard: View {
     /// The tool's options, and on an iPad the network's overview.
     private var middle: some View {
         VStack(alignment: .leading, spacing: Self.spacing) {
-            ControlPanel(session: session, arrangement: .options)
+            ControlPanel(session: session, arrangement: .options, rowAbove: shownTop)
             if verticalSizeClass == .regular {
                 Divider()
                 NetworkOverview(session: session)

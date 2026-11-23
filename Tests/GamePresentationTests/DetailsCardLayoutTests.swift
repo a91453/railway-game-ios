@@ -117,4 +117,61 @@ final class DetailsCardLayoutTests: XCTestCase {
         XCTAssertFalse(DetailsCardLayout.placesTrain(tool: .train, trainIsSelected: false, trainIsOnTrack: false))
         XCTAssertFalse(DetailsCardLayout.placesTrain(tool: .select, trainIsSelected: true, trainIsOnTrack: false))
     }
+
+    /// DEPOT-SIDINGS-HIT (full lane `fcaa3f0`): #2614 pinned the network
+    /// tool's mode row above the card. Counted against the options' room,
+    /// a phone on its side lost the pinned head, and the inspector,
+    /// scrolling above the options, pushed the Depot mode's sidings out of
+    /// reach. The row was the options' first row: a card that pinned both
+    /// ends with the row among the options pins them with the row on top.
+    func testThePinnedModeRowCountsAsTheOptionsRoom() {
+        for top in [40.0, 50, 60] {
+            XCTAssertEqual(DetailsCardLayout.layout(top: top, head: 100, foot: 56, maxHeight: 288, current: nil), .pinned, "a \(top) pt row")
+            XCTAssertEqual(DetailsCardLayout.layout(top: top, head: 101, foot: 56, maxHeight: 288, current: nil), .footPinned, "a \(top) pt row")
+        }
+    }
+
+    /// The options under the row keep at least a row of their own when
+    /// both ends are pinned, however tall the row (a large text size), and
+    /// the foot is pinned only with a row of room under the mode row.
+    func testTheOptionsUnderTheModeRowKeepARow() {
+        for top in stride(from: 0.0, through: 200, by: 10) {
+            for head in stride(from: 0.0, through: 300, by: 10) {
+                for current in [nil, DetailsCardLayout.pinned, .footPinned, .whole] {
+                    let maxHeight = 320.0, foot = 56.0
+                    switch DetailsCardLayout.layout(top: top, head: head, foot: foot, maxHeight: maxHeight, current: current) {
+                    case .pinned:
+                        XCTAssertGreaterThanOrEqual(maxHeight - top - head - foot, DetailsCardLayout.leastKept, "row \(top), head \(head)")
+                    case .footPinned:
+                        XCTAssertGreaterThanOrEqual(maxHeight - top - foot, DetailsCardLayout.leastFootKept, "row \(top), head \(head)")
+                    case .whole:
+                        break
+                    }
+                }
+            }
+        }
+    }
+
+    /// With the row on top, a head a line longer or shorter still keeps
+    /// the layout (TestFlight 56.1).
+    func testAHeadALineLongerKeepsTheLayoutUnderTheModeRow() {
+        for top in [44.0, 60, 100] {
+            for start in stride(from: 20.0, through: 280, by: 5) {
+                var current = DetailsCardLayout.layout(top: top, head: start, foot: 56, maxHeight: 320, current: nil)
+                let first = current
+                for head in [start + 20, start, start + 20, start] {
+                    current = DetailsCardLayout.layout(top: top, head: head, foot: 56, maxHeight: 320, current: current)
+                    XCTAssertEqual(current, first, "row \(top), head \(start) to \(head)")
+                }
+            }
+        }
+    }
+
+    /// The card is as tall with the row pinned on top as it was with the
+    /// row among the options: they take the rest of their steady height.
+    func testTheOptionsTakeTheRestOfTheirHeightUnderTheRow() {
+        XCTAssertEqual(DetailsCardLayout.optionsMinimum(under: 0), DetailsCardLayout.optionsHeight)
+        XCTAssertEqual(DetailsCardLayout.optionsMinimum(under: 50) + 50, DetailsCardLayout.optionsHeight)
+        XCTAssertEqual(DetailsCardLayout.optionsMinimum(under: 200), 0)
+    }
 }
