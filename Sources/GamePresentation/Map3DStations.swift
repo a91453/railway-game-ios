@@ -561,6 +561,7 @@ extension Map3DScene.Builder {
         kit.gameName = world.station(id: id)?.name
         kit.japanese = look.buildings == .japan
         kit.finnish = look.buildings == .nordic
+        kit.hongKong = look.buildings == .hongKong
         kit.house(station, expansion: world.station(id: id)?.expansion)
         guard let bounds = kit.mesh.bounds else { return [] }
         let depth = bounds.max.x - bounds.min.x, wide = bounds.max.z - bounds.min.z
@@ -581,6 +582,7 @@ extension Map3DScene.Builder {
             var farKit = StationKitBuilder()
             farKit.japanese = kit.japanese
             farKit.finnish = kit.finnish
+            farKit.hongKong = kit.hongKong
             farKit.genericHouse(station, expansion: world.station(id: id)?.expansion, far: true)
             var farMoved = Map3DMesh()
             farMoved.append(farKit.mesh, at: shift, forward: Map3DPoint(1, 0, 0))
