@@ -59,7 +59,12 @@ public enum WhatsNew {
                     chinese: "香港的小車站換上照真實車站做的新站房。"
                 ),
             ],
-            fixes: []
+            fixes: [
+                Line(
+                    english: "Tapping Arrange on the train roster no longer closes the app.",
+                    chinese: "點車隊運用表的「編排」不再閃退。"
+                ),
+            ]
         ),
         // 144.
         Entry(
