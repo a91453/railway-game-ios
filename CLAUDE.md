@@ -68,7 +68,7 @@ train models with sourced formations, 12 station complexes, terrain, and
 since 2026-11-23 a procedural landscape engine,
 `regions/taiwan/source/landscape-engine/`, with its record in
 `regions/taiwan/rights/SOURCE_UPDATE_2026-11-23.json`
-(`docs/research/RAIL_REFERENCE_2026-11-23.md`); start with
+(`docs/research/RAIL_REFERENCE_WEBSITE_TO_GAME_2026-11-23.md`); start with
 `source/rail-3d/README.md`, `source/data/data_provenance.json` and
 `source/app/THIRD_PARTY_NOTICES.md`; prefer it over `site_archive_clean` for
 new work, and a tool reading `site_archive_clean` names which one it read.
