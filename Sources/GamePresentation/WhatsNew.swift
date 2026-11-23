@@ -158,6 +158,10 @@ public enum WhatsNew {
                     english: "Guandu Bridge spans the Tamsui River: three red arches, the middle one highest, with cars crossing on top.",
                     chinese: "淡水河上多了關渡大橋：三座紅色拱橋，中間最高，車子從橋上開過。"
                 ),
+                Line(
+                    english: "The big welcome canopy in front of Hualien station is a waved timber canopy like the real one.",
+                    chinese: "花蓮車站前的迎客大傘換成照真實做的木構波浪雨棚。"
+                ),
             ],
             fixes: [
                 Line(
