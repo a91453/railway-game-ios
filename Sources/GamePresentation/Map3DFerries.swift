@@ -134,9 +134,17 @@ public struct Map3DFerries: Sendable {
     /// ferries: the southernmost pier, on Hong Kong Island's shore (as
     /// Central's and Wan Chai's), the hall pier, the others Kowloon's
     /// finger pier (as Tsim Sha Tsui's); elsewhere the floating pier.
+    /// Decision 930: an outlying island route
+    /// (``Map3DFerry/Boat/outlyingMetres``): the northernmost pier, the
+    /// city's (as Central's, north of Lamma Island, Cheung Chau, Mui Wo
+    /// and Peng Chau), the hall pier, the islands' the floating pier.
     static func pierKinds(of route: FerryRoute, in region: Map3DStreetRegion) -> [Map3DFerry.PierKind] {
         guard region == .hongKong else { return route.piers.map { _ in .pontoon } }
         // The world's y runs south.
+        if route.metres >= Map3DFerry.Boat.outlyingMetres {
+            let north = route.piers.indices.min { route.piers[$0].middle.y < route.piers[$1].middle.y }
+            return route.piers.indices.map { $0 == north ? .hall : .pontoon }
+        }
         let south = route.piers.indices.max { route.piers[$0].middle.y < route.piers[$1].middle.y }
         return route.piers.indices.map { $0 == south ? .hall : .finger }
     }

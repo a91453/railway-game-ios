@@ -2,13 +2,13 @@
 
 Reads the gzipped JSON Lines of `Railway/tdx-snapshot-2026-10/data/` in the
 private reference repository and the TRA timetable of
-`Railway/taiwan-rail-reference-clean/source/data/` (train number -> train type
+`Railway/rail-reference/regions/taiwan/source/data/` (train number -> train type
 and stop order), and writes small CSV tables to the output directory. Raw rows
 never leave the reference repository.
 
     python3 -I tools/tra-delay-analysis/analyze.py \
         --data <ref>/Railway/tdx-snapshot-2026-10/data \
-        --timetable <ref>/Railway/taiwan-rail-reference-clean/source/data \
+        --timetable <ref>/Railway/rail-reference/regions/taiwan/source/data \
         --out tools/tra-delay-analysis/results
 
 Standard library only. A run over the 341 days takes a few minutes.

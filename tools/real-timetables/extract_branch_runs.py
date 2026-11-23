@@ -3,7 +3,7 @@
 (ARCHITECTURE decision 315) from the reference's TRA timetable.
 
     python3 -I tools/real-timetables/extract_branch_runs.py \\
-        <reference>/Railway/taiwan-rail-reference-clean/source/data/tra_schedule_dense.json \\
+        <reference>/Railway/rail-reference/regions/taiwan/source/data/tra_schedule_dense.json \\
         RailwayGameApp/Resources/RealRailways/tra.json \\
         RailwayGameApp/Resources/RealRailways/tra_branch_runs.json
 

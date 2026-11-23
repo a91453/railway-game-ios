@@ -8,7 +8,7 @@ final class CollectionShowcaseTests: XCTestCase {
     func testTheCableCarPageGivesEachRealLinesFigures() {
         for language in [DisplayLanguage.english, .traditionalChinese] {
             let entries = FerryCollection.cableways(in: language)
-            XCTAssertEqual(entries.map(\.id), ["maokong", "sunMoonLake", "ngongPing"])
+            XCTAssertEqual(entries.map(\.id), ["maokong", "sunMoonLake", "ngongPing", "wulai"])
             XCTAssertTrue(entries.allSatisfy { $0.lines.count >= 3 })
             XCTAssertFalse(FerryCollection.cablewayNote(in: language).isEmpty)
         }
@@ -37,6 +37,13 @@ final class CollectionShowcaseTests: XCTestCase {
         }
         XCTAssertEqual(RealCableway.ngongPing.stops.filter(\.boards).count, 2)
         XCTAssertEqual(RealCableway.ngongPing.stops.filter { !$0.boards }.count, 2)
+        // Decision 930: Wulai's 382 m and 165 m (the New Taipei tourism
+        // site's 382 m and 164.59 m; the game's span 381 m), 1967, 71 people.
+        let wulai = chinese[3].lines.joined(separator: "\n")
+        for figure in ["1967 年 8 月", "382 公尺", "165 公尺", "2 個車站", "71 人"] {
+            XCTAssertTrue(wulai.contains(figure), figure)
+        }
+        XCTAssertEqual(RealCableway.wulai.legMetres, [381])
     }
 
     /// Every piece on both stages is a model the 3D map draws, near and far.
@@ -79,10 +86,12 @@ final class CollectionShowcaseTests: XCTestCase {
         let cabins = layout.pieces.filter { $0.model.hasPrefix("cablecar-cabin-") }
         XCTAssertEqual(cabins.map(\.model), Map3DCableCar.Cabin.allCases.map { "cablecar-cabin-" + $0.rawValue }
                        + Map3DCableCar.SunMoonCabin.allCases.map { "cablecar-cabin-sunmoon-" + $0.rawValue }
-                       + Map3DNgongPingCabin.Kind.allCases.map { "cablecar-cabin-ngongping-" + $0.rawValue })
-        // Decision 897: three lines, each two towers and two ropes.
-        XCTAssertEqual(layout.pieces.filter { $0.model == "cablecar-tower" }.count, 6)
-        XCTAssertEqual(layout.ropes.count, 6)
+                       + Map3DNgongPingCabin.Kind.allCases.map { "cablecar-cabin-ngongping-" + $0.rawValue }
+                       + Map3DWulaiCabin.Kind.allCases.map(Map3DWulaiCabin.name))
+        // Decision 897: three lines, each two towers and two ropes;
+        // decision 930: and Wulai's, the fourth.
+        XCTAssertEqual(layout.pieces.filter { $0.model == "cablecar-tower" }.count, 8)
+        XCTAssertEqual(layout.ropes.count, 8)
         let height = Map3DCableCar.ropeHeight(ofTower: Map3DCableCar.towerHeight)
         for cabin in cabins {
             // On a rope: its grip at the rope's height, on one of the ropes' lines, between the towers.

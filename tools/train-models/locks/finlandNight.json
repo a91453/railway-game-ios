@@ -1,7 +1,7 @@
 {
   "comment" : "Decision 782: the models of the registered train finlandNight (Map3DFinlandSleeper): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
-  "lampCount" : 16,
-  "lamps" : "377593de04fb11bc",
+  "lampCount" : 24,
+  "lamps" : "bd30a6f002d6981e",
   "models" : {
     "light-set-finlandNight-car" : {
       "hash" : "b8eff880127a33e9",
@@ -10,6 +10,14 @@
     "light-set-finlandNight-centre" : {
       "hash" : "289accb5a11719fd",
       "triangles" : 320
+    },
+    "light-set-finlandNight-fourth" : {
+      "hash" : "1f5e4ac2e572f5a9",
+      "triangles" : 360
+    },
+    "light-set-finlandNight-panto" : {
+      "hash" : "28aeb5d641cb3841",
+      "triangles" : 204
     },
     "light-set-finlandNight-tail" : {
       "hash" : "9e6d0c2ce6b04d81",
@@ -23,6 +31,14 @@
       "hash" : "1b43904be5c796a5",
       "triangles" : 64
     },
+    "light-set-finlandNightFar-fourth" : {
+      "hash" : "97258fc7920c6549",
+      "triangles" : 44
+    },
+    "light-set-finlandNightFar-panto" : {
+      "hash" : "e926e3d5e609ee16",
+      "triangles" : 76
+    },
     "light-set-finlandNightFar-tail" : {
       "hash" : "8349f26ef3464149",
       "triangles" : 36
@@ -34,6 +50,14 @@
     "light-set-finlandNightSr3-centre" : {
       "hash" : "289accb5a11719fd",
       "triangles" : 320
+    },
+    "light-set-finlandNightSr3-fourth" : {
+      "hash" : "1f5e4ac2e572f5a9",
+      "triangles" : 360
+    },
+    "light-set-finlandNightSr3-panto" : {
+      "hash" : "28aeb5d641cb3841",
+      "triangles" : 204
     },
     "light-set-finlandNightSr3-tail" : {
       "hash" : "9e6d0c2ce6b04d81",
@@ -47,6 +71,14 @@
       "hash" : "1b43904be5c796a5",
       "triangles" : 64
     },
+    "light-set-finlandNightSr3Far-fourth" : {
+      "hash" : "97258fc7920c6549",
+      "triangles" : 44
+    },
+    "light-set-finlandNightSr3Far-panto" : {
+      "hash" : "e926e3d5e609ee16",
+      "triangles" : 76
+    },
     "light-set-finlandNightSr3Far-tail" : {
       "hash" : "8349f26ef3464149",
       "triangles" : 36
@@ -59,9 +91,17 @@
       "hash" : "ade8590bf337b7f",
       "triangles" : 5336
     },
+    "set-finlandNight-fourth" : {
+      "hash" : "ac3d99a38c5bae65",
+      "triangles" : 6846
+    },
     "set-finlandNight-head" : {
       "hash" : "c224fff123e180fd",
       "triangles" : 11644
+    },
+    "set-finlandNight-panto" : {
+      "hash" : "9699dbd2fad6a75c",
+      "triangles" : 5568
     },
     "set-finlandNight-tail" : {
       "hash" : "119ebb7406a69adf",
@@ -75,9 +115,17 @@
       "hash" : "4597f4a718f6254f",
       "triangles" : 2448
     },
+    "set-finlandNightFar-fourth" : {
+      "hash" : "172249ee4b67608b",
+      "triangles" : 3162
+    },
     "set-finlandNightFar-head" : {
       "hash" : "3f59185929600e94",
       "triangles" : 4116
+    },
+    "set-finlandNightFar-panto" : {
+      "hash" : "547ae2386bbbb554",
+      "triangles" : 2700
     },
     "set-finlandNightFar-tail" : {
       "hash" : "41e079f75663471c",
@@ -91,9 +139,17 @@
       "hash" : "ade8590bf337b7f",
       "triangles" : 5336
     },
+    "set-finlandNightSr3-fourth" : {
+      "hash" : "ac3d99a38c5bae65",
+      "triangles" : 6846
+    },
     "set-finlandNightSr3-head" : {
       "hash" : "30c3b8177f71d508",
       "triangles" : 4816
+    },
+    "set-finlandNightSr3-panto" : {
+      "hash" : "9699dbd2fad6a75c",
+      "triangles" : 5568
     },
     "set-finlandNightSr3-tail" : {
       "hash" : "119ebb7406a69adf",
@@ -107,9 +163,17 @@
       "hash" : "4597f4a718f6254f",
       "triangles" : 2448
     },
+    "set-finlandNightSr3Far-fourth" : {
+      "hash" : "172249ee4b67608b",
+      "triangles" : 3162
+    },
     "set-finlandNightSr3Far-head" : {
       "hash" : "239b2f293fa0ded0",
       "triangles" : 2200
+    },
+    "set-finlandNightSr3Far-panto" : {
+      "hash" : "547ae2386bbbb554",
+      "triangles" : 2700
     },
     "set-finlandNightSr3Far-tail" : {
       "hash" : "41e079f75663471c",

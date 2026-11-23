@@ -19,5 +19,10 @@ extension Map3DTrainRegistry {
         Map3DFukuokaNanakumaLine.registration,
         Map3DFinlandSr3.registration,
         Map3DFinlandSleeper.registration,
+        Map3DEMU100.registration,
+        Map3DGuidedMonorail.registration,
+        Map3DGuidedMaglev.registration,
+        Map3DGuidedSkyrail.registration,
+        Map3DHKPeakTram.registration,
     ]
 }

@@ -41,18 +41,20 @@ extension Map3DFinlandSleeper {
     /// Sr3), near and far, its showcase row and its cars' triangles (the
     /// sleeping car 6,790 near and 2,904 far, the Sr2 11,644 and 4,116, the
     /// Sr3 4,816 and 2,200, decision 914's closed car carrier 4,560 and
-    /// 2,190, decision 916's open one 5,336 and 2,448) and lengths (the
-    /// locomotives 19.02 and 19.05 m, the sleeping car and the open car
-    /// carrier 26.40 m, the closed one 26.70 m).
+    /// 2,190, decision 916's open one 5,336 and 2,448, decision 930's
+    /// restaurant car 5,568 and 2,700 and luggage car 6,846 and 3,162) and
+    /// lengths (the locomotives 19.02 and 19.05 m, the sleeping car, the
+    /// restaurant car, the luggage car and the open car carrier 26.40 m,
+    /// the closed one 26.70 m). Decision 930: always its seven cars.
     static let registration = Map3DTrainRegistration(
         id: "finlandNight",
         sets: [Map3DTrainSet.finlandNight(sr3: false), .finlandNight(sr3: false, far: true),
                .finlandNight(sr3: true), .finlandNight(sr3: true, far: true)],
         showcase: [
             Map3DShowcase.Entry(key, "Finnish night train, double-deck sleepers (Sr2)", "芬蘭夜車（雙層臥鋪車，Sr2）", .finland,
-                                cars: Map3DFinlandSr2.cars, most: 10, gauge: 1.524),
+                                cars: Map3DFinlandSr2.cars, fixed: true, gauge: 1.524),
             Map3DShowcase.Entry(sr3Key, "Finnish night train, double-deck sleepers (Sr3)", "芬蘭夜車（雙層臥鋪車，Sr3）", .finland,
-                                cars: Map3DFinlandSr2.cars, most: 10, gauge: 1.524),
+                                cars: Map3DFinlandSr2.cars, fixed: true, gauge: 1.524),
         ],
         triangles: 2_190...11_700, length: 19.0...26.75)
 }
@@ -61,22 +63,30 @@ extension Map3DTrainSet {
     /// FINLAND-TRAINS-2: the night train, its locomotive (the Sr2, or the
     /// Sr3 when `sr3`) and its double-deck sleeping cars at their own
     /// lengths, the locomotive's front lamps lit. Decision 914: its last
-    /// two cars the car carriers, the last the closed one
-    /// (``Map3DFinlandCarCarrier``) with its tail lamps lit, decision 916:
-    /// the one before it the open one (``Map3DFinlandCarCarrierGfot``); of
-    /// a train of fewer than seven cars only the last.
+    /// car the closed car carrier (``Map3DFinlandCarCarrier``) with its
+    /// tail lamps lit, decision 916: the one before it the open one
+    /// (``Map3DFinlandCarCarrierGfot``).
+    ///
+    /// Decision 930: seven cars whatever the train's count, laid as a week
+    /// of Digitraffic's compositions had the night trains at Rovaniemi:
+    /// the locomotive, a sleeping car, the restaurant car
+    /// (``Map3DFinlandRestaurantCar``) and the luggage car
+    /// (``Map3DFinlandEdg``) side by side among the sleeping cars, a
+    /// second sleeping car, and the two car carriers at the back.
     static func finlandNight(sr3: Bool, far: Bool = false) -> Map3DTrainSet {
         let key = sr3 ? Map3DFinlandSleeper.sr3Key : Map3DFinlandSleeper.key
-        return Map3DTrainSet(key: far ? key + "Far" : key, centreCars: [Map3DFinlandSr2.cars - 2], ownLengths: true,
-                             far: far ? nil : key + "Far") {
-            let sleeper = Map3DFinlandSleeper.model(far: far)
-                ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: false).model(named: Map3DFinlandSleeper.name)
-            let carrier = Map3DFinlandCarCarrier.model(far: far)
-                ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: false).model(named: Map3DFinlandCarCarrier.name)
-            let open = Map3DFinlandCarCarrierGfot.model(far: far)
-                ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: false).model(named: Map3DFinlandCarCarrierGfot.name)
+        return Map3DTrainSet(key: far ? key + "Far" : key, cycle: [.middle, .pantograph, .fourth, .middle, .centre],
+                             cycleFromFront: true, ownLengths: true, fixedCars: Map3DFinlandSr2.cars, far: far ? nil : key + "Far") {
+            func plain(_ name: String) -> Map3DModelPack.Model {
+                Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: false).model(named: name)
+            }
+            let sleeper = Map3DFinlandSleeper.model(far: far) ?? plain(Map3DFinlandSleeper.name)
+            let carrier = Map3DFinlandCarCarrier.model(far: far) ?? plain(Map3DFinlandCarCarrier.name)
+            let open = Map3DFinlandCarCarrierGfot.model(far: far) ?? plain(Map3DFinlandCarCarrierGfot.name)
+            let restaurant = Map3DFinlandRestaurantCar.model(far: far) ?? plain(Map3DFinlandRestaurantCar.name)
+            let luggage = Map3DFinlandEdg.model(far: far) ?? plain(Map3DFinlandEdg.name)
             return Cars(head: litLenses(finlandLocomotive(sr3: sr3, far: far), front: true), middle: sleeper,
-                        tail: litLenses(carrier, front: false), single: nil, centre: open)
+                        tail: litLenses(carrier, front: false), single: nil, pantograph: restaurant, centre: open, fourth: luggage)
         }
     }
 

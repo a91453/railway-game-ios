@@ -24,10 +24,17 @@ public struct CabinFollowFacts: Equatable, Sendable {
 }
 
 extension GameWorld {
+    /// Decision 930: the numbers of the cabins `cableway` runs here: two
+    /// on a line drawn as an aerial tramway (``Map3DCableways/CabinLook/isPair``),
+    /// else every one.
+    public func cabinNumbers(of cableway: Cableway) -> [Int] {
+        CablewayCabins.numbers(of: cableway, pair: Map3DCableways.look(of: cableway, in: self).isPair)
+    }
+
     /// Whether cabin `id` runs now: its cable car is there, runs at this
     /// hour, and has a cabin of that number.
     public func cabinRuns(_ id: CabinID) -> Bool {
-        guard let cableway = cableway(id: id.cableway), id.number >= 0, id.number < CablewayCabins.count(of: cableway) else { return false }
+        guard let cableway = cableway(id: id.cableway), cabinNumbers(of: cableway).contains(id.number) else { return false }
         return CablewayCabins.runs(id.cableway, in: self, at: clock.now)
     }
 
@@ -37,7 +44,7 @@ extension GameWorld {
         guard let cableway = cableway(id: id), CablewayCabins.runs(id, in: self, at: clock.now) else { return nil }
         let loop = CablewayCabins.loopSeconds(of: cableway)
         let second = clock.now.seconds
-        let number = (0..<CablewayCabins.count(of: cableway)).min { a, b in
+        let number = cabinNumbers(of: cableway).min { a, b in
             func at(_ n: Int) -> Int64 { ((second - Int64(n) * Cableway.cabinIntervalSeconds) % loop + loop) % loop }
             return at(a) < at(b)
         }
@@ -52,7 +59,7 @@ extension GameWorld {
         guard let cableway = cableway(id: id), CablewayCabins.runs(id, in: self, at: clock.now),
               let longest = cableway.legMetres.indices.max(by: { cableway.legMetres[$0] < cableway.legMetres[$1] }) else { return nil }
         let second = Double(clock.now.seconds)
-        let out = (0..<CablewayCabins.count(of: cableway)).compactMap { number -> (number: Int, offMiddle: Double)? in
+        let out = cabinNumbers(of: cableway).compactMap { number -> (number: Int, offMiddle: Double)? in
             guard case .span(let leg, let share, _) = CablewayCabins.glide(of: number, on: cableway, atSecond: second), leg == longest else { return nil }
             return (number, abs(share - 0.5))
         }
