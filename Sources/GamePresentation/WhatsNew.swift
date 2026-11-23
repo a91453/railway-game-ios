@@ -91,6 +91,10 @@ public enum WhatsNew {
                     chinese: "平溪線菁桐、集集線車埕換上照真實站房做的木造車站。"
                 ),
                 Line(
+                    english: "Hexing and Neiwan on the Neiwan Line have stations modelled on their real buildings.",
+                    chinese: "內灣線合興、內灣換成照真實站房做的樣子。"
+                ),
+                Line(
                     english: "Shanjia on the Western Line and Shifen on the Pingxi Line have stations modelled on their real buildings.",
                     chinese: "台鐵山佳、平溪線十分換上照真實站房做的車站。"
                 ),

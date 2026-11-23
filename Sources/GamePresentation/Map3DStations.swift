@@ -578,20 +578,22 @@ extension Map3DScene.Builder {
         // here and added after the chunk's, as the exterior studies are.
         var near = Map3DMesh(), far = Map3DMesh()
         near.append(moved, at: foot, forward: forward)
-        if station.profile == .regional || station.profile == .halt {
+        if let own = Map3DStudioStation(rawValue: station.id) {
+            // Decision 929: its own far version, placed as the near
+            // (decision 945: before the `halt` and `regional` profiles',
+            // since Hexing and Neiwan are halts).
+            var farKit = StationKitBuilder()
+            farKit.studioStation(own, far: true)
+            var farMoved = Map3DMesh()
+            farMoved.append(farKit.mesh, at: shift, forward: Map3DPoint(1, 0, 0))
+            far.append(farMoved, at: foot, forward: forward)
+        } else if station.profile == .regional || station.profile == .halt {
             // Decision 899: the studio's far versions, placed as the near.
             var farKit = StationKitBuilder()
             farKit.japanese = kit.japanese
             farKit.finnish = kit.finnish
             farKit.hongKong = kit.hongKong
             farKit.genericHouse(station, expansion: world.station(id: id)?.expansion, far: true)
-            var farMoved = Map3DMesh()
-            farMoved.append(farKit.mesh, at: shift, forward: Map3DPoint(1, 0, 0))
-            far.append(farMoved, at: foot, forward: forward)
-        } else if let own = Map3DStudioStation(rawValue: station.id) {
-            // Decision 929: its own far version, placed as the near.
-            var farKit = StationKitBuilder()
-            farKit.studioStation(own, far: true)
             var farMoved = Map3DMesh()
             farMoved.append(farKit.mesh, at: shift, forward: Map3DPoint(1, 0, 0))
             far.append(farMoved, at: foot, forward: forward)
