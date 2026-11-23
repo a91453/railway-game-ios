@@ -116,8 +116,10 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // (24 vertices fewer). Decision 918: the two bicycles and the ten
         // close-up people after them (12 models, 15,006 vertices more,
         // 600 KB a copy).
-        XCTAssertEqual(models.count, 972)
-        XCTAssertEqual(vertices, 6_833_100)
+        // Decision 941: the level crossings' boom after them (1 model, 204
+        // vertices more, 8 KB a copy).
+        XCTAssertEqual(models.count, 973)
+        XCTAssertEqual(vertices, 6_833_304)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

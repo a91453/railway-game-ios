@@ -292,6 +292,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 918: five more people seen close up, standing and
         // mid-stride, after them and before the route bus.
         groups.append { Map3DPedestrian.drawn }
+        // Decision 941: the level crossings' boom, drawn where the trains
+        // put it, after them and before the route bus.
+        groups.append { Map3DCrossingGate.drawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }
