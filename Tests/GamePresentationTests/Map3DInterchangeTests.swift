@@ -181,8 +181,14 @@ extension Map3DSceneMemoryTests {
         // river meeting the streets along its banks (21 at 青埔's rivers,
         // 25.01–25.02, 121.21–121.22; 台中's 筏子溪, 大漢溪), 2 a deck
         // and the ground. Those bridges had lain on the water.
+        // Decision 943: on the Ministry of the Interior's ground, 276
+        // (ramps 168 → 160, a deck and the ground 70 → 76, two decks
+        // 34 → 40): the same kinds, most at the same interchanges (青埔,
+        // 台中's trunk road; the worst now a ramp in 高雄, 22.710,
+        // 120.330), the ground under them a few metres lower or flatter;
+        // no rule changed.
         XCTAssertLessThanOrEqual(kinds[.deckAndGround] ?? 0, 80, "\(kinds[.deckAndGround] ?? 0) sites where a deck and a road on the ground meet 0.5–4.5 m apart")
-        XCTAssertLessThanOrEqual(all.count, 275, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
+        XCTAssertLessThanOrEqual(all.count, 276, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
     }
 }
 
