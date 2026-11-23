@@ -26,7 +26,7 @@ formation, OSM's on one track, so about 2 m on double track is the two
 data sets agreeing.
 
 The shapefile reader and the TM2 inverse are ported from the owner's
-reference, `Railway/taiwan-rail-reference-clean/source/scripts/
+reference, `Railway/rail-reference/regions/taiwan/source/scripts/
 build_rail_structures_official.mjs` (its `readShp`, `readDbf`, `toWgs`).
 """
 
