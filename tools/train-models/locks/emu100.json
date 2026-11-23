@@ -1,0 +1,55 @@
+{
+  "comment" : "Decision 782: the models of the registered train emu100 (Map3DEMU100): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 6,
+  "lamps" : "63703f4d94572ab4",
+  "models" : {
+    "light-set-EMU100-car" : {
+      "hash" : "1df6238b14b13bc1",
+      "triangles" : 56
+    },
+    "light-set-EMU100-head" : {
+      "hash" : "63d225fdd6b01840",
+      "triangles" : 52
+    },
+    "light-set-EMU100-tail" : {
+      "hash" : "5af0f0dce5d65940",
+      "triangles" : 52
+    },
+    "light-set-EMU100Far-car" : {
+      "hash" : "2bd4ab497c8e1e01",
+      "triangles" : 32
+    },
+    "light-set-EMU100Far-head" : {
+      "hash" : "6d61149c66ea061d",
+      "triangles" : 28
+    },
+    "light-set-EMU100Far-tail" : {
+      "hash" : "896ec147c7be011d",
+      "triangles" : 28
+    },
+    "set-EMU100-car" : {
+      "hash" : "b26c5cc35cfd5406",
+      "triangles" : 1812
+    },
+    "set-EMU100-head" : {
+      "hash" : "46635b33ed56eafe",
+      "triangles" : 3248
+    },
+    "set-EMU100-tail" : {
+      "hash" : "6b153b937e090653",
+      "triangles" : 3248
+    },
+    "set-EMU100Far-car" : {
+      "hash" : "a62fee78bf12ccb7",
+      "triangles" : 668
+    },
+    "set-EMU100Far-head" : {
+      "hash" : "e212e528d6065449",
+      "triangles" : 1140
+    },
+    "set-EMU100Far-tail" : {
+      "hash" : "6e1b5be70f53ce84",
+      "triangles" : 1140
+    }
+  }
+}

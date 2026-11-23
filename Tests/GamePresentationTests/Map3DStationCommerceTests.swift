@@ -31,7 +31,9 @@ final class Map3DStationCommerceTests: XCTestCase {
         let models = Map3DScene.Builder.commerceModels
         XCTAssertEqual(models.map(\.example), [.stationTransitHub, .commercialAvenue, .neighborhoodRetailCorner, .nightMarketAlley])
         for (example, model) in models {
-            XCTAssertEqual(model.triangles, Map3DCommercialKit.model(for: example).triangleCount, "\(example)")
+            // Decision 935: the night market with the studio's bulbs, canopy and cart.
+            let added = example == .nightMarketAlley ? Map3DMeshyMarketTemple.alleyParts(lift: 0).reduce(0) { $0 + $1.model.triangleCount } : 0
+            XCTAssertEqual(model.triangles, Map3DCommercialKit.model(for: example).triangleCount + added, "\(example)")
             let bounds = try XCTUnwrap(model.mesh.bounds)
             // Its ground holds it, signs and awnings too.
             XCTAssertGreaterThanOrEqual(bounds.min.x, -model.length / 2, "\(example)")
@@ -67,6 +69,8 @@ final class Map3DStationCommerceTests: XCTestCase {
             if sum + scene.model.triangles <= Map3DScene.Builder.commerceTriangles { sum += scene.model.triangles }
         }
         XCTAssertEqual(placed, fit)
+        // Decision 935: the four scenes, the night market's pieces too, within the cap.
+        XCTAssertLessThanOrEqual(Map3DScene.Builder.commerceModels.reduce(0) { $0 + $1.model.triangles }, Map3DScene.Builder.commerceTriangles)
         XCTAssertGreaterThan(placed, Map3DScene.Builder.commerceModels[0].model.triangles)
         XCTAssertGreaterThan(try XCTUnwrap(vertices(b.closeMeshes).map(\.z).min()), 40 + Map3DScene.Builder.commerceGap - 1)
         XCTAssertTrue(b.nearMeshes.isEmpty)

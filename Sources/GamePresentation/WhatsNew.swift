@@ -39,12 +39,56 @@ public enum WhatsNew {
                     chinese: "福岡的行人號誌燈箱改成深色，和真的一樣。"
                 ),
                 Line(
+                    english: "The Finnish night train has a double-deck seating car.",
+                    chinese: "芬蘭夜車多了一節雙層座車。"
+                ),
+                Line(
+                    english: "The Finnish night train has a restaurant car.",
+                    chinese: "芬蘭夜車多了一節餐車。"
+                ),
+                Line(
+                    english: "The EMU100 has its own 3D model.",
+                    chinese: "EMU100 自強號有自己的 3D 模型。"
+                ),
+                Line(
+                    english: "The garage has Hong Kong's Peak Tram car.",
+                    chinese: "車庫多了香港山頂纜車的車廂。"
+                ),
+                Line(
+                    english: "Monorail trains have a 3D model instead of a box.",
+                    chinese: "單軌列車有 3D 模型，不再是方塊。"
+                ),
+                Line(
+                    english: "Maglev trains have a 3D model instead of a box.",
+                    chinese: "磁浮列車有 3D 模型，不再是方塊。"
+                ),
+                Line(
+                    english: "Light monorail trains hang from their beam as a 3D model instead of a box.",
+                    chinese: "輕型單軌列車有懸吊式的 3D 模型，不再是方塊。"
+                ),
+                Line(
+                    english: "The Midsummer Formosa's steam locomotive is a new CT273 model.",
+                    chinese: "仲夏寶島號的蒸汽機車換成新的 CT273 模型。"
+                ),
+                Line(
+                    english: "Long ferry routes in Hong Kong are sailed by a catamaran.",
+                    chinese: "香港較長的渡輪航線改由雙體船行駛。"
+                ),
+                Line(
+                    english: "The Wulai cable car has its two cabins, one green and one red, passing each other.",
+                    chinese: "烏來纜車換成兩部對開的車廂，一綠一紅。"
+                ),
+                Line(
                     english: "The high-speed stations at Miaoli, Changhua, Yunlin and Chiayi have their own buildings.",
                     chinese: "高鐵苗栗、彰化、雲林、嘉義站有了自己的站房。"
                 ),
                 Line(
                     english: "Pingxi and Rinan stations are drawn as their own timber station houses.",
                     chinese: "平溪站與日南站畫成各自的木造站房。"
+                ),
+                Line(
+                    english: "Jingtong on the Pingxi Line and Checheng on the Jiji Line have timber stations modelled on the real ones.",
+                    chinese: "平溪線菁桐、集集線車埕換上照真實站房做的木造車站。"
                 ),
                 Line(
                     english: "Small stations on the Nordic map are yellow timber station houses.",
@@ -57,6 +101,10 @@ public enum WhatsNew {
                 Line(
                     english: "Hong Kong's small stations are new station houses modelled on real ones.",
                     chinese: "香港的小車站換上照真實車站做的新站房。"
+                ),
+                Line(
+                    english: "Night markets have strings of bulbs that light up after dark, striped canopies and snack carts, and temples have a Tiangong burner and a pair of stone lions.",
+                    chinese: "夜市有了入夜會亮的燈泡串、紅白帆布棚與小吃推車，廟前多了天公爐與一對石獅。"
                 ),
                 Line(
                     english: "Stations on the ground have footbridges or underpass stairs, and island platforms have transfer signs.",

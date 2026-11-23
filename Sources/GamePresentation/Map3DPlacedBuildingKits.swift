@@ -276,14 +276,21 @@ extension Map3DScene.Builder {
                             pad: forecourt, recolours: false),
         ]
         // A night market (30 m): the commercial kit's alley of stalls
-        // (Map3DCommercialKit.Example.nightMarketAlley, as it lays them);
+        // (Map3DCommercialKit.Example.nightMarketAlley, as it lays them,
+        // and decision 935's bulbs, canopy and cart);
         // or the civic kit's market canopies and carts round tables under
         // lanterns.
         let markets = [
             PlacedKitLayout([stall(.ramenYatai, -5, -8), stall(.nightMarketFryer, -5, 0), stall(.nightMarketFruit, -5, 8),
                              stall(.nightMarketGame, 5, -6, .pi), stall(.mobileFoodCart, 5, 6, .pi), stall(.commercialRecycling, 0, 12),
                              stall(.aFrameSign, -1, -12), stall(.totemLightbox, 1, -12)],
-                            pad: Map3DPalette.plaza, recolours: false),
+                            pad: Map3DPalette.plaza, recolours: false) { builder in
+                // Decision 935: in the mesh but with no box from farther
+                // (a 4 m string of bulbs is no block).
+                for part in Map3DMeshyMarketTemple.alleyParts(lift: 0) {
+                    builder.add(part.model, at: Map3DPoint(part.x, part.lift, part.right), angle: part.angle)
+                }
+            },
             PlacedKitLayout([civic(.marketCanopy, 8, -7), civic(.marketStall, 8, -9), civic(.marketStall, 8, -5), civic(.produceCart, 6, 1),
                              civic(.snackCart, 10, 1), civic(.umbrellaTable, 7, 7), civic(.umbrellaTable, 11, 11), civic(.lanternString, 2, 7),
                              civic(.marketCanopy, -8, 7, .pi), civic(.marketStall, -8, 9, .pi), civic(.marketStall, -8, 5, .pi),
