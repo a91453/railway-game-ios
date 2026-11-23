@@ -1117,6 +1117,25 @@ final class WebsiteScreenshotTests: XCTestCase {
         }
     }
 
+    /// IPAD-HOME-HALF: the start screen on its side and upright, to see
+    /// that on an iPad the menu stands near the middle rather than in the
+    /// top half (on an iPhone it stays at the top).
+    func testStartScreen() {
+        defer { XCUIDevice.shared.orientation = .landscapeLeft }
+        for upright in [false, true] {
+            // Upright from before the launch, as testBuildingCardNames.
+            continueAfterFailure = false
+            XCUIDevice.shared.orientation = upright ? .portrait : .landscapeLeft
+            let app = XCUIApplication()
+            app.launchArguments = ["-ui-testing", "-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"]
+            app.launch()
+            XCTAssertTrue(app.buttons["start.settings"].appears(within: 60), "Missing start.settings")
+            settle()
+            keep("start-screen\(upright ? "-portrait" : "")", app)
+            app.terminate()
+        }
+    }
+
     /// GLASS-POLISH (museum-title): the building tool's cards with the
     /// museum's chosen, upright and on its side, in both languages, to see
     /// that the long English names ("Railway museum") are not cut short.

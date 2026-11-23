@@ -68,4 +68,44 @@ final class DataSourcesEntryTests: XCTestCase {
         XCTAssertFalse(DataSourcesEntry.shows(matching: "票價"))
         XCTAssertNotEqual(DataSourcesEntry.helpIdentifier, DataSourcesEntry.settingsIdentifier)
     }
+
+    /// IPAD-HOME-HALF: an iPhone keeps the menu at the top, 40 points
+    /// down, whatever its height, as before.
+    func testAPhoneKeepsTheMenuAtTheTop() {
+        XCTAssertFalse(StartMenuPlacement.centres(on: .iPhone))
+        for (screen, menu) in [(874.0, 700.0), (956, 500), (667, 900), (0, 0)] {
+            XCTAssertEqual(StartMenuPlacement.roomAbove(screenHeight: screen, menuHeight: menu, on: .iPhone), 40)
+        }
+    }
+
+    /// IPAD-HOME-HALF: on an iPad (and a Mac) the menu stands a little
+    /// above the middle of the screen, and it and its margins fill the
+    /// screen's height without scrolling; the room below is never less
+    /// than above's 40 either.
+    func testAnIPadStandsTheMenuAboveTheMiddle() {
+        XCTAssertTrue(StartMenuPlacement.centres(on: .iPad))
+        XCTAssertTrue(StartMenuPlacement.centres(on: .mac))
+        // An 11-inch iPad on its side (834 tall, the status bar's 24 off)
+        // and upright, an iPad mini upright and a 13-inch upright.
+        for (screen, menu) in [(810.0, 560.0), (1170, 760), (1109, 760), (1352, 620)] {
+            let above = StartMenuPlacement.roomAbove(screenHeight: screen, menuHeight: menu, on: .iPad)
+            let below = screen - menu - above
+            XCTAssertGreaterThan(above, 40)
+            XCTAssertLessThan(above, below, "a little above the middle")
+            XCTAssertGreaterThan(above, 0.7 * below, "but near it")
+            XCTAssertEqual(above + menu + below, screen, accuracy: 0.001)
+        }
+        // The 11-inch upright: 410 free, 172.2 of it above.
+        XCTAssertEqual(StartMenuPlacement.roomAbove(screenHeight: 1170, menuHeight: 760, on: .iPad), 40 + 330 * 0.42, accuracy: 0.001)
+    }
+
+    /// IPAD-HOME-HALF: a menu as tall as the screen or taller (large text,
+    /// an iPad mini on its side) starts at the top and scrolls, as on an
+    /// iPhone; so does the first layout, before the heights are measured.
+    func testATallMenuStillStartsAtTheTop() {
+        XCTAssertEqual(StartMenuPlacement.roomAbove(screenHeight: 720, menuHeight: 900, on: .iPad), 40)
+        XCTAssertEqual(StartMenuPlacement.roomAbove(screenHeight: 720, menuHeight: 640, on: .iPad), 40)
+        XCTAssertEqual(StartMenuPlacement.roomAbove(screenHeight: 0, menuHeight: 0, on: .iPad), 40)
+        XCTAssertEqual(StartMenuPlacement.roomAbove(screenHeight: 721, menuHeight: 640, on: .iPad), 40.42, accuracy: 0.001)
+    }
 }
