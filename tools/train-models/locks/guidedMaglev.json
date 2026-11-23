@@ -1,0 +1,55 @@
+{
+  "comment" : "Decision 782: the models of the registered train guidedMaglev (Map3DGuidedMaglev): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 6,
+  "lamps" : "affa71368a0f0d4a",
+  "models" : {
+    "light-set-MAGLEV-car" : {
+      "hash" : "afe66972c03b8af6",
+      "triangles" : 364
+    },
+    "light-set-MAGLEV-head" : {
+      "hash" : "b9cc8849b31d8b10",
+      "triangles" : 360
+    },
+    "light-set-MAGLEV-tail" : {
+      "hash" : "3a8303920019110",
+      "triangles" : 360
+    },
+    "light-set-MAGLEVFar-car" : {
+      "hash" : "c288d1e35bfff7c0",
+      "triangles" : 200
+    },
+    "light-set-MAGLEVFar-head" : {
+      "hash" : "86de97b69e709f13",
+      "triangles" : 176
+    },
+    "light-set-MAGLEVFar-tail" : {
+      "hash" : "92be1fd8fa8b0f13",
+      "triangles" : 176
+    },
+    "set-MAGLEV-car" : {
+      "hash" : "d283f25319c64fe0",
+      "triangles" : 2316
+    },
+    "set-MAGLEV-head" : {
+      "hash" : "da21ef5391569ec8",
+      "triangles" : 4014
+    },
+    "set-MAGLEV-tail" : {
+      "hash" : "63d05854d944041e",
+      "triangles" : 4014
+    },
+    "set-MAGLEVFar-car" : {
+      "hash" : "3f9f16f5c24ea0fd",
+      "triangles" : 1024
+    },
+    "set-MAGLEVFar-head" : {
+      "hash" : "1ba2eeead5206668",
+      "triangles" : 1362
+    },
+    "set-MAGLEVFar-tail" : {
+      "hash" : "6a149156c115614a",
+      "triangles" : 1362
+    }
+  }
+}

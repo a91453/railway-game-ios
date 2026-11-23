@@ -73,6 +73,32 @@ final class Map3DFerriesTests: XCTestCase {
         XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 715, in: .taiwan), .cijin)
     }
 
+    /// Decision 930: Hong Kong's outlying island catamaran as the studio
+    /// made it (revision-2's `stats.json`): the triangles, the size, the
+    /// window bands lit, the colours the game's own; a long route there
+    /// draws it, between the city's hall pier and an island's floating one.
+    func testHongKongsOutlyingCatamaranIsTheStudios() throws {
+        let boat = Map3DFerry.model(.hongKongOutlying), far = Map3DFerry.model(.hongKongOutlying, far: true)
+        XCTAssertEqual(boat.triangleCount, 2_024)
+        XCTAssertEqual(far.triangleCount, 592)
+        XCTAssertEqual(boat.maximum.x - boat.minimum.x, Map3DFerry.Boat.hongKongOutlying.length, accuracy: 0.01)
+        XCTAssertEqual(boat.maximum.y - boat.minimum.y, Map3DFerry.Boat.hongKongOutlying.beam, accuracy: 0.01)
+        XCTAssertEqual(boat.minimum.z, -0.8, accuracy: 0.01)
+        XCTAssertEqual(boat.maximum.z, 11, accuracy: 0.01, "its antennas' top")
+        XCTAssertEqual(Set(boat.vertices.filter(\.glows).map(\.color)), [CableParts.Paint.warm])
+        XCTAssertEqual(boat.vertices.filter(\.glows).count, 460 * 3)
+        XCTAssertFalse(Map3DFerry.Boat.hongKongOutlying.isDoubleEnded, "one bow: it turns round")
+        for model in [boat, far] {
+            XCTAssertTrue(Set(model.vertices.map(\.color)).isSubset(of: Set(Map3DHKOutlyingFerry.meshPalette)), model.name)
+        }
+        // Longer than the harbour ferry and lower (the roofs).
+        XCTAssertGreaterThan(Map3DFerry.Boat.hongKongOutlying.length, Map3DFerry.Boat.hongKong.length)
+        XCTAssertLessThan(Map3DFerry.Boat.hongKongOutlying.height, Map3DFerry.Boat.hongKong.height)
+        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 3_999, in: .hongKong), .hongKong)
+        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 4_000, in: .hongKong), .hongKongOutlying)
+        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 4_000, in: .taiwan), .tamsui)
+    }
+
     func testTheDrawnModelsAreInTheGamesPack() {
         for model in Map3DFerry.drawn {
             XCTAssertNotNil(Self.pack.index(of: model.name), model.name)

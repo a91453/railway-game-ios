@@ -286,6 +286,25 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertEqual(session.networkDraftText(), "2 站 · 381 公尺 · 全程 1 分")
         XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
         XCTAssertEqual(RealCableway.matching(try XCTUnwrap(session.world.cableways.last), in: session.world), .wulai)
+        // Decision 930: drawn as an aerial tramway, two cabins half the
+        // loop apart: one on its way up as the other comes down, one at
+        // each end while it stands still; a cabin of another number is
+        // none of its.
+        let built = try XCTUnwrap(session.world.cableways.last)
+        XCTAssertEqual(Map3DCableways.look(of: built, in: session.world), .wulai)
+        XCTAssertTrue(Map3DCableways.CabinLook.wulai.isPair)
+        XCTAssertFalse(Map3DCableways.CabinLook.maokong.isPair)
+        let pair = CablewayCabins.numbers(of: built, pair: true)
+        XCTAssertEqual(pair, [0, 11])
+        XCTAssertEqual(CablewayCabins.numbers(of: built, pair: false), Array(0..<22))
+        XCTAssertEqual(session.world.cabinNumbers(of: built), pair)
+        guard case .span(_, let up, let outbound) = CablewayCabins.glide(of: pair[0], on: built, atSecond: 40),
+              case .span(_, let down, let back) = CablewayCabins.glide(of: pair[1], on: built, atSecond: 40) else { return XCTFail("both out on the span") }
+        XCTAssertTrue(outbound)
+        XCTAssertFalse(back)
+        XCTAssertEqual(up + (1 - down), 1, accuracy: 0.15, "they pass at about the middle")
+        let standing = CablewayCabins.cabins(of: built, atSecond: 0, open: false).filter { pair.contains($0.number) }.map(\.place)
+        XCTAssertEqual(Set(standing), [.station(stop: 0, outbound: true), .station(stop: 1, outbound: false)])
         XCTAssertEqual(session.realCablewayOffers, [])
     }
 

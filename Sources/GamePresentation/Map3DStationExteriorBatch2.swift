@@ -944,7 +944,7 @@ private extension StationKitBuilder {
             box(x+18.2,0,zz,0.34,0.34,3.85,frame)
             if detail == .near { beam(Map3DPoint(x+18.2,3.3,zz),Map3DPoint(x+13.8,4.0,zz),0.16,frame) }
         }
-        timberSiding(x,0,z,17,28,rgb(0x4E392F),detail:detail)
+        timberSiding(x,0,z,17,28,Map3DPalette.timberSiding,detail:detail)
         roofDetail(x,4.5,z,18,28,rgb(0x725B4E),detail:detail,rise:2.3,hipped:true)
         stationSign(x+8.8,3.54,z,width:10,board:rgb(0xC69B70),ink:rgb(0x543A2D))
         eaveLights(x+8.7,4.0,z,25,detail:detail)
