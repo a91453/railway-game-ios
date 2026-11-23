@@ -101,6 +101,24 @@ final class AsyncRenderClosureSourceTests: XCTestCase {
         XCTAssertEqual(found, [], "place it with a Layout of its own, which is not main-actor code (CRASHSWEEP-3)")
     }
 
+    /// ROSTERCRASH (0.6.0 (144): the app stopped when the train roster's
+    /// Arrange page was tapped, which turns the short rows into full ones
+    /// and adds the waiting trains' column): these views keep no
+    /// main-actor closure at all, wherever it stands. A list that only
+    /// grows.
+    private static let keepNoMainActorClosure = ["TrainRosterView.swift"]
+
+    func testSweptViewsKeepNoMainActorClosure() throws {
+        let sources = try Self.readViews()
+        for file in Self.keepNoMainActorClosure {
+            let text = try XCTUnwrap(sources[file], file)
+            XCTAssertEqual(Self.kept(in: text), [], """
+                \(file): a closure SwiftUI keeps and calls later is main-actor \
+                code: make it @Sendable, or build its rows in `body` (ROSTERCRASH)
+                """)
+        }
+    }
+
     /// The scan itself: it finds a row closure in a helper and in a view
     /// the layout makes, and lets a sendable one and a menu's rows be.
     func testTheScanFindsWhatItLooksFor() {
