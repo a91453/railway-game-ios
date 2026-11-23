@@ -56,18 +56,25 @@ a91453/railway-reference-private, read the files the Stage can reuse, and put a
 mapping table in the PR (reference file/function → target file/function, with
 any fixed-point scale where relevant). Check all available implementation
 sources: `Ci/reference_snapshot/`, `Railway/site_archive_clean/`,
-`Railway/taiwan-rail-reference-clean/` (added 2026-10-18; a newer and larger
+`Railway/rail-reference/` (since 2026-11-16 the one directory that replaced
+`Railway/taiwan-rail-reference-clean/` and `Railway/world-rail-reference-clean/`,
+both removed; an old `taiwan-rail-reference-clean/source/X` is now
+`rail-reference/regions/taiwan/source/X`, the world one
+`rail-reference/regions/world/source/X`; start with its `README.md`,
+`INVENTORY.json` and `rights/README.md`. Taiwan: a newer and larger
 snapshot of the same Taiwan rail website as `site_archive_clean`: TRA
 timetable of 2026-10-16, THSR fares, official bridge/tunnel corrections, 62
-train models with sourced formations, 12 station complexes, terrain; it has
-no `00_READ_ME_FIRST.md`, so start with `source/rail-3d/README.md`,
-`source/data/data_provenance.json` and `source/app/THIRD_PARTY_NOTICES.md`;
-prefer it over `site_archive_clean` for new work, and a tool reading
-`site_archive_clean` names which one it read),
-`Railway/world-rail-reference-clean/` (added 2026-10-18; the same website's
-world edition: networks and dense timetables of 12 cities outside Taiwan from
-official GTFS and OSM, 120 train models; start with
-`source/docs/HANDOFF-2026-10-01.md`, `source/data/route_scope.json` and
+train models with sourced formations, 12 station complexes, terrain, and
+since 2026-11-23 a procedural landscape engine,
+`regions/taiwan/source/landscape-engine/`, with its record in
+`regions/taiwan/rights/SOURCE_UPDATE_2026-11-23.json`
+(`docs/research/RAIL_REFERENCE_2026-11-23.md`); start with
+`source/rail-3d/README.md`, `source/data/data_provenance.json` and
+`source/app/THIRD_PARTY_NOTICES.md`; prefer it over `site_archive_clean` for
+new work, and a tool reading `site_archive_clean` names which one it read.
+World: the same website's world edition: networks and dense timetables of 12
+cities outside Taiwan from official GTFS and OSM, 120 train models; start
+with `source/docs/HANDOFF-2026-10-01.md`, `source/data/route_scope.json` and
 `rights/`; each `data/*.json` keeps its own `source_notes` and licence),
 `Railway/railway_game_reference_clean/` (start with its
 `00_READ_ME_FIRST.md`), `Railway/city_world_reference/` (start with its
