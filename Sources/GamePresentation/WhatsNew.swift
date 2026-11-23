@@ -78,8 +78,29 @@ public enum WhatsNew {
                     english: "The Wulai cable car has its two cabins, one green and one red, passing each other.",
                     chinese: "烏來纜車換成兩部對開的車廂，一綠一紅。"
                 ),
+                Line(
+                    english: "The high-speed stations at Miaoli, Changhua, Yunlin and Chiayi have their own buildings.",
+                    chinese: "高鐵苗栗、彰化、雲林、嘉義站有了自己的站房。"
+                ),
+                Line(
+                    english: "Pingxi and Rinan stations are drawn as their own timber station houses.",
+                    chinese: "平溪站與日南站畫成各自的木造站房。"
+                ),
+                Line(
+                    english: "Small stations on the Nordic map are yellow timber station houses.",
+                    chinese: "北歐地圖的小站改成黃色的木造站房。"
+                ),
+                Line(
+                    english: "Level crossings have barrier machines with striped arms and warning lights.",
+                    chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
+                ),
             ],
-            fixes: []
+            fixes: [
+                Line(
+                    english: "Tapping Arrange on the train roster no longer closes the app.",
+                    chinese: "點車隊運用表的「編排」不再閃退。"
+                ),
+            ]
         ),
         // 144.
         Entry(
