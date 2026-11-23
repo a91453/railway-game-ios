@@ -182,8 +182,10 @@ public struct Map3DTrainSet: Sendable {
             // Decision 286, later (fourth): the Midsummer Formosa's
             // Chu-Kuang coaches; decision 399: behind #1103's steam
             // locomotive and its tender, in place of the black hood unit.
-            steam("SUMMER", formation: .steamTender, coach: chuKuang),
-            steam("SUMMER", formation: .steamTender, coach: chuKuang, far: true),
+            // Decision 930: the local studio's CT273 and its tender, near
+            // and far, in place of #1103's.
+            steam("SUMMER", formation: .ct273, coach: chuKuang),
+            steam("SUMMER", formation: .ct273, coach: chuKuang, far: true),
             // Decision 399: the steam train as #1118's duplex locomotive
             // and its tender, the Blue Train's old blue coaches behind.
             steam("STEAM", formation: .duplex, coach: coach(TrainLivery.blueTrain, band: 0.38...0.43)),
@@ -709,30 +711,51 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 430: `far`, as ``hauled(_:head:coach:lastIsLocomotive:far:)``.
     static func steam(_ key: String, formation: SteamFormation, coach: Coach, far: Bool = false) -> Map3DTrainSet {
         Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true, far: coach.chuKuang && !far ? key + "Far" : nil) {
-            var builder = StationKitBuilder()
-            builder.add(formation.locomotive, at: .zero)
-            let lamp = formation.lamp
-            builder.lamp(atX: lamp.x, height: lamp.height, across: 0, width: lamp.size, tall: lamp.size, colour: Map3DTrainStyle.headlamp)
-            return Cars(head: .flat(named: key, from: builder.mesh), middle: coach.middle(named: key, far: far),
-                        tail: coach.tail(named: key, far: far), single: nil, tender: formation.tender)
+            var head = formation.locomotive(far: far)
+            if let lamp = formation.lamp {
+                var builder = StationKitBuilder()
+                builder.add(head, at: .zero)
+                builder.lamp(atX: lamp.x, height: lamp.height, across: 0, width: lamp.size, tall: lamp.size, colour: Map3DTrainStyle.headlamp)
+                head = .flat(named: key, from: builder.mesh)
+            } else {
+                // Decision 930: a locomotive with a lamp lens of its own.
+                head = litLenses(head, front: true)
+            }
+            return Cars(head: head, middle: coach.middle(named: key, far: far),
+                        tail: coach.tail(named: key, far: far), single: nil, tender: formation.tender(far: far))
         }
     }
 
     /// Decision 399: the two steam locomotives, and where each one's
     /// headlamp lens is (its front, its bottom, its size).
+    /// Decision 930: and the local studio's CT273 (``Map3DCT273``), which
+    /// has its lens and a light version; a unit of it that does not
+    /// decode draws as #1103's.
     enum SteamFormation {
-        case steamTender, duplex
+        case steamTender, duplex, ct273
 
-        var locomotive: Map3DModelPack.Model {
-            self == .steamTender ? Map3DSteamTender.model(.locomotive) : Map3DDuplexSteam.model(.locomotive)
+        func locomotive(far: Bool) -> Map3DModelPack.Model {
+            switch self {
+            case .steamTender: Map3DSteamTender.model(.locomotive)
+            case .duplex: Map3DDuplexSteam.model(.locomotive)
+            case .ct273: Map3DCT273.model(.locomotive, far: far) ?? Map3DSteamTender.model(.locomotive)
+            }
         }
 
-        var tender: Map3DModelPack.Model {
-            self == .steamTender ? Map3DSteamTender.model(.tender) : Map3DDuplexSteam.model(.tender)
+        func tender(far: Bool) -> Map3DModelPack.Model {
+            switch self {
+            case .steamTender: Map3DSteamTender.model(.tender)
+            case .duplex: Map3DDuplexSteam.model(.tender)
+            case .ct273: Map3DCT273.model(.tender, far: far) ?? Map3DSteamTender.model(.tender)
+            }
         }
 
-        var lamp: (x: Float, height: Float, size: Float) {
-            self == .steamTender ? (5.67, 2.695, 0.27) : (7.13, 4.0, 0.26)
+        var lamp: (x: Float, height: Float, size: Float)? {
+            switch self {
+            case .steamTender: (5.67, 2.695, 0.27)
+            case .duplex: (7.13, 4.0, 0.26)
+            case .ct273: nil
+            }
         }
     }
 

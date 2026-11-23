@@ -420,13 +420,15 @@ public struct Map3DModelPack: Sendable {
 
     /// The style of each train type, by its code (`""` for a train with no
     /// type: a commuter EMU). Types with neither a style nor a set
-    /// (``Map3DTrainSet``: maglev, skyrail, monorail) are drawn as boxes.
+    /// (``Map3DTrainSet``) are drawn as boxes; decision 930: the maglev,
+    /// the light monorail and the monorail have sets.
     public static let styleByType: [String: String] = [
         "": "commuter", "EMU3000": "express", "HSR": "highSpeed",
         // Decision 252: the flat-fronted EMUs as commuters (decision 286:
         // and the Shan-Lan); the Chu-Kuang sets have no locomotive model
         // yet, so are boxes.
-        "EMU100": "commuter", "HAIFENG": "commuter", "SHANLAN": "commuter",
+        // Decision 930: the EMU100 has its own set (``Map3DEMU100``).
+        "HAIFENG": "commuter", "SHANLAN": "commuter",
         "A": "metro", "B": "metro", "C": "metro", "L": "metro", "D": "metro", "APM": "peopleMover",
     ]
 
