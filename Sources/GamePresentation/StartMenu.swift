@@ -71,6 +71,39 @@ public enum StartMenuEntry: String, CaseIterable, Sendable {
     }
 }
 
+/// Where the start screen's menu (its title, buttons and capsules) stands
+/// in the screen's height (decision 643, later: IPAD-HOME-HALF, the AI
+/// playtest of 2026-11-23). On an iPad, upright or on its side, and on a
+/// Mac, the menu is shorter than the screen and stood at the top, the lower
+/// half left empty; there it stands a little above the middle, which reads
+/// as the middle. An iPhone keeps it at the top, as it was: the menu all
+/// but fills a phone held upright, and one on its side has its own layout.
+public enum StartMenuPlacement {
+    /// The room above and below the menu at the least, in points: the
+    /// start screen's padding.
+    public static let margin: Double = 40
+    /// The share of the free height above the menu, the rest below: a
+    /// little less than half, so the menu sits at the optical middle.
+    public static let shareAbove: Double = 0.42
+
+    /// Whether the menu is stood in the screen's height on `device`.
+    public static func centres(on device: DeviceFamily) -> Bool {
+        device != .iPhone
+    }
+
+    /// The room above the menu, in points, on a screen `screenHeight`
+    /// tall with a menu `menuHeight` tall: ``margin`` on an iPhone and
+    /// where the menu fills the screen (it scrolls then, from the top);
+    /// otherwise ``margin`` and ``shareAbove`` of the free height, so the
+    /// menu and its two margins fill the screen without scrolling.
+    public static func roomAbove(screenHeight: Double, menuHeight: Double, on device: DeviceFamily) -> Double {
+        guard centres(on: device) else { return margin }
+        let free = screenHeight - menuHeight - 2 * margin
+        guard free > 0 else { return margin }
+        return margin + free * shareAbove
+    }
+}
+
 /// A capsule under the start screen's buttons.
 public enum StartMenuChip: String, CaseIterable, Sendable {
     /// The help guide, with the data sources and licences in it.
