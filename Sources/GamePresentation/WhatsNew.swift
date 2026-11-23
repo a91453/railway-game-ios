@@ -116,6 +116,10 @@ public enum WhatsNew {
                     english: "Fukuoka's water towers stand properly on the ground, on open legs.",
                     chinese: "福岡給水塔的底部改正，好好站在地上。"
                 ),
+                Line(
+                    english: "The Taoyuan Airport MRT no longer jams after it is rebuilt.",
+                    chinese: "機場捷運改建後不再卡車。"
+                ),
             ]
         ),
         // 144.
