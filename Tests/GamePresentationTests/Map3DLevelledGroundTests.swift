@@ -92,7 +92,11 @@ final class Map3DLevelledGroundTests: XCTestCase {
 
     /// Central Taipei (Zhongxiao East Road by the Sun Yat-sen Memorial
     /// Hall, flat ground): the drawn ground is at least twice as smooth as
-    /// the world's, and no corner moves more than its reach.
+    /// the world's, and no corner moves more than its reach. Decision 943:
+    /// the world's ground is the Ministry of the Interior's terrain, not a
+    /// surface model with the roofs in, so it is far smoother to begin with
+    /// (0.78 m → 0.14 m on the old ground and the new; levelled, 0.21 m →
+    /// 0.014 m); still rough enough that the levelling has work to do.
     func testCentralTaipeiIsLevelled() throws {
         var world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0415, longitudeDegrees: 121.5560)))
         try world.mapGround()
@@ -121,7 +125,7 @@ final class Map3DLevelledGroundTests: XCTestCase {
         }
         let before = roughness(&raw), after = roughness(&drawn)
         print("ROAD-FLATTEN central Taipei roughness", before, "→", after)
-        XCTAssertGreaterThan(before, 0.2)
+        XCTAssertGreaterThan(before, 0.1)
         XCTAssertLessThan(after, before / 2)
         for row in rows {
             for column in columns {

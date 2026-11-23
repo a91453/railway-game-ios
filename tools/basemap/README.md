@@ -27,7 +27,7 @@
 
 ## 山的陰影
 
-`build_terrain.py` 把遊戲的地面高度（`Resources/RealWorld/taiwan_heights.dat`，決策 124）寫成 `Resources/BaseMap/taiwan_terrain.pmtiles`：Terrarium 編碼（高度 = 紅 × 256 + 綠 + 藍 ÷ 256 − 32768 公尺）的 512 像素 PNG，zoom 0–10，只寫有陸地的圖磚。照 `Railway/` 網站的 `rail-3d/integration/map3d.js`（`raster-dem` 加 `hillshade`）。陰影和遊戲判斷路堤、隧道的高度是同一份資料。需要 numpy，約 1 分鐘；2026-10-10：115 塊、10.0 MB。
+`build_terrain.py` 把遊戲的地面高度（`Resources/RealWorld/taiwan_heights.dat`，決策 124）寫成 `Resources/BaseMap/taiwan_terrain.pmtiles`：Terrarium 編碼（高度 = 紅 × 256 + 綠 + 藍 ÷ 256 − 32768 公尺）的 512 像素 PNG，zoom 0–10，只寫有陸地的圖磚。照 `Railway/` 網站的 `rail-3d/integration/map3d.js`（`raster-dem` 加 `hillshade`）。陰影和遊戲判斷路堤、隧道的高度是同一份資料。需要 numpy，約 1 分鐘；2026-10-10：115 塊、10.0 MB；2026-11-23（決策 943，內政部 DTM）：115 塊、9.73 MB。
 
 ## 重新產生
 

@@ -9,7 +9,18 @@ the same grid, the app's `Resources/RealWorld/taiwan_heights.dat`
         RailwayGameApp/Resources/RealWorld/taiwan_water.json \\
         copernicus-dem/ \\
         RailwayGameApp/Resources/RealWorld/taiwan_water.json \\
-        RailwayGameApp/Resources/RealWorld/taiwan_heights.dat
+        RailwayGameApp/Resources/RealWorld/taiwan_heights.dat \\
+        ../railway-reference-private/Railway/moi-dtm-2026/data
+
+With the fifth argument (ARCHITECTURE decision 943), the folder of the
+reference repository's `Railway/moi-dtm-2026/data/` (the Ministry of the
+Interior's 2026 edition of its 20 m DTM: the island in three parts and
+Kinmen, `MOI_SHEETS`), each cell takes the DTM's mean of the 3 × 3 nodes
+round its middle where the DTM reaches, and the surface model's height,
+shifted to meet the DTM, where it does not (Penghu, Matsu, Green Island
+and a patch of the Miaoli hills); the 3 × 3 median and the rest below stay
+as they are. Without it the two files are main's before decision 943, to
+the byte.
 
 The water file (`build_water_grid.py`) gives the grid: 1.875″ cells, some
 58 × 53 m; its other contents are kept as they are. The folder holds the

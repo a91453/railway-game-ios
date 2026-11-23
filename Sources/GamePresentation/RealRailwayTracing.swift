@@ -398,7 +398,12 @@ extension GameSession {
         // an island platform track's turnouts (``PlatformTrackLayout/reach``),
         // so a platform track can be added there however long the platform;
         // without it where two stations stand too near for both.
-        let turnouts = Double(2 * PlatformTrackLayout.island.reach)
+        // Decision 943: and a few metres more, as the level edge laid over
+        // the span is a curve a little shorter than the traced path (at
+        // Qipan 495.6 m for 496 m, which left 87.6 m past one end for a
+        // reach of 88 m; the old ground's gentler grade beyond had hidden
+        // it).
+        let turnouts = Double(2 * PlatformTrackLayout.island.reach + 8 * WorldCoordinate.unitsPerMetre)
         let margin = Double(NetworkBuilding.minimumSpacing)
         var spans: [ClosedRange<Double>] = []
         for station in railways.stations where station.system.id == system {
