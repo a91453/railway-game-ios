@@ -371,6 +371,24 @@ final class Map3DPreviewDump: XCTestCase {
                 expand(Map3DTrains.instance(of: pack.models[model], index: model, from: b, to: a, stripe: Map3DColor.rgb(0x2F6DB5)))
             }
         }
+        // Decision 941: MAP3D_BOOMS=closed, the level crossings' booms
+        // (drawn each frame with the trains in the App) at that much down,
+        // 0 raised to 1 lowered; prints each crossing to aim the camera.
+        if let closed = ProcessInfo.processInfo.environment["MAP3D_BOOMS"].flatMap(Float.init) {
+            let pack = Map3DModelPack.standard
+            for crossing in scene.levelCrossings {
+                print("MAP3D_BOOMS crossing at x \(crossing.point.x) z \(crossing.point.z) along \(crossing.along.x) \(crossing.along.z)")
+            }
+            if let model = pack.index(of: Map3DCrossingGate.boomName) {
+                for crossing in scene.levelCrossings {
+                    for (end, foot) in crossing.gateFeet {
+                        let transform = Map3DCrossingGate.boomTransform(at: foot, reach: crossing.across * end, facing: crossing.along * end, closed: closed,
+                                                                        stretch: Map3DCrossingBooms.boomLength(crossing) / pack.models[model].maximum.x)
+                        expand(Map3DInstance(model: model, transform: transform, stripe: (0, 0, 0)))
+                    }
+                }
+            }
+        }
         var shadowFloats: [Float] = [], shadowIndices: [UInt32] = []
         for chunk in chunks {
             let base = shadowFloats.count / 7

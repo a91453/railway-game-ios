@@ -48,10 +48,11 @@ public enum Map3DLook {
     /// pale version would hide: the traffic signals' housings and lights,
     /// lit and unlit (the cars' and the walkers', decisions 355, 429 and
     /// 445); the level crossings' red and black (decision 263), and the
-    /// red kerb line, which is the same red (decision 447).
+    /// red kerb line, which is the same red (decision 447); the level
+    /// crossings' yellow hatching (decision 941).
     static let functional: Set<UInt32> = Set(Map3DProp.signalLights.flatMap { [$0.lit, $0.unlit] } + [
         Map3DProp.signalHousing, Map3DPedestrianSignal.housing,
-        Map3DScene.Builder.barrierRed, Map3DScene.Builder.barrierBlack,
+        Map3DScene.Builder.barrierRed, Map3DScene.Builder.barrierBlack, Map3DPalette.crossingHatch,
     ])
 
     /// Colours the look gives a colour of its own rather than a pale one.

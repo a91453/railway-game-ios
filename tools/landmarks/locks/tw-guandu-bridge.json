@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-guandu-bridge: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-guandu-bridge" : {
+      "hash" : "9c9f49322f593764",
+      "triangles" : 3168
+    },
+    "tw-guandu-bridge-far" : {
+      "hash" : "ad1c5daaad33f468",
+      "triangles" : 988
+    }
+  }
+}

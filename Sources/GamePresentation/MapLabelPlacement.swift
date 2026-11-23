@@ -44,9 +44,28 @@ public enum MapLabelPlacement {
     /// ``MapProblems/nameTop(stationRadius:)`` under the middle (past the
     /// crowded ring, decision 477 續), 2 points wider each side. Not the row of its lines' badges under it (decision 216),
     /// which a label may lie on sooner than on a name.
-    public static func nameBox(of station: Station, radius: Double) -> Box {
+    public static func nameBox(of station: Station, radius: Double, clearBottom: Double = .infinity) -> Box {
         let width = textWidth(station.name, size: 11) + 4
-        return Box(x: station.x - width / 2, y: station.y + MapProblems.nameTop(stationRadius: radius), width: width, height: 15)
+        let top = nameOffset(stationY: station.y, stationRadius: radius, height: 15, clearBottom: clearBottom)
+        return Box(x: station.x - width / 2, y: station.y + top, width: width, height: 15)
+    }
+
+    /// The room over a station's middle its waiting count's pill takes
+    /// (``markBox(of:radius:)``), which a name moved over the station
+    /// keeps above.
+    static let pillRoom = 20.0
+
+    /// Where a station's name plate starts, from the station's middle,
+    /// downward: under the station (``MapProblems/nameTop(stationRadius:)``),
+    /// or over it, above its waiting count's pill, when a name `height`
+    /// high (with its lines' badges) would reach past `clearBottom`, where
+    /// the bottom bar or the screen's edge begins. The AI testers' first
+    /// round (2026-11-23) found a new station's name cut off by the
+    /// screen's bottom edge.
+    public static func nameOffset(stationY: Double, stationRadius: Double, height: Double, clearBottom: Double) -> Double {
+        let below = MapProblems.nameTop(stationRadius: stationRadius)
+        guard stationY + below + height > clearBottom else { return below }
+        return -(below + pillRoom + height)
     }
 
     /// A station's mark and the waiting count's pill over it (decision 210).
@@ -56,10 +75,12 @@ public enum MapLabelPlacement {
 
     /// What labels keep off: every station's name, and the marks of all
     /// but the one at `own` (whose own label may lie on its pill).
-    public static func obstacles(_ stations: [Station], radius: Double, own: (x: Double, y: Double)? = nil) -> [Box] {
+    public static func obstacles(_ stations: [Station], radius: Double, own: (x: Double, y: Double)? = nil,
+                                 clearBottom: Double = .infinity) -> [Box] {
         stations.flatMap { station -> [Box] in
             let isOwn = own.map { abs($0.x - station.x) < 1 && abs($0.y - station.y) < 1 } ?? false
-            return isOwn ? [nameBox(of: station, radius: radius)] : [nameBox(of: station, radius: radius), markBox(of: station, radius: radius)]
+            let name = nameBox(of: station, radius: radius, clearBottom: clearBottom)
+            return isOwn ? [name] : [name, markBox(of: station, radius: radius)]
         }
     }
 

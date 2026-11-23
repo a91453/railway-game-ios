@@ -36,14 +36,14 @@ final class Map3DHKWestKowloonTests: XCTestCase {
         }
     }
 
-    /// The Lands Department's outlines of the two museums (M+'s slab, 9 m
-    /// north and 8 m east of its site's middle; the Palace Museum's body,
-    /// at its registration) are not drawn again under the models.
+    /// The Lands Department's outlines of the two museums (M+'s slab, 3.4 m
+    /// north and 1.1 m west of its podium's middle; the Palace Museum's
+    /// body, at its registration) are not drawn again under the models.
     func testTheSurveyedMuseumsAreNotDrawnAgain() throws {
         let world = GameWorld.newOverseasGame(try HongKongBaseMapTests.ground())
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         let metre = Double(WorldCoordinate.unitsPerMetre), reach = 400 * metre
-        for (museum, east, south) in [(Self.museums[0], 8.1, -9.0), (Self.museums[1], 0.0, 0.0)] {
+        for (museum, east, south) in [(Self.museums[0], -1.1, -3.4), (Self.museums[1], 0.0, 0.0)] {
             let place = frame.worldPosition(latitude: museum.latitude, longitude: museum.longitude)
             let region = WorldRegion(minX: place.x - reach, minY: place.y - reach, maxX: place.x + reach, maxY: place.y + reach)
             var builder = Map3DScene.Builder(originX: place.x, originY: place.y, region: region, world: world, heights: nil)
@@ -56,7 +56,8 @@ final class Map3DHKWestKowloonTests: XCTestCase {
     }
 
     /// M+'s slab lies as the Lands Department's outline of it does, its
-    /// east end further north (4° anticlockwise), on the podium's north side.
+    /// east end further north (4° anticlockwise), across the podium's middle
+    /// (decision 931's later note: revision 2).
     func testMPlusSlabLiesAsSurveyed() {
         let slab = Map3DHKMPlus.registration.model(full: true).vertices.filter { $0.z > 40 }
         XCTAssertFalse(slab.isEmpty)
@@ -64,6 +65,10 @@ final class Map3DHKWestKowloonTests: XCTestCase {
         let mean = { (values: [Float]) in values.reduce(0, +) / Float(values.count) }
         // Over some 90 m between the two ends' middles, 4° is about 6 m.
         XCTAssertEqual(mean(east) - mean(west), 6.5, accuracy: 2.5)
-        XCTAssertGreaterThan(mean(slab.map(\.y)), 20, "the slab on the north side")
+        // The Lands Department's slab is 1.1 m west and 3.4 m north of the
+        // podium's middle (the model's origin).
+        let centreX = mean(slab.map(\.x)), centreY = mean(slab.map(\.y))
+        XCTAssertLessThanOrEqual(((centreX + 1.1) * (centreX + 1.1) + (centreY - 3.4) * (centreY - 3.4)).squareRoot(), 5,
+                                 "the slab where it was surveyed: \(centreX), \(centreY)")
     }
 }

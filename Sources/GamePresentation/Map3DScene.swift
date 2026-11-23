@@ -872,6 +872,12 @@ public enum Map3DPalette {
     public static let rail = Map3DColor.rgb(0x6E7379)
     public static let railTop = Map3DColor.rgb(0xC9CED4)
     public static let concrete = Map3DColor.rgb(0xCFCBC2)
+    /// Decision 941: the yellow of a level crossing's hatching, the
+    /// reference's own (`level-crossing.js`, `PAINT_Y` [205, 160, 25]).
+    /// Its posts' yellow and black (`YEL`, `BLK`) are the studio's gate's
+    /// (decision 929, ``Map3DCrossingGate/meshPalette``), and the rubber
+    /// over the rails ``Map3DScene/Builder/crossingDeck``.
+    public static let crossingHatch = Map3DColor.rgb(0xCDA019)
     public static let bridge = Map3DColor.rgb(0x8E9CA8)
     public static let portal = Map3DColor.rgb(0x8B9096)
     /// Decision 359 (續): a tunnel's walls the ground's cool grey a step
@@ -1376,6 +1382,9 @@ extension Map3DScene {
         /// Decision 869: the suspension bridges round the scene, once found
         /// (``suspensionBridges()``).
         var placedSuspensionBridges: [Map3DSuspensionBridge.Placed]?
+        /// Decision 944: the landmark bridges carrying a road round the
+        /// scene, once found (``archBridges()``).
+        var placedArchBridges: [Map3DArchBridgeDeck.Placed]?
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 455: whether the simplified city's boxes are kept as
         /// instances (the city's lots), not vertices.

@@ -320,6 +320,7 @@ enum MapArt {
         projection: some MapProjection,
         names: Bool = true,
         counts: Bool = true,
+        clearBottom: Double = .infinity,
         in context: GraphicsContext
     ) {
         if names, layers.showsStationNames {
@@ -329,10 +330,10 @@ enum MapArt {
                 let badges = stationBadges(world, codes: lineCodes)
                 for station in world.stations {
                     drawStationName(station, badges: badges[station.id] ?? [], signal: labels.signalStations.contains(station.id),
-                                    projection: projection, in: context)
+                                    projection: projection, clearBottom: clearBottom, in: context)
                 }
             } else {
-                drawOverviewNames(world, labels: labels, latitude: latitude, projection: projection, in: context)
+                drawOverviewNames(world, labels: labels, latitude: latitude, projection: projection, clearBottom: clearBottom, in: context)
             }
         }
         // Decision 210: the waiting counts and crowded rings, over every
@@ -2508,16 +2509,20 @@ enum MapArt {
     }
 
     /// A station's name under its badge, on its plate, and the badges of
-    /// its lines in a row under it (decision 216), zoomed in.
+    /// its lines in a row under it (decision 216), zoomed in; over the
+    /// station when they would reach past `clearBottom`
+    /// (``MapLabelPlacement/nameOffset(stationY:stationRadius:height:clearBottom:)``).
     private static func drawStationName(
         _ station: Station,
         badges: [(code: String, color: Color)],
         signal: Bool = false,
         projection: some MapProjection,
+        clearBottom: Double = .infinity,
         in context: GraphicsContext
     ) {
         let center = projection.screenPoint(of: station.location)
-        let nameTop = MapProblems.nameTop(stationRadius: stationRadius(projection))
+        let radius = stationRadius(projection)
+        let below = MapProblems.nameTop(stationRadius: radius)
         // Resolving and measuring a name is the costly part, and every pan
         // frame redraws: first rule out stations whose name cannot reach
         // the view. A caption2 character is under 24 points wide and a line
@@ -2525,10 +2530,12 @@ enum MapArt {
         // measuring; the shops' square (decision 222) adds 20 to its left,
         // and the expansion's (decision 506 續) 20 to its right.
         let reach = Double(station.name.count) * 12 + 20
-        let largest = CGRect(x: center.x - reach, y: center.y + nameTop, width: reach * 2, height: 4 + 48 + 14)
+        let largest = CGRect(x: center.x - reach, y: center.y - below - 20 - 4 - 48 - 14, width: reach * 2, height: 2 * (below + 4 + 48 + 14) + 20)
         guard largest.intersects(context.clipBoundingRect) else { return }
         let name = context.resolve(stationNameText(station.name, signal: signal))
         let nameSize = name.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity))
+        let nameTop = MapLabelPlacement.nameOffset(stationY: center.y, stationRadius: radius,
+                                                   height: nameSize.height + (badges.isEmpty ? 0 : 14), clearBottom: clearBottom)
         let nameRect = CGRect(x: center.x - nameSize.width / 2, y: center.y + nameTop, width: nameSize.width, height: nameSize.height)
         // Decision 205: on the same pale plate as the names zoomed out
         // (``drawOverviewNames``), so it reads over a line or a town.
@@ -2776,14 +2783,14 @@ enum MapArt {
     }
 
     private static func drawOverviewNames(
-        _ world: GameWorld, labels: StationLabels, latitude: Double, projection: some MapProjection, in context: GraphicsContext
+        _ world: GameWorld, labels: StationLabels, latitude: Double, projection: some MapProjection, clearBottom: Double = .infinity,
+        in context: GraphicsContext
     ) {
         let zoom = StationLabels.zoom(pointsPerUnit: projection.pointsPerUnit, latitude: latitude)
         let view = context.clipBoundingRect
         let near = view.insetBy(dx: -160, dy: -60)
         let radius = max(5, projection.referenceSize * 0.32)
         // Past the crowded ring, as at full detail (review L5-4).
-        let nameTop = MapProblems.nameTop(stationRadius: radius)
         let points = Dictionary(uniqueKeysWithValues: world.stations.map { ($0.id, $0) })
         var placed: [CGRect] = []
         var measured = 0
@@ -2795,6 +2802,7 @@ enum MapArt {
             measured += 1
             let name = context.resolve(stationNameText(station.name, signal: labels.signalStations.contains(station.id)))
             let size = name.measure(in: CGSize(width: CGFloat.infinity, height: CGFloat.infinity))
+            let nameTop = MapLabelPlacement.nameOffset(stationY: center.y, stationRadius: radius, height: size.height, clearBottom: clearBottom)
             let rect = CGRect(x: center.x - size.width / 2, y: center.y + nameTop, width: size.width, height: size.height)
             guard rect.intersects(view), !placed.contains(where: { $0.insetBy(dx: -3, dy: -1).intersects(rect) }) else { continue }
             placed.append(rect)

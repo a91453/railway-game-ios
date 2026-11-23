@@ -28,6 +28,9 @@ struct StartView: View {
     @State private var showsWhatsNew = false
     /// How wide the start menu can be (decision 643).
     @State private var menuWidth: CGFloat = 0
+    /// How tall the start screen and its menu are (IPAD-HOME-HALF).
+    @State private var screenHeight: CGFloat = 0
+    @State private var menuHeight: CGFloat = 0
     @Environment(GameAudio.self) private var audio
     /// Compact: a phone on its side.
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -54,6 +57,10 @@ struct StartView: View {
                         .padding(.vertical, 16)
                         .frame(maxWidth: .infinity)
                     }
+                    // A card cut by the screen's bottom edge reads as more
+                    // to scroll to, not as cut off (AI testers, round 1,
+                    // 2026-11-23: New Game's card at a large text size).
+                    .scrollIndicatorsFlash(onAppear: true)
                     .frame(maxWidth: .infinity)
                 }
             } else {
@@ -81,12 +88,22 @@ struct StartView: View {
                         footer
                             .frame(maxWidth: Self.columnWidth)
                     }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { menuHeight = $0 }
                     .padding(.horizontal)
-                    .padding(.vertical, 40)
+                    // IPAD-HOME-HALF: on an iPad, a little above the middle
+                    // of the screen rather than at its top (StartMenuPlacement).
+                    .padding(.top, StartMenuPlacement.roomAbove(
+                        screenHeight: screenHeight, menuHeight: menuHeight, on: DeviceFamily.current
+                    ))
+                    .padding(.bottom, StartMenuPlacement.margin)
                     .frame(maxWidth: .infinity)
                 }
+                .scrollIndicatorsFlash(onAppear: true)
                 // The room for the buttons: the width less the padding.
-                .onGeometryChange(for: CGFloat.self) { $0.size.width - 32 } action: { menuWidth = $0 }
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+                    menuWidth = size.width - 32
+                    screenHeight = size.height
+                }
             }
         }
         .background(Theme.background)
