@@ -906,32 +906,13 @@ private extension StationKitBuilder {
         add(.flat(named: "hualien-ticket-hall", from: ticket.mesh),
             at: Map3DPoint(84.52, 0, 66.63), angle: 65.8392 * .pi / 180)
 
-        // The huge welcome canopy is a shallow waved shell. Its roof polygon is
-        // surveyed; scallops, timber ribs, support heights and curvature are estimates.
-        footprint(Map3DStationExteriorBatch1.welcomeUmbrellaFootprint,
-                  color: rib, baseY: 10.0, height: 0.35)
-        var umbrella = StationKitBuilder()
-        for (index, x) in stride(from: Float(-29), through: 29, by: 14.5).enumerated() {
-            let edgeHeight: Float = index.isMultiple(of: 2) ? 11.0 : 12.0
-            if detail == .near {
-                umbrella.canopy(x, edgeHeight, 0, length: 15.5, width: 28.5, rise: 1.8, color: paleRoof)
-            } else {
-                umbrella.gable(x, edgeHeight, 0, 15.5, 28.5, 1.8, paleRoof)
-            }
-            umbrella.litBox(x, edgeHeight - 0.3, -9, 12, 0.26, 0.16, warmWall)
-            umbrella.box(x, 0.32, 0, 0.7, 0.7, 10.98, rib)
-            umbrella.box(x, 9.2, 0, 0.8, 27.2, 0.28, rib)
+        // Decision 946: the welcome canopy is the studio's model (five waved
+        // timber shells a side on tree columns), its long side along OSM way
+        // 718223887's minimum-area rectangle (73.7 × 30.4 m, centre and
+        // bearing below), standing on the plaza's 0.32 m outline.
+        if let canopy = Map3DHualienCanopy.model(far: detail == .far) {
+            add(canopy, at: Map3DPoint(76.02, 0.32, 13.77), angle: 65.8235 * .pi / 180)
         }
-        if detail == .near {
-            for x in stride(from: Float(-32), through: 32, by: 3.6) {
-                umbrella.box(x, 11.42, 0, 0.24, 27.5, 0.2, rib)
-            }
-            for z in stride(from: Float(-12), through: 12, by: 4) {
-                umbrella.box(0, 11.4, z, 70, 0.25, 0.2, rib)
-            }
-        }
-        add(.flat(named: "hualien-welcome-canopy", from: umbrella.mesh),
-            at: Map3DPoint(76.09, 0, 13.77), angle: 65.8235 * .pi / 180)
 
         // Lower front and rear station halls use the OSM ground outlines. Both
         // heights and roof forms are visual estimates because tags omit them.
@@ -1797,5 +1778,34 @@ private extension StationKitBuilder {
         }
         add(.flat(named: "xinzuoying-station", from: tra.mesh),
             at: Map3DPoint(-30.7, 0, 37.04), angle: 42.2875 * .pi / 180)
+    }
+}
+
+/// Decision 946: Hualien station's welcome canopy, from the local studio
+/// (`a91453/railway-assets-private-2`
+/// `game-art-previews/docs/art/hualien-welcome-canopy-2026-11/revision-1`;
+/// lessons in `docs/studio/lessons/hualien-welcome-canopy.md`): two rows of
+/// five waved timber shells on tree columns of six steel tubes, a skylight
+/// strip between the rows, equipment boxes on the roof (near only). Its own
+/// space is metres, +x along the long side, +z up, the origin in the middle
+/// of the outline on the ground; near and far share the outline.
+enum Map3DHualienCanopy {
+    /// The mesh's palette, in the order given to `glb_to_swift.py`: wood,
+    /// roofSilver, trim, steel, equipment, glazing, dark, warm_lit (colours
+    /// the game already has, decision 891).
+    static let meshPalette: [UInt32] = [
+        Map3DPalette.timber, Map3DPalette.mtrRoofSilver, Map3DPalette.tankSteel, Map3DPalette.mastSteel,
+        Map3DPalette.steel, Map3DPalette.glazing, Map3DPalette.dark, Map3DPalette.tunnelLamp,
+    ]
+    /// The warm lamps under the shells, the only glowing colour.
+    static let lamp = 7
+
+    /// The model, near or `far`; `nil` if its mesh does not decode.
+    static func model(far: Bool = false) -> Map3DModelPack.Model? {
+        let name = "station-hualien-canopy" + (far ? "-far" : "")
+        guard let text = encoded[name],
+              let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { return nil }
+        return Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette,
+                                            lamps: [lamp], perMetre: 100)
     }
 }

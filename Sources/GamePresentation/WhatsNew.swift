@@ -91,6 +91,10 @@ public enum WhatsNew {
                     chinese: "平溪線菁桐、集集線車埕換上照真實站房做的木造車站。"
                 ),
                 Line(
+                    english: "Hexing and Neiwan on the Neiwan Line have stations modelled on their real buildings.",
+                    chinese: "內灣線合興、內灣換成照真實站房做的樣子。"
+                ),
+                Line(
                     english: "Shanjia on the Western Line and Shifen on the Pingxi Line have stations modelled on their real buildings.",
                     chinese: "台鐵山佳、平溪線十分換上照真實站房做的車站。"
                 ),
@@ -99,8 +103,12 @@ public enum WhatsNew {
                     chinese: "北歐地圖的小站改成黃色的木造站房。"
                 ),
                 Line(
-                    english: "Level crossings have barrier machines with striped arms and warning lights.",
-                    chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈。"
+                    english: "Level crossings have barrier machines with striped arms and warning lights; the arms come down before a train arrives and rise once it has passed, over a yellow-hatched road.",
+                    chinese: "平交道有了柵欄機：黃黑相間的欄杆與警示燈，列車快到時放下、過了才升起，路面畫上黃色網狀線。"
+                ),
+                Line(
+                    english: "The moon in the night sky shows its real phase and stands where the real moon is.",
+                    chinese: "夜空的月亮照真實的月相與位置出現，有圓有缺。"
                 ),
                 Line(
                     english: "Hong Kong's small stations are new station houses modelled on real ones.",
@@ -131,8 +139,8 @@ public enum WhatsNew {
                     chinese: "地面車站有了跨站天橋或地下道入口，島式月台有轉乘指示牌。"
                 ),
                 Line(
-                    english: "Hong Kong: M+ stands in West Kowloon beside Kowloon station, its tall slab on a long dark podium.",
-                    chinese: "香港西九文化區多了 M+：九龍站旁，長長的深色基座上立著一片高樓。"
+                    english: "Hong Kong: M+ stands in West Kowloon beside Kowloon station, a thin tall slab across the middle of its long dark podium, as surveyed.",
+                    chinese: "香港西九文化區多了 M+：九龍站旁，長長的深色基座正中立著一片薄薄的高樓，大小與位置照實測。"
                 ),
                 Line(
                     english: "Hong Kong: the Hong Kong Palace Museum stands by the harbour in West Kowloon, wider at each storey up.",
@@ -150,6 +158,14 @@ public enum WhatsNew {
                     english: "New landmarks: Ci'en Pagoda, Lalu Island and the front and rear halls of Wenwu Temple at Sun Moon Lake, the National Taichung Theater and Luce Chapel in Taichung, Weiwuying in Kaohsiung and Chihkan Tower in Tainan.",
                     chinese: "新地標：日月潭慈恩塔、拉魯島、文武廟前後殿，台中歌劇院、路思義教堂，高雄衛武營，台南赤崁樓。"
                 ),
+                Line(
+                    english: "Guandu Bridge spans the Tamsui River: three red arches, the middle one highest, with cars crossing on top.",
+                    chinese: "淡水河上多了關渡大橋：三座紅色拱橋，中間最高，車子從橋上開過。"
+                ),
+                Line(
+                    english: "The big welcome canopy in front of Hualien station is a waved timber canopy like the real one.",
+                    chinese: "花蓮車站前的迎客大傘換成照真實做的木構波浪雨棚。"
+                ),
             ],
             fixes: [
                 Line(
@@ -163,6 +179,26 @@ public enum WhatsNew {
                 Line(
                     english: "The Taoyuan Airport MRT no longer jams after it is rebuilt.",
                     chinese: "機場捷運改建後不再卡車。"
+                ),
+                Line(
+                    english: "At large text sizes, the Build, Station and Remove row stays at the top of the network tool's card instead of being pushed out of reach.",
+                    chinese: "字放大時，建設工具上排的「建造、車站、拆除」不再被擠出畫面。"
+                ),
+                Line(
+                    english: "Something you have just built that lies under the details card or a panel moves into view.",
+                    chinese: "剛蓋好的東西若被資訊卡或面板蓋住，地圖會移過去讓你看到。"
+                ),
+                Line(
+                    english: "Lessons ring and number the towns to link on the map, so you can find them while zooming out.",
+                    chinese: "教學課會在地圖上圈出要連的城鎮並標上號碼，拉遠時找得到。"
+                ),
+                Line(
+                    english: "Station names near the bottom of the map no longer cover their station, and tutorial step counts and panel titles are no longer cut off.",
+                    chinese: "地圖下方的站名不再蓋住車站，教學的步數與面板標題也不再被切掉。"
+                ),
+                Line(
+                    english: "On iPad, the start screen's menu stands near the middle instead of the top half.",
+                    chinese: "iPad 開始畫面的選單站在畫面中間，不再擠在上半部。"
                 ),
             ]
         ),

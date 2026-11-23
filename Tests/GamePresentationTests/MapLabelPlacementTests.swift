@@ -256,4 +256,21 @@ final class MapLabelPlacementTests: XCTestCase {
         XCTAssertEqual(MapLabelPlacement.textWidth("臺北", size: 10), 20)
         XCTAssertEqual(MapLabelPlacement.textWidth("ab", size: 10), 12)
     }
+    /// AI testers, round 1 (2026-11-23): a station's name that would reach
+    /// past the bottom bar or the screen's edge goes over the station,
+    /// above its waiting count's pill, and stays under it everywhere else.
+    func testANameNearTheBottomGoesOverItsStation() {
+        let radius = Self.radius, below = MapProblems.nameTop(stationRadius: radius)
+        XCTAssertEqual(MapLabelPlacement.nameOffset(stationY: 100, stationRadius: radius, height: 15, clearBottom: 400), below)
+        XCTAssertEqual(MapLabelPlacement.nameOffset(stationY: 100, stationRadius: radius, height: 15, clearBottom: .infinity), below)
+        // Just fits.
+        XCTAssertEqual(MapLabelPlacement.nameOffset(stationY: 400 - below - 15, stationRadius: radius, height: 15, clearBottom: 400), below)
+        let over = MapLabelPlacement.nameOffset(stationY: 390, stationRadius: radius, height: 15, clearBottom: 400)
+        XCTAssertLessThan(390 + over + 15, 390 - radius - 20, "over the station and its pill")
+        let station = MapLabelPlacement.Station(x: 200, y: 390, name: "車站 2")
+        let name = MapLabelPlacement.nameBox(of: station, radius: radius, clearBottom: 400)
+        XCTAssertLessThanOrEqual(name.maxY, 400)
+        XCTAssertFalse(overlaps(name, MapLabelPlacement.markBox(of: station, radius: radius)))
+        XCTAssertEqual(MapLabelPlacement.nameBox(of: station, radius: radius).minY, 390 + below, "unchanged without a bottom")
+    }
 }

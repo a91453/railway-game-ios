@@ -259,8 +259,11 @@ final class Map3DStationExteriorsTests: XCTestCase {
             XCTAssertEqual(exterior.origin.x, expected.x, accuracy: 0.01, "\(study)")
             XCTAssertEqual(exterior.origin.z, expected.z, accuracy: 0.01, "\(study)")
             XCTAssertGreaterThanOrEqual(exterior.kept.near, Map3DScene.Builder.exteriorLeast, "\(study)")
-            XCTAssertLessThanOrEqual(exterior.near.triangleCount, 8_000, "\(study) near")
-            XCTAssertLessThanOrEqual(exterior.far.triangleCount, 3_000, "\(study) far")
+            // Decision 946: Hualien's study carries the studio's welcome
+            // canopy (8,656 and 2,368 triangles) besides its seven ways.
+            let hualien = study == .hualienTRA
+            XCTAssertLessThanOrEqual(exterior.near.triangleCount, hualien ? 12_000 : 8_000, "\(study) near")
+            XCTAssertLessThanOrEqual(exterior.far.triangleCount, hualien ? 4_000 : 3_000, "\(study) far")
             let lowest = exterior.near.vertices.map(\.y).min() ?? 0
             XCTAssertGreaterThanOrEqual(lowest, exterior.origin.y - 0.01, "\(study)")
         }

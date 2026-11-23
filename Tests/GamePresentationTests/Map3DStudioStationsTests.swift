@@ -4,7 +4,7 @@ import XCTest
 
 /// Decision 929: Pingxi's and Rinan's stations are the studio's own models;
 /// decision 932: Jingtong's and Checheng's too; decision 937: Shanjia's and
-/// Shifen's too.
+/// Shifen's too; decision 945: Hexing's and Neiwan's too.
 final class Map3DStudioStationsTests: XCTestCase {
     private func station(_ id: String) throws -> Map3DStationKit.Station {
         try XCTUnwrap(Map3DStationKit.stations.first { $0.id == id })
@@ -27,6 +27,7 @@ final class Map3DStudioStationsTests: XCTestCase {
             .pingxi: (3452, 592, 26, 7.4), .rinan: (2956, 864, 16.4, 6.66),
             .shanjia: (3140, 476, 41.75, 18.5), .shifen: (2132, 640, 45, 6.25),
             .jingtong: (1612, 736, 19.02, 5.85), .checheng: (2980, 724, 25.68, 8.8),
+            .hexing: (1476, 648, 12.06, 5.26), .neiwan: (1864, 748, 24.36, 9.04),
         ]
         for own in Map3DStudioStation.allCases {
             let want = try XCTUnwrap(expected[own])
@@ -55,6 +56,8 @@ final class Map3DStudioStationsTests: XCTestCase {
         XCTAssertEqual(try station("station-tra_sched-683ebb50").name, "十分")
         XCTAssertEqual(try station("station-tra_sched-b2e8d7d9").name, "菁桐")
         XCTAssertEqual(try station("station-tra_sched-49f63912").name, "車埕")
+        XCTAssertEqual(try station("station-tra_sched-23c52cff").name, "合興")
+        XCTAssertEqual(try station("station-tra_sched-9d27c592").name, "內灣")
         for own in Map3DStudioStation.allCases {
             var kit = StationKitBuilder()
             kit.house(try station(own.rawValue))
@@ -140,6 +143,46 @@ final class Map3DStudioStationsTests: XCTestCase {
             let top = checheng.vertices.filter { $0.z > 7.5 }
             XCTAssertTrue(top.contains { $0.color == Map3DPalette.cityRoofs[5].color })
             XCTAssertLessThan(top.map { abs($0.x) }.max() ?? 99, 8)
+        }
+    }
+
+    /// Decision 945: Hexing and Neiwan are no longer the kit's `halt`,
+    /// which the Neiwan Line's other stations keep. Hexing is the white
+    /// boarded house with the red frames, blue plinth and boards and the
+    /// dark fascia on its front gable; Neiwan the pale green tiled house
+    /// with the white tower far above Hexing's ridge; in the far versions
+    /// too, which the map draws for them rather than the halt's.
+    func testHexingAndNeiwanAreNotTheHaltRecipe() throws {
+        for own in [Map3DStudioStation.hexing, .neiwan] {
+            XCTAssertEqual(try station(own.rawValue).profile, .halt, own.name)
+            var recipe = StationKitBuilder()
+            recipe.house(try recipeTwin(of: own.rawValue))
+            var kit = StationKitBuilder()
+            kit.house(try station(own.rawValue))
+            XCTAssertNotEqual(kit.mesh.triangleCount, recipe.mesh.triangleCount, own.name)
+        }
+        for far in [false, true] {
+            let hexing = try XCTUnwrap(Map3DStudioStation.hexing.model(far: far))
+            let neiwan = try XCTUnwrap(Map3DStudioStation.neiwan.model(far: far))
+            for colour in [Map3DPalette.tankWhite, Map3DContainerWagon.rust, Map3DPalette.cityRoofs[2].color,
+                           Map3DPalette.hallRoofs[0], Map3DPalette.arcade] {
+                XCTAssertTrue(hexing.vertices.contains { $0.color == colour }, "far \(far)")
+            }
+            for colour in [Map3DPalette.park, Map3DPalette.tankWhite, Map3DPalette.glazing, Map3DPalette.steel] {
+                XCTAssertTrue(neiwan.vertices.contains { $0.color == colour }, "far \(far)")
+            }
+            XCTAssertFalse(hexing.vertices.contains { $0.color == Map3DPalette.park })
+            XCTAssertFalse(neiwan.vertices.contains { $0.color == Map3DContainerWagon.rust })
+            XCTAssertGreaterThan(neiwan.maximum.z, hexing.maximum.z + 3)
+            // Neiwan's tower is the highest of it, in front of the house.
+            let top = neiwan.vertices.filter { $0.z > 8.9 }
+            XCTAssertFalse(top.isEmpty)
+            XCTAssertLessThan(top.map(\.y).max() ?? 99, 0)
+        }
+        // Neiwan's dark timber doors and green frames close up.
+        let neiwan = try XCTUnwrap(Map3DStudioStation.neiwan.model())
+        for colour in [Map3DPalette.timberSiding, CableParts.Paint.green] {
+            XCTAssertTrue(neiwan.vertices.contains { $0.color == colour })
         }
     }
 

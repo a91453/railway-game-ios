@@ -122,6 +122,40 @@ enum Map3DShifenStation {
     ]
 }
 
+/// Decision 945: Hexing's station on the Neiwan Line, from the local studio
+/// (`a91453/railway-assets-private-2`
+/// `game-art-previews/docs/art/tw-stations-hexing-neiwan-2026-11/revision-3`,
+/// #381; lessons in `docs/studio/lessons/tw-stations-hexing-neiwan.md`), in
+/// place of the kit's `halt`: the white boarded house under its dark grey
+/// tiled L-shaped roof, red posts and frames, a blue plinth, four blue
+/// boards on its front gable (blocks of colour, no word on any), a lean-to
+/// on red posts along the platform side.
+enum Map3DHexingStation {
+    /// The mesh's palette, in the order given to `glb_to_swift.py`:
+    /// wallWhite, trimRed, fasciaDark, roofTile, skirtBlue, signBlue,
+    /// glazingDark, dark.
+    static let meshPalette: [UInt32] = [
+        Map3DPalette.tankWhite, Map3DContainerWagon.rust, Map3DPalette.cityRoofs[2].color, Map3DPalette.arcade,
+        Map3DPalette.hallRoofs[0], Map3DPalette.hallRoofs[0], Map3DDepotFacilities.glass, Map3DPalette.dark,
+    ]
+}
+
+/// Decision 945: Neiwan's station, the Neiwan Line's terminus, from the
+/// same studio ticket: the pale green tiled flat-roofed house with the
+/// white square tower stepping out in front, the flat canopy on two posts
+/// before the dark timber doors, the wavy steel and glass canopy of 2024
+/// beside it, green window frames (the tower's front a plain white wall,
+/// without its relief).
+enum Map3DNeiwanStation {
+    /// The mesh's palette, in the order given to `glb_to_swift.py`:
+    /// tileGreen, towerWhite, frameGreen, timberSiding, concrete, steel,
+    /// canopyGlass, glazingDark, dark.
+    static let meshPalette: [UInt32] = [
+        Map3DPalette.park, Map3DPalette.tankWhite, CableParts.Paint.green, Map3DPalette.timberSiding,
+        Map3DPalette.concrete, Map3DPalette.steel, Map3DPalette.glazing, Map3DDepotFacilities.glass, Map3DPalette.dark,
+    ]
+}
+
 /// Decision 929: the real stations whose building is the studio's own
 /// model of it, by the catalog's id. The models' own space is the generic
 /// station's (decision 899): metres, +x along the platforms, +y towards
@@ -136,6 +170,9 @@ enum Map3DStudioStation: String, CaseIterable, Sendable {
     /// Decision 932.
     case jingtong = "station-tra_sched-b2e8d7d9"
     case checheng = "station-tra_sched-49f63912"
+    /// Decision 945.
+    case hexing = "station-tra_sched-23c52cff"
+    case neiwan = "station-tra_sched-9d27c592"
 
     /// How far behind the origin the platform side's clear line is.
     static let platformLine: Float = 6
@@ -148,6 +185,8 @@ enum Map3DStudioStation: String, CaseIterable, Sendable {
         case .shifen: "station-shifen"
         case .jingtong: "station-jingtong"
         case .checheng: "station-checheng"
+        case .hexing: "station-hexing"
+        case .neiwan: "station-neiwan"
         }
     }
 
@@ -159,6 +198,8 @@ enum Map3DStudioStation: String, CaseIterable, Sendable {
         case .shifen: Map3DShifenStation.meshPalette
         case .jingtong: Map3DJingtongStation.meshPalette
         case .checheng: Map3DChechengStation.meshPalette
+        case .hexing: Map3DHexingStation.meshPalette
+        case .neiwan: Map3DNeiwanStation.meshPalette
         }
     }
 
@@ -172,6 +213,8 @@ enum Map3DStudioStation: String, CaseIterable, Sendable {
         case .shifen: Map3DShifenStation.encoded[name]
         case .jingtong: Map3DJingtongStation.encoded[name]
         case .checheng: Map3DChechengStation.encoded[name]
+        case .hexing: Map3DHexingStation.encoded[name]
+        case .neiwan: Map3DNeiwanStation.encoded[name]
         }
         guard let text, let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { return nil }
         return Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: meshPalette)

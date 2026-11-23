@@ -38,9 +38,11 @@ public enum PanelTitlePlacement: Equatable, Sendable {
     public static let lineLimit = 2
 
     /// Where the title stands on a compact height (a phone on its side)
-    /// or not.
-    public static func place(compactHeight: Bool) -> PanelTitlePlacement {
-        compactHeight ? .belowBar : .bar
+    /// or not. At an accessibility text size it stands under the bar
+    /// everywhere: the bar keeps its height, and a station's name in it
+    /// was cut off top and bottom (AI testers, round 1, 2026-11-23).
+    public static func place(compactHeight: Bool, accessibilitySize: Bool = false) -> PanelTitlePlacement {
+        compactHeight || accessibilitySize ? .belowBar : .bar
     }
 }
 

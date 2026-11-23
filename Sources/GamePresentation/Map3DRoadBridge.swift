@@ -813,6 +813,41 @@ extension Map3DScene.Builder {
                 bounds[deck] += holds.map { .init(point: $0, height: height, isFloor: true, flat: Float(reach) + spacing / 2) }
             }
         }
+        // Decision 944: a landmark bridge's deck (關渡大橋's arches) carries
+        // the road a little over its top, as decision 873 holds 淡江大橋's:
+        // holds every 25 m along its middle, each level for 42.5 m round
+        // it, so the last stands at the model's ends; then the road gives
+        // way at its grade. Over the water at the model's middle, where the
+        // landmark is set (``Map3DLandmarkRegistration/sink``), so a chunk
+        // built apart finds the same height.
+        for arch in archBridges() {
+            let reach = Double(Map3DSuspensionBridge.corridor), spacing: Float = 25
+            let flat = Float(reach) + spacing / 2, last = arch.deck.half - flat
+            let water = drawnGround(x: arch.middle.x, z: arch.middle.z)
+            var holds: [Point] = [], raised: [Int: Map3DBaseMap.RoadKind] = [:]
+            let count = Int((2 * last / spacing).rounded(.up))
+            for step in 0...count {
+                let at = arch.point(along: -last + 2 * last * Float(step) / Float(max(count, 1)))
+                let p = Point(x: Double(at.x), z: Double(at.z))
+                holds.append(p)
+                let low = Map3DRoadBridges.key(p.x - reach, p.z - reach), high = Map3DRoadBridges.key(p.x + reach, p.z + reach)
+                for row in low.row...high.row {
+                    for column in low.column...high.column {
+                        for (piece, index) in cells[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
+                            let points = bridges[piece].points
+                            guard Map3DRoadBridges.nearest(p, points[index - 1], points[index]).distance <= reach else { continue }
+                            let deck = deckOf[root(piece)]!, kind = bridges[piece].kind
+                            if (raised[deck]?.rawValue ?? -1) < kind.rawValue { raised[deck] = kind }
+                        }
+                    }
+                }
+            }
+            for (deck, kind) in raised.sorted(by: { $0.key < $1.key }) {
+                // The road's top is its rise over the ground and its kind's lift.
+                let height = water + arch.deck.top + Map3DArchBridgeDeck.roadOver - Self.lift(of: kind)
+                bounds[deck] += holds.map { .init(point: $0, height: height, isFloor: true, flat: flat) }
+            }
+        }
         for (deck, numbers) in members.enumerated() {
             let length = numbers.reduce(0.0) { total, number in
                 zip(bridges[number].points, bridges[number].points.dropFirst()).reduce(total) { sum, step in
@@ -1997,7 +2032,9 @@ extension Map3DScene.Builder {
                         // Decision 869: none under a deck its cables carry.
                         guard !nearTrack(x: top.x, z: top.z, within: look.column / 2 + 3),
                               trackCover.trenches.piece(at: Point(x: Double(top.x), z: Double(top.z))) == nil,
-                              !hangsFromCables(x: top.x, z: top.z) else { continue }
+                              !hangsFromCables(x: top.x, z: top.z),
+                              // Decision 944: nor under a landmark bridge's deck, which has its own.
+                              !standsOnArchBridge(x: top.x, z: top.z) else { continue }
                         let foot = Map3DPoint(top.x, drawnGround(x: top.x, z: top.z), top.z)
                         built.addPier(foot: foot, deckTop: top.y - lift, forward: d.top - c.top, width: width, look: look)
                     }

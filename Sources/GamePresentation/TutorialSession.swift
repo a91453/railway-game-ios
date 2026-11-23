@@ -105,6 +105,26 @@ extension GameSession {
         return hint
     }
 
+    /// The places a lesson's map marks while its first steps look for them
+    /// and lay track to them: each place its goal links that no station is
+    /// near yet (``tutorialPlacesToReach``), numbered from 1, ringed as far
+    /// as a station there would reach. Shown on the step that zooms out to
+    /// find them and the step that lays the track. The AI testers' players
+    /// could not tell the towns from the rest of the map's blocks (round 1,
+    /// 2026-11-23: "the whole map is dots"). Empty on every other step and
+    /// outside a lesson.
+    public var tutorialPlaceMarks: [TutorialPlaceMark] {
+        guard let tutorial, lesson != nil else { return [] }
+        switch tutorial.step.goal {
+        case .moveMap, .drawTrack: break
+        default: return []
+        }
+        guard let reach = tutorialPlacesToReach else { return [] }
+        return reach.places.enumerated().map { index, place in
+            TutorialPlaceMark(number: index + 1, location: place, radius: reach.radius)
+        }
+    }
+
     /// The places on the map the step on screen has the player tap
     /// (decision 188, later fix): the ends of the stretch of track built for
     /// the stations (near one end, then the other), the line's two
@@ -953,4 +973,13 @@ extension GameSession {
         }
         return nil
     }
+}
+
+/// A place a lesson's map rings and numbers (``GameSession/tutorialPlaceMarks``).
+public struct TutorialPlaceMark: Equatable, Sendable {
+    /// From 1, in the goal's order.
+    public let number: Int
+    public let location: PlanPoint
+    /// How near a station must stand, in world units: the ring's radius.
+    public let radius: Int64
 }

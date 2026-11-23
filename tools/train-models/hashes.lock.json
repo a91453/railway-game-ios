@@ -4828,6 +4828,10 @@
     "ped-traveller-walking" : {
       "hash" : "4b460878750289ff",
       "triangles" : 346
+    },
+    "crossing-warning-arm" : {
+      "hash" : "803535afcebb03cd",
+      "triangles" : 68
     }
   }
 }

@@ -48,5 +48,6 @@ extension Map3DLandmarkRegistry {
         Map3DHKPalaceMuseum.registration,
         Map3DTianTanBuddha.registration,
         Map3DPoLinMonastery.registration,
+        Map3DGuanduBridge.registration,
     ]
 }

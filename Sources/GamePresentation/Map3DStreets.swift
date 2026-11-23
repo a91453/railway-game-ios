@@ -130,12 +130,21 @@ struct Map3DLevelCrossing: Sendable {
     /// street its outermost tracks are crossed (0 for one track).
     var trackWay: Map3DPoint = Map3DPoint(0, 0, 1)
     var spread: Float = 0
+    /// Decision 941: where its two barriers' posts stand, on the side the
+    /// street comes from (`end` −1) and the other (+1), for their booms
+    /// (``Map3DCrossingBooms``); empty until laid.
+    var gateFeet: [(end: Float, foot: Map3DPoint)] = []
 
-    /// Half the deck along the street over one track crossed square on
-    /// (a bed 4.6 m wide), and how far past the deck the ramps reach the
-    /// road again: long and gentle, about 1 in 13 over the track's raised
-    /// bed (``Map3DScene/railLift``).
-    static let deckHalf: Float = 2.6
+    /// Across the street, to its left.
+    var across: Map3DPoint { Map3DPoint(-along.z, 0, along.x) }
+
+    /// Half the deck along the street over one track crossed square on,
+    /// and how far past the deck the ramps reach the road again: long and
+    /// gentle, about 1 in 13 over the track's raised bed
+    /// (``Map3DScene/railLift``). Decision 941: the deck level 3.2 m past
+    /// the track, the reference's `FLAT` (``Map3DLevelCrossingDeck/flat``;
+    /// decision 263's 2.6 covered only the 4.6 m bed).
+    static let deckHalf: Float = Map3DLevelCrossingDeck.flat
     static let ramp: Float = 9.4
     /// The most tracks a deck covers apart, metres along the street: a
     /// double track's two (4 m apart) and a little more.
@@ -425,7 +434,7 @@ extension Map3DScene.Builder {
         flush()
         var taken = Set<Map3DScene.ChunkKey>()
         addRoads(roads, taking: &taken)
-        for crossing in crossings { addLevelCrossing(crossing) }
+        for index in crossings.indices { crossings[index].gateFeet = addLevelCrossing(crossings[index]) }
     }
 
     /// Decision 438: on a real-world map, the player's own roads, which the
@@ -489,13 +498,16 @@ extension Map3DScene.Builder {
 
     /// A level crossing's deck over the rails and its two ramps (at every
     /// distance, as the road is), and near, its stop lines and barriers.
-    mutating func addLevelCrossing(_ crossing: Map3DLevelCrossing) {
+    /// Decision 941: where the barriers' posts stand, for their booms.
+    @discardableResult
+    mutating func addLevelCrossing(_ crossing: Map3DLevelCrossing) -> [(end: Float, foot: Map3DPoint)] {
         let along = crossing.along, across = Map3DPoint(-along.z, 0, along.x)
         let half = crossing.halfWidth, top = crossing.deckTop
         let road = Map3DPalette.road(crossing.kind)
-        // The deck: rubber panels over the rails, the light grey of Taiwan's
-        // crossings.
-        let deck = Self.crossingDeck
+        // Decision 941: the deck the road's own surface, as the reference
+        // lays it (`level-crossing.js`), with a rubber panel over each
+        // track, the light grey of Taiwan's crossings.
+        let deck = road
         let middle = Map3DPoint(crossing.point.x, 0, crossing.point.z)
         let base = Map3DPoint(middle.x, drawnGround(x: middle.x, z: middle.z), middle.z)
         var corners: [[Map3DPoint]] = []
@@ -513,6 +525,9 @@ extension Map3DScene.Builder {
             }.map { Map3DPoint($0.x, top, $0.z) }
             let up = (deckCorners[1] - deckCorners[0]).cross(deckCorners[3] - deckCorners[0]).y > 0
             mesh.addFacet(up ? deckCorners : deckCorners.reversed(), color: deck)
+            for panel in Map3DLevelCrossingDeck.panels(crossing) {
+                mesh.addFacet(Map3DLevelCrossingDeck.raised(panel, lift: Map3DLevelCrossingDeck.panelLift) { _, _ in top }, color: Self.crossingDeck)
+            }
             for ramp in corners {
                 // Facing up whichever way the end lies.
                 let up = (ramp[1] - ramp[0]).cross(ramp[3] - ramp[0]).y > 0
@@ -521,6 +536,7 @@ extension Map3DScene.Builder {
         }
         target = .near
         var feet: [Float: Map3DPoint] = [:]
+        var gates: [(end: Float, foot: Map3DPoint)] = []
         for end: Float in [-1, 1] {
             // Decision 267: 3.8 m from the track's middle across the track
             // (clear of its bed at any angle), at the carriageway's edge on
@@ -530,7 +546,17 @@ extension Map3DScene.Builder {
             let ground = drawnGround(x: foot.x, z: foot.z) + Self.sidewalkLift
             feet[end] = Map3DPoint(foot.x, ground + crossing.rise(x: foot.x, z: foot.z, road: ground), foot.z)
         }
+        // Decision 941: the yellow cross-hatching on the deck and its
+        // ramps, from barrier to barrier, on the road's surface.
+        let roadLift = Self.lift(of: crossing.kind)
+        let surface: [[Map3DPoint]] = Map3DLevelCrossingDeck.hatch(crossing).map { piece in
+            Map3DLevelCrossingDeck.raised(piece, lift: Map3DLevelCrossingDeck.paintLift) { x, z in
+                let road = drawnGround(x: x, z: z) + roadLift
+                return road + crossing.rise(x: x, z: z, road: road)
+            }
+        }
         mesh(at: base) { mesh in
+            for piece in surface { mesh.addFacet(piece, color: Map3DPalette.crossingHatch) }
             for end: Float in [-1, 1] {
                 // A stop line across the way in, on the driver's right.
                 let line = middle + along * (end * (crossing.rampEnd + 1))
@@ -543,7 +569,12 @@ extension Map3DScene.Builder {
                 // Decision 929: the studio's warning post and boom, its
                 // lamps towards the way in, its boom's reach over the
                 // street; decision 263's boxes if it does not decode.
-                if Map3DCrossingGate.add(to: &mesh, at: ground, reach: across * end, facing: along * end) { continue }
+                // Decision 941: its boom drawn each frame, where the trains
+                // put it (``Map3DCrossingBooms``).
+                if Map3DCrossingGate.add(to: &mesh, at: ground, reach: across * end, facing: along * end, boom: false) {
+                    gates.append((end, ground))
+                    continue
+                }
                 mesh.addBox(base: ground, forward: along, length: 0.3, width: 0.3, height: 1.2, top: Self.barrierBlack, side: Self.barrierYellow)
                 for segment in 0..<4 {
                     mesh.addBox(base: ground + Map3DPoint(0, 1.2 + Float(segment), 0), forward: along, length: 0.12, width: 0.12, height: 1,
@@ -557,6 +588,7 @@ extension Map3DScene.Builder {
             }
         }
         target = saved
+        return gates
     }
 
     static let stopWhite = Map3DColor.rgb(0xF4F4F0)

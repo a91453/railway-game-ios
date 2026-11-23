@@ -22,7 +22,10 @@ final class Map3DStationExteriorBatch1Tests: XCTestCase {
         for station: Map3DStationExteriorBatch1.Station in
             [.hualienTRA, .taitungTRA, .nangangTRA, .taichungHSR] {
             let far = Map3DStationExteriorBatch1.model(for: station, detail: .far)
-            XCTAssertLessThanOrEqual(far.triangleCount, 1_200, "\(station.rawValue)")
+            // Decision 946: Hualien's far study carries the studio's far
+            // welcome canopy (2,368 triangles).
+            let target = station == .hualienTRA ? 3_400 : 1_200
+            XCTAssertLessThanOrEqual(far.triangleCount, target, "\(station.rawValue)")
         }
     }
 
@@ -331,8 +334,10 @@ final class Map3DStationExteriorBatch1Tests: XCTestCase {
         let near = Map3DStationExteriorBatch1.model(for: .hualienTRA, detail: .near)
         let far = Map3DStationExteriorBatch1.model(for: .hualienTRA, detail: .far)
         XCTAssertGreaterThan(near.triangleCount, far.triangleCount)
-        XCTAssertLessThanOrEqual(near.triangleCount, 6_000)
-        XCTAssertLessThanOrEqual(far.triangleCount, 2_500)
+        // Decision 946: the studio's welcome canopy (8,656 and 2,368) on top
+        // of the other seven ways.
+        XCTAssertLessThanOrEqual(near.triangleCount, 12_000)
+        XCTAssertLessThanOrEqual(far.triangleCount, 4_000)
         XCTAssertNil(Map3DStationKit.model(id: near.name))
         XCTAssertNil(Map3DStationKit.model(id: far.name))
         let ground: [[(Float, Float)]] = [
@@ -369,6 +374,48 @@ final class Map3DStationExteriorBatch1Tests: XCTestCase {
         for (lighter, darker) in zip(ordered, ordered.dropFirst()) {
             XCTAssertGreaterThan(brightness(lighter), brightness(darker))
         }
+    }
+
+    /// Decision 946: the studio's welcome canopy, its size and lamps as the
+    /// review measured them, laid inside OSM way 718223887.
+    func testHualienWelcomeCanopyIsTheStudiosModelInsideItsOSMWay() throws {
+        let near = try XCTUnwrap(Map3DHualienCanopy.model())
+        let far = try XCTUnwrap(Map3DHualienCanopy.model(far: true))
+        XCTAssertEqual(near.vertices.count / 3, 8_656)
+        XCTAssertEqual(far.vertices.count / 3, 2_368)
+        for model in [near, far] {
+            XCTAssertEqual(model.maximum.x - model.minimum.x, 73.70, accuracy: 0.02)
+            XCTAssertEqual(model.maximum.y - model.minimum.y, 30.40, accuracy: 0.02)
+            XCTAssertEqual(model.minimum.z, 0, accuracy: 0.01)
+            XCTAssertEqual(model.maximum.z, 14.00, accuracy: 0.02)
+        }
+        XCTAssertEqual(Set(near.vertices.filter { $0.layer == Map3DVertex.glowing }.map(\.color)),
+                       [Map3DPalette.tunnelLamp])
+        XCTAssertFalse(far.vertices.contains { $0.layer == Map3DVertex.glowing })
+        XCTAssertEqual(Set(near.vertices.map(\.color)).count, 8)
+        XCTAssertEqual(Set(far.vertices.map(\.color)).count, 5)
+        XCTAssertTrue(Set(near.vertices.map(\.color)).isSubset(of: Set(Map3DHualienCanopy.meshPalette)))
+
+        // Every canopy vertex in the study stands within the way's outline
+        // (1 m for the outline's one cut corner the studio left square).
+        let study = Map3DStationExteriorBatch1.model(for: .hualienTRA, detail: .near)
+        XCTAssertFalse(study.vertices.contains { $0.color == Map3DColor.rgb(0xC1B19A) && $0.z > 9 })
+        let outline = Map3DStationExteriorBatch1.welcomeUmbrellaFootprint
+        func distanceOutside(_ east: Float, _ north: Float) -> Float {
+            var inside = false
+            var nearest = Float.infinity
+            for i in outline.indices {
+                let a = outline[i], b = outline[(i + 1) % outline.count]
+                if (a.1 > north) != (b.1 > north), east < (b.0 - a.0) * (north - a.1) / (b.1 - a.1) + a.0 { inside.toggle() }
+                let dx = b.0 - a.0, dy = b.1 - a.1
+                let t = max(0, min(1, ((east - a.0) * dx + (north - a.1) * dy) / (dx * dx + dy * dy)))
+                nearest = min(nearest, hypot(east - (a.0 + t * dx), north - (a.1 + t * dy)))
+            }
+            return inside ? 0 : nearest
+        }
+        let canopy = study.vertices.filter { $0.color == Map3DPalette.mtrRoofSilver || $0.color == Map3DPalette.timber }
+        XCTAssertFalse(canopy.isEmpty)
+        for vertex in canopy { XCTAssertLessThan(distanceOutside(vertex.x, -vertex.y), 2.5) }
     }
 
     func testHsinchuStudyKeepsOSMWayAndHistoricRoofSeparateFromChineseRoofs() {
