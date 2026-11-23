@@ -30,16 +30,20 @@ public enum Map3DFerry {
         /// Decision 909: Hong Kong's green and white double-ended harbour
         /// ferry, from the local studio (``Map3DHongKongFerry``).
         case hongKong
+        /// Decision 930: Hong Kong's orange, white and green fast
+        /// catamaran of the outlying island routes, from the local studio
+        /// (``Map3DHKOutlyingFerry``): one bow, turns round.
+        case hongKongOutlying
 
         /// Length overall and beam, metres (decision 579).
-        public var length: Float { self == .tamsui ? 18 : self == .cijin ? 25.3 : 34 }
-        public var beam: Float { self == .tamsui ? 4.43 : self == .cijin ? 8.2 : 8.6 }
+        public var length: Float { self == .tamsui ? 18 : self == .cijin ? 25.3 : self == .hongKong ? 34 : 40.1 }
+        public var beam: Float { self == .tamsui ? 4.43 : self == .cijin ? 8.2 : self == .hongKong ? 8.6 : 11.2 }
         /// People it takes (decision 579's sources; the game's boats take
         /// ``FerryRoute/capacity`` whichever is drawn).
         /// Hong Kong's: none sourced (decision 909), Cijin's.
         public var people: Int { self == .tamsui ? 99 : 170 }
         /// Whether it sails either end first instead of turning round.
-        public var isDoubleEnded: Bool { self != .tamsui }
+        public var isDoubleEnded: Bool { self == .cijin || self == .hongKong }
 
         /// Decision 585 PR-4 (FERRYFOLLOW): where the follow camera sits
         /// in the boat, read off the model below. The bridge view's eye:
@@ -52,8 +56,10 @@ public enum Map3DFerry {
         /// (``Map3DFerries/bridgeLookDown``).
         /// Decision 909: Hong Kong's ferry has a wheelhouse on its roof at
         /// each end, its front window at x 14.94, 6.9–7.5 m up.
-        public var bridgeFront: Float { self == .tamsui ? 5.7 : self == .cijin ? 5.9 : 14.3 }
-        public var bridgeEye: Float { self == .tamsui ? 3.6 : self == .cijin ? 6.9 : 7.3 }
+        /// Decision 930: the catamaran's bridge is the front of its upper
+        /// deck, its window at x 9.02, 4.85–6.63 m up.
+        public var bridgeFront: Float { self == .tamsui ? 5.7 : self == .cijin ? 5.9 : self == .hongKong ? 14.3 : 8.4 }
+        public var bridgeEye: Float { self == .tamsui ? 3.6 : self == .cijin ? 6.9 : self == .hongKong ? 7.3 : 6.2 }
         /// The cabin window view's seat: a seated eye 1.15 m over the
         /// saloon's floor (the open lower deck at 0.77 m; the upper saloon
         /// at 3.40 m), as far out to the side as the walls and posts
@@ -62,11 +68,13 @@ public enum Map3DFerry {
         /// is near its middle: by its posts and life rings (1.98 m and
         /// 2.25 m out) they filled the window; from 1.6 m they frame it.
         /// Hong Kong's: its upper saloon (floor 3.6 m, glass out to 4.23 m).
-        public var seatAcross: Float { self == .tamsui ? 0.4 : self == .cijin ? 2.6 : 2.8 }
-        public var seatHeight: Float { self == .tamsui ? 1.92 : self == .cijin ? 4.55 : 4.75 }
+        /// The catamaran's: its upper deck (floor 4.6 m, glass out to 4.85 m).
+        public var seatAcross: Float { self == .tamsui ? 0.4 : self == .cijin ? 2.6 : self == .hongKong ? 2.8 : 3.4 }
+        public var seatHeight: Float { self == .tamsui ? 1.92 : self == .cijin ? 4.55 : self == .hongKong ? 4.75 : 5.75 }
         /// How tall it stands over the water, for the view beside it (to
         /// the wheelhouse's roof).
-        public var height: Float { self == .tamsui ? 4.6 : self == .cijin ? 7.8 : 7.9 }
+        /// The catamaran's to its green roof (its radar mast reaches 11 m).
+        public var height: Float { self == .tamsui ? 4.6 : self == .cijin ? 7.8 : self == .hongKong ? 7.9 : 7.5 }
 
         /// The boat a route's crossing draws: the double-ended ferry on a
         /// short harbour crossing (under a kilometre, as Gushan–Cijin's
@@ -78,9 +86,17 @@ public enum Map3DFerry {
 
         /// Decision 909: the boat a route draws in `region`: Hong Kong's
         /// own there, else by its length (``drawn(forMetres:)``).
+        /// Decision 930: there, a route of ``outlyingMetres`` or more (as
+        /// Central to Lamma Island's some 5 km, and the longer ones to
+        /// Peng Chau, Mui Wo and Cheung Chau) the outlying islands' fast
+        /// catamaran, a shorter one (the harbour crossings, 1.3 to 3 km)
+        /// the harbour ferry.
         public static func drawn(forMetres metres: Int64, in region: Map3DStreetRegion) -> Boat {
-            region == .hongKong ? .hongKong : drawn(forMetres: metres)
+            region == .hongKong ? (metres >= outlyingMetres ? .hongKongOutlying : .hongKong) : drawn(forMetres: metres)
         }
+
+        /// From how long a Hong Kong route is an outlying island one, metres.
+        public static let outlyingMetres: Int64 = 4_000
     }
 
     /// Decision 909: the kinds of pier. Each model's +x points out over
@@ -129,6 +145,8 @@ public enum Map3DFerry {
             made.append(model(.hongKong, far: far))
             for kind in [PierKind.finger, .hall] { made.append(pier(kind, far: far)) }
         }
+        // Decision 930: the outlying islands' catamaran after those.
+        for far in [false, true] { made.append(model(.hongKongOutlying, far: far)) }
         return made
     }
 
@@ -145,6 +163,9 @@ public enum Map3DFerry {
     public static func model(_ boat: Boat, far: Bool = false) -> Map3DModelPack.Model {
         if boat == .hongKong {
             return Map3DHongKongFerry.model(.boat, far: far, named: name(boat, far: far)) ?? .flat(named: name(boat, far: far), from: Map3DMesh())
+        }
+        if boat == .hongKongOutlying {
+            return Map3DHKOutlyingFerry.model(far: far, named: name(boat, far: far)) ?? .flat(named: name(boat, far: far), from: Map3DMesh())
         }
         var m = CableMesh()
         solids(boat, far: far).append(to: &m.kit.mesh)
@@ -169,7 +190,7 @@ public enum Map3DFerry {
         switch boat {
         case .tamsui: s.tamsui(far: far)
         case .cijin: s.cijin(far: far)
-        case .hongKong: break
+        case .hongKong, .hongKongOutlying: break
         }
         return s
     }

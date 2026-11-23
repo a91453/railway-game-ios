@@ -185,11 +185,14 @@ final class Map3DSunPathTests: XCTestCase {
         XCTAssertGreaterThan(noon.skySun.z, 0.7)
         XCTAssertEqual(noon.skySun.x, 0, accuracy: 0.02)
         XCTAssertEqual(noon.sunDirection.dot(noon.skySun), 1, accuracy: 0.0001)
-        // Sunrise in June, in the north-east; the moon across from the sun.
+        // Sunrise in June, in the north-east; decision 942: the moon where
+        // tonight's moon stands (``Map3DMoonTests``), no longer always
+        // across from the sun.
         let morning = light(taipei, gameDay: gameJune21, minute: minutes("05:30"))
         XCTAssertGreaterThan(morning.skySun.x, 0.8)
         XCTAssertLessThan(morning.skySun.z, -0.3)
-        XCTAssertEqual(morning.skyMoon.x, -morning.skySun.x, accuracy: 0.0001)
+        let moon = Map3DSunPath.moonPosition(date: GameTime(seconds: gameJune21 * GameTime.secondsPerDay + Int64(minutes("05:30") * 60)), place: taipei)
+        XCTAssertEqual(morning.skyMoon.dot(Map3DLighting.direction(elevation: moon.elevation, azimuth: moon.azimuth)), 1, accuracy: 0.0001)
         XCTAssertGreaterThanOrEqual(morning.sunDirection.y, Float(sin(5.0 * .pi / 180)))
         // The sky draws them there.
         let sky = Map3DSky(noon)

@@ -64,10 +64,12 @@ final class CarGapTests: XCTestCase {
     /// The player's trains too: a set whose models reach their couplers is
     /// laid end to end; boxes and the style cars keep the gap.
     func testCarsReachingTheirCouplersTouch() {
-        for key in ["emu800", "emu3000", "highSpeed", "puyuma", "E200CK", "MINGRI", "pushPull"] {
+        // Decision 930: the EMU100 has its own cars, which reach their
+        // couplers (it borrowed the commuter shell, which keeps the gap).
+        for key in ["emu800", "emu3000", "highSpeed", "puyuma", "E200CK", "MINGRI", "pushPull", "EMU100"] {
             XCTAssertTrue(pack.touches(forType: key, count: 6), key)
         }
-        for key in ["EMU100", "greenTram", "metroGeneric"] {
+        for key in ["greenTram", "metroGeneric"] {
             XCTAssertFalse(pack.touches(forType: key, count: 6), key)
         }
         XCTAssertEqual(Map3DRealTrains.carLength(of: .init(key: "emu800", cars: 8), hasModels: false, models: pack), Map3DRealTrains.carLength)

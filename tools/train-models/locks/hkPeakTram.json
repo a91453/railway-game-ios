@@ -1,0 +1,31 @@
+{
+  "comment" : "Decision 782: the models of the registered train hkPeakTram (Map3DHKPeakTram): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 4,
+  "lamps" : "2fda5375abc8eb43",
+  "models" : {
+    "light-set-hkPeakTram-head" : {
+      "hash" : "e1e0d789a433773d",
+      "triangles" : 128
+    },
+    "light-set-hkPeakTram-single" : {
+      "hash" : "e1e0d789a433773d",
+      "triangles" : 128
+    },
+    "set-hkPeakTram-head" : {
+      "hash" : "981d4099bf6b7a9c",
+      "triangles" : 4984
+    },
+    "set-hkPeakTram-single" : {
+      "hash" : "98925b7f3d26f2e7",
+      "triangles" : 4984
+    },
+    "set-hkPeakTramFar-head" : {
+      "hash" : "99423c14275deffa",
+      "triangles" : 2208
+    },
+    "set-hkPeakTramFar-single" : {
+      "hash" : "78049572aa0a0385",
+      "triangles" : 2208
+    }
+  }
+}

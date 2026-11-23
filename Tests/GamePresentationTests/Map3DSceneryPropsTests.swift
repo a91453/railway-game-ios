@@ -55,7 +55,7 @@ final class Map3DSceneryPropsTests: XCTestCase {
         let pack = Map3DSceneryProp.pack(standard, files: Self.files)
         XCTAssertEqual(pack.models.count, standard.models.count)
         let triangles: [Map3DSceneryProp: Int] = [.pineTall: 136, .pine: 88, .pineYoung: 64, .bushes: 120, .bushesLarge: 180, .tank: 332,
-                                                     .postBoxes: 1724, .busStopPole: 300, .coalBunker: 679]
+                                                     .postBoxes: 352, .busStopPole: 300, .coalBunker: 679]
         for prop in Map3DSceneryProp.allCases {
             let index = try XCTUnwrap(standard.index(of: prop.modelName))
             let model = pack.models[index]

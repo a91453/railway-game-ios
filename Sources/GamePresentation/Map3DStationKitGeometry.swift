@@ -15,6 +15,9 @@ struct StationKitBuilder {
     /// Decision 929: whether the station stands in Finland, where a small
     /// station is the studio's Finnish country station.
     var finnish = false
+    /// Decision 933: whether the station stands in Hong Kong, where a
+    /// small station is the studio's new-town station.
+    var hongKong = false
     static let forward=Map3DPoint(1,0,0)
     static let glass=Map3DPalette.glazing
     static let steel=Map3DPalette.tankStand
