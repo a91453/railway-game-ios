@@ -129,6 +129,25 @@ final class Map3DLandmarksTests: XCTestCase {
         XCTAssertGreaterThan(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z, "its 22 m along the track")
     }
 
+    /// REVIEW-L33: a temple whose point a registered landmark stands on
+    /// (decision 928's Wen Wu Temple front hall, a mapped temple 4 m from
+    /// its middle) is not drawn into it.
+    func testNotInsideALandmark() throws {
+        let world = GameWorld.newGame(anchor: anchor)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        var builder = builder(world)
+        let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
+        var hall = Map3DMesh()
+        hall.addBox(base: middle, length: 48, width: 38, height: 12, top: 0xFF80_8080, side: 0xFF80_8080)
+        builder.landmarkPlans = [LandmarkPlan(hall)]
+        _ = builder.addTemples(RealTemples(temples: [temple(north: 4, east: 0, .temple)]), frame: frame, clearOf: [])
+        XCTAssertTrue(builder.closeMeshes.isEmpty)
+        var away = self.builder(world)
+        away.landmarkPlans = builder.landmarkPlans
+        _ = away.addTemples(RealTemples(temples: [temple(north: 80, east: 0, .temple)]), frame: frame, clearOf: [])
+        XCTAssertFalse(away.closeMeshes.isEmpty, "a temple clear of it stands")
+    }
+
     /// The scene asks for them on a real-world map only.
     func testTheSceneTakesThem() throws {
         // 400 m north of Taipei Main Station, which stands on the middle
