@@ -51,12 +51,30 @@ final class Map3DMeshyMarketTempleTests: XCTestCase {
         let burner = try XCTUnwrap(Map3DMeshyMarketTemple.tiangongBurner.model).triangleCount
         let kit = { (part: Map3DCivicKit.Part) in Map3DCivicKit.model(for: part).triangleCount }
         let temple = try XCTUnwrap(Map3DScene.Builder.templeModels[.temple]), small = try XCTUnwrap(Map3DScene.Builder.templeModels[.small])
-        XCTAssertEqual(temple.triangles, 12 + kit(.templeHall) + kit(.templeGate) + burner)
-        XCTAssertEqual(small.triangles, 12 + kit(.templeSideHall) + burner)
+        let lions = try Map3DTempleStoneLion.allCases.reduce(0) { $0 + (try XCTUnwrap($1.model)).triangleCount }
+        XCTAssertEqual(temple.triangles, 12 + kit(.templeHall) + kit(.templeGate) + burner + lions)
+        XCTAssertEqual(small.triangles, 12 + kit(.templeSideHall) + burner + lions)
         // Every piece within the alley's 26 m by 32 m square.
         for place in Map3DMeshyMarketTemple.alley {
             XCTAssertLessThan(abs(place.x) + 2.2, 13)
             XCTAssertLessThan(abs(place.z) + 2.2, 16)
         }
+    }
+
+    /// The lions: the studio's 600 triangles each, 1.8 m on a 1.0 m by
+    /// 0.62 m plinth, each the other's mirror image, in the palette's
+    /// colours, and none lit.
+    func testTheStoneLions() throws {
+        let left = try XCTUnwrap(Map3DTempleStoneLion.left.model), right = try XCTUnwrap(Map3DTempleStoneLion.right.model)
+        let palette = Set(Map3DTempleStoneLion.palette)
+        for lion in [left, right] {
+            XCTAssertEqual(lion.triangleCount, 600)
+            XCTAssertEqual(lion.maximum.z - lion.minimum.z, 1.8, accuracy: 0.02)
+            XCTAssertEqual(lion.minimum.z, 0, accuracy: 0.002)
+            XCTAssertEqual(lion.maximum.y - lion.minimum.y, 0.62, accuracy: 0.02)
+            XCTAssertTrue(lion.vertices.allSatisfy { palette.contains($0.color) && $0.layer != Map3DVertex.glowing })
+        }
+        XCTAssertEqual(left.minimum.y, -right.maximum.y, accuracy: 0.002)
+        XCTAssertEqual(left.maximum.y, -right.minimum.y, accuracy: 0.002)
     }
 }
