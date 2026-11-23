@@ -89,14 +89,17 @@ final class Map3DSkyTests: XCTestCase {
         }
     }
 
-    func testTheShaderGetsTenRowsOfFour() {
+    func testTheShaderGetsElevenRowsOfFour() {
         let camera = Map3DCamera(target: .zero, distance: 300, heading: 0.4)
         let floats = Map3DSky(lighting(21)).floats(camera: camera)
-        XCTAssertEqual(floats.count, 40)
-        XCTAssertEqual(Array(floats[36...]), [0, 0, 0, 0])
+        XCTAssertEqual(floats.count, 44)
+        XCTAssertEqual(Array(floats[36..<40]), [0, 0, 0, 0])
         var lit = lighting(23)
         lit.aurora = 0.8
-        XCTAssertEqual(Array(Map3DSky(lit).floats(camera: camera, seconds: 12).suffix(4)), [Map3DSky(lit).aurora, 12, 0, 0])
+        XCTAssertEqual(Array(Map3DSky(lit).floats(camera: camera, seconds: 12)[36..<40]), [Map3DSky(lit).aurora, 12, 0, 0])
+        // Decision 942: the way from the moon toward the sun and its lit share.
+        let sky = Map3DSky(lit)
+        XCTAssertEqual(Array(sky.floats(camera: camera).suffix(4)), [sky.moonSunward.x, sky.moonSunward.y, sky.moonSunward.z, sky.moonLit])
         // The camera's way is a unit vector looking down at the target.
         let look = Map3DPoint(floats[0], floats[1], floats[2])
         XCTAssertEqual(look.length, 1, accuracy: 0.001)

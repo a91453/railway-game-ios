@@ -119,6 +119,14 @@ public enum WhatsNew {
                     chinese: "昂坪纜車終點旁多了天壇大佛與寶蓮禪寺。"
                 ),
                 Line(
+                    english: "The red and green post boxes on the pavements are new, with a slot frame on each and a lid over the box.",
+                    chinese: "人行道上的紅綠郵筒換新：投信口有白框，方箱上加頂蓋。"
+                ),
+                Line(
+                    english: "The stations you build have a dark edge along the roof.",
+                    chinese: "自己蓋的車站屋頂加了一圈深色邊。"
+                ),
+                Line(
                     english: "Stations on the ground have footbridges or underpass stairs, and island platforms have transfer signs.",
                     chinese: "地面車站有了跨站天橋或地下道入口，島式月台有轉乘指示牌。"
                 ),
