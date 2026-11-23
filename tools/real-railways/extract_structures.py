@@ -5,13 +5,14 @@ Forest Railway's running lines, and since 2026-10-21 the metros' and light
 rails', for the demos and the network tool to lay their track at real
 heights.
 
-    R=<railway-reference-private>/Railway/taiwan-rail-reference-clean/source/rail-3d/physical
+    R=<railway-reference-private>/Railway/rail-reference/regions/taiwan/source/rail-3d/physical
     python3 tools/real-railways/extract_structures.py \\
         "$R/network.json" "$R/metro-network.json" "$R/level-profiles.json" \\
         RailwayGameApp/Resources/RealRailways/rail_structures.json
 
 The inputs are the owner's Taiwan rail website's, its newer snapshot
-`Railway/taiwan-rail-reference-clean/` (2026-10-18; the first run read the
+`Railway/rail-reference/regions/taiwan/` (added 2026-10-18 as
+`taiwan-rail-reference-clean/`, moved there 2026-11-16; the first run read the
 older `Railway/site_archive_clean/`): `network.json` and
 `metro-network.json`, its OpenStreetMap railway and metro ways (Overpass,
 ODbL 1.0), and `level-profiles.json`,

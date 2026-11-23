@@ -351,6 +351,9 @@ struct RollingStockCatalogView: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 4)
                     .background(Palette.ink, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    // REVIEW-L32: the name alone is no longer told from
+                    // other texts by what follows it, so it is named.
+                    .accessibilityIdentifier("catalog.name")
                 Spacer()
             }
             .padding(.bottom, 10)

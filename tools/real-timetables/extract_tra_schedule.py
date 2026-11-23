@@ -4,7 +4,7 @@ real-world map (ARCHITECTURE decision 532), from the `Railway/` site's TRA
 timetable.
 
     python3 -I tools/real-timetables/extract_tra_schedule.py \\
-        <reference>/Railway/taiwan-rail-reference-clean/source/data/tra_schedule_dense.json \\
+        <reference>/Railway/rail-reference/regions/taiwan/source/data/tra_schedule_dense.json \\
         RailwayGameApp/Resources/RealRailways/tra.json \\
         RailwayGameApp/Resources/RealRailways/tra-schedule.json
 

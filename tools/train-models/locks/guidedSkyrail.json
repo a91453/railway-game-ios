@@ -1,0 +1,55 @@
+{
+  "comment" : "Decision 782: the models of the registered train guidedSkyrail (Map3DGuidedSkyrail): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 6,
+  "lamps" : "42245c80243433b4",
+  "models" : {
+    "light-set-SKYRAIL-car" : {
+      "hash" : "53ecd4a1261e8ed1",
+      "triangles" : 144
+    },
+    "light-set-SKYRAIL-head" : {
+      "hash" : "48f8a60c950d6034",
+      "triangles" : 110
+    },
+    "light-set-SKYRAIL-tail" : {
+      "hash" : "92a91351efb7e434",
+      "triangles" : 110
+    },
+    "light-set-SKYRAILFar-car" : {
+      "hash" : "b9e4ad40b8a2835d",
+      "triangles" : 48
+    },
+    "light-set-SKYRAILFar-head" : {
+      "hash" : "c52282969cc183dd",
+      "triangles" : 36
+    },
+    "light-set-SKYRAILFar-tail" : {
+      "hash" : "c8712f5ece906ddd",
+      "triangles" : 36
+    },
+    "set-SKYRAIL-car" : {
+      "hash" : "a93cb83194459d0c",
+      "triangles" : 2260
+    },
+    "set-SKYRAIL-head" : {
+      "hash" : "631eb8e4212e996e",
+      "triangles" : 2826
+    },
+    "set-SKYRAIL-tail" : {
+      "hash" : "3865309b823e3001",
+      "triangles" : 2826
+    },
+    "set-SKYRAILFar-car" : {
+      "hash" : "57c0472a65a4cbad",
+      "triangles" : 892
+    },
+    "set-SKYRAILFar-head" : {
+      "hash" : "26d5b202d935ae23",
+      "triangles" : 1246
+    },
+    "set-SKYRAILFar-tail" : {
+      "hash" : "2998fb0f676ecc52",
+      "triangles" : 1246
+    }
+  }
+}

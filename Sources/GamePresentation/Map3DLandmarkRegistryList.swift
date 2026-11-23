@@ -44,5 +44,7 @@ extension Map3DLandmarkRegistry {
         Map3DChihkanTower.registration,
         Map3DWenwuFrontHall.registration,
         Map3DWenwuRearHall.registration,
+        Map3DTianTanBuddha.registration,
+        Map3DPoLinMonastery.registration,
     ]
 }

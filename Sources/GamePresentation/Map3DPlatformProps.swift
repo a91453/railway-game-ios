@@ -358,8 +358,18 @@ extension Map3DScene.Builder {
         // Decision 847: the real lines' screen doors.
         let screenDoors = shared.screenDoors(of: world)
         // Decision 860: the underground platforms' too.
-        for platform in laidPlatforms + laidUnderground where !depots.contains(platform.station) {
+        // Decision 936: the lines at each face, for the transfer signs.
+        var transfers: [StationID: StationTransfers] = [:]
+        let all = laidPlatforms + laidUnderground
+        for (index, platform) in all.enumerated() where !depots.contains(platform.station) {
             guard let path = Map3DStreetLife.Path(platform.line) else { continue }
+            // Decision 936: nothing where a footbridge's tower or an
+            // underpass's stairs stand on it.
+            let crossing = index < laidPlatforms.count ? crossingKeepOut[index] : nil
+            func clearOfCrossing(_ along: Float, _ half: Float = 0.5) -> Bool {
+                crossing.map { along + half < $0.lowerBound || along - half > $0.upperBound } ?? true
+            }
+            let signs = transferSigns(on: index, of: all, path: path, crossing: crossing, transfers: &transfers)
             let trains = calling[platform.station]
             let doorsHere = platform.edge.flatMap {
                 screenDoors.doors(edge: $0, station: platform.station, underground: platform.structure == .tunnel)
@@ -376,6 +386,7 @@ extension Map3DScene.Builder {
             // they come in towards.
             let stands = platform.edge.map { screenDoors.stands(edge: $0) } ?? []
             let marks = Map3DPlatformProps.stopMarks(length: path.length, formations: formations, kind: kind, stands: stands)
+                .filter { clearOfCrossing($0.along) }
             let doors = Map3DPlatformProps.doorCentres(length: path.length, formations: formations, kind: kind, stands: stands)
             let side: Float = platform.offset >= 0 ? 1 : -1
             // Across the line: the platform's edge by the track, and its back.
@@ -428,7 +439,8 @@ extension Map3DScene.Builder {
                 // The bins at the back, their long side along it; none on
                 // a platform too narrow to walk past one.
                 let bins = platform.width >= Self.binPlatform
-                    ? Map3DPlatformProps.bins(length: path.length, doors: doors, boards: marks.map(\.along)) : []
+                    ? Map3DPlatformProps.bins(length: path.length, doors: doors, boards: marks.map(\.along))
+                        .filter { clearOfCrossing($0, 1) } : []
                 for bin in bins {
                     let at = place(bin, platform.offset + side * (platform.width / 2 - 0.55), top)
                     mesh.append(Self.binMesh, at: at.point, forward: at.right * -side)
@@ -448,10 +460,21 @@ extension Map3DScene.Builder {
                     let columns = under || shellRoofed.contains(platform.station) ? []
                         : Map3DPlatformProps.canopyColumns(length: path.length, share: canopyShare)
                     for board in Map3DPlatformProps.nameBoards(length: path.length, depth: platform.width, island: platform.island,
-                                                               forward: forward, bins: bins, columns: columns) {
+                                                               forward: forward, bins: bins, columns: columns)
+                        where clearOfCrossing(board, 1.5) {
                         let at = place(board, back, top)
                         Self.addNameBoard(&mesh, foot: at.point, out: at.right * -side, name: name, second: second, styled: styled,
                                           underground: under)
+                    }
+                }
+                // Decision 936: the transfer signs of an island whose
+                // two tracks' lines change across it.
+                for sign in signs {
+                    let at = place(sign.along, back, top)
+                    let first = mesh.vertices.count
+                    if Map3DPlatformTransferSign.add(to: &mesh, at: at.point, across: at.right * side, hung: sign.hung,
+                                                     near: sign.near, far: sign.far) {
+                        mesh.makeNightLit(from: first)
                     }
                 }
                 guard !(under && platform.island) else { return }
@@ -464,7 +487,7 @@ extension Map3DScene.Builder {
                     signTop: under ? nil : Map3DPlatformProps.signTopUnderCanopy,
                     columns: under ? [] : Map3DPlatformProps.canopyColumns(length: path.length, share: canopyShare)
                 )
-                for piece in furniture {
+                for piece in furniture where clearOfCrossing(piece.along, piece.length / 2 + 0.3) {
                     let at = place(piece.along, back - side * (piece.near + piece.far) / 2, top + piece.bottom)
                     let first = mesh.vertices.count
                     mesh.addBox(base: at.point, forward: at.along, length: piece.length, width: piece.far - piece.near,
@@ -473,6 +496,51 @@ extension Map3DScene.Builder {
                 }
             }
         }
+    }
+
+    /// Decision 936: the transfer signs of the island whose half is
+    /// platform `index` of `all`, drawn with the half laid first: where
+    /// its two tracks' lines differ and change across the platform
+    /// (decision 912), a sign by each end of its canopy, each side's
+    /// blocks in the colours of that track's lines (two at most). None
+    /// under ground (the box's own signs) or at a station under a shell.
+    mutating func transferSigns(on index: Int, of all: [LaidPlatform], path: Map3DStreetLife.Path, crossing: ClosedRange<Float>?,
+                                transfers: inout [StationID: StationTransfers])
+        -> [(along: Float, hung: Bool, near: [UInt32], far: [UInt32])] {
+        let platform = all[index]
+        guard platform.island, platform.structure != .tunnel, !shellRoofed.contains(platform.station), let edge = platform.edge
+        else { return [] }
+        func back(_ platform: LaidPlatform, _ path: Map3DStreetLife.Path) -> Map3DPoint {
+            let at = path.at(path.length / 2), side: Float = platform.offset >= 0 ? 1 : -1
+            return at.point + at.right * (platform.offset + side * platform.width / 2)
+        }
+        let here = back(platform, path)
+        guard let other = all.indices.first(where: { other in
+            guard other != index, all[other].station == platform.station, all[other].island, all[other].structure == platform.structure,
+                  all[other].edge != nil, all[other].edge != edge, let path = Map3DStreetLife.Path(all[other].line) else { return false }
+            let there = back(all[other], path)
+            return abs(there.x - here.x) + abs(there.z - here.z) < 1 && abs(there.y - here.y) < 0.3
+        }), index < other, let otherEdge = all[other].edge else { return [] }
+        let found = transfers[platform.station] ?? StationTransfers(world: world, station: platform.station)
+        transfers[platform.station] = found
+        guard let a = found.linesAt.keys.first(where: { $0.edge == edge }), let b = found.linesAt.keys.first(where: { $0.edge == otherEdge }),
+              let near = found.linesAt[a], let far = found.linesAt[b], Set(near) != Set(far),
+              world.platformChange(from: a, to: b)?.kind == .acrossPlatform else { return [] }
+        func colours(_ lines: [LineID], not others: [LineID]) -> [UInt32] {
+            // The lines only this side has first: they are what the
+            // sign is for.
+            (lines.filter { !others.contains($0) } + lines.filter(others.contains)).prefix(2).map {
+                Map3DColor.rgb(UInt32(world.line(id: $0)?.color?.rgb ?? LineBadge.automaticColor(of: $0)))
+            }
+        }
+        let nearColours = colours(near, not: far), farColours = colours(far, not: near)
+        keptColours.formUnion(nearColours + farColours)
+        let share = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
+        let roof = (path.length * (1 - share) / 2)...(path.length * (1 + share) / 2)
+        let otherCrossing = other < laidPlatforms.count ? crossingKeepOut[other] : nil
+        return Map3DPlatformTransferSign.places(length: path.length, width: platform.width + all[other].width, roof: roof,
+                                                taken: [crossing, otherCrossing].compactMap { $0 })
+            .map { ($0.along, $0.hung, nearColours, farColours) }
     }
 
     /// The narrowest platform a bin stands on, metres: a bin 0.85 m deep

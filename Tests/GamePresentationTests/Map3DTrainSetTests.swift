@@ -54,7 +54,11 @@ final class Map3DTrainSetTests: XCTestCase {
                                                     : (name == set.tailName ? 6_500...6_500 : 6_476...6_476))
                     : ["greenCommuter", "threeCarUrban", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 2_000...6_000
                     // Decision 399: a steam locomotive, eight to ten thousand.
-                    : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 8_000...10_500
+                    // Decision 930: the Midsummer Formosa's CT273, 5,370 near
+                    // and 1,654 far; its tender 2,044 and 664.
+                    : name == set.headName && set.key == "SUMMER" ? 5_370...5_370
+                    : name == set.headName && set.key == "SUMMERFar" ? 1_654...1_654
+                    : name == set.headName && set.key == "STEAM" ? 8_000...10_500
                     // Decision 408: #1201's 700T, eight to nine thousand a
                     // cab and five to six a middle car, so drawn near only;
                     // its E200, five to six thousand; the N700S-G, the
@@ -135,7 +139,10 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 558: #1742's Wenhu line cars, 13.78 m with their couplers.
                     : Self.wenhu.contains(set.key) ? 13.7...13.85
                     : set.key == "threeCarUrban" ? 15...16 : set.key == "sevenSectionLRT" ? 14...16
-                    : name == set.headName && ["SUMMER", "SUMMERFar", "STEAM"].contains(set.key) ? 14.5...15.5
+                    // Decision 930: the CT273 13.40 m and its tender 6.88 m.
+                    : name == set.headName && ["SUMMER", "SUMMERFar"].contains(set.key) ? 13.39...13.41
+                    : name == set.tenderName && ["SUMMER", "SUMMERFar"].contains(set.key) ? 6.87...6.89
+                    : name == set.headName && set.key == "STEAM" ? 14.5...15.5
                     : name == set.tenderName ? 8.9...9.6 : set.key == "fourCarMetro" ? 12.3...12.8
                     : set.key == "blueSeven" ? 7.5...8.4
                     : name == set.headName && ["R100CK", "R100CKFar"].contains(set.key) ? 15.79...15.81
@@ -154,7 +161,9 @@ final class Map3DTrainSetTests: XCTestCase {
                 // coaches' grab bars 2.32 m.
                 // Decision 893: the Nanakuma line's small linear-motor cars, 2.49 m wide and 3.145 m high.
                 let nanakuma = ["fukuokaNanakumaLine", "fukuokaNanakumaLineFar"].contains(set.key)
-                XCTAssertTrue((alishan ? 2.1...2.35 : nanakuma ? 2.45...2.55 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
+                // Decision 930: the maglev car 3.70 m wide over the arms that wrap its guideway.
+                let maglev = ["MAGLEV", "MAGLEVFar"].contains(set.key)
+                XCTAssertTrue((alishan ? 2.1...2.35 : nanakuma ? 2.45...2.55 : maglev ? 3.65...3.75 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
                 let height: ClosedRange<Float> = name == set.headName && ["E500CK", "STAR", "E500CKFar", "STARFar", "pushPull", "pushPullFar", "pushPullE1000", "pushPullE1000Far"].contains(set.key) ? 5.2...5.5
@@ -171,7 +180,14 @@ final class Map3DTrainSetTests: XCTestCase {
                     : alishan ? 3.0...3.3
                     : nanakuma ? 3.1...3.2
                     // Decision 864: the Finnish double-deck coaches, 5.2 m (decision 900: the control car and the sleepers too).
+                    // Decision 930: the night train's restaurant car a single-deck one, 3.97 m.
+                    : name == set.pantographName && set.key.hasPrefix("finlandNight") ? 3.9...4.0
                     : name != set.headName && set.key.hasPrefix("finland") ? 5.1...5.3
+                    // Decision 930: a straddling car with the skirts that reach
+                    // down beside its beam, 5.08 m, and a suspended car with its
+                    // bogies' housing on its roof, 4.72 m, each standing on the rail.
+                    : ["MONORAIL", "MONORAILFar"].contains(set.key) ? 5.0...5.2
+                    : ["SKYRAIL", "SKYRAILFar"].contains(set.key) ? 4.6...4.8
                     // Decision 837: a bare flat wagon (its hand brake and tail
                     // lamp the highest) and the hopper wagons of stone (3.21 m,
                     // its later note), lower than a container wagon.
@@ -209,15 +225,12 @@ final class Map3DTrainSetTests: XCTestCase {
         }
     }
 
-    /// The types that were boxes now have their models; maglev, skyrail,
-    /// monorail still have none.
+    /// The types that were boxes now have their models; decision 930:
+    /// maglev, skyrail and monorail too.
     func testTheTypesThatWereBoxes() {
         // Decision 399: and the steam train.
-        for code in ["E200CK", "E500CK", "R100CK", "R200CK", "BLUE", "MINGRI", "STAR", "SUMMER", "STEAM"] {
+        for code in ["E200CK", "E500CK", "R100CK", "R200CK", "BLUE", "MINGRI", "STAR", "SUMMER", "STEAM", "MAGLEV", "SKYRAIL", "MONORAIL"] {
             XCTAssertNotNil(pack.models(forType: code), code)
-        }
-        for code in ["MAGLEV", "SKYRAIL", "MONORAIL"] {
-            XCTAssertNil(pack.models(forType: code), code)
         }
     }
 
@@ -233,7 +246,7 @@ final class Map3DTrainSetTests: XCTestCase {
         }
         let summer = try layout("SUMMER", 4)
         XCTAssertEqual(summer.map(\.0), ["set-SUMMER-head", "set-SUMMER-tender", "set-SUMMER-car", "set-SUMMER-car", "set-SUMMER-tail"])
-        for (car, (length, gap)) in zip(summer, zip([14.77, 9, 20, 20, 20] as [Float], [0, 0.6, 0.6, 0.6, 0] as [Float])) {
+        for (car, (length, gap)) in zip(summer, zip([13.4, 6.88, 20, 20, 20] as [Float], [0, 0.6, 0.6, 0.6, 0] as [Float])) {
             XCTAssertEqual(car.1, length, accuracy: 0.01, car.0)
             XCTAssertEqual(car.2, gap, accuracy: 1e-6, car.0)
         }
@@ -264,11 +277,12 @@ final class Map3DTrainSetTests: XCTestCase {
         // Decision 461: the L's set while the pack is locked is the C381, whose far set takes over from 500 m.
         XCTAssertEqual(Map3DTrainSet.reach(of: "L"), Map3DTrainSet.tramReach)
         XCTAssertEqual(Map3DTrainSet.reach(of: "fourCarMetro"), Map3DTrains.modelReach)
-        // The locomotive's headlamp lit at its smokebox's lens.
+        // The locomotive's headlamp lit at its smokebox's lens (decision
+        // 930: the CT273's own lens, on top of its smokebox).
         let head = recipes.models[try XCTUnwrap(pack.index(of: "set-SUMMER-head"))]
         let lamp = head.vertices.filter(\.glows)
         XCTAssertFalse(lamp.isEmpty)
-        XCTAssertTrue(lamp.allSatisfy { abs($0.x - 5.67) < 0.02 && abs($0.z - 2.83) < 0.14 && abs($0.y) < 0.14 })
+        XCTAssertTrue(lamp.allSatisfy { abs($0.x - 5.435) < 0.02 && abs($0.z - 3.44) < 0.14 && abs($0.y) < 0.14 })
     }
 
     /// A train's key: its type's when the type has a style or a set, else
@@ -317,7 +331,8 @@ final class Map3DTrainSetTests: XCTestCase {
         // EMU; four or more the owner's old red commuter car.
         XCTAssertEqual(names("", 3), ["set-threeCarUrban-head", "set-threeCarUrban-car", "set-threeCarUrban-tail"])
         XCTAssertEqual(names("", 4), ["set-redCommuter-head", "set-redCommuter-car", "set-redCommuter-car", "set-redCommuter-tail"])
-        XCTAssertEqual(names("EMU100", 2), ["commuter-cab", "commuter-cab turned"])
+        // Decision 930: the EMU100 is its own set.
+        XCTAssertEqual(names("EMU100", 2), ["set-EMU100-head", "set-EMU100-tail"])
         // As #900 has them (the author, 2026-10-21): the 700T with its two
         // pantograph cars, the EMU3000, every metro size a C381 (decision
         // 461: #1323's, at its own lengths).
