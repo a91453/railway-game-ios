@@ -35,6 +35,12 @@ extension Map3DScene.Builder {
         ([.stationTransitHub, .commercialAvenue, .neighborhoodRetailCorner, .nightMarketAlley] as [Map3DCommercialKit.Example]).map { example in
             var builder = StationKitBuilder()
             builder.add(Map3DCommercialKit.model(for: example), at: .zero)
+            // Decision 935: the night market's bulbs, canopy and cart.
+            if example == .nightMarketAlley {
+                for part in Map3DMeshyMarketTemple.alleyParts(lift: 0.12) {
+                    builder.add(part.model, at: Map3DPoint(part.x, part.lift, part.right), angle: part.angle)
+                }
+            }
             let mesh = builder.mesh, bounds = mesh.bounds
             let length = 2 * max(-(bounds?.min.x ?? 0), bounds?.max.x ?? 0), width = 2 * max(-(bounds?.min.z ?? 0), bounds?.max.z ?? 0)
             return (example, ParkModel(mesh: mesh, length: length, width: width))

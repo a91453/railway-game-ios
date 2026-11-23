@@ -14,6 +14,9 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
             ("car carrier", Map3DFinlandCarCarrier.model(), Map3DFinlandCarCarrier.model(far: true), 26.70, 2.9),
             // Decision 916.
             ("open car carrier", Map3DFinlandCarCarrierGfot.model(), Map3DFinlandCarCarrierGfot.model(far: true), 26.40, 2.6),
+            // Decision 930.
+            ("luggage car", Map3DFinlandEdg.model(), Map3DFinlandEdg.model(far: true), 26.40, 3.2),
+            ("restaurant car", Map3DFinlandRestaurantCar.model(), Map3DFinlandRestaurantCar.model(far: true), 26.40, 3.2),
         ]
         for (label, near, far, length, width) in cars {
             let near = try XCTUnwrap(near, label), far = try XCTUnwrap(far, label)
@@ -51,9 +54,10 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
     }
 
     /// The intercity: the locomotive, five coaches, the control car at the
-    /// back with its cab turned back; the night train: the locomotive, four
-    /// sleeping cars and (decisions 914 and 916) two car carriers, the
-    /// open one and then the closed one, its tail lamps lit at the back.
+    /// back with its cab turned back; the night train: the locomotive, a
+    /// sleeping car, (decision 930) the restaurant car and the luggage
+    /// car, a sleeping car and (decisions 914 and 916) two car carriers,
+    /// the open one and then the closed one, its tail lamps lit at the back.
     func testTheSetsAreLaidAsTheRealTrains() throws {
         let pack = Map3DModelPack.standard
         let count = Map3DFinlandSr2.cars
@@ -68,8 +72,8 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
             XCTAssertEqual(try names(key), expected, key)
         }
         for key in [Map3DFinlandSleeper.key, Map3DFinlandSleeper.sr3Key] {
-            let sleepers: [String] = Array(repeating: "set-\(key)-car", count: 4)
-            let expected: [String] = ["set-\(key)-head"] + sleepers + ["set-\(key)-centre", "set-\(key)-tail"]
+            let expected: [String] = ["set-\(key)-head", "set-\(key)-car", "set-\(key)-panto", "set-\(key)-fourth", "set-\(key)-car",
+                                      "set-\(key)-centre", "set-\(key)-tail"]
             XCTAssertEqual(try names(key), expected, key)
         }
         let sr3 = try XCTUnwrap(pack.layout(forType: Map3DFinlandSr3.key, count: count))
@@ -87,6 +91,12 @@ final class Map3DFinlandTrains2Tests: XCTestCase {
         XCTAssertFalse(carrier.vertices.contains { $0.layer == Map3DVertex.glowing })
         XCTAssertEqual(carrier.length, 26.40, accuracy: 0.02, "the open car carrier before it")
         XCTAssertEqual(carrier.maximum.z, 4.535, accuracy: 0.03)
+        // Decision 930: the restaurant car a single-deck one, the luggage
+        // car as tall as the sleeping cars; neither lit as a train's end.
+        let restaurant = try XCTUnwrap(nightCars.pantograph), luggage = try XCTUnwrap(nightCars.fourth)
+        XCTAssertEqual(restaurant.maximum.z, 3.97, accuracy: 0.05)
+        XCTAssertEqual(luggage.maximum.z, 5.2, accuracy: 0.05)
+        XCTAssertFalse((restaurant.vertices + luggage.vertices).contains { $0.layer == Map3DVertex.glowing })
         // The control car's cab (its headlamps) at the train's back.
         let tail = try XCTUnwrap(pack.models.first { $0.name == "set-\(Map3DFinlandSr2.key)-tail" })
         let lamps = tail.vertices.filter { $0.color == Map3DTrainStyle.headlamp }.map(\.x)

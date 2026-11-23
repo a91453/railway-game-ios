@@ -29,8 +29,9 @@ final class Map3DCableNightLightsTests: XCTestCase {
 
     func testEveryCabinsGlassIsLitAfterDark() {
         let cabins = drawn("cablecar-cabin-")
-        // Maokong's two, Sun Moon Lake's four and Ngong Ping's two, near and far.
-        XCTAssertEqual(cabins.count, 16)
+        // Maokong's two, Sun Moon Lake's four, Ngong Ping's two and
+        // Wulai's two, near and far.
+        XCTAssertEqual(cabins.count, 20)
         for cabin in cabins {
             let lit = cabin.vertices.filter { Self.litGlass.contains($0.layer) }.count
             let dark = cabin.vertices.filter { Self.darkGlass.contains($0.layer) }.count
@@ -84,5 +85,39 @@ final class Map3DCableNightLightsTests: XCTestCase {
         }
         XCTAssertEqual(Map3DNgongPingCabin.kind(0), CablewayCabins.isCrystal(0) ? .crystal : .standard)
         XCTAssertEqual(Map3DPalette.slatGold, Map3DColor.rgb(0xA8904A))
+    }
+
+    /// Decision 930: Wulai's two cabins as the studio made them
+    /// (revision-2's README): the triangles, the size, on the rope at the
+    /// origin, one shape in two colours, the lamp panel and the red end
+    /// lamps lit, the colours the game's own.
+    func testTheWulaiCabinsAreTheStudios() throws {
+        var shapes: [[Float]] = []
+        for kind in Map3DWulaiCabin.Kind.allCases {
+            let near = try XCTUnwrap(Map3DWulaiCabin.model(kind)), far = try XCTUnwrap(Map3DWulaiCabin.model(kind, far: true))
+            XCTAssertEqual(near.triangleCount, 2_004, near.name)
+            XCTAssertEqual(far.triangleCount, 480, far.name)
+            for cabin in [near, far] {
+                XCTAssertEqual(cabin.maximum.x, 3.32, accuracy: 0.01, cabin.name)
+                XCTAssertEqual(cabin.minimum.x, -3.32, accuracy: 0.01, cabin.name)
+                XCTAssertEqual(cabin.maximum.y - cabin.minimum.y, 2.74, accuracy: 0.01, cabin.name)
+                XCTAssertEqual(cabin.minimum.z, -5.3, accuracy: 0.01, cabin.name)
+                XCTAssertLessThan(cabin.maximum.z, 0.5, cabin.name)
+                XCTAssertTrue(cabin.vertices.allSatisfy { Map3DWulaiCabin.meshPalette.contains($0.color) }, cabin.name)
+                let paint = kind == .green ? Map3DPalette.emu900Green : Map3DPalette.mtrRed
+                let other = kind == .green ? Map3DPalette.mtrRed : Map3DPalette.emu900Green
+                XCTAssertTrue(cabin.vertices.contains { $0.color == paint }, cabin.name)
+                XCTAssertFalse(cabin.vertices.contains { $0.color == other }, cabin.name)
+                XCTAssertTrue(cabin.vertices.contains { $0.glows && $0.color == Map3DPalette.lantern }, "\(cabin.name): its red end lamps")
+            }
+            XCTAssertEqual(near.vertices.filter { $0.glows && $0.color == CableParts.Paint.warm }.count, 12 * 3, "\(near.name): its lamp panel")
+            XCTAssertEqual(near.vertices.filter { $0.glows && $0.color == Map3DPalette.lantern }.count, 80 * 3, near.name)
+            // Wider than the gap a Maokong cabin leaves, still clear of the other rope's.
+            XCTAssertLessThan(near.maximum.y - near.minimum.y, Map3DCableCar.ropeSpacing, "two pass on the two ropes")
+            shapes.append(near.vertices.flatMap { [$0.x, $0.y, $0.z] })
+        }
+        XCTAssertEqual(shapes[0], shapes[1], "one shape in two colours")
+        XCTAssertEqual(Map3DWulaiCabin.kind(0), .green)
+        XCTAssertEqual(Map3DWulaiCabin.kind(11), .red)
     }
 }

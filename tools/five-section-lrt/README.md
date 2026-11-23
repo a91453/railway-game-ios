@@ -16,7 +16,7 @@
 
 ID 前綴 `lrt-five-`，完整 `lrt-five-formation`。全部原生 +x 前、+y 左、+z 上，單位公尺；依中心 x 平移，**不旋轉、不鏡射**。車殼四處間距 .20m，兩相接單元各自帶半個風琴與耦合器，半件伸出 .10m。完整車鼻至車鼻 34m，殼寬2.65m，屋頂3.25m；精確外廓與三角形看 manifest。輪徑.58m、每架軸距1.50m；端節架中心 local x=±1.1m，中節=0。輪底原生 z=0；兩短節懸掛在鉸接間，不應單獨落地或加輪。
 
-數字為**遊戲展示比例規格，非製造商工程尺寸**。私有參考 `taiwan-rail-reference-clean/source/rail-3d/integration/FORMATIONS.md` 及 `formations.js` 引述高雄市政府 `https://takao.kcg.gov.tw/article/2127` 的五節／約34m，程式寬2.65m作尺度參照；本次沒有重新認證該頁工程圖。其 `garage-blender-v1/caf.json` 是壓縮 Q 比例與四門群，與本輪圖片不同，不採其形狀、門位或 mesh。本輪五張 inline 圖均目視查看，未提供可下載本地檔，所以不做像素疊圖、不編造圖片 SHA。新圖的長—短—長—短—長與各長節兩組雙門優先。圖片看不見輪組／底部，三架六軸屬合理補全假設，仍資料不足。
+數字為**遊戲展示比例規格，非製造商工程尺寸**。私有參考 `rail-reference/regions/taiwan/source/rail-3d/integration/FORMATIONS.md` 及 `formations.js` 引述高雄市政府 `https://takao.kcg.gov.tw/article/2127` 的五節／約34m，程式寬2.65m作尺度參照；本次沒有重新認證該頁工程圖。其 `garage-blender-v1/caf.json` 是壓縮 Q 比例與四門群，與本輪圖片不同，不採其形狀、門位或 mesh。本輪五張 inline 圖均目視查看，未提供可下載本地檔，所以不做像素疊圖、不編造圖片 SHA。新圖的長—短—長—短—長與各長節兩組雙門優先。圖片看不見輪組／底部，三架六軸屬合理補全假設，仍資料不足。
 
 造型全新編寫：斜面且收窄的兩端、平窗帶、薄肩線、低裙板；不複製既有車的車體、頭尾、門窗或編組。色票只用專案 `shopAwnings[1]` 珊瑚橘、`shopAwnings[3]` 暖白、既有灰藍玻璃色票的0.62明度與鋼灰；霧面頂點色，不使用貼圖／品牌。既有模型只作同公尺相機下的風格比較。通用 box／封閉 facet／tube、M3DM writer、GLB packer、WebGL viewer 取自專案工具，沒有新依賴。
 

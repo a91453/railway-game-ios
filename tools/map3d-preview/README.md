@@ -81,7 +81,7 @@ cp tools/map3d-preview/Map3DLandmarkStudio.swift.txt Tests/GamePresentationTests
 swift build --build-tests
 # 舊版：在那個 commit 的 worktree 裡同樣複製、建置，再
 STUDIO_EXPORT=/tmp/old swift test --skip-build --filter Map3DLandmarkStudio
-python3 -I tools/map3d-preview/blender_mesh_to_raw.py <參考庫>/Railway/taiwan-rail-reference-clean/source/rail-3d/assets/blender-buildings-v1/national-theater /tmp/blender/nationalTheater.raw
+python3 -I tools/map3d-preview/blender_mesh_to_raw.py <參考庫>/Railway/rail-reference/regions/taiwan/source/rail-3d/assets/blender-buildings-v1/national-theater /tmp/blender/nationalTheater.raw
 STUDIO_DUMP=/tmp/sheet STUDIO_COLUMNS=/tmp/old,/tmp/blender,LIVE swift test --skip-build --filter Map3DLandmarkStudio
 tools/map3d-preview/render.sh /tmp/sheet /tmp/png/s r0c0-front,r0c1-front,...
 rm Tests/GamePresentationTests/Map3DLandmarkStudio.swift

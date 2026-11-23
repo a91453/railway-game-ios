@@ -4,7 +4,7 @@ each, with the height the owner's site shows it at (decision 402): for the
 3D map of a real-world game to lay the real lines as single, double or more
 tracks, as they are, at the heights of their viaducts and tunnels.
 
-    R=<railway-reference-private>/Railway/taiwan-rail-reference-clean/source/rail-3d/physical
+    R=<railway-reference-private>/Railway/rail-reference/regions/taiwan/source/rail-3d/physical
     python3 -I tools/real-railways/extract_tracks.py \\
         "$R/network.json" "$R/metro-network.json" "$R/level-profiles.json" \\
         RailwayGameApp/Resources/RealRailways/rail_tracks.json \\
