@@ -104,7 +104,10 @@ final class Map3DPaletteGuardTests: XCTestCase {
         check([Map3DPlatformProps.nameBoardGreen], "platform name board")
         check(Map3DHongKongLandmark.materialColours, "Hong Kong landmark materials")
         // Decision 895: Fukuoka Tower, and every registered landmark.
-        check(Map3DLandmarkRegistry.landmarks.flatMap(\.palette), "registered landmarks")
+        // Decision 931: M+'s and the Palace Museum's dark glass is the
+        // depots', trains' and street vehicles' own (#26313D, older than
+        // the palette), as the red commuter car's.
+        check(Map3DLandmarkRegistry.landmarks.flatMap(\.palette).filter { $0 != Map3DDepotFacilities.glass }, "registered landmarks")
         typealias Prop = Map3DSceneryProp
         check([Prop.bunkerBrick, Prop.bunkerStone, Prop.bunkerSteel, Prop.bunkerCoal, Prop.bunkerWood], "coal bunker")
     }
