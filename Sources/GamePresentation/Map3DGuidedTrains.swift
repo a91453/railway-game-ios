@@ -4,8 +4,8 @@ import Foundation
 /// (``Map3DGuidedMonorail``, ``Map3DGuidedMaglev``, ``Map3DGuidedSkyrail``)
 /// share: a white body with one band and one thin line under its windows,
 /// which differ only in the band's and the line's colours, and a model
-/// made about its guideway's running surface, which the game, drawing
-/// every line as ordinary track, stands on the rail instead.
+/// made about its guideway's running surface (decision 947 draws the
+/// guideways, ``Map3DGuideway``).
 enum Map3DGuidedTrains {
     /// The colours of the mesh's palette indices, in the order
     /// `glb_to_swift.py --materials` gave them: the studio's material
@@ -25,8 +25,10 @@ enum Map3DGuidedTrains {
     /// The mesh `name` of `encoded`, raised `lift` metres: the studio's
     /// models have z 0 at their guideway's running surface and reach under
     /// it (a straddling car's skirts beside its beam, a suspended car its
-    /// whole body), and the game has no such guideway, so each stands with
-    /// its lowest point on the rail. `nil` if it does not decode.
+    /// whole body). Raised so each stands with its lowest point on the
+    /// rail, where the track is ordinary; decision 947 draws a guideway's
+    /// running surface `lift` over the rails, so on its own beam the car
+    /// rides it. `nil` if it does not decode.
     static func model(_ name: String, in encoded: [String: String], palette: [UInt32], lift: Float) -> Map3DModelPack.Model? {
         guard let text = encoded[name], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters),
               let model = Map3DRedCommuter.decodedMesh([UInt8](data), named: name, palette: palette, glass: glassIndex) else { return nil }
@@ -71,7 +73,7 @@ public enum Map3DGuidedMonorail {
 
     /// How far its skirts reach under the beam's top, metres: the model
     /// is raised by it (``Map3DGuidedTrains/model(_:in:palette:lift:)``).
-    static let lift: Float = 1.3
+    static let lift: Float = Map3DGuideway.Kind.straddle.runningSurface
 
     /// The band the cable cars' blue, the line their red, the beam
     /// sample's the concrete's.
@@ -109,7 +111,7 @@ public enum Map3DGuidedMaglev {
     public static let middle = "guided-maglev-middle"
 
     /// How far its arms reach under the guideway's top, metres.
-    static let lift: Float = 0.75
+    static let lift: Float = Map3DGuideway.Kind.maglev.runningSurface
 
     /// The band the cable cars' dark navy, the line the EMU100's
     /// yellow-orange band (``TrainLivery/emu100``), the beam sample's
@@ -149,9 +151,9 @@ public enum Map3DGuidedSkyrail {
     public static let middle = "guided-skyrail-middle"
 
     /// How far its floor hangs under the beam's running surface, metres:
-    /// the game has no beam to hang it from, so it stands on the rail,
-    /// its bogies' housing on its roof.
-    static let lift: Float = 4.1
+    /// hung from its beam (decision 947) its floor is at the rails' height;
+    /// on track another line shares it stands on the rail.
+    static let lift: Float = Map3DGuideway.Kind.suspended.runningSurface
 
     /// The band the cable cars' green, the line their dark navy, the
     /// beam sample's the palette's steel.

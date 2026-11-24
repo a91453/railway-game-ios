@@ -1240,6 +1240,13 @@ extension Map3DScene {
         /// height, by section), the platforms' lines, the seeded streets
         /// kept and the level crossings.
         var trackLines: [(points: [Map3DPoint], kind: TrackSectionKind)] = []
+        /// Decision 947: which of ``trackLines`` are guideways (no overhead
+        /// line over them).
+        var guidedTrackLines: Set<Int> = []
+        /// Decision 947: the edges that are guideways, and the lines of the
+        /// platforms beside a suspended beam, once worked out
+        /// (``guideways(of:)``).
+        var guidewayEdges: (edges: [TrackEdgeID: Map3DGuideway.Kind], hung: [[Map3DPoint]])?
         var platformLines: [[Map3DPoint]] = []
         /// Decision 321: the platforms as laid, for the station kit.
         var laidPlatforms: [LaidPlatform] = []
@@ -2015,9 +2022,12 @@ extension Map3DScene {
             // Decision 888: the diamonds, their rails cut and their wing
             // rails laid.
             diamonds = Map3DDiamondCrossings.find(snapshot) { point($0) + Self.lifted }
+            // Decision 947: the guideway trains' lines' track, their beams.
+            let guided = guideways(of: snapshot).edges
             for (number, alignment) in snapshot.edges.enumerated() {
                 // Decision 407: a high-speed line's on its box girder.
                 let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : .railway
+                let guideway = guided[alignment.edge.id]
                 for span in samples.edges[number] where span.end > span.start && span.reaches(region) {
                     let line = span.line
                     guard line.count > 1 else { continue }
@@ -2026,9 +2036,10 @@ extension Map3DScene {
                     }
                     guard line.contains(where: inside) else { continue }
                     let points = line.map { point($0) + Self.lifted }
+                    if guideway != nil { guidedTrackLines.insert(trackLines.count) }
                     trackLines.append((points, span.kind))
                     for piece in Self.pieces(of: points) {
-                        addTrackPiece(piece, kind: span.kind, viaduct: viaduct)
+                        addTrackPiece(piece, kind: span.kind, viaduct: viaduct, guideway: guideway)
                     }
                 }
             }
@@ -2134,8 +2145,14 @@ extension Map3DScene {
         /// (a real track's, review L11-1), so a viaduct's piers stand where
         /// the whole track puts them, wherever the piece starts.
         mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway, railsNear: Bool = false,
-                                    from along: Float? = nil) {
+                                    from along: Float? = nil, guideway: Map3DGuideway.Kind? = nil) {
             let middle = line[line.count / 2]
+            // Decision 947: a guideway in place of the rails, the bed and
+            // the viaduct.
+            if let guideway {
+                addGuideway(line, kind: kind, guideway: guideway)
+                return
+            }
             switch kind {
             case .tunnel:
                 // Decision 359 (續): its bore round its bed.
@@ -2279,12 +2296,16 @@ extension Map3DScene {
             let middles = platforms.map { point($0.points[$0.points.count / 2]) }
             let others = snapshot.edges.map { ($0.edge.id, $0.geometry.points.map(point)) }
             let fast = world.highSpeedStations
+            // Decision 947: beside a guideway, level with its cars' doors
+            // and clear of its widest car.
+            let guided = guideways(of: snapshot).edges
             for (index, platform) in platforms.enumerated() {
                 guard platform.points.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { continue }
                 let line = platform.points.map { point($0) + Self.lifted }
                 let across = Map3DMesh.acrossDirections(line)[line.count / 2]
                 let middle = middles[index]
-                let edge = fast.contains(platform.platform.station) ? Self.highSpeedPlatformEdge : Self.platformEdge
+                let guideway = guided[platform.platform.edge]
+                let edge = guideway?.platformEdge ?? (fast.contains(platform.platform.station) ? Self.highSpeedPlatformEdge : Self.platformEdge)
                 let near = Self.nearestTracks(beside: line, others: others.filter { $0.0 != platform.platform.edge }.map(\.1))
                 // The other platforms of its station across the nearest
                 // track either side, far enough for an island between.
@@ -2318,7 +2339,12 @@ extension Map3DScene {
                     if room(-1) < Self.platformWidth, room(1) > room(-1) { side = 1 }
                     width = room(side)
                 }
-                platformLines.append(line) // Decision 263: no street over it.
+                // Decision 947: what stands on a platform stands
+                // ``platformHeight`` over its line, so a guideway's platform's
+                // line is raised (or lowered) by the difference.
+                let rise = guideway.map { $0.platformTop - Self.platformHeight } ?? 0
+                let laid = rise == 0 ? line : line.map { $0 + Map3DPoint(0, rise, 0) }
+                platformLines.append(laid) // Decision 263: no street over it.
                 // An island's `width` is its half on this track's side: the
                 // whole of it is held to the narrowest, as its partner was
                 // picked (decision 856; before, an island 2 to 4 m wide
@@ -2329,21 +2355,21 @@ extension Map3DScene {
                 let offset = side * (edge + width / 2)
                 // Decision 259: its waiting crowd, and the station's
                 // passengers outside.
-                addStationLife(line: line, offset: offset, width: width, station: platform.platform.station)
+                addStationLife(line: laid, offset: offset, width: width, station: platform.platform.station)
                 mesh(at: middle) { mesh in
-                    mesh.addRibbon(along: line, width: width, offset: offset, lift: Self.platformHeight, depth: Self.platformHeight + Self.bedDrop,
+                    mesh.addRibbon(along: laid, width: width, offset: offset, lift: Self.platformHeight, depth: Self.platformHeight + Self.bedDrop + rise,
                                    top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete,
                                    widths: curved, offsets: curved?.map { side * (edge + $0 / 2) })
                     // Decision 721: its edge line lit after dark.
                     let start = mesh.vertices.count
-                    mesh.addRibbon(along: line, width: 0.3, offset: side * (edge + 0.35), lift: Self.platformHeight + 0.01,
+                    mesh.addRibbon(along: laid, width: 0.3, offset: side * (edge + 0.35), lift: Self.platformHeight + 0.01,
                                    top: Map3DPalette.platformEdge)
                     mesh.makeNightLit(from: start)
                 }
-                addPlatformLight(line, offset: offset)
+                addPlatformLight(laid, offset: offset)
                 // Decision 321: its canopy and its station's building come
                 // with the station kit (`addStations`).
-                laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: line, offset: offset, width: width,
+                laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: laid, offset: offset, width: width,
                                                   structure: platform.structure, island: island,
                                                   edge: platform.platform.edge))
             }
