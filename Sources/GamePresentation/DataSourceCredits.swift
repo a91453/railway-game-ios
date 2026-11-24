@@ -1253,10 +1253,10 @@ public enum DataSourceCredits {
                     // (tools/coal-bunker/).
                     DataSourceCredit(
                         id: "coalBunkerModel",
-                        title: language.text("Coal bunker", "儲煤台"),
+                        title: language.text("Coaling stage", "給炭台"),
                         detail: language.text(
-                            "The elevated coal bunker with its conveyor in the old brick plants’ yards on the 3D map: a model the game’s author made.",
-                            "3D 地圖上老磚廠空地裡、附輸送帶的高架儲煤台：遊戲作者自己做的模型。"
+                            "The coaling stage with its conveyor in the old brick plants’ yards on the 3D map: a model the game’s author made.",
+                            "3D 地圖上老磚廠空地裡、附輸送帶的給炭台：遊戲作者自己做的模型。"
                         ),
                         notice: language.text(
                             "The game author’s own model, in the game’s colours, used with the author’s permission.",
