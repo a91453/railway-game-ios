@@ -84,11 +84,11 @@ final class RollingStockSessionTests: XCTestCase {
         let editing = GameSession(world: world)
         let before = editing.world.economy.balance
 
-        editing.reformSelectedLine(type: .maglev, cars: 2)
+        editing.reformSelectedLine(type: .d, cars: 2)
         XCTAssertEqual(editing.message?.kind, .success, editing.message?.text ?? "")
         for id in waiting {
             let train = try XCTUnwrap(editing.world.train(id: id))
-            XCTAssertEqual(train.type, .maglev)
+            XCTAssertEqual(train.type, .d)
             XCTAssertEqual(train.cars, 2)
             XCTAssertEqual(editing.world.assignedLine(of: id), Self.main)
             XCTAssertNotNil(train.position)
@@ -97,8 +97,8 @@ final class RollingStockSessionTests: XCTestCase {
             XCTAssertNil(editing.world.train(id: id)?.type, "on a trip, left as it was")
             XCTAssertEqual(editing.world.train(id: id)?.cars, 1)
         }
-        // Each: the maglev's price for one car less 70 % of the standard train's books, and one more car.
-        let each = (RollingStock.price(of: .maglev, cars: 1).amount - 31_500_000) + TrainType.maglev.pricing.eachCar.amount
+        // Each: the D train's price for one car less 70 % of the standard train's books, and one more car.
+        let each = (RollingStock.price(of: .d, cars: 1).amount - 31_500_000) + TrainType.d.pricing.eachCar.amount
         XCTAssertEqual(before - editing.world.economy.balance, Money(each * Int64(waiting.count)))
         XCTAssertTrue(editing.message?.text.contains("Left as they were") ?? false)
         XCTAssertEqual(editing.undoCount, 1, "one edit")
@@ -116,14 +116,14 @@ final class RollingStockSessionTests: XCTestCase {
         XCTAssertFalse(waiting.isEmpty)
         XCTAssertEqual(session.world.line(id: Self.main)?.assignedTrains, waiting)
         let before = session.world.economy.balance
-        session.reformSelectedLine(type: .maglev, cars: 1)
+        session.reformSelectedLine(type: .d, cars: 1)
         XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
         for id in waiting {
-            XCTAssertEqual(session.world.train(id: id)?.type, .maglev)
+            XCTAssertEqual(session.world.train(id: id)?.type, .d)
             XCTAssertEqual(session.world.train(id: id)?.cars, 1)
         }
-        // Each: one maglev car less 70 % of the one L car kept.
-        let each = RollingStock.price(of: .maglev, cars: 1).amount - RollingStock.price(of: .l, cars: 1).amount * 70 / 100
+        // Each: one D car less 70 % of the one L car kept.
+        let each = RollingStock.price(of: .d, cars: 1).amount - RollingStock.price(of: .l, cars: 1).amount * 70 / 100
         XCTAssertEqual(before - session.world.economy.balance, Money(each * Int64(waiting.count)))
     }
 

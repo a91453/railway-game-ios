@@ -17,6 +17,8 @@ import GameCore
 struct TestLine {
     let tiles: Int
     var row = 1
+    /// The track's system (decision 951); `nil`, ordinary track.
+    var system: TrackSystem?
 
     // The test layout's spacing: 1024 units, 16 m (the world has no cells).
     static let tile = Int64(1_024)
@@ -42,7 +44,7 @@ struct TestLine {
             try world.buildTrackNode(at: WorldCoordinate(x: centre.x, y: centre.y))
         }
         for x in 1..<tiles {
-            try world.buildTrackEdge(from: node(x - 1), to: node(x))
+            try world.buildTrackEdge(from: node(x - 1), to: node(x), system: system)
         }
     }
 

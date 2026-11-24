@@ -157,6 +157,11 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// 515, ``TrackEdge/mountain``): only the Alishan Forest Railway's.
     public var climbsMountains: Bool { TrainTypeCatalog.builtIn[row].climbsMountains }
 
+    /// The track system a train of this type runs on (decision 951,
+    /// ``TrackEdge/system``): a guideway for `MONORAIL`, `MAGLEV` and
+    /// `SKYRAIL`, ordinary track for the rest.
+    public var trackSystem: TrackSystem { TrainTypeCatalog.builtIn[row].trackSystem }
+
     /// Reads a code; a code no type has does not read, as the type's codes
     /// did when they were an enum's raw values.
     public init(from decoder: any Decoder) throws {

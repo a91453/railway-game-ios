@@ -403,11 +403,16 @@ extension GameWorld {
     ///
     /// - Throws: ``GameError/insufficientFunds(required:available:)`` when
     ///   the price does not fit in a ``Money``.
-    func edgeCost(of geometry: TrackGeometry, structure: TrackStructure, sections: [TrackSection]) throws(GameError) -> Money {
+    func edgeCost(
+        of geometry: TrackGeometry, structure: TrackStructure, sections: [TrackSection], system: TrackSystem = .conventional
+    ) throws(GameError) -> Money {
         let pieces = try pricedPieces(of: geometry, structure: structure, sections: sections)
         let extras = structure == .automatic || ground.isMapped
-        let (price, overflow) = Self.price(of: pieces, track: economy.costs.track.amount, extras: extras)
-        guard !overflow, price >= 0 else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
+        let (ordinary, overflow) = Self.price(of: pieces, track: economy.costs.track.amount, extras: extras)
+        guard !overflow, ordinary >= 0 else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
+        // Decision 951: a guideway costs more than ordinary track there.
+        let (price, overflowSystem) = TrackSystem.price(of: ordinary, on: system)
+        guard !overflowSystem, price >= 0 else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
         return Money(price)
     }
 
@@ -497,25 +502,31 @@ public struct TrackCostParts: Hashable, Sendable {
     public let viaductsAndBridges: Money
     /// What tunnels cost past the track price.
     public let tunnels: Money
+    /// What a guideway costs past ordinary track carried the same way
+    /// (decision 951, ``TrackSystem/costPermille``); nothing for ordinary
+    /// track.
+    public let guideway: Money
 
-    public init(track: Money, earthwork: Money, viaductsAndBridges: Money, tunnels: Money) {
+    public init(track: Money, earthwork: Money, viaductsAndBridges: Money, tunnels: Money, guideway: Money = .zero) {
         self.track = track
         self.earthwork = earthwork
         self.viaductsAndBridges = viaductsAndBridges
         self.tunnels = tunnels
+        self.guideway = guideway
     }
 
     public static let zero = TrackCostParts(track: .zero, earthwork: .zero, viaductsAndBridges: .zero, tunnels: .zero)
 
     /// What the edge costs.
     public var total: Money {
-        track + earthwork + viaductsAndBridges + tunnels
+        track + earthwork + viaductsAndBridges + tunnels + guideway
     }
 
     public static func + (lhs: TrackCostParts, rhs: TrackCostParts) -> TrackCostParts {
         TrackCostParts(
             track: lhs.track + rhs.track, earthwork: lhs.earthwork + rhs.earthwork,
-            viaductsAndBridges: lhs.viaductsAndBridges + rhs.viaductsAndBridges, tunnels: lhs.tunnels + rhs.tunnels
+            viaductsAndBridges: lhs.viaductsAndBridges + rhs.viaductsAndBridges, tunnels: lhs.tunnels + rhs.tunnels,
+            guideway: lhs.guideway + rhs.guideway
         )
     }
 }
@@ -570,13 +581,13 @@ extension GameWorld {
     ///   money.
     public func trackEdgePrice(
         from: WorldCoordinate, to: WorldCoordinate, curve: TrackCurve = .straight, profile: TrackProfile = .uniform,
-        structure: TrackStructure = .surface, mountain: Bool = false
+        structure: TrackStructure = .surface, mountain: Bool = false, system: TrackSystem = .conventional
     ) throws(GameError) -> Money {
         guard from != to, curve.controlPoints.allSatisfy(bounds.contains),
               let geometry = TrackGeometry(from: from, to: to, curve: curve, profile: profile)
         else { throw .invalidTrackGeometry }
         guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade(mountain: mountain)) else { throw .trackTooSteep }
-        return try edgeCost(of: geometry, structure: structure, sections: sections(of: geometry, structure: structure))
+        return try edgeCost(of: geometry, structure: structure, sections: sections(of: geometry, structure: structure), system: system)
     }
 
     /// Edge `id`'s long section and its price in parts (decision 124, H3),
@@ -586,7 +597,7 @@ extension GameWorld {
     public func longSection(of id: TrackEdgeID) -> TrackLongSection? {
         guard let edge = network.edge(id), let geometry = trackGeometry(of: id),
               let pieces = try? pricedPieces(of: geometry, structure: edge.structure, sections: edge.sections),
-              let cost = costParts(of: pieces, extras: edge.structure == .automatic || ground.isMapped)
+              let cost = costParts(of: pieces, extras: edge.structure == .automatic || ground.isMapped, system: edge.system)
         else { return nil }
         let spans = edge.sectionSpans
         func sample(at distance: Int64, kind: TrackSectionKind) -> TrackGroundSample? {
@@ -613,7 +624,7 @@ extension GameWorld {
     /// ``price(of:track:extras:)`` adds them up (``edgeCost(of:structure:sections:)``
     /// says when it takes the `extras`); `nil` when they do not fit in a
     /// whole number.
-    func costParts(of pieces: [(TrackPricedLength, TrackSectionKind)], extras: Bool) -> TrackCostParts? {
+    func costParts(of pieces: [(TrackPricedLength, TrackSectionKind)], extras: Bool, system: TrackSystem = .conventional) -> TrackCostParts? {
         let track = economy.costs.track.amount
         var lengths: Int64 = 0, structures: Int64 = 0, tunnels: Int64 = 0, earth: Int64 = 0, piers: Int64 = 0
         var overflow = false
@@ -645,14 +656,21 @@ extension GameWorld {
         }
         var bridges = times(structures)
         add(share(piers, TrackSectionRules.pierStep), to: &bridges)
-        let parts = TrackCostParts(
+        let ordinary = TrackCostParts(
             track: Money(times(lengths)), earthwork: Money(share(earth, TrackSectionRules.earthworkDivisor)),
             viaductsAndBridges: Money(bridges), tunnels: Money(times(tunnels))
         )
         var total: Int64 = 0
-        for part in [parts.track, parts.earthwork, parts.viaductsAndBridges, parts.tunnels] {
+        for part in [ordinary.track, ordinary.earthwork, ordinary.viaductsAndBridges, ordinary.tunnels] {
             add(part.amount, to: &total)
         }
-        return overflow ? nil : parts
+        guard !overflow else { return nil }
+        // Decision 951: what the guideway costs past ordinary track.
+        let (price, overflowSystem) = TrackSystem.price(of: total, on: system)
+        guard !overflowSystem else { return nil }
+        return TrackCostParts(
+            track: ordinary.track, earthwork: ordinary.earthwork, viaductsAndBridges: ordinary.viaductsAndBridges, tunnels: ordinary.tunnels,
+            guideway: Money(price - total)
+        )
     }
 }
