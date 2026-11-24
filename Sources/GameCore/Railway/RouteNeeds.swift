@@ -42,6 +42,14 @@ extension GameWorld {
                 return reservingApproach(candidate, envelopes: envelopes, limit: limit, following: following, memo: &memo)
             }
         }
+        // Decision 968: PROBE.
+        if route.moves, !blockSections, candidate.isDeadheading, case .travellingToStop? = candidate.execution {
+            let envelopes = authorityEnvelopes(of: candidate, along: route.stretches)
+            if Probe.on("dump") { dumpRoute(of: candidate, envelopes) }
+            if Probe.on("dl"), !Probe.on("dlfree"), let limit = depotLimit(of: candidate, envelopes) {
+                return reservingApproach(candidate, envelopes: envelopes, limit: limit, following: following, memo: &memo)
+            }
+        }
         let envelope = cover(of: bodyStretches(of: candidate) + route.stretches)
         if let holder = holder(of: envelope, except: candidate.id, holders: trackHolders(memo: &memo)) {
             if following, route.moves, let train = followingAuthority(of: candidate, route: envelope, memo: &memo) {

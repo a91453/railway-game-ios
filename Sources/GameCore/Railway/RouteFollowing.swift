@@ -384,7 +384,9 @@ extension GameWorld {
     /// never followed.
     func isLeading(_ train: Train, onto route: TrackCover, for follower: Train) -> Bool {
         guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
-              routeStretches(of: train).moves, blockSections || !isFollowing(train) || holdsToItsApproach(train)
+              routeStretches(of: train).moves,
+              blockSections || !isFollowing(train) || holdsToItsApproach(train) || Probe.on("chain") && leadsOutOfDepot(train, follower)
+                  || Probe.on("anylead") && follower.timetable.first.map({ station(id: $0.station)?.isDepot == true }) == true && follower.timetable.count == 2
         else { return false }
         let ways = Set((bodyStretches(of: follower) + routeStretches(of: follower).stretches).map(\.traversal))
         for stretch in bodyStretches(of: train) + routeStretches(of: train).stretches where ways.contains(stretch.traversal.reversed) {
@@ -394,6 +396,14 @@ extension GameWorld {
             return !train.timetable[stop].reverses && train.call(after: stop, cycle: cycle) != nil
         }
         return true
+    }
+
+    /// Decision 966: whether `train` and `follower` are both empty runs out
+    /// of the same depot.
+    func leadsOutOfDepot(_ train: Train, _ follower: Train) -> Bool {
+        guard train.isDeadheading, let from = train.timetable.first?.station,
+              from == follower.timetable.first?.station else { return false }
+        return station(id: from)?.isDepot == true
     }
 
     /// Whether `train`, travelling to a call, stops for it on track `route`
