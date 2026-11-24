@@ -404,11 +404,26 @@ struct RollingStockCatalogView: View {
     }
 
     private func figures(_ entry: RollingStockCatalog.Entry, language: DisplayLanguage) -> some View {
-        HStack(spacing: 8) {
-            figure(language.text("A car", "每節人數"), "\(entry.card.capacityPerCar)", language.text("riders", "人"))
-            figure(language.text("Top speed", "最高速度"), "\(entry.card.topSpeed)", "km/h")
-            figure(language.text("Doors a car", "每節車門"), "\(entry.doorsPerCar)", "")
-            figure(language.text("A day, one car", "每日（一節）"), entry.card.dailyCost.moneyText, "")
+        // Decision 962: how each model runs is part of it, so its rates
+        // stand beside its top speed.
+        let runs = entry.card.type?.performance
+        let rates = runs ?? .standard
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                figure(language.text("A car", "每節人數"), "\(entry.card.capacityPerCar)", language.text("riders", "人"))
+                figure(language.text("Top speed", "最高速度"), "\(entry.card.topSpeed)", "km/h")
+                figure(language.text("Doors a car", "每節車門"), "\(entry.doorsPerCar)", "")
+                figure(language.text("A day, one car", "每日（一節）"), entry.card.dailyCost.moneyText, "")
+            }
+            HStack(spacing: 8) {
+                figure(language.text("Accelerates", "加速"), TrainPerformance.rateText(rates.acceleration), "km/h/s")
+                figure(language.text("Brakes", "減速"), TrainPerformance.rateText(rates.braking), "km/h/s")
+            }
+            if runs == nil {
+                Text(verbatim: language.text("Runs as its line is planned.", "照路線的性能跑。"))
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+            }
         }
     }
 

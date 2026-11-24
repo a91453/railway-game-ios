@@ -60,6 +60,9 @@ extension PlayerCommand {
         case unplaceTrain(TrainID)
         /// The performance, and running at it if the train is moving.
         case setTrainPerformance(TrainID, TrainPerformance)
+        /// A train back to its type's own performance (decision 962,
+        /// ``GameWorld/restoreTrainFactoryPerformance(_:)``).
+        case restoreTrainFactoryPerformance(TrainID)
         case setTrainTimetable(TrainID, [ScheduledStop], period: Int64?)
         case startTrainService(TrainID)
         case stopTrainService(TrainID)
@@ -362,6 +365,10 @@ extension GameSession {
         case .setTrainPerformance(let id, let performance):
             guard let train = world.train(id: id) else { throw .unknownTrain(id) }
             try world.setTrainPerformance(id, to: performance)
+            if train.position != nil, train.movement.rate > 0 { try world.useTrainPerformanceForMovement(id) }
+        case .restoreTrainFactoryPerformance(let id):
+            guard let train = world.train(id: id) else { throw .unknownTrain(id) }
+            try world.restoreTrainFactoryPerformance(id)
             if train.position != nil, train.movement.rate > 0 { try world.useTrainPerformanceForMovement(id) }
         case .setTrainTimetable(let id, let stops, let period): try world.setTrainTimetable(id, to: stops, repeatingEvery: period)
         case .startTrainService(let id):
