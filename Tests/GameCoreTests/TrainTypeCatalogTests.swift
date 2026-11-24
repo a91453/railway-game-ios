@@ -51,6 +51,14 @@ final class TrainTypeCatalogTests: XCTestCase {
         .init(code: "SUMMER", capacity: 50, doors: 2, overloads: true, performance: .midsummerFormosa, first: 350_000, car: 35_000, permille: 1_650),
         // Decision 515.
         .init(code: "ALISHAN", capacity: 40, doors: 2, overloads: true, performance: .forestRailway, first: 180_000, car: 30_000, permille: 1_500),
+        // Decision 961.
+        .init(code: "TAROKO", capacity: 47, doors: 1, overloads: true, performance: .tiltingTaroko, first: 280_000, car: 60_000, permille: 1_300),
+        .init(code: "PUYUMA", capacity: 47, doors: 1, overloads: true, performance: .tiltingPuyuma, first: 280_000, car: 60_000, permille: 1_300),
+        .init(code: "EMU800", capacity: 150, doors: 3, overloads: true, performance: .emu800, first: 180_000, car: 40_000, permille: 1_000),
+        .init(code: "PUSHPULL", capacity: 52, doors: 2, overloads: true, performance: .pushPull, first: 350_000, car: 40_000, permille: 1_300),
+        .init(code: "DR3100", capacity: 52, doors: 2, overloads: true, performance: .dieselExpress, first: 200_000, car: 45_000, permille: 1_500),
+        .init(code: "DR1000", capacity: 120, doors: 2, overloads: true, performance: .dieselRailcar, first: 100_000, car: 40_000, permille: 1_400),
+        .init(code: "C381", capacity: 310, doors: 4, overloads: true, performance: .metroC381, first: 150_000, car: 40_000, permille: 1_000),
     ]
 
     /// Cents of New Taiwan dollars for a pinned price in the reference's dollars.
@@ -75,10 +83,12 @@ final class TrainTypeCatalogTests: XCTestCase {
     func testTheListsKeepTheirTypesAndOrder() {
         XCTAssertEqual(TrainType.main.map(\.rawValue), ["A", "B", "C"])
         XCTAssertEqual(TrainType.reference.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL"])
-        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER", "ALISHAN"])
+        XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER", "ALISHAN",
+                                                           "TAROKO", "PUYUMA", "EMU800", "PUSHPULL", "DR3100", "DR1000", "C381"])
         XCTAssertEqual(TrainType.referenceDefault.rawValue, "B")
         XCTAssertEqual([TrainType.a, .b, .c, .l, .d, .apm, .maglev, .skyRail, .monorail, .steam, .highSpeed, .emu3000,
-                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar, .midsummerFormosa, .alishan], TrainType.allCases)
+                        .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar, .midsummerFormosa, .alishan,
+                        .taroko, .puyuma, .emu800, .pushPull, .dr3100, .dr1000, .c381], TrainType.allCases)
     }
 
     func testTheStandardCarKeepsItsNumbers() {

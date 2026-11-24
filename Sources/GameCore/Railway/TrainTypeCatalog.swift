@@ -281,6 +281,23 @@ public enum TrainTypeCatalog {
         .init(code: "ALISHAN", family: .railway, offer: .added, capacity: 40, doors: 2, overloads: true,
               performance: .forestRailway, firstDollars: 540_000, carDollars: 90_000, operatingPermille: 1_500, carMetres: (13, 0),
               climbsMountains: true),
+        // Decision 961: the seven real models that had a performance and
+        // no type, each a type with its own performance (where each number
+        // comes from is in `docs/decisions/961.md`).
+        .init(code: "TAROKO", family: .railway, offer: .added, capacity: 47, doors: 1, overloads: true,
+              performance: .tiltingTaroko, firstDollars: 840_000, carDollars: 180_000, operatingPermille: 1_300, carMetres: (21, 0)),
+        .init(code: "PUYUMA", family: .railway, offer: .added, capacity: 47, doors: 1, overloads: true,
+              performance: .tiltingPuyuma, firstDollars: 840_000, carDollars: 180_000, operatingPermille: 1_300, carMetres: (20, 7)),
+        .init(code: "EMU800", family: .railway, offer: .added, capacity: 150, doors: 3, overloads: true,
+              performance: .emu800, firstDollars: 540_000, carDollars: 120_000, operatingPermille: 1_000, carMetres: (20, 3)),
+        .init(code: "PUSHPULL", family: .railway, offer: .added, capacity: 52, doors: 2, overloads: true,
+              performance: .pushPull, firstDollars: 1_050_000, carDollars: 120_000, operatingPermille: 1_300, carMetres: (20, 3)),
+        .init(code: "DR3100", family: .railway, offer: .added, capacity: 52, doors: 2, overloads: true,
+              performance: .dieselExpress, firstDollars: 600_000, carDollars: 135_000, operatingPermille: 1_500, carMetres: (20, 0)),
+        .init(code: "DR1000", family: .railway, offer: .added, capacity: 120, doors: 2, overloads: true,
+              performance: .dieselRailcar, firstDollars: 300_000, carDollars: 120_000, operatingPermille: 1_400, carMetres: (20, 0)),
+        .init(code: "C381", family: .metro, offer: .added, capacity: 310, doors: 4, overloads: true,
+              performance: .metroC381, firstDollars: 450_000, carDollars: 120_000, operatingPermille: 1_000, carMetres: (22, 0)),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

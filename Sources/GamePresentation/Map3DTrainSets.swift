@@ -371,6 +371,10 @@ public struct Map3DTrainSet: Sendable {
     static let byType: [String: String] = [
         "EMU3000": "emu3000", "HSR": "highSpeed",
         "A": "metroC381", "B": "metroC381", "C": "greenTram", "L": "metroC381", "D": "metroC381", "APM": wenhu370Key,
+        // Decision 961: the real models that were a performance before
+        // they were a type, as the set their performance had.
+        "TAROKO": "taroko", "PUYUMA": "puyuma", "EMU800": "emu800", "PUSHPULL": "pushPull",
+        "DR3100": "dieselExpress", "DR1000": "dieselRailcar", "C381": "metroC381",
     ]
 
     /// How far from the eye a car of `key` is drawn with its model, in
@@ -567,12 +571,14 @@ public struct Map3DTrainSet: Sendable {
     ]
 
     /// The key of a train of `type` with `performance`: its type's code
-    /// when that type has a style or a set, else its performance's when
-    /// that has a set, else its type's.
+    /// when that type has a style or a set (its own, or another's,
+    /// ``byType``), else its performance's when that has a set, else its
+    /// type's.
     public static func key(type: TrainType?, performance: TrainPerformance) -> String {
         let code = type?.spec.code ?? ""
         if Map3DModelPack.styleByType[code] != nil, code != "" { return code }
         if byKey[code] != nil { return code }
+        if byType[code] != nil { return code }
         if let preset = PerformancePreset(matching: performance) {
             let wanted = aliases[preset.code] ?? preset.code
             if byKey[wanted] != nil { return wanted }

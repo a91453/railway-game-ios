@@ -971,6 +971,14 @@ extension TrainType {
         "STAR": ("Formosa Star sightseeing train", "環島之星"),
         "SUMMER": ("Midsummer Formosa steam train", "仲夏寶島號"),
         "ALISHAN": ("Alishan Forest Railway mountain train", "阿里山林鐵登山列車"),
+        // Decision 961.
+        "TAROKO": ("TEMU1000 Taroko", "TEMU1000 太魯閣號"),
+        "PUYUMA": ("TEMU2000 Puyuma", "TEMU2000 普悠瑪號"),
+        "EMU800": ("EMU800 local", "EMU800 區間車"),
+        "PUSHPULL": ("Push-pull Tze-Chiang", "推拉式自強號"),
+        "DR3100": ("DR3100 diesel Tze-Chiang", "DR3100 柴聯自強號"),
+        "DR1000": ("DR1000 railcar", "DR1000 柴油客車"),
+        "C381": ("Taipei Metro C381", "台北捷運 C381"),
     ]
 }
 

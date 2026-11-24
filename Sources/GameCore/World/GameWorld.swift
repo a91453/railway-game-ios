@@ -2488,6 +2488,23 @@ public struct GameWorld: Equatable, Sendable {
         trains[index].performance = performance
     }
 
+    /// Sets train `id` back to its type's own performance (decision 961,
+    /// ``Train/factoryPerformance``): the way out for a train a save gave
+    /// a performance of its own before the type and its performance became
+    /// one choice. Placed or not, at no cost; a train already running as
+    /// its type, or of a type without a performance of its own, is left as
+    /// it is.
+    ///
+    /// - Throws, checked in this order: ``GameError/unknownTrain(_:)`` or
+    ///   ``GameError/trainServiceActive(_:)`` while it runs a service (its
+    ///   run follows the curve of the performance it set off with).
+    public mutating func restoreTrainFactoryPerformance(_ id: TrainID) throws(GameError) {
+        let index = try trainIndex(of: id)
+        guard let factory = trains[index].factoryPerformance, trains[index].performance != factory else { return }
+        guard trains[index].execution == nil else { throw .trainServiceActive(id) }
+        trains[index].performance = factory
+    }
+
     /// Replaces a placed train's path with `traversals` (Stage S3): the form
     /// ``route(from:to:)`` returns. Each traversal must be one a train may
     /// take after the one before it (see ``transitions(after:)``), the first

@@ -29,6 +29,12 @@ final class RealCarLengthTests: XCTestCase {
             "SUMMER": 1_280,
             // Decision 515: the Alishan Forest Railway's coaches, 13.0 m (estimated).
             "ALISHAN": 832,
+            // Decision 961: the reference's fleet catalogue's pitches
+            // (TEMU2000 20.7 m, EMU800 and PP coaches 20.3 m), its
+            // formations' "about 21 m" for the TEMU1000, and estimates
+            // (the DR3100 and DR1000 20.0 m, the C381 22.0 m).
+            "TAROKO": 1_344, "PUYUMA": 1_325, "EMU800": 1_299, "PUSHPULL": 1_299,
+            "DR3100": 1_280, "DR1000": 1_280, "C381": 1_408,
         ]
         XCTAssertEqual(Set(metres.keys), Set(TrainType.allCases.map(\.rawValue)))
         for type in TrainType.allCases {
