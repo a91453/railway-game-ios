@@ -61,8 +61,8 @@ final class Map3DTrainMaterialTests: XCTestCase {
                 // trains (decision 450's later note), Finnish intercity
                 // (decision 864), Fukuoka's (decision 893), the EMU900's cab
                 // (decision 904), the Puyuma (decision 905), the Taroko
-                // (decision 906), decision 930's trains and decision 957's steam
-                // coaches; the pack keeps
+                // (decision 906), decision 930's trains, decision 957's steam
+                // coaches and the Keikyu New 1000 (decision 956); the pack keeps
                 // that layer.
                 if materials.contains(before.layer) {
                     XCTAssertEqual(layer, before.layer, recipe.name)
@@ -72,7 +72,9 @@ final class Map3DTrainMaterialTests: XCTestCase {
                                             "set-EMU100", "set-MONORAIL", "set-MAGLEV", "set-SKYRAIL", "set-hkPeakTram", "set-SUMMER-head",
                                             "set-SUMMERFar-head",
                                             // Decision 957: the steam train's wooden coaches.
-                                            "set-STEAM-car", "set-STEAM-tail", "set-STEAMFar-car", "set-STEAMFar-tail"].contains { recipe.name.hasPrefix($0) },
+                                            "set-STEAM-car", "set-STEAM-tail", "set-STEAMFar-car", "set-STEAMFar-tail",
+                                            // Decision 956: the Keikyu New 1000, near and far.
+                                            "set-redCommuter"].contains { recipe.name.hasPrefix($0) },
                                   "\(recipe.name): only a cabin or a studio train marks its own glass")
                     continue
                 }

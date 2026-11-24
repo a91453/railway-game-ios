@@ -125,8 +125,11 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // 46,512 vertices more, 1.9 MB a copy).
         // Decision 957: the steam train a registered train, its seven
         // models (45,348 vertices) no longer counted here.
-        XCTAssertEqual(models.count, 968)
-        XCTAssertEqual(vertices, 6_835_188)
+        // Decision 956: the Keikyu New 1000's cars in the red commuter's
+        // place and its far set after them (6 models, 2,874 vertices more,
+        // 115 KB a copy).
+        XCTAssertEqual(models.count, 974)
+        XCTAssertEqual(vertices, 6_838_062)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 
