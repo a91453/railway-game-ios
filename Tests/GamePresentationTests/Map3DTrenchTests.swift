@@ -201,7 +201,10 @@ extension Map3DSceneMemoryTests {
                 }
             }
         }
-        XCTAssertGreaterThan(sections, 50, "the cutting is round here")
+        // Decision 943: on the Ministry of the Interior's ground, which has
+        // no trees on the hills, the cutting is shallower and shorter in
+        // these four chunks: 53 sections before, 46 now.
+        XCTAssertGreaterThan(sections, 40, "the cutting is round here")
         XCTAssertTrue(covered.isEmpty, "\(covered.count) points over the bed of \(sections * 3), first \(covered.prefix(3))")
         print("Map3DSceneMemoryTests: \(sections) sections, \(bridged) points under a road's bridge, \(chunks.count) chunks")
     }

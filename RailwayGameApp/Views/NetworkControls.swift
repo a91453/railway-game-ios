@@ -46,7 +46,10 @@ struct NetworkControls: View {
             case .passingLoop:
                 passingLoopOptions
             case .depot:
-                depotOptions
+                // DEPOT-SIDINGS-HIT: the sidings are chosen in the card's
+                // foot, over the button that lays them
+                // (``DepotSidingsChoice``).
+                EmptyView()
             case .cableway:
                 cablewayOptions
             }
@@ -329,21 +332,6 @@ struct NetworkControls: View {
         }
     }
 
-    // MARK: - Depot
-
-    /// Decision 214: how many sidings (the inspector says what the tap
-    /// picked and why it cannot go there). Decision 619 fans them out about
-    /// the picked end, as real yards stand, so the side is no longer asked.
-    private var depotOptions: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Stepper(value: $session.networkDepotSidings, in: DepotYard.sidings) {
-                Text(verbatim: session.language.text("\(session.networkDepotSidings) sidings", "\(session.networkDepotSidings) 股停車線"))
-                    .font(.footnote)
-                    .monospacedDigit()
-            }
-            .accessibilityIdentifier("network.depotSidings")
-        }
-    }
 
 
     // MARK: - Cable car
@@ -933,5 +921,30 @@ private struct NetworkModeSegment: View {
 
     var body: some View {
         Text(mode.title(in: language)).tag(mode)
+    }
+}
+
+/// Decision 214: how many sidings the Depot mode lays (the inspector says
+/// what the tap picked and why it cannot go there; decision 619 fans them
+/// out about the picked end, so the side is not asked). It stands in the
+/// details card's foot, over Lay Depot Sidings, as a train's cars stand
+/// over the button that places it (decision 588): with the mode row pinned
+/// on top (#2614), a phone on its side had room for the inspector and the
+/// button only, and the sidings, among the options, were below the card's
+/// edge (DEPOT-SIDINGS-HIT, full lane `fcaa3f0`).
+struct DepotSidingsChoice: View {
+    @Bindable var session: GameSession
+
+    static func shows(_ session: GameSession) -> Bool {
+        DetailsCardLayout.laysDepot(tool: session.tool, networkMode: session.networkMode)
+    }
+
+    var body: some View {
+        Stepper(value: $session.networkDepotSidings, in: DepotYard.sidings) {
+            Text(verbatim: session.language.text("\(session.networkDepotSidings) sidings", "\(session.networkDepotSidings) 股停車線"))
+                .font(.footnote)
+                .monospacedDigit()
+        }
+        .accessibilityIdentifier("network.depotSidings")
     }
 }

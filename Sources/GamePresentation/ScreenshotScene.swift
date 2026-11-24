@@ -84,6 +84,13 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
     /// request that drew them so.
     case acquired
 
+    /// ROSTERCRASH-2: the demo map with twenty more trains on its lines
+    /// and four on none, run on to the late morning: a train roster of
+    /// more rows than a screen holds at full height, so it opens on its
+    /// short rows, with trains waiting beside its Arrange page. For the UI
+    /// test that opens Arrange from there (`TrainRosterArrangeUITests`).
+    case rosterFleet
+
     /// Decision 555: a real-world map of Taipei round Taipei Main Station
     /// (``taipeiMain``) or Taipei 101 (``taipei101``), a short line laid
     /// 300 m north of it so the map opens there: for the screenshots of the 3D
@@ -431,6 +438,7 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
         case .crowdSurge: Self.crowdSurgeWorld(in: language, until: 3 * GameTime.secondsPerDay + 8 * 3_600)
         case .crowdSurgeToday: Self.crowdSurgeWorld(in: language, until: 5 * GameTime.secondsPerDay + 17 * 3_600)
         case .acquired: Self.acquiredWorld(in: language)
+        case .rosterFleet: Self.rosterFleetWorld(in: language)
         case .taipeiMain, .taipei101, .taichungViaduct, .interchange, .changhuaRoundhouse: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), in: language)
         case .hsuehshanTunnel, .suhuaTunnel, .suhuaGallery: Self.groundWorld(at: self, in: language)
         case .streetStop: Self.taipeiWorld(at: place ?? (25.0478, 121.5170), resume: .x10, in: language)
@@ -1106,6 +1114,47 @@ public enum ScreenshotScene: String, CaseIterable, Sendable {
             try world.advance(ticks: Int(acquiredRunSeconds / 600))
         } catch {
             preconditionFailure("The acquired screenshot scene no longer builds: \(error)")
+        }
+        world.setSpeed(.normal)
+        world.setSpeed(.paused)
+        return world
+    }
+
+    // MARK: - Roster fleet
+
+    /// ``rosterFleet``'s lines, each with its train running; the trains
+    /// it adds to those lines, which wait to be placed; and the trains it
+    /// leaves on no line.
+    public static let rosterFleetLines = 16
+    public static let rosterFleetExtraTrains = 8
+    public static let rosterFleetWaitingTrains = 4
+    /// ``rosterFleet`` runs on to 10:40 of its first day.
+    static let rosterFleetRunSeconds: Int64 = 10 * 3_600 + 40 * 60
+
+    private static func rosterFleetWorld(in language: DisplayLanguage) -> GameWorld {
+        let metre = WorldCoordinate.unitsPerMetre
+        var world = GameWorld.newGame(balance: 1_000_000_000)
+        // Sixteen lines and their trains cost more than a new game has.
+        world.setUnlimitedFunds(true)
+        do {
+            for line in 0..<rosterFleetLines {
+                let y = 8_000 * metre + Int64(line - rosterFleetLines / 2) * 400 * metre
+                let points = (0..<3).map { PlanPoint(x: 6_000 * metre + Int64($0) * 900 * metre, y: y) }
+                world = try LineBuilder.line(through: points, in: world)
+            }
+            let lines = world.lines.map(\.id)
+            for index in 0..<rosterFleetExtraTrains {
+                let train = try world.purchaseTrain(named: language.text("Extra \(index + 1)", "加班 \(index + 1)")).id
+                try world.assignTrain(train, to: lines[index % lines.count])
+            }
+            for index in 0..<rosterFleetWaitingTrains {
+                _ = try world.purchaseTrain(named: language.text("Spare \(index + 1)", "備用 \(index + 1)"))
+            }
+            // .fast is ten minutes a tick.
+            world.setSpeed(.fast)
+            try world.advance(ticks: Int(rosterFleetRunSeconds / 600))
+        } catch {
+            preconditionFailure("The roster fleet screenshot scene no longer builds: \(error)")
         }
         world.setSpeed(.normal)
         world.setSpeed(.paused)

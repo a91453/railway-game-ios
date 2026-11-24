@@ -391,7 +391,9 @@ extension GameWorld {
         let missing = missingGroundBlocks(under: points)
         guard !missing.isEmpty else { return }
         guard let heights, let frame = RealWorldFrame(world: self) else { throw .groundNotLoaded }
-        try setGround(heights.ground(of: missing, frame: frame))
+        // Decision 943: joined to the blocks a save made on the earlier
+        // heights file holds round them.
+        try setGround(heights.ground(of: missing, frame: frame, joining: ground.blocks))
     }
 }
 

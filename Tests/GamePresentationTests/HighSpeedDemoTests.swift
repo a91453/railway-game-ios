@@ -556,8 +556,22 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertFalse(on.isEmpty)
         // Decision 228: where a set is held up behind another, the two days
         // part by some seconds.
+        // Decision 943: on the Ministry of the Interior's terrain the demo's
+        // curves are gentler, so three legs (All Stops 9→10, Nine Stops 6→7,
+        // Five Stops 4→3) keep their limits where they once did without.
+        // Five Stops set 27 is slower near station 2 for it: set 10 (all
+        // stops) is held up behind it out of station 2 (decision 228) and is
+        // at worst 120 s late (0 with the limits off), set 15 (nine stops)
+        // 180 s (66 off); a late set keeps its limits (decision 306), so
+        // neither makes the time up. Their days with the limits on,
+        // measured, not a wider allowance.
+        let heldUp: [TrainID: Int64] = [TrainID(rawValue: 10): 120, TrainID(rawValue: 15): 180]
         for (train, late) in on {
-            XCTAssertLessThanOrEqual(late, (off[train] ?? 0) + GameTime.secondsPerMinute, "train \(train.rawValue)")
+            if let measured = heldUp[train] {
+                XCTAssertEqual(late, measured, "train \(train.rawValue), held up behind set 27")
+            } else {
+                XCTAssertLessThanOrEqual(late, (off[train] ?? 0) + GameTime.secondsPerMinute, "train \(train.rawValue)")
+            }
         }
 
         var (_, world, _) = try Self.built.get()

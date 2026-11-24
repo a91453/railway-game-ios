@@ -131,8 +131,13 @@ final class WenhuUndergroundTests: XCTestCase {
         XCTAssertEqual(open, [], "open to the sky between Songshan Airport and Dazhi")
         XCTAssertEqual(over, [], "over the ground along the real tunnel")
         // The rest is the two ramps down from the viaducts, a cutting
-        // until the game's tunnels begin 11 m down.
-        XCTAssertGreaterThan(Double(inTunnel) / Double(samples), 0.8, "\(inTunnel) of \(samples) samples of the real tunnel in a tunnel")
+        // until the game's tunnels begin 11 m down. Decision 943: on the
+        // Ministry of the Interior's ground the north portal's ground is
+        // the river plain's 6 m (the old surface model rose to 12–16 m
+        // there), so the ramp at its same grade is a cutting some 160 m
+        // longer: 100 of 121 samples in a tunnel before, 95 of 120 now
+        // (92 of 119 on a map centred on the line).
+        XCTAssertGreaterThan(Double(inTunnel) / Double(samples), 0.75, "\(inTunnel) of \(samples) samples of the real tunnel in a tunnel")
     }
 
     /// In the 3D map: from Songshan Airport to Dazhi the ground (the

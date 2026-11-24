@@ -50,6 +50,7 @@ public enum DataSourceCredits {
     static let nlscMetroURL = "https://data.gov.tw/dataset/73222"
     static let odblURL = "https://opendatacommons.org/licenses/odbl/1-0/"
     static let worldPopURL = "https://www.worldpop.org"
+    static let moiTerrainURL = "https://data.gov.tw/dataset/178729"
     static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
     static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
     static let worldCoverURL = "https://doi.org/10.5281/zenodo.7254221"
@@ -167,12 +168,13 @@ public enum DataSourceCredits {
     /// empty for the player's own map. A real-world map's 3D view draws
     /// the railways (OpenStreetMap, TDX), the buildings' footprints
     /// (Overture Maps, OpenStreetMap's under the ODbL) and the ground's
-    /// heights (Copernicus DEM): the photo, shared away from the game's
+    /// heights (the Ministry of the Interior's terrain model and, where it
+    /// does not reach, the Copernicus DEM; decision 943): the photo, shared away from the game's
     /// data sources page, names them all. Decision 811: and the ground's
     /// land cover (ESA WorldCover, CC BY 4.0).
     public static func map3DPhoto(realWorld: Bool, in language: DisplayLanguage) -> String {
         guard realWorld else { return "" }
-        return "© OpenStreetMap · Overture Maps · Copernicus DEM · © ESA WorldCover · \(language.text("MOTC TDX", "交通部 TDX"))"
+        return "© OpenStreetMap · Overture Maps · \(language.text("MOI DTM", "內政部 DTM")) · Copernicus DEM · © ESA WorldCover · \(language.text("MOTC TDX", "交通部 TDX"))"
     }
 
     /// The Open Government Data License, linked from every source under it.
@@ -1008,16 +1010,39 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("Licence", "授權條款"), url: mapLibreLicenseURL),
                         ]
                     ),
+                    // Decision 943: Taiwan's ground, its steep slopes and
+                    // the base map's hills, from the Ministry of the
+                    // Interior's terrain model where it reaches; the
+                    // licence asks for the provider, the year, the dataset
+                    // and its sentence.
+                    DataSourceCredit(
+                        id: "moiTerrain",
+                        title: language.text("Taiwan’s terrain", "台灣的地形"),
+                        detail: language.text(
+                            "The lie of the land on Taiwan’s main island, the islets beside it and Kinmen: how high the ground is on real-world maps, the hillsides steeper than 30 % where nothing new can be built, and the shaded hills of Taiwan’s OSM base map.",
+                            "台灣本島、鄰近小島與金門的地形：實景地圖的地面高低、坡度超過 30%、不能新蓋的山坡地，以及台灣 OSM 底圖上山的陰影。"
+                        ),
+                        notice: language.text(
+                            "Department of Land Administration, Ministry of the Interior, 2026: the 2026 edition of the 20-metre grid digital terrain model (DTM) of the whole of Taiwan. ",
+                            "內政部地政司 2026 年「2026年版全臺灣20公尺網格數值地形模型DTM資料」"
+                        ) + openGovernmentAttribution(in: language),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("The dataset", "資料集"), url: moiTerrainURL),
+                            openGovernmentLicense(in: language),
+                        ]
+                    ),
                     // Decision 115: the steep slopes, worked out from the
                     // Copernicus DEM, whose licence asks for this notice;
                     // decision 124: the ground's height, from the same
                     // data, and the licence's sentence on liability.
+                    // Decision 943: only where the Ministry of the
+                    // Interior's model does not reach.
                     DataSourceCredit(
                         id: "copernicusDEM",
                         title: "Copernicus DEM",
                         detail: language.text(
-                            "The lie of the land in Taiwan, Penghu, Kinmen and Matsu: how high the ground is on real-world maps, the hillsides steeper than 30 % where nothing new can be built, and the shaded hills of Taiwan’s OSM base map.",
-                            "台灣、澎湖、金門與馬祖的地形：實景地圖的地面高低、坡度超過 30%、不能新蓋的山坡地，以及台灣 OSM 底圖上山的陰影。"
+                            "The lie of the land where Taiwan’s own terrain model does not reach: Penghu, Matsu, Green Island and a patch of the mountains of Miaoli.",
+                            "台灣的地形模型沒有涵蓋的地方的地形：澎湖、馬祖、綠島，以及苗栗山區的一小塊。"
                         ),
                         notice: "Copernicus DEM GLO-30 (Matsu: GLO-90). Produced using Copernicus WorldDEM-30 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved. The organisations in charge of the Copernicus programme by law or by delegation do not incur any liability for any use of the Copernicus WorldDEM-30.",
                         links: [

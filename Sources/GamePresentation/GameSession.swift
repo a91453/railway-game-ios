@@ -931,6 +931,8 @@ public final class GameSession {
     /// without it is worked out again.
     @ObservationIgnored public var heights: HeightGrid? {
         didSet {
+            // Decision 943: a save made on the earlier heights file.
+            if let joining = heights.map(world.groundJoining), !joining.isEmpty { try? world.setGround(joining) }
             networkPreviewMemo = nil
             platformLevellingMemo = nil
             stationLayoutMemo = nil

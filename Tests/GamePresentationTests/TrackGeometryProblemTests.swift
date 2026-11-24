@@ -122,19 +122,29 @@ final class TrackGeometryProblemTests: XCTestCase {
     /// Where no grade reaches from one end to the other (the trace has no
     /// stretch at all), the card shows the real line's way, its length and
     /// its ends' heights, not "0 m · ↕ 0 m": here a short stretch out of a
-    /// tunnel's mouth up steep ground south of Nan'ao.
+    /// tunnel's mouth up steep ground south of Nan'ao, on the map the app
+    /// opens there. Decision 943: on the Ministry of the Interior's ground
+    /// the 200 m from 3,700 m before the station this took, and every
+    /// 200 m within 15 km of it on a game anchored at the station, have a
+    /// grade that reaches (the old ground's tree line was the step); the
+    /// screenshot's 100 m still has none.
     func testATraceNoGradeReachesShowsItsWay() throws {
-        let (session, line, station) = try nanao()
-        session.tapNetwork(at: line.point(at: station - 3_700 * metre).plan, reach: reach)
-        session.tapNetwork(at: line.point(at: station - 3_500 * metre).plan, reach: reach)
+        let nanao = try BundledRealData.station("南澳", in: "tra_sched")
+        let expansion = try XCTUnwrap(RealWorldExpansion(around: try XCTUnwrap(nanao.anchor)))
+        var world = GameWorld.newRealWorldExpansionGame(expansion, ridersStep: 12_000)
+        try world.mapGround()
+        let session = GameSession(world: world, language: .traditionalChinese)
+        session.heights = try XCTUnwrap(HighSpeedDemoTests.heights)
+        session.railways = try BundledRealData.railways()
+        XCTAssertTrue(session.traceWhereNoGradeReaches())
         let preview = try XCTUnwrap(session.networkPreview)
         XCTAssertEqual(preview.traced, 0)
         XCTAssertEqual(preview.problem, "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。")
-        XCTAssertEqual(Double(preview.length) / metre, 200, accuracy: 20, "the way, not 0 m")
+        XCTAssertEqual(Double(preview.length) / metre, 100, accuracy: 15, "the way, not 0 m")
         let first = try XCTUnwrap(preview.points.first), last = try XCTUnwrap(preview.points.last)
         XCTAssertEqual(preview.startHeight, first.z)
         XCTAssertEqual(preview.endHeight, last.z)
-        XCTAssertGreaterThan(abs(preview.endHeight - preview.startHeight), 8 * WorldCoordinate.unitsPerMetre, "more than 40‰ of 200 m apart")
+        XCTAssertGreaterThan(abs(preview.endHeight - preview.startHeight), 4 * WorldCoordinate.unitsPerMetre, "more than 40‰ of 100 m apart")
     }
 
     /// The website screenshot test's trace (`-ui-test-trace-refused`), on
