@@ -228,15 +228,15 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
     /// every model of them as it was on main before this decision.
     /// (Decision 483 made the Ming-Ri #1480's E200CK units; decision 541
     /// the Blue Train two R100s and #1671's coaches; decision 953 the
-    /// Formosa Star's coaches the Chu-Kuang coach, its E500s as they were.)
+    /// Formosa Star's coaches the Chu-Kuang coach, its E500s as they were;
+    /// decision 957 the steam train's coaches the studio's wooden coach,
+    /// ``Map3DSteamCoachTests``, its locomotive and tender as they were.)
     func testTheOtherHauledSetsAreAsTheyWere() throws {
         let before: [String: String] = [
             "set-STAR-head": "9847c0f5eb19364", "set-STARFar-head": "8dbdf8cee771ebe4",
-            "set-STEAM-head": "b043cf673bc3f74a", "set-STEAM-car": "1ef18359c168b9f5", "set-STEAM-tail": "267f145e46bbcd85",
-            "set-STEAM-tender": "3f3c9943404f058f",
+            "set-STEAM-head": "b043cf673bc3f74a", "set-STEAM-tender": "3f3c9943404f058f",
         ]
         for (name, expected) in before { XCTAssertEqual(hash(try model(name)), expected, name) }
-        XCTAssertNil(Map3DTrainSet.named("STEAMFar"))
     }
 
     /// Decision 953: the Formosa Star's coaches are the Chu-Kuang coach,

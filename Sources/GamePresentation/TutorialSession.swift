@@ -57,6 +57,20 @@ extension GameSession {
         return keptTutorialAnswer(tutorial.index, done: done)
     }
 
+    /// What the card says on the last step once it is done: that Finish
+    /// ends the tutorial. The last step does not move on by itself
+    /// (decision 177), and lesson 1's ends on an action, the first fares
+    /// (decision 266): the AI testers' players (round 1, 2026-11-23) saw
+    /// the fares come in and waited for the step to change. `nil` on every
+    /// other step, on a last step to read, and before it is done.
+    public var tutorialFinishPrompt: String? {
+        guard let tutorial, tutorial.isLastStep, tutorial.step.goal != .read, isTutorialStepDone else { return nil }
+        if tutorial.step.goal == .earnFare {
+            return language.text("Fares are in. Tap Finish.", "車資進帳了，按「完成教學」。")
+        }
+        return language.text("Done. Tap Finish.", "做到了，按「完成教學」。")
+    }
+
     /// Whether the step on screen moves on by itself
     /// (``Tutorial/autoAdvanceDelay`` after it is done, decision 188): an
     /// action step, done, that was not reached by Back, and not the last.
@@ -231,8 +245,24 @@ extension GameSession {
     /// on screen, for a step that cannot be done here (decision 188). Only
     /// for an action step before the last; never finishes the tutorial,
     /// which only Finish does (decision 177).
+    ///
+    /// A step that only chooses a tool or a mode has it chosen for the
+    /// player, as the steps after it count on it: the AI testers' players
+    /// (round 1, 2026-11-23) skipped "Tap Station", and tapping the track
+    /// on the next step drew track instead of picking the station's place.
+    /// What a skipped step was to build cannot be built for them; the
+    /// steps that need it say so (``tutorialHint``).
     public func skipTutorialStep() {
         guard let shown = tutorial, shown.step.goal != .read, !shown.isLastStep else { return }
+        switch shown.step.goal {
+        case .chooseTool(let wanted):
+            selectTool(wanted)
+        case .chooseNetworkMode(let mode):
+            selectTool(.network)
+            setNetworkMode(mode)
+        default:
+            break
+        }
         moveTutorialForward(to: shown.index + 1)
     }
 
@@ -679,10 +709,45 @@ extension GameSession {
         return keptTutorialHint(tutorial.index, hint: workOutTutorialHint(tutorial))
     }
 
+    /// What a step needs that an earlier step, skipped, was to build
+    /// (the AI testers' round 1, 2026-11-23): track for the station steps,
+    /// two stations for the line steps, a line for the service steps. Said
+    /// as what to do, not as a problem, which would offer to skip this step
+    /// too.
+    private func tutorialMissingHint(for goal: TutorialGoal) -> TutorialHint? {
+        switch goal {
+        case .chooseNetworkMode(.platform), .pickPlatformSite, .buildStation:
+            guard world.network.edges.isEmpty else { break }
+            if tool != .network {
+                return TutorialHint(language.text("Tap Build to get the network tool back.", "點「建設」拿回路網工具。"))
+            }
+            return TutorialHint(language.text(
+                "No track yet. Tap Lay, then where it starts and where it ends, then ✓.",
+                "還沒有軌道。點「鋪設」，點起點和終點，再按 ✓。"
+            ))
+        case .startPickingStops, .pickLineStations, .createLine:
+            guard world.stations.count < 2 else { break }
+            return TutorialHint(language.text(
+                "A line needs two stations. Tap Build, then Station, then your track.",
+                "路線要兩座車站。點「建設」，再點「車站」和你的軌道。"
+            ))
+        case .startService, .earnFare:
+            guard world.lines.isEmpty else { break }
+            return TutorialHint(language.text(
+                "No line yet. Tap Lines, then Pick on Map and your two stations.",
+                "還沒有路線。點「路線」，按「在地圖上選站」，再點兩座車站。"
+            ))
+        default:
+            break
+        }
+        return nil
+    }
+
     /// ``tutorialHint`` for the step on screen, not done.
     private func workOutTutorialHint(_ tutorial: Tutorial) -> TutorialHint? {
         let before = tutorial.snapshot(forChapterOf: tutorial.index) ?? Tutorial.Snapshot(of: world)
         let goal = tutorial.step.goal
+        if let missing = tutorialMissingHint(for: goal) { return missing }
         // Decision 226, later: Done stands beside the network tool, as in
         // the game; left early, the track and station steps say how back.
         switch goal {
@@ -721,6 +786,9 @@ extension GameSession {
                 return TutorialHint(language.text("Tap the start and the end again.", "再點一次起點和終點。"))
             }
         case .pickPlatformSite, .buildStation:
+            if case .pickPlatformSite = goal, networkMode != .platform {
+                return TutorialHint(language.text("Tap Station first, then your track.", "先點「車站」，再點軌道。"))
+            }
             if case .buildStation = goal, let message, message.kind == .failure {
                 // Decision 376: short of cash, the fares pay for it.
                 let short = networkPlatformCost.map { !world.economy.canAfford($0) } == true

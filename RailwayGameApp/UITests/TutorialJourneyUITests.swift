@@ -229,6 +229,8 @@ private final class TutorialJourney {
             app.chooseSpeed("6000 times real time, fast forward")
             XCTAssertTrue(waitForFares(timeout: 120), failure("no fares came"))
         }
+        // The AI testers' round 1: once done, the card says to tap Finish.
+        XCTAssertTrue(app.staticTexts["tutorial.finishPrompt"].appears(within: 5), failure("no Finish prompt"))
         tapNext(finishing: true)
         XCTAssertTrue(card.disappears(within: 10), failure("Finish did not end the tutorial"))
         XCTAssertFalse(folded.exists, failure("Finish left the folded card"))
