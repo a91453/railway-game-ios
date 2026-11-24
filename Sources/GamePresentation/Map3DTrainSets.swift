@@ -176,9 +176,10 @@ public struct Map3DTrainSet: Sendable {
             mingRi(),
             mingRi(far: true),
             // Decision 286, later (third): the Formosa Star's pink coaches
-            // behind the E500.
-            e500Hauled("STAR", coach: coach(TrainLivery.formosaStar, band: 0.38...0.43)),
-            e500Hauled("STAR", far: true, coach: coach(TrainLivery.formosaStar, band: 0.38...0.43)),
+            // behind the E500; decision 953: the Chu-Kuang coach in the
+            // Formosa Star's pink, near and far.
+            e500Hauled("STAR", coach: formosaStarCoach),
+            e500Hauled("STAR", far: true, coach: formosaStarCoach),
             // Decision 286, later (fourth): the Midsummer Formosa's
             // Chu-Kuang coaches; decision 399: behind #1103's steam
             // locomotive and its tender, in place of the black hood unit.
@@ -1415,14 +1416,16 @@ public struct Map3DTrainSet: Sendable {
         /// navy and cream baked into the model, so `style` and `tint`
         /// paint nothing, and its light model from 500 m out.
         var chuKuang = false
+        /// Decision 953: the Chu-Kuang coach's paint, when `chuKuang`.
+        var paint = Map3DChuKuangPassenger.Paint.chuKuang
 
         func middle(named name: String, far: Bool) -> Map3DModelPack.Model {
-            chuKuang ? Map3DChuKuangPassenger.model(.standard, far: far)
+            chuKuang ? Map3DChuKuangPassenger.model(.standard, far: far, paint: paint)
                 : Map3DTrainSet.baked(SceneKitCab.coach(style: style, named: name), tint: tint)
         }
 
         func tail(named name: String, far: Bool) -> Map3DModelPack.Model {
-            chuKuang ? Map3DTrainSet.chuKuangTail(far: far) : Map3DTrainSet.tailCoach(self, named: name)
+            chuKuang ? Map3DTrainSet.chuKuangTail(far: far, paint: paint) : Map3DTrainSet.tailCoach(self, named: name)
         }
     }
 
@@ -1432,6 +1435,15 @@ public struct Map3DTrainSet: Sendable {
         var chuKuang = coach(TrainLivery.e200ChuKuang)
         chuKuang.chuKuang = true
         return chuKuang
+    }()
+
+    /// Decision 953: the Formosa Star's coach, the Chu-Kuang coach it was
+    /// rebuilt from (decision 286) in its pink and deep pink.
+    static let formosaStarCoach: Coach = {
+        var star = coach(TrainLivery.formosaStar)
+        star.chuKuang = true
+        star.paint = .formosaStar
+        return star
     }()
 
     static func coach(_ livery: TrainLivery, band: ClosedRange<Float> = 0.5...0.86) -> Coach {
@@ -1468,8 +1480,8 @@ public struct Map3DTrainSet: Sendable {
     /// backs on the wall, 0.1 m proud of it, 0.9 to 1.1 m from the middle
     /// and 1.45 m up, where the wall is bare navy. The lamps are not part of
     /// the coach's recipe (#1306), so are added to its vertices.
-    static func chuKuangTail(far: Bool) -> Map3DModelPack.Model {
-        let coach = Map3DChuKuangPassenger.model(.standard, far: far)
+    static func chuKuangTail(far: Bool, paint: Map3DChuKuangPassenger.Paint = .chuKuang) -> Map3DModelPack.Model {
+        let coach = Map3DChuKuangPassenger.model(.standard, far: far, paint: paint)
         var builder = StationKitBuilder()
         let wall = -Map3DChuKuangPassenger.bodyHalfLength
         for z: Float in [-1, 1] {

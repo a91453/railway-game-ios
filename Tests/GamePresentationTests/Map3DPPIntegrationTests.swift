@@ -84,7 +84,8 @@ final class Map3DPPIntegrationTests: XCTestCase {
         // Star's are as they were. Decision 483: the Ming-Ri is #1480's
         // E200 and coaches (Map3DMetroSets483Tests).
         let existing: [(String, Map3DTrainSet.Coach)] = [
-            ("STAR", Map3DTrainSet.coach(TrainLivery.formosaStar, band: 0.38...0.43)),
+            // Decision 953: the Chu-Kuang coach in the Formosa Star's pink.
+            ("STAR", Map3DTrainSet.formosaStarCoach),
         ]
         for (key, coach) in existing {
             for far in [false, true] {

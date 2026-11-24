@@ -10,12 +10,11 @@ final class Map3DE500Tests: XCTestCase {
             XCTAssertEqual(near.build().head.vertices,Map3DE500.model().vertices)
             XCTAssertEqual(far.build().head.vertices,Map3DE500.model(far:true).vertices)
             XCTAssertEqual(Map3DTrainSet.reach(of:key),500)
-            if key == "E500CK" {
-                // Decision 430: the Chu-Kuang coach has a light model of its own.
+            do {
+                // Decision 430: the Chu-Kuang coach has a light model of its
+                // own; decision 953: the Formosa Star's too.
                 XCTAssertNotEqual(near.build().middle?.vertices,far.build().middle?.vertices)
                 XCTAssertLessThan(try XCTUnwrap(far.build().middle).triangleCount,try XCTUnwrap(near.build().middle).triangleCount)
-            } else {
-                XCTAssertEqual(near.build().middle?.vertices,far.build().middle?.vertices)
             }
         }
     }
