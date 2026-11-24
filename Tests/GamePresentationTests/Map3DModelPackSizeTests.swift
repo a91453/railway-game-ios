@@ -118,8 +118,10 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // 600 KB a copy).
         // Decision 941: the level crossings' boom after them (1 model, 204
         // vertices more, 8 KB a copy).
-        XCTAssertEqual(models.count, 973)
-        XCTAssertEqual(vertices, 6_833_304)
+        // Decision 949: the bicycle rack and shed after it (2 models, 720
+        // vertices more, 29 KB a copy).
+        XCTAssertEqual(models.count, 975)
+        XCTAssertEqual(vertices, 6_834_024)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

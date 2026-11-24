@@ -166,8 +166,10 @@ public enum Map3DShowcase {
         Entry("ALISHAN", "Alishan Forest Railway mountain train", "阿里山林鐵登山列車", .other, cars: 6, most: 8, gauge: 0.762),
         Entry("threeCarUrban", "Three-car urban EMU", "三節都市電聯車", .other, cars: 3, fixed: true),
         Entry("greenCommuter", "Two-car green EMU", "兩節綠色電聯車", .other, cars: 2, fixed: true),
-        // The owner's old red commuter car (Map3DRedCommuter).
-        Entry("redCommuter", "Red commuter EMU", "紅色通勤電聯車", .other, cars: 4, most: 10),
+        // The owner's old red commuter car (Map3DRedCommuter): the earlier
+        // version names it the Keikyu New 1000 (decision 891, later), a
+        // standard-gauge Japanese commuter EMU.
+        Entry("redCommuter", "Keikyu New 1000", "京急新1000形", .japan, cars: 4, most: 10, gauge: 1.435),
         // Decision 782: then the registered trains' own rows
         // (``Map3DTrainRegistration/showcase``).
     ] + Map3DTrainRegistry.trains.flatMap(\.showcase)
