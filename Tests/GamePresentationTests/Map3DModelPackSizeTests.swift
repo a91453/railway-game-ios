@@ -123,8 +123,10 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // Decision 953: the Formosa Star's coaches the Chu-Kuang coach in
         // pink, near and far, and their light versions (the same models,
         // 46,512 vertices more, 1.9 MB a copy).
-        XCTAssertEqual(models.count, 975)
-        XCTAssertEqual(vertices, 6_880_536)
+        // Decision 957: the steam train a registered train, its seven
+        // models (45,348 vertices) no longer counted here.
+        XCTAssertEqual(models.count, 968)
+        XCTAssertEqual(vertices, 6_835_188)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 
