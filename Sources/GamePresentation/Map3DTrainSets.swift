@@ -750,7 +750,7 @@ public struct Map3DTrainSet: Sendable {
         func locomotive(far: Bool) -> Map3DModelPack.Model {
             switch self {
             case .steamTender: Map3DSteamTender.model(.locomotive)
-            case .duplex: Map3DDuplexSteam.model(.locomotive)
+            case .duplex: Map3DDuplexSteam.model(.locomotive, far: far)
             case .ct273: Map3DCT273.model(.locomotive, far: far) ?? Map3DSteamTender.model(.locomotive)
             }
         }
@@ -758,7 +758,7 @@ public struct Map3DTrainSet: Sendable {
         func tender(far: Bool) -> Map3DModelPack.Model {
             switch self {
             case .steamTender: Map3DSteamTender.model(.tender)
-            case .duplex: Map3DDuplexSteam.model(.tender)
+            case .duplex: Map3DDuplexSteam.model(.tender, far: far)
             case .ct273: Map3DCT273.model(.tender, far: far) ?? Map3DSteamTender.model(.tender)
             }
         }

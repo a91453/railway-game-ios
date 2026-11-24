@@ -18,9 +18,7 @@
   },
   "grandfathered": {
     "comment": "Sets on main when this tool was made that break a rule below. They stay as they are; a new model may not join the list. id -> reason.",
-    "noFar": {
-      "STEAM": "1 car(s) of 8000+ triangles and no far version (decision 417)"
-    },
+    "noFar": {},
     "farBox": {
       "metroC341": "the far car is not in the near car's box",
       "n700sG": "the far car is not in the near car's box"
