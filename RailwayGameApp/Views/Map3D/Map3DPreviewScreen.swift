@@ -1354,6 +1354,10 @@ struct Map3DSceneKey: Hashable {
     /// Decision 947: the lines running guideway trains, whose track is
     /// drawn as their guideway.
     let guideways: Map3DGuidewaySignature
+    /// Decision 964: the lines' trains' kinds of track (a slab and a
+    /// third rail, rubber-tyred pads, an embedded track), which the
+    /// track is drawn as.
+    let trackKinds: Map3DTrackKindSignature
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil,
          facades: Bool = Map3DQuality.scenesKeepFacades) {
@@ -1376,6 +1380,7 @@ struct Map3DSceneKey: Hashable {
         exhibits = Map3DRailwayMuseum.shown(in: world)
         freightYards = Map3DFreightYard.signature(of: world)
         guideways = Map3DGuidewaySignature(world: world)
+        trackKinds = Map3DTrackKindSignature(world: world)
     }
 
     /// Decision 517 續 (PR 3b): whether `other` differs from this only in
@@ -1385,7 +1390,7 @@ struct Map3DSceneKey: Hashable {
             && buildings == other.buildings && week == other.week && lines == other.lines && palette == other.palette
             && bought == other.bought && roads == other.roads && ownRoads == other.ownRoads && expansions == other.expansions
             && facades == other.facades && exhibits == other.exhibits && freightYards == other.freightYards
-            && guideways == other.guideways
+            && guideways == other.guideways && trackKinds == other.trackKinds
     }
 }
 

@@ -192,6 +192,16 @@ final class Map3DPreviewDump: XCTestCase {
                 let at = part.split(separator: ":").map { Double(String($0))! }
                 return PlanPoint(x: Int64(empty.originX + at[0] * metre), y: Int64(empty.originY + at[1] * metre))
             }, in: world)
+            // MAP3D_LINE_TYPE=<code>: its trains of this type instead
+            // (decision 964: the kind of track they run on).
+            if let code = ProcessInfo.processInfo.environment["MAP3D_LINE_TYPE"], let type = TrainType(rawValue: code) {
+                for line in world.lines {
+                    for train in line.assignedTrains {
+                        try world.unassignTrain(train)
+                        try world.assignTrain(try world.purchaseTrain(named: "Typed \(train.rawValue)", as: type).id, to: line.id)
+                    }
+                }
+            }
         }
         let tiles = ProcessInfo.processInfo.environment["MAP3D_BASEMAP"] == "1"
             ? try BaseMapTiles(data: Data(contentsOf: root.appendingPathComponent("BaseMap/taiwan.pmtiles"), options: .alwaysMapped), cities: cities) : nil
@@ -362,12 +372,14 @@ final class Map3DPreviewDump: XCTestCase {
         // unless given).
         if let at = ProcessInfo.processInfo.environment["MAP3D_TRAIN"].map({ $0.split(separator: ":").map { Float(String($0))! } }) {
             let pack = Map3DModelPack.standard
+            // MAP3D_TRAIN_TYPE=<code>: of this type's set.
+            let code = ProcessInfo.processInfo.environment["MAP3D_TRAIN_TYPE"] ?? ""
             let head = Map3DPoint(at[0], at.count > 4 ? at[4] : 0.2, at[1])
             let back = ((Map3DPoint(at[2], head.y, at[3]) - head).normalized) ?? Map3DPoint(1, 0, 0)
             for car in 0..<3 {
-                guard let model = pack.modelIndex(forType: "", carIndex: car, count: 3) else { continue }
+                guard let model = pack.modelIndex(forType: code, carIndex: car, count: 3) else { continue }
                 var a = head + back * (Float(car) * 20.5), b = head + back * (Float(car) * 20.5 + 20)
-                if pack.isTurned(forType: "", carIndex: car, count: 3) { swap(&a, &b) }
+                if pack.isTurned(forType: code, carIndex: car, count: 3) { swap(&a, &b) }
                 expand(Map3DTrains.instance(of: pack.models[model], index: model, from: b, to: a, stripe: Map3DColor.rgb(0x2F6DB5)))
             }
         }
