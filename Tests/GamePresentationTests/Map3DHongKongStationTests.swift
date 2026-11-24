@@ -20,7 +20,7 @@ final class Map3DHongKongStationTests: XCTestCase {
             .twoFloor: (1232, 330, 30.45, -9, 6.45, 11.95),
             .halt: (1108, 236, 12.2, -5.5, 3.05, 9.5),
         ]
-        XCTAssertEqual(Set(Map3DHongKongStation.models), Set(expected.keys))
+        XCTAssertEqual(Set(Map3DHongKongStation.models), Set(expected.keys).union([.wing1, .wing2, .frontCanopy]))
         for (kind, want) in expected {
             let near = try XCTUnwrap(Map3DHongKongStation.model(kind), kind.rawValue)
             let far = try XCTUnwrap(Map3DHongKongStation.model(kind, far: true), kind.rawValue)
@@ -35,7 +35,7 @@ final class Map3DHongKongStationTests: XCTestCase {
                 XCTAssertTrue(model.vertices.allSatisfy { Map3DHongKongStation.meshPalette.contains($0.color) }, kind.rawValue)
             }
         }
-        XCTAssertNil(Map3DHongKongStation.model(.wing1), "the wings are Taiwan's still")
+        XCTAssertNil(Map3DHongKongStation.model(.stairHead), "the stair head is Taiwan's still")
         XCTAssertEqual(Map3DHongKongStation.meshPalette.count, 13)
     }
 
@@ -66,10 +66,9 @@ final class Map3DHongKongStationTests: XCTestCase {
     /// the rule that picks Taiwan's (the halt, two floors for two
     /// platforms or more, one floor for the rest), and only in Hong Kong.
     func testWhichStationsAreHongKongs() throws {
-        XCTAssertTrue(Map3DHongKongStation.replaces(profile: .regional, expansion: nil))
-        XCTAssertTrue(Map3DHongKongStation.replaces(profile: .halt, expansion: nil))
-        XCTAssertFalse(Map3DHongKongStation.replaces(profile: .regional, expansion: .hall))
-        XCTAssertFalse(Map3DHongKongStation.replaces(profile: .elevated, expansion: nil))
+        XCTAssertTrue(Map3DHongKongStation.replaces(profile: .regional))
+        XCTAssertTrue(Map3DHongKongStation.replaces(profile: .halt))
+        XCTAssertFalse(Map3DHongKongStation.replaces(profile: .elevated))
         let cases: [(Map3DStationKit.Profile, Int, Map3DGenericStation.Model)] = [
             (.regional, 3, .oneFloor), (.regional, 2, .twoFloor), (.regional, 0, .twoFloor), (.halt, 3, .halt),
         ]
@@ -85,11 +84,104 @@ final class Map3DHongKongStationTests: XCTestCase {
                 XCTAssertTrue(hongKong.mesh.vertices.allSatisfy { Map3DHongKongStation.meshPalette.contains($0.color) })
             }
         }
-        var expanded = StationKitBuilder(), plain = StationKitBuilder()
-        expanded.hongKong = true
-        expanded.genericHouse(station(.regional), expansion: .hall)
-        plain.genericHouse(station(.regional), expansion: .hall)
-        XCTAssertEqual(expanded.mesh.triangleCount, plain.mesh.triangleCount, "an expanded one keeps Taiwan's building and wings")
+    }
+
+    /// Decision 967: the studio's Hong Kong wings and front canopy decode
+    /// at their size and triangle counts: a wing 10 m square about its
+    /// origin (its walkway 3 m further out in front, its eave over the
+    /// back), symmetric about x 0 so one mesh serves both ends; a canopy
+    /// unit 12 × 7 m.
+    func testTheWingsDecode() throws {
+        typealias Expected = (near: Int, far: Int, front: Float, back: Float, height: Float, half: Float)
+        let expected: [Map3DGenericStation.Model: Expected] = [
+            .wing1: (312, 96, -8, 5.3, 4.6, 5),
+            .wing2: (584, 138, -8, 5.45, 9.6, 5),
+            .frontCanopy: (124, 124, -3.5, 3.5, 5.05, 6),
+        ]
+        for (kind, want) in expected {
+            let near = try XCTUnwrap(Map3DHongKongStation.model(kind), kind.rawValue)
+            let far = try XCTUnwrap(Map3DHongKongStation.model(kind, far: true), kind.rawValue)
+            XCTAssertEqual(near.triangleCount, want.near, kind.rawValue)
+            XCTAssertEqual(far.triangleCount, want.far, kind.rawValue)
+            for model in [near, far] {
+                XCTAssertEqual(model.minimum.z, 0, accuracy: 0.02, kind.rawValue)
+                XCTAssertEqual(model.maximum.z, want.height, accuracy: 0.02, kind.rawValue)
+                XCTAssertEqual(model.minimum.x, -want.half, accuracy: 0.02, kind.rawValue)
+                XCTAssertEqual(model.maximum.x, want.half, accuracy: 0.02, kind.rawValue)
+                XCTAssertEqual(model.minimum.y, want.front, accuracy: 0.02, kind.rawValue)
+                XCTAssertEqual(model.maximum.y, want.back, accuracy: 0.02, kind.rawValue)
+                XCTAssertTrue(model.vertices.allSatisfy { Map3DHongKongStation.meshPalette.contains($0.color) }, kind.rawValue)
+            }
+        }
+    }
+
+    /// Decision 967: a wing's walls take the body's wall colour; nothing
+    /// else changes colour, and the canopy has no wall colour at all.
+    func testTheWingsTakeTheBodysWalls() throws {
+        let green = Map3DHongKong.tenementWalls[8], cream = Map3DHongKong.civicWalls[1], grey = Map3DHongKong.civicWalls[3]
+        XCTAssertEqual(Map3DHongKongStation.wingWalls(beside: .oneFloor), green)
+        XCTAssertEqual(Map3DHongKongStation.wingWalls(beside: .twoFloor), cream)
+        XCTAssertEqual(Map3DHongKongStation.wingWalls(beside: .halt), grey)
+        for kind in [Map3DGenericStation.Model.wing1, .wing2] {
+            for far in [false, true] {
+                let plain = try XCTUnwrap(Map3DHongKongStation.model(kind, far: far))
+                let greened = try XCTUnwrap(Map3DHongKongStation.model(kind, far: far, walls: green))
+                XCTAssertTrue(plain.vertices.contains { $0.color == cream }, kind.rawValue)
+                XCTAssertFalse(greened.vertices.contains { $0.color == cream }, kind.rawValue)
+                XCTAssertEqual(plain.vertices.count, greened.vertices.count)
+                for (a, b) in zip(plain.vertices, greened.vertices) {
+                    XCTAssertEqual(a.color == cream ? green : a.color, b.color, kind.rawValue)
+                }
+                let colours = Set(plain.vertices.map(\.color))
+                XCTAssertTrue(colours.contains(Map3DPalette.brick), "\(kind.rawValue): the walkway's red edge")
+                XCTAssertFalse(colours.contains(Map3DPalette.canopy) || colours.contains(Map3DPalette.gymGreen), "none of Taiwan's green")
+            }
+        }
+        let canopy = Set(try XCTUnwrap(Map3DHongKongStation.model(.frontCanopy)).vertices.map(\.color))
+        XCTAssertEqual(canopy, [Map3DPalette.brick, Map3DPalette.tileWhite, Map3DPalette.concrete, Map3DPalette.glazing])
+    }
+
+    /// Decision 967: an expanded Hong Kong station is Hong Kong's body
+    /// with Hong Kong's wings at both ends against the body's outline, the
+    /// second level with the canopy units in front, near only; Taiwan's
+    /// expanded station is as it was.
+    func testAnExpandedStationKeepsHongKongsLook() throws {
+        let cases: [(Map3DStationKit.Profile, Int, Map3DGenericStation.Model)] = [
+            (.regional, 3, .oneFloor), (.regional, 1, .twoFloor), (.halt, 3, .halt),
+        ]
+        for (profile, tier, kind) in cases {
+            let body = try XCTUnwrap(Map3DHongKongStation.model(kind))
+            let span = body.maximum.x - body.minimum.x + 20
+            let units = max(1, Int(span / 12))
+            for (expansion, wingKind) in [(StationExpansion.concourse, Map3DGenericStation.Model.wing1), (.hall, .wing2)] {
+                for far in [false, true] {
+                    var kit = StationKitBuilder()
+                    kit.hongKong = true
+                    kit.genericHouse(station(profile, tier: tier), expansion: expansion, far: far)
+                    let main = try XCTUnwrap(Map3DHongKongStation.model(kind, far: far))
+                    let wing = try XCTUnwrap(Map3DHongKongStation.model(wingKind, far: far))
+                    let canopies = expansion == .hall && !far ? units * 124 : 0
+                    let label = "\(kind.rawValue) \(expansion) far \(far)"
+                    XCTAssertEqual(kit.mesh.triangleCount, main.triangleCount + 2 * wing.triangleCount + canopies, label)
+                    XCTAssertTrue(kit.mesh.vertices.allSatisfy { Map3DHongKongStation.meshPalette.contains($0.color) }, label)
+                    let bounds = try XCTUnwrap(kit.mesh.bounds)
+                    // The wings' outer ends: the body's outline 10 m
+                    // further at each end (model −x is kit +z).
+                    XCTAssertEqual(bounds.max.z, -(body.minimum.x - 10), accuracy: 0.02, label)
+                    XCTAssertEqual(bounds.min.z, -(body.maximum.x + 10), accuracy: 0.02, label)
+                    // Nothing below 2.8 m past the platform-side wall.
+                    let low = kit.mesh.vertices.filter { $0.y < 0.25 + 2.8 }.map(\.x).min() ?? 7
+                    XCTAssertGreaterThanOrEqual(low, 7 - 0.01, label)
+                    // The front: the canopy's front edge 7 m in front of
+                    // the body's and wings' front, else the walkway.
+                    let front: Float = 7 + (kind == .halt ? 3 : 6) - Map3DHongKongStation.canopyBack(kind)
+                    XCTAssertEqual(bounds.max.x, canopies > 0 ? front + 7 : front, accuracy: 0.02, label)
+                }
+            }
+            var taiwan = StationKitBuilder()
+            taiwan.genericHouse(station(profile, tier: tier), expansion: .hall)
+            XCTAssertFalse(taiwan.mesh.vertices.contains { $0.color == Map3DPalette.brick }, "Taiwan's expanded \(kind.rawValue) as it was")
+        }
     }
 
     /// Its platform-side wall on x 7, the line the generic station's back
