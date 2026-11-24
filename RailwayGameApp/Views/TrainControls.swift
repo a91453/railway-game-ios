@@ -220,12 +220,42 @@ struct TrainControls: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityLabel(Text(verbatim: name))
                     .accessibilityIdentifier("train.identity")
-                PerformanceMenu(performance: train.performance, language: session.language, identifier: "train.performance",
-                                showsName: false, compact: true) { performance in
-                    session.setSelectedTrainPerformance(performance)
+                // Decision 962: how it runs is its model's, not a choice.
+                Text(verbatim: train.performance.figuresText(in: session.language))
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .accessibilityIdentifier("train.performance")
+                if train.hasCustomPerformance {
+                    customPerformance(of: train)
                 }
-                .equatable()
             }
+        }
+    }
+
+    /// Decision 962: a train a save gave another performance than its
+    /// model's says so, with a button back to its model's.
+    private func customPerformance(of train: Train) -> some View {
+        HStack(spacing: 8) {
+            Text(verbatim: session.language.text("Custom performance", "自訂性能"))
+                .font(.caption.weight(.bold))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Theme.chip, in: Capsule())
+                .foregroundStyle(Theme.textPrimary)
+            Button {
+                session.restoreTrainFactoryPerformance(train.id)
+            } label: {
+                Text(verbatim: session.language.text("Restore factory", "改回原廠"))
+                    .font(.caption.weight(.bold))
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .disabled(train.execution != nil)
+            .accessibilityIdentifier("train.restoreFactory")
         }
     }
 

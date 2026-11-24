@@ -1915,7 +1915,8 @@ struct LinesPanel: View {
                     .foregroundStyle(Theme.textSecondary)
             }
             // Stage C3: the performance its journeys are planned with
-            // (Stage W2c), and the journey that gives.
+            // (Stage W2c); decision 962: only its speed limit is chosen
+            // here, a train runs as its model does.
             PerformanceMenu(performance: line.performance, language: session.language, identifier: "line.performance") { performance in
                 session.setSelectedLinePerformance(performance)
             }
