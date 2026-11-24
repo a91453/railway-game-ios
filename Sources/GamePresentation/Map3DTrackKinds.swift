@@ -112,16 +112,13 @@ enum Map3DTrackKind: Int, Hashable, Sendable, CaseIterable {
     static let embeddedRail: Float = 0.1
     static let grooveWidth: Float = 0.26
 
-    /// The reference kit's materials (`slab`, `pad`, `fastener`, `cover`,
-    /// `insulator`, `paving`); the lawn its `#5f8a48` lightened to sit
-    /// with the game's ground.
-    static let slabColour = Map3DColor.rgb(0xBDB8AB)
-    static let padColour = Map3DColor.rgb(0x8D8F8C)
-    static let fastening = Map3DColor.rgb(0x4A4C4E)
-    static let cover = Map3DColor.rgb(0xD6CBA2)
-    static let insulator = Map3DColor.rgb(0x6F6257)
-    static let paving = Map3DColor.rgb(0x9D9A90)
-    static let lawn = Map3DColor.rgb(0x86A96B)
+    static let slabColour = Map3DPalette.trackSlab
+    static let padColour = Map3DPalette.trackPad
+    static let fastening = Map3DPalette.trackFastening
+    static let cover = Map3DPalette.thirdRailCover
+    static let insulator = Map3DPalette.trackInsulator
+    static let paving = Map3DPalette.trackPaving
+    static let lawn = Map3DPalette.trackLawn
 
     // MARK: Which track
 
@@ -322,4 +319,25 @@ extension Map3DScene.Builder {
         trackKindEdges = edges
         return edges
     }
+}
+
+/// Decision 964: the track kinds' colours, the reference kit's materials
+/// (`slab`, `pad`, `fastener`, `cover`, `insulator`, `paving`), which the
+/// palette had no concrete, yellowed cover or lawn close enough to stand
+/// for; the lawn is its `#5f8a48` lightened to sit with the game's ground.
+extension Map3DPalette {
+    /// A slab track's concrete bed.
+    static let trackSlab = Map3DColor.rgb(0xBDB8AB)
+    /// A rubber-tyred train's running pads, darker than their bed.
+    static let trackPad = Map3DColor.rgb(0x8D8F8C)
+    /// The fastenings along a slab track's rails.
+    static let trackFastening = Map3DColor.rgb(0x4A4C4E)
+    /// A third rail's cover board.
+    static let thirdRailCover = Map3DColor.rgb(0xD6CBA2)
+    /// The brackets and posts that hold a third rail or a guide bar.
+    static let trackInsulator = Map3DColor.rgb(0x6F6257)
+    /// An embedded track's paving on a viaduct and in a tunnel.
+    static let trackPaving = Map3DColor.rgb(0x9D9A90)
+    /// An embedded track's lawn.
+    static let trackLawn = Map3DColor.rgb(0x86A96B)
 }
