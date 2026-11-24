@@ -47,8 +47,10 @@ final class PerformanceSessionTests: XCTestCase {
         XCTAssertEqual(TrainPerformance.metro.withTopSpeed(120).topSpeed, 120)
         XCTAssertEqual(TrainPerformance.metro.withTopSpeed(120).acceleration, 3_960)
         XCTAssertNil(PerformancePreset(matching: Self.crawl))
-        // The DR1000 and diesel expresses run alike: the first is named.
-        XCTAssertEqual(PerformancePreset(matching: .dieselRailcar), .dieselExpress)
+        // Decision 952: the DR1000 and the diesel express no longer run
+        // alike, so each is read as itself.
+        XCTAssertEqual(PerformancePreset(matching: .dieselRailcar), .dieselRailcar)
+        XCTAssertEqual(PerformancePreset(matching: .dieselExpress), .dieselExpress)
     }
 
     /// Decision 237: the real models' rows, at their published figures (the
