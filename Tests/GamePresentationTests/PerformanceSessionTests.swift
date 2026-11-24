@@ -185,6 +185,24 @@ final class PerformanceSessionTests: XCTestCase {
 
     // MARK: - Trains
 
+    /// Decision 962: a train a save gave another performance than its
+    /// model's goes back to its model's with one command, said once.
+    func testATrainGoesBackToItsModelsPerformance() async throws {
+        var world = try makeWorld(balance: 1_000_000_000)
+        let id = try world.purchaseTrain(named: "Mixed", as: .emu100).id
+        try world.setTrainPerformance(id, to: .haiFeng)
+        var expected = world
+        try expected.restoreTrainFactoryPerformance(id)
+        await MainActor.run { [world, expected] in
+            let session = GameSession(world: world)
+            XCTAssertEqual(session.world.train(id: id)?.hasCustomPerformance, true)
+            session.restoreTrainFactoryPerformance(id)
+            XCTAssertEqual(session.world, expected)
+            XCTAssertEqual(session.world.train(id: id)?.hasCustomPerformance, false)
+            XCTAssertEqual(session.message?.kind, .success)
+        }
+    }
+
     /// A train's performance is set whether or not it is placed, but not
     /// while it runs a service; once it runs, the panel shows the run it
     /// follows.

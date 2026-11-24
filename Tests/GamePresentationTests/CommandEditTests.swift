@@ -111,6 +111,7 @@ final class CommandEditTests: XCTestCase {
             .setTrainType(train, nil), .setTrainRate(train, rate: 40), .resumeTrain(train),
             .sendTrain(train, along: [PlayerCommand.Edit.Step(TrackTraversal(edge: .edge(2), direction: .backward))], stoppingAt: 512),
             .reverseTrain(train), .unplaceTrain(train), .setTrainPerformance(train, .standard),
+            .restoreTrainFactoryPerformance(train),
             .setTrainTimetable(train, [stop], period: 3_600), .startTrainService(train), .stopTrainService(train),
             .assignTrain(train, line, pattern: 1), .unassignTrain(train), .placeTrain(train, at: station, heading: .west),
             .staffLine(line, headway: 10, type: .highSpeed, cars: 4, language: .traditionalChinese),

@@ -148,7 +148,7 @@ extension TrainPerformance {
 
     /// Thousandths of a km/h per second as a decimal: 2500 is "2.5", 3960
     /// "3.96", 2000 "2".
-    static func rateText(_ thousandths: Int64) -> String {
+    public static func rateText(_ thousandths: Int64) -> String {
         let whole = thousandths / 1_000
         var fraction = String(thousandths % 1_000)
         while fraction.count < 3 {
@@ -307,6 +307,17 @@ extension GameSession {
         perform(.setTrainPerformance(train.id, performance)) { _, _, _ in
             let text = performance.displayText(in: language)
             return language.text("\(train.name) now runs as \(text).", "\(train.name) 的性能改為 \(text)。")
+        }
+    }
+
+    /// Sets train `id` back to its type's own performance through
+    /// `GameWorld.restoreTrainFactoryPerformance(_:)` (decision 962): the
+    /// button under a train a save gave a performance of its own.
+    public func restoreTrainFactoryPerformance(_ id: TrainID) {
+        guard let train = world.train(id: id), let factory = train.factoryPerformance else { return }
+        perform(.restoreTrainFactoryPerformance(id)) { _, _, _ in
+            let text = factory.figuresText(in: language)
+            return language.text("\(train.name) runs as built again: \(text).", "\(train.name) 改回原廠性能：\(text)。")
         }
     }
 
