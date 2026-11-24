@@ -103,8 +103,12 @@ public struct TrainPerformance: Hashable, Sendable {
     public static let pushPull = TrainPerformance(acceleration: 1600, braking: 2800, topSpeed: 130)
     /// `PERF_RULES` `/\(3000|110[KM]/`: EMU3000 expresses.
     public static let emu3000 = TrainPerformance(acceleration: 2520, braking: 3600, topSpeed: 135)
-    /// `PERF_RULES` `/\(D\d/`: diesel expresses.
-    public static let dieselExpress = TrainPerformance(acceleration: 1500, braking: 2448, topSpeed: 110)
+    /// The DR3100 diesel Tze-Chiang (decision 952): 110 km/h, 0.5 km/h a
+    /// second to start and 3.0 km/h a second of service braking, the
+    /// published figures (JORSA 1999, as the DR3100's Wikipedia infobox
+    /// cites them). The reference's `PERF_RULES` `/\(D\d/` gave it
+    /// ``dieselRailcar``'s numbers, so a DR1000 read as a diesel express.
+    public static let dieselExpress = TrainPerformance(acceleration: 500, braking: 3000, topSpeed: 110)
     /// `PERF_RULES` `/自強/` and `PERF_BY_TYPE` `自強`: Tze-Chiang expresses.
     public static let express = TrainPerformance(acceleration: 1800, braking: 2900, topSpeed: 130)
     /// `PERF_RULES` `/莒光|復興/` and `PERF_BY_TYPE` `莒光/復興`: Chu-Kuang and Fu-Hsing trains.
