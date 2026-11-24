@@ -291,7 +291,8 @@ final class Map3DTrainSetTests: XCTestCase {
     func testATrainsKey() {
         XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .tiltingPuyuma), "puyuma")
         XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .tiltingTaroko), "taroko")
-        XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .dieselRailcar), "dieselExpress", "the same curves")
+        XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .dieselRailcar), "dieselRailcar", "decision 952: its own curves")
+        XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .dieselExpress), "dieselExpress")
         XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .r100ChuKuang), "R100CK")
         XCTAssertEqual(Map3DTrainSet.key(type: nil, performance: .standard), "")
         XCTAssertEqual(Map3DTrainSet.key(type: .emu3000, performance: .tiltingPuyuma), "EMU3000", "the type's style first")
