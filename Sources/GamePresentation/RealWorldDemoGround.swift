@@ -342,18 +342,24 @@ extension RealWorldDemo {
                     startNode = (node.point, ahead.dot(node.direction) >= 0 ? node.direction : node.direction.reversed)
                     flat.append(TrackRise.Level(0...0, at: Double(hostPlan.heights[index])))
                 }
-                guard let rise = TrackRise(path: path, ground: ground, water: water, levels: flat, carried: routes.carried(along: path)) else {
+                let carried = routes.carried(along: path)
+                guard let rise = TrackRise(path: path, ground: ground, water: water, levels: flat, carried: carried) else {
                     preconditionFailure("No grade reaches along a demo track \(Int(path.length / metre)) m long")
                 }
+                // Decision 950: the real line's short bridges, as a bought
+                // line's are laid.
+                let shortBridges = RealLineAcquisition.shortBridges(carried, length: path.length, forced: forced, keepOut: zones, rise: rise)
+                forced += shortBridges.flatMap { [$0.lowerBound, $0.upperBound] }
                 for (stop, span) in stations where levels[stop.station.id] == nil {
                     levels[stop.station.id] = Double(rise.node(at: span.lowerBound))
                 }
                 // Closely through the loops, so the two tracks keep apart.
                 let loopSpans = loopEnds.map { $0.1...$0.2 }
-                let plan = TrackPlan(
+                var plan = TrackPlan(
                     path, forced: forced, avoiding: zones, looseUntil: looseUntil, close: close + loopSpans, start: startNode, rise: rise,
                     structure: structure, closeLongestEdge: besideLongestEdge
                 )
+                plan.shortBridges = shortBridges
                 pieces.append(Piece(plan: plan, start: host, end: nil))
                 let index = pieces.count - 1
                 for (stop, zone) in zip(stops, zones) {
@@ -494,11 +500,12 @@ extension RealWorldDemo {
             total += Int64(services.map(\.starts.count).reduce(0, +)) * (costs.train.amount + Int64(cars - 1) * costs.car.amount)
             for piece in pieces {
                 let plan = piece.plan
+                let structures = plan.edgeStructures(in: world)
                 for (index, curve) in plan.curves.enumerated() {
                     func at(_ index: Int) -> WorldCoordinate {
                         WorldCoordinate(x: plan.nodes[index].point.x, y: plan.nodes[index].point.y, z: plan.heights[index])
                     }
-                    total += try world.trackEdgePrice(from: at(index), to: at(index + 1), curve: curve, structure: plan.structure).amount
+                    total += try world.trackEdgePrice(from: at(index), to: at(index + 1), curve: curve, structure: structures?[index] ?? plan.structure).amount
                 }
             }
             return Money(total)

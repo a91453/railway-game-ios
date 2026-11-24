@@ -445,6 +445,11 @@ public enum RealWorldDemo {
         let heights: [Int64]
         /// What carries each edge.
         let structure: TrackStructure
+        /// Decision 950: the real line's short bridges along the path,
+        /// each end a node, whose edges ``build(in:start:end:together:)``
+        /// lays as bridges where they may be
+        /// (``RealLineAcquisition/shortBridgeStructures(nodes:curves:distances:bridges:structure:in:)``).
+        var shortBridges: [ClosedRange<Double>] = []
 
         /// With `rise` (decision 132) the track has the heights it gives,
         /// edges are cut until their straight grade keeps close to it, and
@@ -550,6 +555,15 @@ public enum RealWorldDemo {
             }
         }
 
+        /// What carries each edge in `world` where some differ from
+        /// ``structure`` (decision 950, ``shortBridges``); `nil` where none.
+        func edgeStructures(in world: GameWorld) -> [TrackStructure]? {
+            RealLineAcquisition.shortBridgeStructures(
+                nodes: nodes.indices.map { WorldCoordinate(x: nodes[$0].point.x, y: nodes[$0].point.y, z: heights[$0]) },
+                curves: curves, distances: distances, bridges: shortBridges, structure: structure, in: world
+            )
+        }
+
         /// Builds the track, from `start` and to `end` if they are built;
         /// `together`, its edges as one command
         /// (``GameWorld/buildTrackEdges(_:)``), the spacing checked once all
@@ -567,14 +581,16 @@ public enum RealWorldDemo {
                     ids.append(try world.buildTrackNode(at: WorldCoordinate(x: node.point.x, y: node.point.y, z: heights[index])))
                 }
             }
+            let structures = edgeStructures(in: world)
+            func carrier(ofEdge index: Int) -> TrackStructure { structures?[index] ?? self.structure }
             var edges: [TrackEdgeID] = []
             if together {
                 edges = try world.buildTrackEdges(curves.enumerated().map { index, curve in
-                    TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: structure)
+                    TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: carrier(ofEdge: index))
                 })
             } else {
                 for (index, curve) in curves.enumerated() {
-                    edges.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: structure))
+                    edges.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: carrier(ofEdge: index)))
                 }
             }
             return Track(plan: self, nodes: ids, edges: edges)

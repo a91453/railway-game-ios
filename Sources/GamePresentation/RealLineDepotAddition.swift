@@ -472,7 +472,7 @@ extension RealLineLaying {
                     }
                 }
                 edges.append(try world.buildTrackEdges(piece.curves.enumerated().map { index, curve in
-                    TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure)
+                    TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure(ofEdge: index))
                 }))
                 nodes.append(ids)
             }

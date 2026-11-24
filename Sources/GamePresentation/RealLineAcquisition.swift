@@ -378,6 +378,11 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         /// crossing it on the flat; `nil` for none (and in the logs of
         /// before).
         public var crossings: [Int]? = nil
+        /// BRANCH-SHORT-BRIDGE (decision 950): what carries each of its
+        /// edges, where some differ from ``structure`` (the real line's
+        /// short bridges); `nil` where all are ``structure`` (and in the
+        /// logs of before). Read through ``structure(ofEdge:)``.
+        public var structures: [TrackStructure]? = nil
     }
 
     /// SHALUN-ONE-ISLAND: a line whose trains run on the track of the
@@ -2054,6 +2059,10 @@ extension RealLineLaying {
         // left (decision 202) would tell the two ways apart by their
         // rounding, not by the side they lead to (Danhai's Blue Coast Line
         // sent its trains back on the wrong track).
+        // Decision 950: a node at each end of the real line's short
+        // bridges, the edges between laid as bridges where they may be.
+        let shortBridges = RealLineAcquisition.shortBridges(carried, length: path.length, forced: forced, keepOut: zones, rise: rise)
+        forced += shortBridges.flatMap { [$0.lowerBound, $0.upperBound] }
         let main = RealWorldDemo.TrackPlan(
             path, forced: forced, avoiding: zones, close: loopSpans.map { $0.a...$0.b }, start: joined.map { ($0.node.plan, $0.way) }, rise: rise,
             structure: .automatic
@@ -2094,6 +2103,9 @@ extension RealLineLaying {
             ))
             platformsAt += zones.indices.dropFirst().dropLast().map { ($0, plans.count - 1, zones[$0]) }
         }
+        // Decision 950: the plans laid along their own path (the passing
+        // loops), not along the line's.
+        var offPath: Set<Int> = []
         for loop in loopSpans {
             for offset in [loop.offset] {
                 // Decision 605: a loop beside the second track leaves and
@@ -2116,6 +2128,7 @@ extension RealLineLaying {
                 // the line's: a metro's trains are longer than the demo's.
                 let middle = loopPath.length / 2, loopHalf = max(half, Double(RealWorldDemo.platformLength) / 2)
                 let zone = (middle - loopHalf)...(middle + loopHalf)
+                offPath.insert(plans.count)
                 plans.append((
                     RealWorldDemo.TrackPlan(
                         loopPath, forced: [0, loopPath.length], avoiding: [zone], close: [0...loopPath.length],
@@ -2193,17 +2206,23 @@ extension RealLineLaying {
                 RealLineAcquisition.NodeAt(piece: 0, node: a), RealLineAcquisition.NodeAt(piece: 0, node: b), true
             ))
         }
-        var pieces = plans.map { entry in
+        var pieces = plans.enumerated().map { number, entry in
             let plan = entry.plan
             let nodes = plan.nodes.indices.map { WorldCoordinate(x: plan.nodes[$0].point.x, y: plan.nodes[$0].point.y, z: plan.heights[$0]) }
             let ground = plan.curves.indices.flatMap { index -> [PlanPoint] in
                 let surveyed = TrackGeometry(from: nodes[index], to: nodes[index + 1], curve: plan.curves[index]).map(NetworkBuilding.surveyedPoints(of:)) ?? []
                 return [nodes[index].plan, nodes[index + 1].plan] + surveyed
             }
-            return RealLineAcquisition.Piece(
+            var piece = RealLineAcquisition.Piece(
                 nodes: nodes, start: entry.start, end: entry.end, curves: plan.curves, distances: plan.distances, structure: plan.structure,
                 together: entry.together, ground: ground
             )
+            if !offPath.contains(number) {
+                piece.structures = RealLineAcquisition.shortBridgeStructures(
+                    nodes: nodes, curves: plan.curves, distances: plan.distances, bridges: shortBridges, structure: plan.structure, in: planning
+                )
+            }
+            return piece
         }
         // SHALUN-ONE-ISLAND: its first node the one it leaves the track
         // from, to the unit.
@@ -2221,6 +2240,7 @@ extension RealLineLaying {
                 structure: first.structure, together: first.together, ground: first.ground, startsOnTrack: true
             )
             first.crossings = crossings
+            first.structures = pieces[0].structures
             pieces[0] = first
             // GRADE-CROSSING-SHALUN: its second track from the near
             // platform track's end, to the unit, along its way there.
@@ -2235,6 +2255,7 @@ extension RealLineLaying {
                     ground: [joined.inbound.plan, next.plan] + surveyed + piece.ground, startsOnTrack: true
                 )
                 replaced.crossings = piece.crossings
+                replaced.structures = piece.structures
                 pieces[1] = replaced
             }
         }
@@ -2598,12 +2619,12 @@ extension RealLineLaying {
                 }
                 if piece.together {
                     edges.append(try world.buildTrackEdges(piece.curves.enumerated().map { index, curve in
-                        TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure)
+                        TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure(ofEdge: index))
                     }))
                 } else {
                     var built: [TrackEdgeID] = []
                     for (index, curve) in piece.curves.enumerated() {
-                        built.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure))
+                        built.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure(ofEdge: index)))
                     }
                     edges.append(built)
                 }

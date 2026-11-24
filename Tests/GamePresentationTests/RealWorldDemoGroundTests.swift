@@ -51,7 +51,11 @@ final class RealWorldDemoGroundTests: XCTestCase {
         let (_, world) = try Self.built.get()
         XCTAssertTrue(world.ground.isMapped)
         XCTAssertEqual(world.economy.balance, GameWorld.startingBalance, "what it built was added to a new game's money, and paid")
-        XCTAssertTrue(world.network.edges.allSatisfy { $0.structure == .automatic && $0.profile == .uniform })
+        XCTAssertTrue(world.network.edges.allSatisfy { $0.profile == .uniform })
+        // Automatic everywhere but over the real short bridges, which are
+        // laid as bridges (decision 950).
+        XCTAssertTrue(world.network.edges.allSatisfy { $0.structure == .automatic || $0.structure == .bridge })
+        XCTAssertTrue(world.network.edges.contains { $0.structure == .bridge })
         // The ground decides what carries it: every kind is somewhere on
         // these hill lines, and most of it is on the ground.
         var lengths: [TrackSectionKind: Int] = [:]
