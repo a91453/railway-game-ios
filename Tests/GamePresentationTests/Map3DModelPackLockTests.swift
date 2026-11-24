@@ -80,13 +80,9 @@ final class Map3DModelPackLockTests: XCTestCase {
     func testEveryModelIsAsLocked() throws {
         let locked = try Self.lockedModels()
         let models = Map3DModelPack.standard.models + Map3DModelPack.studies.models
-        // Decision 467's two stand-ins came after the lock was last
-        // written and were never added to it (the app draws their files);
-        // `testTheOrderAndTheLampsAreAsBefore` pins them with the rest.
-        let unlocked: Set<String> = ["scenery-postBoxes", "scenery-busStopPole"]
-        XCTAssertEqual(Set(models.map(\.name)).subtracting(unlocked), Set(locked.keys))
+        XCTAssertEqual(Set(models.map(\.name)), Set(locked.keys))
         var wrong: [String] = []
-        for model in models where !unlocked.contains(model.name) {
+        for model in models {
             let entry = locked[model.name]
             // With what it is now, for the lock (the hashes are Linux's:
             // a Mac's differ in the last bit of a sine).
