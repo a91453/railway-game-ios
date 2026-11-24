@@ -758,6 +758,12 @@ extension Map3DScene.Builder {
             mesh(at: foot) { $0.append(piece.mesh, at: foot, forward: piece.forward) }
             // WINTER-LIGHTS-2: the lights along an exit's canopy.
             guard number < lit else { continue }
+            // Decision 949: a bicycle rack beside some of them, away from
+            // the track (each exit's right).
+            if let bounds = piece.mesh.bounds {
+                addExitBikeRack(exit: foot, forward: piece.forward, width: 2 * max(-bounds.min.z, bounds.max.z),
+                                length: 2 * max(-bounds.min.x, bounds.max.x))
+            }
             let along = Map3DPoint(piece.forward.x, 0, piece.forward.z).normalized ?? Map3DPoint(1, 0, 0), right = along.cross(.up)
             for string in Map3DWinterLights.exitStrings {
                 exitLights.append((foot + along * string.x + right * string.z + Map3DPoint(0, string.y, 0), along))
