@@ -262,26 +262,43 @@ extension Map3DScene.Builder {
         // Decision 361's sequel. A school (46 m): the primary school and its
         // gym facing the street, a pitch and play things behind; or a
         // kindergarten with a playground, a court behind.
-        let pupils = Map3DBikeParking.shed(x: -6, right: 7), parents = Map3DBikeParking.rack(x: 21, right: 2, bicycles: 2)
+        // Decision 963: the primary school the studio's L of classroom
+        // wings in the front and left corner, its gym at the back right,
+        // the pitch and play things in the yard between them (the
+        // bleachers no longer fit), the pupils' shed beside the long wing. A
+        // hospital the studio's hospital, tables by the drive before it;
+        // the clinic with the day-care wing stays the second look, the
+        // small town's.
+        func studio(_ name: String, _ x: Float, _ right: Float) -> [Part] {
+            guard let model = Map3DPlayerSchoolHospital.model(name) else { return [] }
+            return [(model, x, right, 0, Map3DPlayerShopOffice.frontTurn)]
+        }
+        let pupils = Map3DBikeParking.shed(x: 14, right: -16), parents = Map3DBikeParking.rack(x: 21, right: 2, bicycles: 2)
+        let schoolHouse = studio(Map3DPlayerSchoolHospital.schoolName, Map3DPlayerSchoolHospital.schoolAt.x, Map3DPlayerSchoolHospital.schoolAt.right)
+        var primary = PlacedKitLayout(schoolHouse
+                                      + studio(Map3DPlayerSchoolHospital.gymName, Map3DPlayerSchoolHospital.gymAt.x, Map3DPlayerSchoolHospital.gymAt.right)
+                                      + [play(.miniSoccerPitch, -9.5, 4.6), play(.soccerGoal, -21.5, 4.6), play(.soccerGoal, 2.5, 4.6, .pi),
+                                         play(.slide, 6.5, -2.5), play(.swingSet, 6.5, 2.5), play(.climbingFrame, 6.5, 7.5), play(.sandpit, 6.5, 11.5)]
+                                      // Decision 949: the pupils' bicycle shed (decision 963:
+                                      // beside the long wing, before the gym).
+                                      + pupils.parts, bicycles: pupils.bicycles,
+                                      pad: forecourt, recolours: false)
+        // One box round the L would cover the yard and stand in the gym:
+        // from farther the school is its two wings.
+        if !schoolHouse.isEmpty { primary.boxes.replaceSubrange(0..<1, with: Map3DPlayerSchoolHospital.schoolWings) }
         let schools = [
-            PlacedKitLayout([civic(.primarySchool, 12, -11), civic(.schoolGym, 10, 13, .pi / 2),
-                             play(.miniSoccerPitch, -13, -10, .pi / 2), play(.soccerGoal, -5, -10), play(.soccerGoal, -21, -10, .pi),
-                             play(.bleachers, -13, 6), play(.slide, -8, 14), play(.swingSet, -14, 18), play(.climbingFrame, -19, 12), play(.sandpit, -19, 19)]
-                            // Decision 949: the pupils' bicycle shed between the
-                            // gym and the bleachers.
-                            + pupils.parts, bicycles: pupils.bicycles,
-                            pad: forecourt, recolours: false),
+            primary,
             PlacedKitLayout([civic(.kindergarten, 12, -12), play(.playhouse, 12, 8), play(.slide, 16, 14), play(.swingSet, 8, 16), play(.sandpit, 6, 6),
                              play(.basketballCourt, -12, -8, .pi / 2), play(.gazebo, -14, 15)]
                             // Decision 949: the parents' bicycles in a rack by the gate.
                             + parents.parts, bicycles: parents.bicycles,
                             pad: forecourt, recolours: false),
         ]
-        // A hospital (30 m): the clinic and the day-care wing side by
-        // side, tables before them; or the care centre in front and the
-        // clinic behind.
+        // A hospital (30 m): decision 963's hospital, tables either side
+        // of the drive; or the care centre in front and the clinic behind.
         let hospitals = [
-            PlacedKitLayout([civic(.clinic, 8, -9), civic(.dayCareCenter, 6, 7), civic(.umbrellaTable, -10, -6), civic(.umbrellaTable, -10, 6)],
+            PlacedKitLayout(studio(Map3DPlayerSchoolHospital.hospitalName, Map3DPlayerSchoolHospital.hospitalAt.x, Map3DPlayerSchoolHospital.hospitalAt.right)
+                            + [civic(.umbrellaTable, 12, -11), civic(.umbrellaTable, 12, 11)],
                             pad: forecourt, recolours: false),
             PlacedKitLayout([civic(.dayCareCenter, 6, -6), civic(.clinic, -8, 8, .pi), civic(.umbrellaTable, -10, -10), play(.gazebo, 10, 11)],
                             pad: forecourt, recolours: false),

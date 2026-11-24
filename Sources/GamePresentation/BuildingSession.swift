@@ -92,7 +92,7 @@ extension PlacedBuildingKind {
         case (.departmentStore, 1): language.text("Halls", "展覽宴會館")
         case (.school, 0): language.text("Primary school", "國小")
         case (.school, 1): language.text("Kindergarten", "幼兒園")
-        case (.hospital, 0): language.text("Clinic", "社區醫院")
+        case (.hospital, 0): language.text("Hospital", "綜合醫院")
         case (.hospital, 1): language.text("Care centre", "醫療照護中心")
         case (.nightMarket, 0): language.text("Stall alley", "夜市街")
         case (.nightMarket, 1): language.text("Market square", "市場小吃廣場")
