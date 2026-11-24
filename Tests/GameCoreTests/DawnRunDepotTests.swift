@@ -32,7 +32,8 @@ final class DawnRunDepotTests: XCTestCase {
     /// B to C at 05:30 every day and the depot D (one siding); T1, Main's,
     /// at B, traffic control on. With block sections when `blocks`. When
     /// `arriving`, a run from C arrives at B at 05:20 too, in time for the
-    /// 05:30.
+    /// 05:30. The line runs at 12 km/h, so B is half an hour's empty run
+    /// from D, more than ``GameWorld/dawnKeepDepotRun``.
     private func makeScene(blocks: Bool = true, arriving: Bool = false) throws -> Scene {
         var world = try GameWorld(
             bounds: WorldBounds(width: 362_496, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
@@ -69,6 +70,8 @@ final class DawnRunDepotTests: XCTestCase {
         if arriving { runs.append(run(at: 5 * 60 + 4, back: true)) }
         try world.setLineRuns(line, to: runs)
         try world.setLineDepots(line, to: [depot])
+        // At 12 km/h B is half an hour from D: an end far from its depot.
+        try world.setLinePerformance(line, to: TrainPerformance(acceleration: 700, braking: 1100, topSpeed: 12))
         let id = try world.purchaseTrain(named: "T1").id
         try world.setTrainCars(id, to: 2)
         try world.placeTrain(id, at: .onEdge(forward(0), offset: 9_216))

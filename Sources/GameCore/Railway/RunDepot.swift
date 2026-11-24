@@ -207,8 +207,9 @@ extension GameWorld {
         }
         guard needed > 0 else { return 0 }
         // Near a depot, trains out of it are there in time. With no train
-        // in a depot, none can come out for the runs.
-        if let run = runPullOut(of: line, to: station, memo: &memo)?.trip.deadhead, run.seconds < Self.dawnKeepDepotRun { return 0 }
+        // of the line in a depot, the way there is this train's own.
+        let run = runPullOut(of: line, to: station, memo: &memo)?.trip.deadhead ?? emptyRun(of: line, for: train, to: line.depots)?.deadhead
+        if let run, run.seconds < Self.dawnKeepDepotRun { return 0 }
         let tracks = Set(berths(of: station, length: train.length).map(\.traversal.edge)).count
         return min(needed, tracks)
     }
