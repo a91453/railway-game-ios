@@ -705,6 +705,9 @@ final class MapInteractionTests: XCTestCase {
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
         let hud = app.otherElements["map.constructionHUD"]
+        // The banner saying the game paused takes the start's touch while
+        // it shows (see testConstructionHUDAppearsDuringTrackPreview).
+        app.waitForTheBannerToGo()
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
         keepsZoom("Tapping a track start")
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
@@ -904,15 +907,24 @@ final class MapInteractionTests: XCTestCase {
         // 27.2 Simulator two touches 0.6 s after Network reached the app
         // and picked no track start (pull request #2480, full lane: the
         // card still asked where the track starts). They wait for the card
-        // to rest, and are made once more if no stretch is previewed.
+        // to rest.
+        // Choosing Network pauses the running game and says so in a banner
+        // across the top of the map for 4 s; on a phone on its side it
+        // reaches 0.35 of the map's height, so a start touched there in
+        // those seconds landed on the banner and was lost, and the end
+        // became the start: 3 of the 4 full lanes from 2026-11-23
+        // (559162f, 2816b43, 0ecdedc; the screen recording of this
+        // branch's run 45442778222 shows it). The touches wait for it to go.
+        app.waitForTheBannerToGo()
         let card = app.descendants(matching: .any)["details.card"].firstMatch
         if card.exists { card.waitUntilStill() }
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
         map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
         if !hud.appears(within: 5) {
             app.logTree("no construction HUD after the first two touches")
-            map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
-            map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
+            // A third point, not the start again, which would forget it:
+            // with either touch lost, the start and this make a stretch.
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5)).tap()
         }
 
         if !hud.appears(within: 5) { app.logTree("no construction HUD") }

@@ -400,11 +400,15 @@ extension XCUIElement {
     /// `isHittable` asked at once answers for where it is on its way: the
     /// second `waitForExistence(timeout:)` waited before it looked used to
     /// hide that (PR #493's run 38360304931, the tutorial's Skip right after
-    /// the phone turned).
+    /// the phone turned). One look after the deadline still counts: a
+    /// single look can take longer than the whole wait while the app is
+    /// busy (main 0ecdedc's full lane, run 45416414975: on the iPad, after
+    /// lesson 1 opened, one look at Build took some 40 s and said "not
+    /// yet", and the wait gave up without looking again).
     func becomesHittable(within timeout: TimeInterval = 2) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while !(exists && isHittableNow) {
-            guard Date() < deadline else { return false }
+            guard Date() < deadline else { return exists && isHittableNow }
             Thread.sleep(forTimeInterval: 0.1)
         }
         return true
@@ -473,6 +477,15 @@ extension XCUIElement {
 
 @MainActor
 extension XCUIApplication {
+    /// Waits for the status banner over the top of the map to clear itself
+    /// (a message clears in 4 to 10 s, ``StatusMessage/autoDismissDelay``):
+    /// it takes a touch on the map under it. Not its ✕, which can go as
+    /// the touch is sent and leave it on the map.
+    func waitForTheBannerToGo(file: StaticString = #filePath, line: UInt = #line) {
+        let banner = buttons["banner.dismiss"]
+        XCTAssertTrue(banner.disappears(within: 12), "The status banner stayed over the map", file: file, line: line)
+    }
+
     /// The app's accessibility tree in the test's log, headed `XC27-TREE
     /// why`, for a failure only a Simulator can show (pull request #2453:
     /// the run's result bundle cannot be read where the failure is fixed).

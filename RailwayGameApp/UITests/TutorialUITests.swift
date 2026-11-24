@@ -669,7 +669,9 @@ final class TutorialUITests: XCTestCase {
         let card = app.descendants(matching: .any).matching(identifier: "tutorial.card").firstMatch
         XCTAssertTrue(tool.appears(within: 10))
         XCTAssertTrue(card.appears(within: 10))
-        XCTAssertTrue(tool.becomesHittable())
+        // As long as `appears` waits: on the iPad the app can be busy for
+        // tens of seconds right after a lesson opens (run 45416414975).
+        XCTAssertTrue(tool.becomesHittable(within: 10), "\(identifier) cannot be touched. \(app.logTree("\(identifier) not hittable"))")
         XCTAssertFalse(card.frame.intersects(tool.frame), "The tutorial card covers \(identifier)")
     }
 
