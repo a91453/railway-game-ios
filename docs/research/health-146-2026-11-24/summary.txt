@@ -1,0 +1,415 @@
+[plain] DEPOT_RETURN hk-sil-tcl: second day 0 of 732 runs not sent out; 141 of 732 trips late; 68 empty runs into a depot, 50 out, 770 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 金鐘 5, 海怡半島 4, 香港 4, 東涌 4; most deadlocked 0; most stranded 0; 2 of 2 lines with runs and depots
+[plain] DEPOT_RETURN rovaniemi-both: second day 0 of 14 runs not sent out; 0 of 14 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 2 lines with runs and depots
+[plain] DEPOT_RETURN rovaniemi-kja: second day 0 of 2 runs not sent out; 0 of 2 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN rovaniemi-mul: second day 0 of 12 runs not sent out; 0 of 12 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN ankeng: second day 0 of 178 runs not sent out; 0 of 178 trips late; 15 empty runs into a depot, 14 out, 52 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 4, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain] DEPOT_RETURN ankeng-added: second day 0 of 178 runs not sent out; 0 of 178 trips late; 21 empty runs into a depot, 14 out, 57 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 4, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain] DEPOT_RETURN danhai-blue: second day 0 of 112 runs not sent out; 0 of 112 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN pingxi: second day 0 of 34 runs not sent out; 0 of 34 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN jiji: second day 0 of 24 runs not sent out; 0 of 24 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN neiwan: second day 0 of 39 runs not sent out; 0 of 39 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN shenao: second day 0 of 16 runs not sent out; 0 of 16 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN liujia: second day 0 of 82 runs not sent out; 0 of 82 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN shalun: second day 0 of 74 runs not sent out; 0 of 74 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN demo: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[plain] DEPOT_RETURN ferry-tamsui: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[plain] DEPOT_RETURN ferry-tamsui ferry 1: day 0 103 riders, day 1 103 riders
+[plain] DEPOT_RETURN ferry-gushan: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[plain] DEPOT_RETURN ferry-gushan ferry 1: day 0 583 riders, day 1 583 riders
+[plain] DEPOT_RETURN danhai: second day 0 of 152 runs not sent out; 0 of 152 trips late; 18 empty runs into a depot, 18 out, 14 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 紅樹林 6, 崁頂 6; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain] DEPOT_RETURN hsr: second day 0 of 191 runs not sent out; 0 of 0 trips late; 72 empty runs into a depot, 87 out, 1290 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Nangang 5, Zuoying 7; most deadlocked 0; most stranded 0; 3 of 3 lines with runs and depots
+[plain] DEPOT_RETURN klrt: second day 0 of 168 runs not sent out; 0 of 168 trips late; 54 empty runs into a depot, 54 out, 51 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 龍華國小 2, 愛河之心 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain] DEPOT_RETURN maokong: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[plain] DEPOT_RETURN maokong cableway 1: day 0 2427 riders, day 1 1195 riders
+[plain] DEPOT_RETURN realworld: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[plain] DEPOT_RETURN sanying: second day 0 of 292 runs not sent out; 0 of 292 trips late; 6 empty runs into a depot, 6 out, 58 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 頂埔 4, 鶯桃福德 4; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain] DEPOT_RETURN tra: second day 0 of 148 runs not sent out; 0 of 0 trips late; 120 empty runs into a depot, 121 out, 769 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Toucheng 5, Su'aoxin 6; most deadlocked 0; most stranded 0; 8 of 8 lines with runs and depots
+[plain] DEPOT_RETURN tymc deadlock day 0 07:16: 桃園機場捷運列車 14 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc deadlock day 0 07:17: cleared
+[plain] DEPOT_RETURN tymc deadlock day 0 07:46: 桃園機場捷運列車 25 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc deadlock day 0 07:47: cleared
+[plain] DEPOT_RETURN tymc deadlock day 0 16:55: 桃園機場捷運列車 17 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc deadlock day 0 16:57: cleared
+[plain] DEPOT_RETURN tymc deadlock day 0 17:08: 桃園機場捷運列車 21 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc deadlock day 0 17:09: cleared
+[plain] DEPOT_RETURN tymc deadlock day 0 20:05: 桃園機場捷運列車 1 at 興南站
+[plain] DEPOT_RETURN tymc deadlock day 0 20:06: cleared
+[plain] DEPOT_RETURN tymc deadlock day 0 23:29: 桃園機場捷運列車 18 at line
+[plain] DEPOT_RETURN tymc deadlock day 0 23:30: cleared
+[plain] DEPOT_RETURN tymc deadlock day 1 00:20: 桃園機場捷運列車 11 at 三重站
+[plain] DEPOT_RETURN tymc deadlock day 1 00:21: cleared
+[plain] DEPOT_RETURN tymc deadlock day 1 16:55: 桃園機場捷運列車 23 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc deadlock day 1 16:56: cleared
+[plain] DEPOT_RETURN tymc deadlock day 1 19:36: 桃園機場捷運列車 32 at line
+[plain] DEPOT_RETURN tymc deadlock day 1 19:38: cleared
+[plain] DEPOT_RETURN tymc deadlock day 2 00:08: 桃園機場捷運列車 3 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc deadlock day 2 00:09: cleared
+[plain] DEPOT_RETURN tymc deadlock day 2 00:23: 桃園機場捷運列車 21 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc deadlock day 2 00:24: cleared
+[plain] DEPOT_RETURN tymc: not sent 長庚醫院站 to 台北車站 at 05:58
+[plain] DEPOT_RETURN tymc: second day 1 of 333 runs not sent out; 139 of 332 trips late; 59 empty runs into a depot, 61 out, 717 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 2; most deadlocked 1 (first day 0 07:16: 桃園機場捷運列車 14 at 機場第一航廈站; deadlocked in 13 minutes); most stranded 0; 1 of 1 lines with runs and depots
+[plain] DEPOT_RETURN tymc-old deadlock day 1 06:05: 桃園機場捷運列車 1 at 機場第二航廈站; 桃園機場捷運列車 9 at 機場第二航廈站; 桃園機場捷運列車 13 at 機場第二航廈站; 桃園機場捷運列車 19 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc-old deadlock day 1 06:06: 桃園機場捷運列車 9 at 機場第二航廈站; 桃園機場捷運列車 13 at 機場第二航廈站; 桃園機場捷運列車 19 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc-old deadlock day 1 06:07: cleared
+[plain] DEPOT_RETURN tymc-old deadlock day 1 16:55: 桃園機場捷運列車 2 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-old deadlock day 1 16:56: cleared
+[plain] DEPOT_RETURN tymc-old deadlock day 1 19:50: 桃園機場捷運列車 24 at 興南站
+[plain] DEPOT_RETURN tymc-old deadlock day 1 19:51: cleared
+[plain] DEPOT_RETURN tymc-old deadlock day 2 00:20: 桃園機場捷運列車 28 at 三重站
+[plain] DEPOT_RETURN tymc-old deadlock day 2 00:21: cleared
+[plain] DEPOT_RETURN tymc-old deadlock day 2 05:57: 桃園機場捷運列車 1 at 機場第二航廈站; 桃園機場捷運列車 19 at 機場第一航廈站; 桃園機場捷運列車 25 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-old deadlock day 2 05:58: 桃園機場捷運列車 1 at 機場第二航廈站; 桃園機場捷運列車 19 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc-old deadlock day 2 05:59: cleared
+[plain] DEPOT_RETURN tymc-old deadlock day 2 16:55: 桃園機場捷運列車 4 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-old deadlock day 2 16:56: cleared
+[plain] DEPOT_RETURN tymc-old deadlock day 3 00:08: 桃園機場捷運列車 17 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-old deadlock day 3 00:09: cleared
+[plain] DEPOT_RETURN tymc-old deadlock day 3 00:20: 桃園機場捷運列車 27 at 三重站
+[plain] DEPOT_RETURN tymc-old deadlock day 3 00:21: cleared
+[plain] DEPOT_RETURN tymc-old deadlock day 3 00:23: 桃園機場捷運列車 6 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-old deadlock day 3 00:24: cleared
+[plain] DEPOT_RETURN tymc-old: not sent 長庚醫院站 to 台北車站 at 05:58
+[plain] DEPOT_RETURN tymc-old: second day 1 of 333 runs not sent out; 143 of 332 trips late; 56 empty runs into a depot, 57 out, 645 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 2; most deadlocked 4 (first day 1 06:05: 桃園機場捷運列車 1 at 機場第二航廈站; 桃園機場捷運列車 9 at 機場第二航廈站; 桃園機場捷運列車 13 at 機場第二航廈站; 桃園機場捷運列車 19 at 機場第一航廈站; deadlocked in 11 minutes); most stranded 0; 1 of 1 lines with runs and depots
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 1 07:16: 桃園機場捷運列車 14 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 1 07:17: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 1 07:46: 桃園機場捷運列車 11 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 1 07:47: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 1 16:55: 桃園機場捷運列車 19 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 1 16:56: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 1 19:36: 桃園機場捷運列車 32 at line
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 1 19:38: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 00:08: 桃園機場捷運列車 5 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 00:09: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 00:23: 桃園機場捷運列車 6 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 00:24: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 05:57: 桃園機場捷運列車 2 at 機場第二航廈站; 桃園機場捷運列車 6 at 機場第一航廈站; 桃園機場捷運列車 17 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 05:58: 桃園機場捷運列車 2 at 機場第二航廈站; 桃園機場捷運列車 6 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 05:59: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 07:16: 桃園機場捷運列車 23 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 07:17: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 07:46: 桃園機場捷運列車 19 at 機場第一航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 07:47: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 16:55: 桃園機場捷運列車 13 at 機場第二航廈站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 16:56: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 20:05: 桃園機場捷運列車 24 at 興南站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 2 20:06: cleared
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 3 00:20: 桃園機場捷運列車 20 at 三重站
+[plain] DEPOT_RETURN tymc-rebuilt deadlock day 3 00:21: cleared
+[plain] DEPOT_RETURN tymc-rebuilt: not sent 長庚醫院站 to 台北車站 at 05:58
+[plain] DEPOT_RETURN tymc-rebuilt: second day 1 of 333 runs not sent out; 141 of 332 trips late; 59 empty runs into a depot, 60 out, 608 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 2; most deadlocked 3 (first day 2 05:57: 桃園機場捷運列車 2 at 機場第二航廈站; 桃園機場捷運列車 6 at 機場第一航廈站; 桃園機場捷運列車 17 at 機場第二航廈站; deadlocked in 14 minutes); most stranded 0; 1 of 1 lines with runs and depots
+[plain] DEPOT_RETURN tymc-rebuilt: rebuilt at 1560 min
+[plain] DEPOT_RETURN wenhu: second day 0 of 532 runs not sent out; 289 of 532 trips late; 116 empty runs into a depot, 116 out, 189 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 動物園 5, 南港展覽館 5; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain] DEPOT_RETURN xiaobitan: second day 0 of 138 runs not sent out; 0 of 138 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain] DEPOT_RETURN xinbeitou: second day 0 of 244 runs not sent out; 0 of 244 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN hk-sil-tcl: second day 0 of 732 runs not sent out; 0 of 0 trips late; 56 empty runs into a depot, 38 out, 961 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 金鐘 5, 海怡半島 4, 香港 4, 東涌 3; most deadlocked 0; most stranded 0; 2 of 2 lines with runs and depots
+[simple] DEPOT_RETURN rovaniemi-both: second day 0 of 14 runs not sent out; 0 of 14 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 2 lines with runs and depots
+[simple] DEPOT_RETURN rovaniemi-kja: second day 0 of 2 runs not sent out; 0 of 2 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN rovaniemi-mul: second day 0 of 12 runs not sent out; 0 of 12 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN ankeng: second day 0 of 178 runs not sent out; 0 of 0 trips late; 17 empty runs into a depot, 16 out, 67 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 4, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple] DEPOT_RETURN ankeng-added: second day 0 of 178 runs not sent out; 0 of 0 trips late; 23 empty runs into a depot, 16 out, 66 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 5, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple] DEPOT_RETURN danhai-blue: second day 0 of 112 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN pingxi: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN jiji: second day 0 of 24 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN neiwan: second day 0 of 39 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN shenao: second day 0 of 16 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN liujia: second day 0 of 82 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN shalun: second day 0 of 74 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN demo: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[simple] DEPOT_RETURN ferry-tamsui: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[simple] DEPOT_RETURN ferry-tamsui ferry 1: day 0 103 riders, day 1 103 riders
+[simple] DEPOT_RETURN ferry-gushan: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[simple] DEPOT_RETURN ferry-gushan ferry 1: day 0 583 riders, day 1 583 riders
+[simple] DEPOT_RETURN danhai: second day 0 of 152 runs not sent out; 0 of 0 trips late; 18 empty runs into a depot, 18 out, 14 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 紅樹林 6, 崁頂 6; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple] DEPOT_RETURN hsr: second day 0 of 191 runs not sent out; 0 of 0 trips late; 72 empty runs into a depot, 87 out, 1290 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Nangang 5, Zuoying 7; most deadlocked 0; most stranded 0; 3 of 3 lines with runs and depots
+[simple] DEPOT_RETURN klrt: second day 0 of 168 runs not sent out; 0 of 0 trips late; 44 empty runs into a depot, 44 out, 42 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 龍華國小 2, 愛河之心 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple] DEPOT_RETURN maokong: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[simple] DEPOT_RETURN maokong cableway 1: day 0 2427 riders, day 1 1195 riders
+[simple] DEPOT_RETURN realworld: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[simple] DEPOT_RETURN sanying: second day 0 of 292 runs not sent out; 0 of 0 trips late; 4 empty runs into a depot, 4 out, 58 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 頂埔 4, 鶯桃福德 4; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple] DEPOT_RETURN tra: second day 0 of 148 runs not sent out; 0 of 0 trips late; 120 empty runs into a depot, 121 out, 769 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Toucheng 5, Su'aoxin 6; most deadlocked 0; most stranded 0; 8 of 8 lines with runs and depots
+[simple] DEPOT_RETURN tymc: second day 0 of 333 runs not sent out; 0 of 0 trips late; 48 empty runs into a depot, 52 out, 1079 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple] DEPOT_RETURN tymc-old: second day 0 of 333 runs not sent out; 0 of 0 trips late; 47 empty runs into a depot, 53 out, 1089 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 1; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple] DEPOT_RETURN tymc-rebuilt: second day 0 of 333 runs not sent out; 0 of 0 trips late; 46 empty runs into a depot, 52 out, 1075 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 1; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple] DEPOT_RETURN tymc-rebuilt: rebuilt at 1560 min
+[simple] DEPOT_RETURN wenhu: second day 0 of 532 runs not sent out; 0 of 0 trips late; 84 empty runs into a depot, 84 out, 135 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 動物園 5, 南港展覽館 5; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple] DEPOT_RETURN xiaobitan: second day 0 of 138 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple] DEPOT_RETURN xinbeitou: second day 0 of 244 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN hk-sil-tcl: not sent 香港 to 東涌 at 06:17
+[ctl] DEPOT_RETURN hk-sil-tcl: second day 1 of 732 runs not sent out; 0 of 0 trips late; 72 empty runs into a depot, 54 out, 932 km empty in all; 4 empty runs between stations to make way (most in a row 1: 南港島綫列車 2, day 0 10:05 to 10:05, 海怡半島>利東); most standing at the ends: 金鐘 5, 海怡半島 4, 香港 4, 東涌 3; most deadlocked 0; most stranded 0; 2 of 2 lines with runs and depots
+[ctl] DEPOT_RETURN rovaniemi-both: second day 0 of 14 runs not sent out; 0 of 14 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 2 lines with runs and depots
+[ctl] DEPOT_RETURN rovaniemi-kja: second day 0 of 2 runs not sent out; 0 of 2 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN rovaniemi-mul: second day 0 of 12 runs not sent out; 0 of 12 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN ankeng: second day 0 of 178 runs not sent out; 0 of 0 trips late; 19 empty runs into a depot, 18 out, 70 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 3, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN ankeng-added: second day 0 of 178 runs not sent out; 0 of 0 trips late; 25 empty runs into a depot, 18 out, 52 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 4, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN danhai-blue: second day 0 of 112 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN pingxi: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN jiji: second day 0 of 24 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN neiwan: second day 0 of 39 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN shenao: second day 0 of 16 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN liujia: second day 0 of 82 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN shalun: second day 0 of 74 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN demo: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[ctl] DEPOT_RETURN ferry-tamsui: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[ctl] DEPOT_RETURN ferry-tamsui ferry 1: day 0 103 riders, day 1 103 riders
+[ctl] DEPOT_RETURN ferry-gushan: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[ctl] DEPOT_RETURN ferry-gushan ferry 1: day 0 583 riders, day 1 583 riders
+[ctl] DEPOT_RETURN danhai: second day 0 of 152 runs not sent out; 0 of 0 trips late; 33 empty runs into a depot, 33 out, 94 km empty in all; 2 empty runs between stations to make way (most in a row 2: 淡海輕軌綠山線列車 9, day 1 07:18 to 07:21, 紅樹林>竿蓁林>紅樹林); most standing at the ends: 紅樹林 5, 崁頂 4; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN hsr: second day 0 of 191 runs not sent out; 0 of 0 trips late; 72 empty runs into a depot, 87 out, 1290 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Nangang 5, Zuoying 7; most deadlocked 0; most stranded 0; 3 of 3 lines with runs and depots
+[ctl] DEPOT_RETURN klrt: second day 0 of 168 runs not sent out; 0 of 0 trips late; 54 empty runs into a depot, 54 out, 51 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 龍華國小 2, 愛河之心 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN maokong: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[ctl] DEPOT_RETURN maokong cableway 1: day 0 2427 riders, day 1 1195 riders
+[ctl] DEPOT_RETURN realworld: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[ctl] DEPOT_RETURN sanying: second day 0 of 292 runs not sent out; 0 of 0 trips late; 8 empty runs into a depot, 8 out, 58 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 頂埔 4, 鶯桃福德 4; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN tra: second day 0 of 148 runs not sent out; 0 of 0 trips late; 120 empty runs into a depot, 121 out, 769 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Toucheng 5, Su'aoxin 6; most deadlocked 0; most stranded 0; 8 of 8 lines with runs and depots
+[ctl] DEPOT_RETURN tymc deadlock day 0 17:17: 桃園機場捷運列車 1 at 機場第一航廈站; 桃園機場捷運列車 2 at 機場第二航廈站; 桃園機場捷運列車 4 at 機場第二航廈站; 桃園機場捷運列車 20 at 機場第二航廈站; 桃園機場捷運列車 21 at 大園站; 桃園機場捷運列車 22 at 機場旅館站; 桃園機場捷運列車 23 at 機場第一航廈站
+[ctl] DEPOT_RETURN tymc deadlock day 0 17:18: cleared
+[ctl] DEPOT_RETURN tymc deadlock day 0 18:20: 桃園機場捷運列車 4 at 機場第一航廈站; 桃園機場捷運列車 16 at 機場旅館站; 桃園機場捷運列車 18 at 機場第二航廈站; 桃園機場捷運列車 19 at 機場第二航廈站; 桃園機場捷運列車 23 at 機場第二航廈站
+[ctl] DEPOT_RETURN tymc deadlock day 0 18:21: cleared
+[ctl] DEPOT_RETURN tymc deadlock day 0 18:33: 桃園機場捷運列車 1 at 機場第一航廈站; 桃園機場捷運列車 14 at 機場第二航廈站; 桃園機場捷運列車 19 at 機場第二航廈站
+[ctl] DEPOT_RETURN tymc deadlock day 0 18:35: cleared
+[ctl] DEPOT_RETURN tymc deadlock day 1 19:38: 桃園機場捷運列車 1 at 機場第二航廈站; 桃園機場捷運列車 6 at 機場第二航廈站; 桃園機場捷運列車 16 at 機場第一航廈站; 桃園機場捷運列車 17 at 機場第一航廈站; 桃園機場捷運列車 18 at 機場第二航廈站
+[ctl] DEPOT_RETURN tymc deadlock day 1 19:39: cleared
+[ctl] DEPOT_RETURN tymc: not sent 泰山站 to 台北車站 at 05:57
+[ctl] DEPOT_RETURN tymc: not sent 長庚醫院站 to 台北車站 at 05:58
+[ctl] DEPOT_RETURN tymc: not sent 三重站 to 老街溪站 at 05:59
+[ctl] DEPOT_RETURN tymc: not sent 體育大學站 to 老街溪站 at 06:00
+[ctl] DEPOT_RETURN tymc: not sent 台北車站 to 老街溪站 at 06:08
+[ctl] DEPOT_RETURN tymc: not sent 台北車站 to 機場第二航廈站 at 07:15
+[ctl] DEPOT_RETURN tymc: not sent 老街溪站 to 台北車站 at 07:33
+[ctl] DEPOT_RETURN tymc: not sent 台北車站 to 機場第二航廈站 at 09:30
+[ctl] DEPOT_RETURN tymc: not sent 機場第一航廈站 to 環北站 at 15:49
+[ctl] DEPOT_RETURN tymc: not sent 機場第一航廈站 to 環北站 at 17:34
+[ctl] DEPOT_RETURN tymc: not sent 機場第一航廈站 to 環北站 at 17:49
+[ctl] DEPOT_RETURN tymc: not sent 台北車站 to 機場第二航廈站 at 19:30
+[ctl] DEPOT_RETURN tymc: not sent 台北車站 to 機場第二航廈站 at 20:00
+[ctl] DEPOT_RETURN tymc: second day 13 of 333 runs not sent out; 0 of 0 trips late; 92 empty runs into a depot, 92 out, 1160 km empty in all; 78 empty runs between stations to make way (most in a row 9: 桃園機場捷運列車 27, day 0 09:39 to 10:33, 台北車站>三重站>新北產業園區站>新莊副都心站>泰山站>泰山貴和站>泰山站>新莊副都心站>泰山站>長庚醫院站); most standing at the ends: 台北車站 4, 老街溪站 3; most deadlocked 7 (first day 0 17:17: 桃園機場捷運列車 1 at 機場第一航廈站; 桃園機場捷運列車 2 at 機場第二航廈站; 桃園機場捷運列車 4 at 機場第二航廈站; 桃園機場捷運列車 20 at 機場第二航廈站; 桃園機場捷運列車 21 at 大園站; 桃園機場捷運列車 22 at 機場旅館站; 桃園機場捷運列車 23 at 機場第一航廈站; deadlocked in 5 minutes); most stranded 0; 1 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN tymc-old deadlock day 2 18:09: 桃園機場捷運列車 5 at 機場第一航廈站; 桃園機場捷運列車 7 at 機場第二航廈站; 桃園機場捷運列車 17 at 機場第二航廈站; 桃園機場捷運列車 22 at 機場第二航廈站
+[ctl] DEPOT_RETURN tymc-old deadlock day 2 18:10: 桃園機場捷運列車 5 at 機場第一航廈站; 桃園機場捷運列車 7 at 機場第二航廈站; 桃園機場捷運列車 17 at 機場第二航廈站
+[ctl] DEPOT_RETURN tymc-old deadlock day 2 18:11: cleared
+[ctl] DEPOT_RETURN tymc-old: not sent 長庚醫院站 to 台北車站 at 05:58
+[ctl] DEPOT_RETURN tymc-old: not sent 機場第二航廈站 to 台北車站 at 16:55
+[ctl] DEPOT_RETURN tymc-old: not sent 機場第二航廈站 to 台北車站 at 17:10
+[ctl] DEPOT_RETURN tymc-old: not sent 台北車站 to 老街溪站 at 19:08
+[ctl] DEPOT_RETURN tymc-old: second day 4 of 333 runs not sent out; 0 of 0 trips late; 101 empty runs into a depot, 101 out, 1355 km empty in all; 87 empty runs between stations to make way (most in a row 12: 桃園機場捷運列車 14, day 1 08:38 to 09:22, 台北車站>三重站>新北產業園區站>新莊副都心站>泰山站>新莊副都心站>新北產業園區站>三重站>新北產業園區站>新莊副都心站>泰山站>泰山貴和站>泰山站); most standing at the ends: 台北車站 3, 老街溪站 3; most deadlocked 4 (first day 2 18:09: 桃園機場捷運列車 5 at 機場第一航廈站; 桃園機場捷運列車 7 at 機場第二航廈站; 桃園機場捷運列車 17 at 機場第二航廈站; 桃園機場捷運列車 22 at 機場第二航廈站; deadlocked in 2 minutes); most stranded 0; 1 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN tymc-rebuilt deadlock day 1 19:51: 桃園機場捷運列車 3 at 機場第二航廈站; 桃園機場捷運列車 4 at 機場第二航廈站; 桃園機場捷運列車 9 at 機場第一航廈站; 桃園機場捷運列車 20 at 機場第二航廈站
+[ctl] DEPOT_RETURN tymc-rebuilt deadlock day 1 19:52: cleared
+[ctl] DEPOT_RETURN tymc-rebuilt: not sent 長庚醫院站 to 台北車站 at 05:58
+[ctl] DEPOT_RETURN tymc-rebuilt: not sent 體育大學站 to 老街溪站 at 06:00
+[ctl] DEPOT_RETURN tymc-rebuilt: not sent 長庚醫院站 to 環北站 at 06:07
+[ctl] DEPOT_RETURN tymc-rebuilt: not sent 台北車站 to 機場第二航廈站 at 10:15
+[ctl] DEPOT_RETURN tymc-rebuilt: not sent 機場第一航廈站 to 環北站 at 15:49
+[ctl] DEPOT_RETURN tymc-rebuilt: not sent 機場第一航廈站 to 環北站 at 17:34
+[ctl] DEPOT_RETURN tymc-rebuilt: not sent 機場第一航廈站 to 環北站 at 17:49
+[ctl] DEPOT_RETURN tymc-rebuilt: not sent 機場第二航廈站 to 台北車站 at 19:25
+[ctl] DEPOT_RETURN tymc-rebuilt: not sent 台北車站 to 機場第二航廈站 at 22:00
+[ctl] DEPOT_RETURN tymc-rebuilt: second day 9 of 333 runs not sent out; 0 of 0 trips late; 74 empty runs into a depot, 78 out, 956 km empty in all; 39 empty runs between stations to make way (most in a row 9: 桃園機場捷運列車 23, day 2 09:42 to 10:31, 台北車站>三重站>新北產業園區站>新莊副都心站>泰山站>泰山貴和站>泰山站>新莊副都心站>泰山站>長庚醫院站); most standing at the ends: 台北車站 3, 老街溪站 2; most deadlocked 4 (first day 1 19:51: 桃園機場捷運列車 3 at 機場第二航廈站; 桃園機場捷運列車 4 at 機場第二航廈站; 桃園機場捷運列車 9 at 機場第一航廈站; 桃園機場捷運列車 20 at 機場第二航廈站; deadlocked in 1 minutes); most stranded 0; 1 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN tymc-rebuilt: rebuilt at 1560 min
+[ctl] DEPOT_RETURN wenhu: not sent 動物園 to 南港展覽館 at 08:46
+[ctl] DEPOT_RETURN wenhu: not sent 南港展覽館 to 動物園 at 08:46
+[ctl] DEPOT_RETURN wenhu: not sent 動物園 to 南港展覽館 at 08:55
+[ctl] DEPOT_RETURN wenhu: not sent 南港展覽館 to 動物園 at 08:55
+[ctl] DEPOT_RETURN wenhu: not sent 動物園 to 南港展覽館 at 09:01
+[ctl] DEPOT_RETURN wenhu: not sent 南港展覽館 to 動物園 at 19:29
+[ctl] DEPOT_RETURN wenhu: second day 6 of 532 runs not sent out; 0 of 0 trips late; 184 empty runs into a depot, 185 out, 303 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 動物園 5, 南港展覽館 5; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN xiaobitan: second day 0 of 138 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl] DEPOT_RETURN xinbeitou: second day 0 of 244 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN hk-sil-tcl fast: second day 0 of 732 runs not sent out; 141 of 732 trips late; 48 empty runs into a depot, 47 out, 667 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 金鐘 4, 海怡半島 4, 香港 3, 東涌 3; most deadlocked 0; most stranded 0; 2 of 2 lines with runs and depots
+[plain-fast] DEPOT_RETURN rovaniemi-both fast: second day 0 of 14 runs not sent out; 0 of 14 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 2 lines with runs and depots
+[plain-fast] DEPOT_RETURN rovaniemi-kja fast: second day 0 of 2 runs not sent out; 0 of 2 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN rovaniemi-mul fast: second day 0 of 12 runs not sent out; 0 of 12 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN ankeng fast: second day 0 of 178 runs not sent out; 0 of 178 trips late; 6 empty runs into a depot, 4 out, 16 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 4, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN ankeng-added fast: second day 0 of 178 runs not sent out; 0 of 178 trips late; 8 empty runs into a depot, 4 out, 20 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 4, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN danhai-blue fast: second day 0 of 112 runs not sent out; 0 of 112 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN pingxi fast: second day 0 of 34 runs not sent out; 0 of 34 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN jiji fast: second day 0 of 24 runs not sent out; 0 of 24 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN neiwan fast: second day 0 of 39 runs not sent out; 0 of 39 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN shenao fast: second day 0 of 16 runs not sent out; 0 of 16 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN liujia fast: second day 0 of 82 runs not sent out; 0 of 82 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN shalun fast: second day 0 of 74 runs not sent out; 0 of 74 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN demo fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[plain-fast] DEPOT_RETURN ferry-tamsui fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[plain-fast] DEPOT_RETURN ferry-tamsui ferry 1: day 0 103 riders, day 1 103 riders
+[plain-fast] DEPOT_RETURN ferry-gushan fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[plain-fast] DEPOT_RETURN ferry-gushan ferry 1: day 0 583 riders, day 1 583 riders
+[plain-fast] DEPOT_RETURN danhai fast: second day 0 of 152 runs not sent out; 0 of 152 trips late; 4 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 紅樹林 6, 崁頂 6; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN hsr fast: second day 0 of 191 runs not sent out; 0 of 0 trips late; 10 empty runs into a depot, 16 out, 771 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Nangang 5, Zuoying 7; most deadlocked 0; most stranded 0; 3 of 3 lines with runs and depots
+[plain-fast] DEPOT_RETURN klrt fast: second day 0 of 168 runs not sent out; 0 of 168 trips late; 12 empty runs into a depot, 9 out, 2 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 龍華國小 2, 愛河之心 1; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN maokong fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[plain-fast] DEPOT_RETURN maokong cableway 1: day 0 2427 riders, day 1 1195 riders
+[plain-fast] DEPOT_RETURN realworld fast: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[plain-fast] DEPOT_RETURN sanying fast: second day 0 of 292 runs not sent out; 0 of 292 trips late; 6 empty runs into a depot, 4 out, 62 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 頂埔 4, 鶯桃福德 4; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN tra fast: second day 0 of 148 runs not sent out; 0 of 0 trips late; 26 empty runs into a depot, 39 out, 143 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Toucheng 5, Su'aoxin 6; most deadlocked 0; most stranded 0; 8 of 8 lines with runs and depots
+[plain-fast] DEPOT_RETURN tymc fast deadlock day 1 00:20: 桃園機場捷運列車 11 at 三重站
+[plain-fast] DEPOT_RETURN tymc fast deadlock day 1 00:30: cleared
+[plain-fast] DEPOT_RETURN tymc fast: not sent 長庚醫院站 to 台北車站 at 05:58
+[plain-fast] DEPOT_RETURN tymc fast: second day 1 of 333 runs not sent out; 139 of 332 trips late; 50 empty runs into a depot, 49 out, 611 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 2; most deadlocked 1 (first day 1 00:20: 桃園機場捷運列車 11 at 三重站; deadlocked in 1 ten-minute ticks); most stranded 0; 1 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN tymc-old fast deadlock day 1 19:50: 桃園機場捷運列車 24 at 興南站
+[plain-fast] DEPOT_RETURN tymc-old fast deadlock day 1 20:00: cleared
+[plain-fast] DEPOT_RETURN tymc-old fast deadlock day 2 00:20: 桃園機場捷運列車 28 at 三重站
+[plain-fast] DEPOT_RETURN tymc-old fast deadlock day 2 00:30: cleared
+[plain-fast] DEPOT_RETURN tymc-old fast deadlock day 3 00:20: 桃園機場捷運列車 27 at 三重站
+[plain-fast] DEPOT_RETURN tymc-old fast deadlock day 3 00:30: cleared
+[plain-fast] DEPOT_RETURN tymc-old fast: not sent 長庚醫院站 to 台北車站 at 05:58
+[plain-fast] DEPOT_RETURN tymc-old fast: second day 1 of 333 runs not sent out; 143 of 332 trips late; 48 empty runs into a depot, 44 out, 588 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 2; most deadlocked 1 (first day 1 19:50: 桃園機場捷運列車 24 at 興南站; deadlocked in 3 ten-minute ticks); most stranded 0; 1 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN tymc-rebuilt fast deadlock day 3 00:20: 桃園機場捷運列車 20 at 三重站
+[plain-fast] DEPOT_RETURN tymc-rebuilt fast deadlock day 3 00:30: cleared
+[plain-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 長庚醫院站 to 台北車站 at 05:58
+[plain-fast] DEPOT_RETURN tymc-rebuilt fast: second day 1 of 333 runs not sent out; 141 of 332 trips late; 49 empty runs into a depot, 43 out, 641 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 2; most deadlocked 1 (first day 3 00:20: 桃園機場捷運列車 20 at 三重站; deadlocked in 1 ten-minute ticks); most stranded 0; 1 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN tymc-rebuilt: rebuilt at 1560 min
+[plain-fast] DEPOT_RETURN wenhu fast: second day 0 of 532 runs not sent out; 289 of 532 trips late; 39 empty runs into a depot, 27 out, 26 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 動物園 5, 南港展覽館 5; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN xiaobitan fast: second day 0 of 138 runs not sent out; 0 of 138 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[plain-fast] DEPOT_RETURN xinbeitou fast: second day 0 of 244 runs not sent out; 0 of 244 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN hk-sil-tcl fast: second day 0 of 732 runs not sent out; 0 of 0 trips late; 29 empty runs into a depot, 34 out, 528 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 金鐘 4, 海怡半島 3, 香港 2, 東涌 2; most deadlocked 0; most stranded 0; 2 of 2 lines with runs and depots
+[simple-fast] DEPOT_RETURN rovaniemi-both fast: second day 0 of 14 runs not sent out; 0 of 14 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 2 lines with runs and depots
+[simple-fast] DEPOT_RETURN rovaniemi-kja fast: second day 0 of 2 runs not sent out; 0 of 2 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN rovaniemi-mul fast: second day 0 of 12 runs not sent out; 0 of 12 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN ankeng fast: second day 0 of 178 runs not sent out; 0 of 0 trips late; 8 empty runs into a depot, 4 out, 23 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 4, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN ankeng-added fast: second day 0 of 178 runs not sent out; 0 of 0 trips late; 9 empty runs into a depot, 2 out, 6 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 4, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN danhai-blue fast: second day 0 of 112 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN pingxi fast: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN jiji fast: second day 0 of 24 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN neiwan fast: second day 0 of 39 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN shenao fast: second day 0 of 16 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN liujia fast: second day 0 of 82 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN shalun fast: second day 0 of 74 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN demo fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[simple-fast] DEPOT_RETURN ferry-tamsui fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[simple-fast] DEPOT_RETURN ferry-tamsui ferry 1: day 0 103 riders, day 1 103 riders
+[simple-fast] DEPOT_RETURN ferry-gushan fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[simple-fast] DEPOT_RETURN ferry-gushan ferry 1: day 0 583 riders, day 1 583 riders
+[simple-fast] DEPOT_RETURN danhai fast: second day 0 of 152 runs not sent out; 0 of 0 trips late; 4 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 紅樹林 6, 崁頂 6; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN hsr fast: second day 0 of 191 runs not sent out; 0 of 0 trips late; 10 empty runs into a depot, 16 out, 771 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Nangang 5, Zuoying 7; most deadlocked 0; most stranded 0; 3 of 3 lines with runs and depots
+[simple-fast] DEPOT_RETURN klrt fast: second day 0 of 168 runs not sent out; 0 of 0 trips late; 12 empty runs into a depot, 0 out, 2 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 龍華國小 2, 愛河之心 1; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN maokong fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[simple-fast] DEPOT_RETURN maokong cableway 1: day 0 2427 riders, day 1 1195 riders
+[simple-fast] DEPOT_RETURN realworld fast: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[simple-fast] DEPOT_RETURN sanying fast: second day 0 of 292 runs not sent out; 0 of 0 trips late; 2 empty runs into a depot, 4 out, 42 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 頂埔 4, 鶯桃福德 4; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN tra fast: second day 0 of 148 runs not sent out; 0 of 0 trips late; 26 empty runs into a depot, 39 out, 143 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Toucheng 5, Su'aoxin 6; most deadlocked 0; most stranded 0; 8 of 8 lines with runs and depots
+[simple-fast] DEPOT_RETURN tymc fast: second day 0 of 333 runs not sent out; 0 of 0 trips late; 35 empty runs into a depot, 40 out, 654 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 1; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN tymc-old fast: second day 0 of 333 runs not sent out; 0 of 0 trips late; 35 empty runs into a depot, 42 out, 672 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 1; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN tymc-rebuilt fast: second day 0 of 333 runs not sent out; 0 of 0 trips late; 36 empty runs into a depot, 41 out, 662 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 台北車站 5, 老街溪站 1; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN tymc-rebuilt: rebuilt at 1560 min
+[simple-fast] DEPOT_RETURN wenhu fast: second day 0 of 532 runs not sent out; 0 of 0 trips late; 14 empty runs into a depot, 18 out, 10 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 動物園 5, 南港展覽館 5; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN xiaobitan fast: second day 0 of 138 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[simple-fast] DEPOT_RETURN xinbeitou fast: second day 0 of 244 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN hk-sil-tcl fast: not sent 香港 to 東涌 at 06:17
+[ctl-fast] DEPOT_RETURN hk-sil-tcl fast: second day 1 of 732 runs not sent out; 0 of 0 trips late; 51 empty runs into a depot, 26 out, 631 km empty in all; 2 empty runs between stations to make way (most in a row 1: 南港島綫列車 10, day 0 19:50 to 19:49, 海怡半島>利東); most standing at the ends: 金鐘 5, 海怡半島 2, 香港 4, 東涌 2; most deadlocked 0; most stranded 0; 2 of 2 lines with runs and depots
+[ctl-fast] DEPOT_RETURN rovaniemi-both fast: second day 0 of 14 runs not sent out; 0 of 14 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 2 lines with runs and depots
+[ctl-fast] DEPOT_RETURN rovaniemi-kja fast: second day 0 of 2 runs not sent out; 0 of 2 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN rovaniemi-mul fast: second day 0 of 12 runs not sent out; 0 of 12 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN ankeng fast: second day 0 of 178 runs not sent out; 0 of 0 trips late; 8 empty runs into a depot, 6 out, 42 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 3, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN ankeng-added fast: second day 0 of 178 runs not sent out; 0 of 0 trips late; 7 empty runs into a depot, 4 out, 29 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 雙城 3, 十四張 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN danhai-blue fast: second day 0 of 112 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN pingxi fast: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN jiji fast: second day 0 of 24 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN neiwan fast: second day 0 of 39 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN shenao fast: second day 0 of 16 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN liujia fast: second day 0 of 82 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN shalun fast: second day 0 of 74 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN demo fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[ctl-fast] DEPOT_RETURN ferry-tamsui fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[ctl-fast] DEPOT_RETURN ferry-tamsui ferry 1: day 0 103 riders, day 1 103 riders
+[ctl-fast] DEPOT_RETURN ferry-gushan fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[ctl-fast] DEPOT_RETURN ferry-gushan ferry 1: day 0 583 riders, day 1 583 riders
+[ctl-fast] DEPOT_RETURN danhai fast: second day 0 of 152 runs not sent out; 0 of 0 trips late; 16 empty runs into a depot, 7 out, 47 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 紅樹林 5, 崁頂 3; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN hsr fast: second day 0 of 191 runs not sent out; 0 of 0 trips late; 10 empty runs into a depot, 16 out, 771 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Nangang 5, Zuoying 7; most deadlocked 0; most stranded 0; 3 of 3 lines with runs and depots
+[ctl-fast] DEPOT_RETURN klrt fast: second day 0 of 168 runs not sent out; 0 of 0 trips late; 12 empty runs into a depot, 8 out, 2 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 龍華國小 2, 愛河之心 1; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN maokong fast: second day 0 of 0 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 0 lines with runs and depots
+[ctl-fast] DEPOT_RETURN maokong cableway 1: day 0 2427 riders, day 1 1195 riders
+[ctl-fast] DEPOT_RETURN realworld fast: second day 0 of 34 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 3 lines with runs and depots
+[ctl-fast] DEPOT_RETURN sanying fast: second day 0 of 292 runs not sent out; 0 of 0 trips late; 8 empty runs into a depot, 8 out, 71 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 頂埔 4, 鶯桃福德 4; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN tra fast: second day 0 of 148 runs not sent out; 0 of 0 trips late; 26 empty runs into a depot, 39 out, 143 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Toucheng 5, Su'aoxin 6; most deadlocked 0; most stranded 0; 8 of 8 lines with runs and depots
+[ctl-fast] DEPOT_RETURN tymc fast deadlock day 0 18:20: 桃園機場捷運列車 4 at 機場第一航廈站; 桃園機場捷運列車 16 at 機場旅館站; 桃園機場捷運列車 18 at 機場第二航廈站; 桃園機場捷運列車 19 at 機場第二航廈站; 桃園機場捷運列車 23 at 機場第二航廈站
+[ctl-fast] DEPOT_RETURN tymc fast deadlock day 0 18:30: cleared
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 泰山站 to 台北車站 at 05:57
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 長庚醫院站 to 台北車站 at 05:58
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 三重站 to 老街溪站 at 05:59
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 體育大學站 to 老街溪站 at 06:00
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 台北車站 to 老街溪站 at 06:08
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 台北車站 to 機場第二航廈站 at 07:15
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 老街溪站 to 台北車站 at 07:33
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 台北車站 to 機場第二航廈站 at 09:30
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 機場第一航廈站 to 環北站 at 15:49
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 機場第一航廈站 to 環北站 at 17:34
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 機場第一航廈站 to 環北站 at 17:49
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 台北車站 to 機場第二航廈站 at 19:30
+[ctl-fast] DEPOT_RETURN tymc fast: not sent 台北車站 to 機場第二航廈站 at 20:00
+[ctl-fast] DEPOT_RETURN tymc fast: second day 13 of 333 runs not sent out; 0 of 0 trips late; 62 empty runs into a depot, 71 out, 695 km empty in all; 22 empty runs between stations to make way (most in a row 4: 桃園機場捷運列車 27, day 0 09:40 to 10:33, 台北車站>三重站>新莊副都心站>泰山站>長庚醫院站); most standing at the ends: 台北車站 3, 老街溪站 3; most deadlocked 5 (first day 0 18:20: 桃園機場捷運列車 4 at 機場第一航廈站; 桃園機場捷運列車 16 at 機場旅館站; 桃園機場捷運列車 18 at 機場第二航廈站; 桃園機場捷運列車 19 at 機場第二航廈站; 桃園機場捷運列車 23 at 機場第二航廈站; deadlocked in 1 ten-minute ticks); most stranded 0; 1 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN tymc-old fast deadlock day 2 18:10: 桃園機場捷運列車 5 at 機場第一航廈站; 桃園機場捷運列車 7 at 機場第二航廈站; 桃園機場捷運列車 17 at 機場第二航廈站
+[ctl-fast] DEPOT_RETURN tymc-old fast deadlock day 2 18:20: cleared
+[ctl-fast] DEPOT_RETURN tymc-old fast: not sent 長庚醫院站 to 台北車站 at 05:58
+[ctl-fast] DEPOT_RETURN tymc-old fast: not sent 機場第二航廈站 to 台北車站 at 16:55
+[ctl-fast] DEPOT_RETURN tymc-old fast: not sent 機場第二航廈站 to 台北車站 at 17:10
+[ctl-fast] DEPOT_RETURN tymc-old fast: not sent 台北車站 to 老街溪站 at 19:08
+[ctl-fast] DEPOT_RETURN tymc-old fast: second day 4 of 333 runs not sent out; 0 of 0 trips late; 68 empty runs into a depot, 73 out, 829 km empty in all; 27 empty runs between stations to make way (most in a row 4: 桃園機場捷運列車 14, day 1 08:40 to 09:10, 台北車站>三重站>泰山站>新北產業園區站>新莊副都心站); most standing at the ends: 台北車站 3, 老街溪站 2; most deadlocked 3 (first day 2 18:10: 桃園機場捷運列車 5 at 機場第一航廈站; 桃園機場捷運列車 7 at 機場第二航廈站; 桃園機場捷運列車 17 at 機場第二航廈站; deadlocked in 1 ten-minute ticks); most stranded 0; 1 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 長庚醫院站 to 台北車站 at 05:58
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 體育大學站 to 老街溪站 at 06:00
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 長庚醫院站 to 環北站 at 06:07
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 台北車站 to 機場第二航廈站 at 10:15
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 機場第一航廈站 to 環北站 at 15:49
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 機場第一航廈站 to 環北站 at 17:34
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 機場第一航廈站 to 環北站 at 17:49
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 機場第二航廈站 to 台北車站 at 19:25
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: not sent 台北車站 to 機場第二航廈站 at 22:00
+[ctl-fast] DEPOT_RETURN tymc-rebuilt fast: second day 9 of 333 runs not sent out; 0 of 0 trips late; 57 empty runs into a depot, 61 out, 586 km empty in all; 9 empty runs between stations to make way (most in a row 3: 桃園機場捷運列車 23, day 2 09:50 to 10:31, 三重站>新北產業園區站>泰山貴和站>長庚醫院站); most standing at the ends: 台北車站 3, 老街溪站 2; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN tymc-rebuilt: rebuilt at 1560 min
+[ctl-fast] DEPOT_RETURN wenhu fast: not sent 動物園 to 南港展覽館 at 08:46
+[ctl-fast] DEPOT_RETURN wenhu fast: not sent 南港展覽館 to 動物園 at 08:46
+[ctl-fast] DEPOT_RETURN wenhu fast: not sent 動物園 to 南港展覽館 at 08:55
+[ctl-fast] DEPOT_RETURN wenhu fast: not sent 南港展覽館 to 動物園 at 08:55
+[ctl-fast] DEPOT_RETURN wenhu fast: not sent 動物園 to 南港展覽館 at 09:01
+[ctl-fast] DEPOT_RETURN wenhu fast: not sent 南港展覽館 to 動物園 at 19:29
+[ctl-fast] DEPOT_RETURN wenhu fast: second day 6 of 532 runs not sent out; 0 of 0 trips late; 42 empty runs into a depot, 25 out, 28 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 動物園 4, 南港展覽館 4; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN xiaobitan fast: second day 0 of 138 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[ctl-fast] DEPOT_RETURN xinbeitou fast: second day 0 of 244 runs not sent out; 0 of 0 trips late; 0 empty runs into a depot, 0 out, 0 km empty in all; 0 empty runs between stations to make way; most standing at the ends: ; most deadlocked 0; most stranded 0; 0 of 1 lines with runs and depots
+[fuk-plain] DEPOT_RETURN fukuoka: second day 0 of 1372 runs not sent out; 29 of 1372 trips late; 44 empty runs into a depot, 44 out, 54 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 博多 3, 橋本 5; most deadlocked 0; most stranded 0; 1 of 3 lines with runs and depots
+[fuk-simple] DEPOT_RETURN fukuoka: second day 0 of 1372 runs not sent out; 0 of 0 trips late; 32 empty runs into a depot, 32 out, 40 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 博多 3, 橋本 5; most deadlocked 0; most stranded 0; 1 of 3 lines with runs and depots
+[fuk-ctl] DEPOT_RETURN fukuoka: second day 0 of 1372 runs not sent out; 0 of 0 trips late; 48 empty runs into a depot, 48 out, 58 km empty in all; 0 empty runs between stations to make way; most standing at the ends: 博多 4, 橋本 4; most deadlocked 0; most stranded 0; 1 of 3 lines with runs and depots
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 07:16: Taoyuan Airport MRT Train 14 at Airport Terminal 1 Station
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 07:17: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 07:46: Taoyuan Airport MRT Train 25 at Airport Terminal 1 Station
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 07:47: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 13:28: Taoyuan Airport MRT Train 18 at line
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 13:29: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 13:43: Taoyuan Airport MRT Train 5 at line
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 13:44: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 16:13: Taoyuan Airport MRT Train 6 at line
+[peo-tymc] DEPOT_RETURN tymc deadlock day 0 16:14: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 08:29: Taoyuan Airport MRT Train 13 at line
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 08:30: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 08:44: Taoyuan Airport MRT Train 3 at line
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 08:45: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 09:14: Taoyuan Airport MRT Train 6 at line
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 09:15: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 09:44: Taoyuan Airport MRT Train 8 at line
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 09:45: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 16:55: Taoyuan Airport MRT Train 2 at Airport Terminal 2 Station
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 16:56: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 19:51: Taoyuan Airport MRT Train 31 at line
+[peo-tymc] DEPOT_RETURN tymc deadlock day 1 19:53: cleared
+[peo-tymc] DEPOT_RETURN tymc deadlock day 2 00:23: Taoyuan Airport MRT Train 9 at Airport Terminal 2 Station
+[peo-tymc] DEPOT_RETURN tymc deadlock day 2 00:24: cleared
+[peo-tymc] DEPOT_RETURN tymc: not sent Chang Gung Memorial Hospital Station to Taipei Main Station at 05:58
+[peo-tymc] DEPOT_RETURN tymc: second day 1 of 333 runs not sent out; 137 of 332 trips late; 60 empty runs into a depot, 62 out, 687 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Taipei Main Station 5, Laojie River Station 2; most deadlocked 1 (first day 0 07:16: Taoyuan Airport MRT Train 14 at Airport Terminal 1 Station; deadlocked in 13 minutes); most stranded 0; 1 of 1 lines with runs and depots
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 18:25: Taoyuan Airport MRT Train 2 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 7 at line; Taoyuan Airport MRT Train 11 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 14 at Dayuan Station; Taoyuan Airport MRT Train 20 at Airport Hotel Station; Taoyuan Airport MRT Train 23 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 24 at Hengshan Station; Taoyuan Airport MRT Train 25 at Airport Terminal 1 Station; Taoyuan Airport MRT Train 27 at line
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 18:26: cleared
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 18:44: Taoyuan Airport MRT Train 4 at Dayuan Station; Taoyuan Airport MRT Train 6 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 7 at line; Taoyuan Airport MRT Train 8 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 14 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 17 at Hengshan Station; Taoyuan Airport MRT Train 20 at Airport Terminal 1 Station; Taoyuan Airport MRT Train 24 at Airport Hotel Station
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 18:45: cleared
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 19:47: Taoyuan Airport MRT Train 3 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 4 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 8 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 22 at Airport Hotel Station; Taoyuan Airport MRT Train 25 at Airport Terminal 1 Station
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 19:48: cleared
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 19:51: Taoyuan Airport MRT Train 3 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 4 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 8 at Airport Terminal 1 Station; Taoyuan Airport MRT Train 22 at Airport Terminal 2 Station
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 19:52: cleared
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 20:14: Taoyuan Airport MRT Train 2 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 5 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 13 at Airport Terminal 1 Station; Taoyuan Airport MRT Train 14 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 15 at Airport Hotel Station; Taoyuan Airport MRT Train 28 at Dayuan Station
+[peo-tymc-ctl] DEPOT_RETURN tymc deadlock day 0 20:15: cleared
+[peo-tymc-ctl] DEPOT_RETURN tymc: not sent Chang Gung Memorial Hospital Station to Taipei Main Station at 05:58
+[peo-tymc-ctl] DEPOT_RETURN tymc: not sent National Taiwan Sport University Station to Laojie River Station at 06:00
+[peo-tymc-ctl] DEPOT_RETURN tymc: not sent Chang Gung Memorial Hospital Station to Huanbei Station at 06:07
+[peo-tymc-ctl] DEPOT_RETURN tymc: second day 3 of 333 runs not sent out; 0 of 0 trips late; 88 empty runs into a depot, 87 out, 1061 km empty in all; 61 empty runs between stations to make way (most in a row 9: Taoyuan Airport MRT Train 27, day 0 09:39 to 10:33, Taipei Main Station>Sanchong Station>New Taipei Industrial Park Station>Xinzhuang Fuduxin Station>Taishan Station>Taishan Guihe Station>Taishan Station>Xinzhuang Fuduxin Station>Taishan Station>Chang Gung Memorial Hospital Station); most standing at the ends: Taipei Main Station 4, Laojie River Station 2; most deadlocked 9 (first day 0 18:25: Taoyuan Airport MRT Train 2 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 7 toward Airport Terminal 2 Station; Taoyuan Airport MRT Train 11 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 14 at Dayuan Station; Taoyuan Airport MRT Train 20 at Airport Hotel Station; Taoyuan Airport MRT Train 23 at Airport Terminal 2 Station; Taoyuan Airport MRT Train 24 at Hengshan Station; Taoyuan Airport MRT Train 25 at Airport Terminal 1 Station; Taoyuan Airport MRT Train 27 toward ?; deadlocked in 5 minutes); most stranded 0; 1 of 1 lines with runs and depots
+[peo-wenhu] DEPOT_RETURN wenhu: second day 0 of 532 runs not sent out; 285 of 532 trips late; 116 empty runs into a depot, 116 out, 189 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Taipei Zoo 5, Taipei Nangang Exhibition Center 5; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
+[peo-wenhu-ctl] DEPOT_RETURN wenhu: not sent Taipei Zoo to Taipei Nangang Exhibition Center at 08:44
+[peo-wenhu-ctl] DEPOT_RETURN wenhu: not sent Taipei Nangang Exhibition Center to Taipei Zoo at 08:46
+[peo-wenhu-ctl] DEPOT_RETURN wenhu: not sent Taipei Nangang Exhibition Center to Taipei Zoo at 08:55
+[peo-wenhu-ctl] DEPOT_RETURN wenhu: not sent Taipei Zoo to Taipei Nangang Exhibition Center at 08:57
+[peo-wenhu-ctl] DEPOT_RETURN wenhu: not sent Taipei Nangang Exhibition Center to Taipei Zoo at 19:26
+[peo-wenhu-ctl] DEPOT_RETURN wenhu: not sent Taipei Zoo to Taipei Nangang Exhibition Center at 19:29
+[peo-wenhu-ctl] DEPOT_RETURN wenhu: second day 6 of 532 runs not sent out; 0 of 0 trips late; 196 empty runs into a depot, 197 out, 322 km empty in all; 0 empty runs between stations to make way; most standing at the ends: Taipei Zoo 5, Taipei Nangang Exhibition Center 5; most deadlocked 0; most stranded 0; 1 of 1 lines with runs and depots
