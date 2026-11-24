@@ -1037,7 +1037,7 @@ private struct TrainRosterChart: Sendable {
 /// needs a row, which its asynchronous renderer may do off the main
 /// thread; written in a view it is main-actor code, and stops the app
 /// there (CRASH101). Here the kept closure only returns what was built.
-private struct TrainRosterBuiltRows<ID: Hashable>: View {
+private struct TrainRosterBuiltRows<ID: Hashable & Sendable>: View {
     private let rows: [TrainRosterBuiltRow<ID>]
 
     init<Data: Sequence, Content: View>(_ data: Data, id: KeyPath<Data.Element, ID>, @ViewBuilder content: (Data.Element) -> Content) {
@@ -1049,7 +1049,7 @@ private struct TrainRosterBuiltRows<ID: Hashable>: View {
     }
 }
 
-private struct TrainRosterBuiltRow<ID: Hashable>: Identifiable {
+private struct TrainRosterBuiltRow<ID: Hashable & Sendable>: Identifiable {
     let id: ID
     let view: AnyView
 }
