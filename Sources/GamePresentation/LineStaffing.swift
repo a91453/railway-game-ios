@@ -351,7 +351,7 @@ extension GameSession {
     /// A train on a trip, or one that cannot be put back, or whose purchase
     /// the balance does not reach, stays as it was; the message names it and
     /// the reason.
-    public func reformSelectedLine(type: TrainType?, cars: Int) {
+    public func reformSelectedLine(type: TrainType?, cars: Int?) {
         guard let line = requireSelectedLine() else { return }
         guard world.lineJourney(line.id) != nil else {
             message = StatusMessage(kind: .failure, text: language.text(
@@ -360,7 +360,7 @@ extension GameSession {
             ))
             return
         }
-        let cars = min(max(cars, Train.minimumCars), Train.maximumCars)
+        let cars = cars.map { min(max($0, Train.minimumCars), Train.maximumCars) }
         do throws(GameError) {
             let before = world
             let outcome = try performCommand(.edit(.reformLine(line.id, type: type, cars: cars, language: language)))
@@ -368,12 +368,19 @@ extension GameSession {
             let summary: String = {
                 let paid = before.economy.balance - world.economy.balance
                 guard let type else {
+                    guard let cars else { return language.text("\(line.name)'s trains are already so.", "\(line.name) 的列車已經是這個編組。") }
                     return language.text(
                         "\(line.name): \(changed) \(changed == 1 ? "train" : "trains") re-formed into \(Train.carsText(cars, in: language)), each keeping its type, for \(paid.moneyText).",
                         "\(line.name)：\(changed) 列車改編為 \(Train.carsText(cars, in: language))，車型不變，花費 \(paid.moneyText)。"
                     )
                 }
                 let name = Train.typeText(type, in: language)
+                guard let cars else {
+                    return language.text(
+                        "\(line.name): \(changed) \(changed == 1 ? "train" : "trains") changed to \(name), each keeping its cars, for \(paid.moneyText).",
+                        "\(line.name)：\(changed) 列車換成\(name)，節數不變，花費 \(paid.moneyText)。"
+                    )
+                }
                 return language.text(
                     "\(line.name): \(changed) \(changed == 1 ? "train" : "trains") re-formed into \(Train.carsText(cars, in: language)) of \(name), for \(paid.moneyText).",
                     "\(line.name)：\(changed) 列車改編為 \(Train.carsText(cars, in: language))的\(name)，花費 \(paid.moneyText)。"
@@ -396,7 +403,7 @@ extension GameSession {
     /// ``reformSelectedLine(type:cars:)`` does: how many were, and those
     /// left as they were, with the reason in `language`.
     static func reform(
-        _ id: LineID, type: TrainType?, cars: Int, in world: inout GameWorld, language: DisplayLanguage
+        _ id: LineID, type: TrainType?, cars wanted: Int?, in world: inout GameWorld, language: DisplayLanguage
     ) throws(GameError) -> (changed: Int, left: [String]) {
         guard let line = world.line(id: id) else { throw .unknownLine(id) }
         guard let journey = world.lineJourney(id) else { throw .unknownLine(id) }
@@ -411,6 +418,8 @@ extension GameSession {
             // No type named (the line's default on a line with none of its
             // own): each train keeps the type it has (decision 180, later).
             let type = type ?? train.type
+            // Decision 960: no cars named, each keeps its own.
+            let cars = wanted ?? train.cars
             if train.type == type && train.cars == cars { continue }
             var attempt = world
             do throws(GameError) {
@@ -426,7 +435,16 @@ extension GameSession {
                     try attempt.runAsItsType(trainID, ranAs: train.type)
                 }
                 if cars > train.cars { try attempt.setTrainCars(trainID, to: cars) }
-                try Self.placeAtStart(trainID, of: journey, in: &attempt)
+                // Decision 960: where it stood when the start is held by
+                // another train (the line's other trains wait there).
+                do throws(GameError) {
+                    var atStart = attempt
+                    try Self.placeAtStart(trainID, of: journey, in: &atStart)
+                    attempt = atStart
+                } catch {
+                    guard let position = train.position else { throw error }
+                    try attempt.placeTrain(trainID, at: position)
+                }
                 try attempt.assignTrain(trainID, to: id, pattern: pattern)
                 world = attempt
                 changed += 1

@@ -2887,6 +2887,23 @@ public final class GameSession {
         }
     }
 
+    /// Buys one train of `type` with `cars` cars, off the track, and
+    /// selects it (decision 960: the train types opened from the fleet).
+    public func purchaseTrain(of type: TrainType?, cars: Int) {
+        let name = Self.suggestedTrainName(for: world, in: language)
+        let bought = perform(.purchaseTrainOfType(name: name, type, cars: cars)) { outcome, before, world in
+            let spent = before.economy.balance - world.economy.balance
+            return language.text(
+                "Bought \(outcome.train?.name ?? name), \(Train.typeText(type, in: language)), for \(spent.moneyText). Select a station to place it.",
+                "已購買 \(outcome.train?.name ?? name)（\(Train.typeText(type, in: language))），花費 \(spent.moneyText)。請選擇要放置它的車站。"
+            )
+        }
+        if let purchased = bought?.train?.id {
+            selectedTrainID = purchased
+            tappedTrainID = purchased
+        }
+    }
+
     /// Sells train `id` back through `GameWorld.sellTrain(_:)` (decision
     /// 180): 70 % of its books, and only a train off its lines. Decision
     /// 327: one on the track is stopped and taken off it first. A sold

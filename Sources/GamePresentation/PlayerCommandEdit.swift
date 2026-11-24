@@ -40,6 +40,13 @@ extension PlayerCommand {
         /// The car type, and, for a train still running as standard, the
         /// type's own way of running (decision 168).
         case setTrainType(TrainID, TrainType?)
+        /// A train on the track, on no trip, taken off, given a type and
+        /// put back where it stood (decision 960), on a line back on its
+        /// service.
+        case refitTrain(TrainID, TrainType?)
+        /// A train of a type with its cars bought off the track (decision
+        /// 960: the train types opened from the fleet).
+        case purchaseTrainOfType(name: String, TrainType?, cars: Int)
         case setTrainRate(TrainID, rate: Int64)
         /// ``GameWorld/useTrainPerformanceForMovement(_:)``.
         case resumeTrain(TrainID)
@@ -75,7 +82,7 @@ extension PlayerCommand {
         case staffLine(LineID, headway: Int64, type: TrainType?, cars: Int, language: DisplayLanguage)
         /// A line's waiting trains re-formed (decision 180); what is left as
         /// it was is said in `language`.
-        case reformLine(LineID, type: TrainType?, cars: Int, language: DisplayLanguage)
+        case reformLine(LineID, type: TrainType?, cars: Int?, language: DisplayLanguage)
         /// `count` trains bought, placed and assigned to a line, and its
         /// target headways set to `targets` (decision 194, later: the line
         /// card's "run more trains"), named in `language`.
@@ -327,6 +334,16 @@ extension GameSession {
             if let line = world.assignedLine(of: id) {
                 outcome.highSpeed = try world.planAtHighSpeedWhenRunByHighSpeedSets(line)
             }
+        case .refitTrain(let id, let type):
+            try Self.refit(id, to: type, in: &world)
+            if let line = world.assignedLine(of: id) {
+                outcome.highSpeed = try world.planAtHighSpeedWhenRunByHighSpeedSets(line)
+            }
+        case .purchaseTrainOfType(let name, let type, let cars):
+            let train: Train
+            if let type { train = try world.purchaseTrain(named: name, as: type) } else { train = try world.purchaseTrain(named: name) }
+            if cars > Train.minimumCars { try world.setTrainCars(train.id, to: cars) }
+            outcome.train = world.train(id: train.id)
         case .setTrainRate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
         case .resumeTrain(let id): try world.useTrainPerformanceForMovement(id)
         case .sendTrain(let id, let steps, let end):
