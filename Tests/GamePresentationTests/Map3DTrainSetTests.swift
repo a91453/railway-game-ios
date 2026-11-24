@@ -34,7 +34,7 @@ final class Map3DTrainSetTests: XCTestCase {
         // Decision 430: the Chu-Kuang sets, near and far.
         // Decision 483: and the Ming-Ri, #1480's E200CK units repainted.
         let chuKuang: Set = ["E200CK", "E500CK", "R100CK", "R200CK", "SUMMER", "E200CKFar", "E500CKFar", "R100CKFar", "R200CKFar", "SUMMERFar",
-                             "MINGRI", "MINGRIFar"]
+                             "MINGRI", "MINGRIFar", "STAR", "STARFar"]  // Decision 953: the Formosa Star's too.
         for set in Map3DTrainSet.all {
             var names = [set.headName]
             for name in [set.middleName, set.tailName, set.singleName, set.pantographName, set.tenderName, set.middleBackName, set.pantographBackName] where pack.index(of: name) != nil { names.append(name) }

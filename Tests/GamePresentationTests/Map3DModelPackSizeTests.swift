@@ -117,9 +117,12 @@ final class Map3DModelPackSizeTests: XCTestCase {
         // close-up people after them (12 models, 15,006 vertices more,
         // 600 KB a copy).
         // Decision 941: the level crossings' boom after them (1 model, 204
-        // vertices more, 8 KB a copy).
+        // vertices more, 8 KB a copy). Decision 953: the Formosa Star's
+        // coaches the Chu-Kuang coach in pink, near and far, and their
+        // light versions (the same models, 46,512 vertices more, 1.9 MB a
+        // copy).
         XCTAssertEqual(models.count, 973)
-        XCTAssertEqual(vertices, 6_833_304)
+        XCTAssertEqual(vertices, 6_879_816)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

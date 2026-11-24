@@ -1874,20 +1874,20 @@
       "triangles" : 72
     },
     "light-set-STAR-car" : {
-      "hash" : "16dd39ef4f1d9938",
-      "triangles" : 472
+      "hash" : "2d6cad0d4d66cb7",
+      "triangles" : 836
     },
     "light-set-STAR-tail" : {
-      "hash" : "5334d881abcefe8f",
-      "triangles" : 356
+      "hash" : "606b3e2de27fa1ef",
+      "triangles" : 688
     },
     "light-set-STARFar-car" : {
-      "hash" : "16dd39ef4f1d9938",
-      "triangles" : 472
+      "hash" : "2ed73f0bb6b6d6ff",
+      "triangles" : 468
     },
     "light-set-STARFar-tail" : {
-      "hash" : "5334d881abcefe8f",
-      "triangles" : 356
+      "hash" : "63557037382901ab",
+      "triangles" : 384
     },
     "light-set-STEAM-car" : {
       "hash" : "16dd39ef4f1d9938",
@@ -3154,28 +3154,28 @@
       "triangles" : 2572
     },
     "set-STAR-car" : {
-      "hash" : "4765858efd5ede2c",
-      "triangles" : 1528
+      "hash" : "841ece9a73d6b0cd",
+      "triangles" : 6476
     },
     "set-STAR-head" : {
       "hash" : "9d353f82e67127b0",
       "triangles" : 9964
     },
     "set-STAR-tail" : {
-      "hash" : "6d7b54a992d4a74d",
-      "triangles" : 1588
+      "hash" : "919f0619c5a6463b",
+      "triangles" : 6500
     },
     "set-STARFar-car" : {
-      "hash" : "a126a281ab1d60",
-      "triangles" : 1528
+      "hash" : "926d2f21c6d965e8",
+      "triangles" : 4008
     },
     "set-STARFar-head" : {
       "hash" : "2041320d054d3e50",
       "triangles" : 3992
     },
     "set-STARFar-tail" : {
-      "hash" : "e0b43865f6d83faf",
-      "triangles" : 1588
+      "hash" : "5f9ca3eab08bba53",
+      "triangles" : 4032
     },
     "set-STEAM-car" : {
       "hash" : "cdaf3d84d3d86c31",

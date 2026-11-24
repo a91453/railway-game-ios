@@ -224,19 +224,50 @@ final class Map3DChuKuangIntegrationTests: XCTestCase {
         }
     }
 
-    /// The Blue Train, the Formosa Star and the steam train are not
-    /// Chu-Kuang coaches: every model of them as it was on main before
-    /// this decision. (Decision 483 made the Ming-Ri #1480's E200CK units;
-    /// decision 541 the Blue Train two R100s and #1671's coaches.)
+    /// The Blue Train and the steam train are not Chu-Kuang coaches:
+    /// every model of them as it was on main before this decision.
+    /// (Decision 483 made the Ming-Ri #1480's E200CK units; decision 541
+    /// the Blue Train two R100s and #1671's coaches; decision 953 the
+    /// Formosa Star's coaches the Chu-Kuang coach, its E500s as they were.)
     func testTheOtherHauledSetsAreAsTheyWere() throws {
         let before: [String: String] = [
-            "set-STAR-head": "9847c0f5eb19364", "set-STAR-car": "ad7930168200a9e5", "set-STAR-tail": "17bd7d1f746dd0b5",
-            "set-STARFar-head": "8dbdf8cee771ebe4", "set-STARFar-car": "ad7930168200a9e5", "set-STARFar-tail": "17bd7d1f746dd0b5",
+            "set-STAR-head": "9847c0f5eb19364", "set-STARFar-head": "8dbdf8cee771ebe4",
             "set-STEAM-head": "b043cf673bc3f74a", "set-STEAM-car": "1ef18359c168b9f5", "set-STEAM-tail": "267f145e46bbcd85",
             "set-STEAM-tender": "3f3c9943404f058f",
         ]
         for (name, expected) in before { XCTAssertEqual(hash(try model(name)), expected, name) }
         XCTAssertNil(Map3DTrainSet.named("STEAMFar"))
+    }
+
+    /// Decision 953: the Formosa Star's coaches are the Chu-Kuang coach,
+    /// near and far, every vertex where it is, only the navy and cream
+    /// painted the Formosa Star's pink and deep pink; the last one has the
+    /// Chu-Kuang's two red lamps.
+    func testTheFormosaStarsCoachesAreTheChuKuangCoachInPink() throws {
+        let pink = Map3DChuKuangPassenger.Paint.formosaStar
+        XCTAssertEqual(pink.body, Map3DColor.rgb(0xF3D3DF))
+        XCTAssertEqual(pink.line, Map3DColor.rgb(0xD9467E))
+        for far in [false, true] {
+            let set = try set("STAR", far: far)
+            let standard = Map3DChuKuangPassenger.model(.standard, far: far)
+            for (name, chuKuang) in [(set.middleName, standard), (set.tailName, Map3DTrainSet.chuKuangTail(far: far))] {
+                let star = try model(name)
+                XCTAssertEqual(star.vertices.count, chuKuang.vertices.count, name)
+                XCTAssertEqual(star.vertices.map { [$0.x, $0.y, $0.z] }, chuKuang.vertices.map { [$0.x, $0.y, $0.z] }, "\(name): the same shape")
+                XCTAssertEqual(star.vertices.map(\.glows), chuKuang.vertices.map(\.glows), name)
+                let colours = Set(star.vertices.map(\.color))
+                XCTAssertTrue(colours.contains(pink.body), name)
+                XCTAssertTrue(colours.contains(pink.line), name)
+                XCTAssertFalse(colours.contains(Map3DChuKuangPassenger.bodyColor), "\(name): no navy")
+                XCTAssertFalse(colours.contains(Map3DChuKuangPassenger.creamColor), "\(name): no cream")
+                // Glass, roof and the red lamps are the Chu-Kuang's.
+                let changed = zip(star.vertices, chuKuang.vertices).filter { $0.color != $1.color }
+                XCTAssertFalse(changed.isEmpty, name)
+                XCTAssertFalse(changed.contains { $0.1.glows || Map3DTrainMaterial.isGlassColour($0.1.color) }, name)
+            }
+            XCTAssertEqual(payload(try model(set.middleName)), payload(Map3DChuKuangPassenger.model(.standard, far: far, paint: pink)))
+        }
+        XCTAssertEqual(Map3DTrainSet.named("STAR")?.far, "STARFar")
     }
 
     /// The conductor study is a display model, not a coach in service.

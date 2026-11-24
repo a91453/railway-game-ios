@@ -9,9 +9,26 @@ public enum Map3DChuKuangPassenger {
     public static let gangwayHalfLength: Float = 9.98
     public static let bodyColor = Map3DColor.rgb(0x262C57)
     public static let glassColor = Map3DE500.glassColor
-    public static func model(_ role: Role, far: Bool = false) -> Map3DModelPack.Model {
-        var b = StationKitBuilder(); b.chuBody(role, far: far)
-        return .flat(named: "chukuang-" + role.rawValue + (far ? "-far" : ""), from: b.mesh)
+    public static let creamColor = Map3DColor.rgb(0xECE2BC)
+
+    /// Decision 953: the coach's two paints, the body's and the lines'
+    /// (the waist line, the line over the windows, the door's). The roof,
+    /// frames, glass, gangways and underframe keep their own colours.
+    public struct Paint: Equatable, Sendable {
+        public var body: UInt32
+        public var line: UInt32
+        /// The Chu-Kuang's navy and cream (decision 430).
+        public static let chuKuang = Paint(body: bodyColor, line: creamColor)
+        /// Decision 953: the Formosa Star's, ``TrainLivery/formosaStar``'s
+        /// pink and its deep pink lines.
+        public static let formosaStar = Paint(body: Map3DColor.rgb(UInt32(TrainLivery.formosaStar.body!)),
+                                              line: Map3DColor.rgb(UInt32(TrainLivery.formosaStar.stripe!)))
+    }
+
+    public static func model(_ role: Role, far: Bool = false, paint: Paint = .chuKuang) -> Map3DModelPack.Model {
+        var b = StationKitBuilder(); b.chuBody(role, far: far, paint: paint)
+        let livery = paint == .chuKuang ? "" : paint == .formosaStar ? "star-" : "painted-"
+        return .flat(named: "chukuang-" + livery + role.rawValue + (far ? "-far" : ""), from: b.mesh)
     }
     public static func windows(_ role: Role, left: Bool) -> [(Float, Float)] {
         // Independently recorded side studies. Unseen opposite-side details are estimates.
@@ -62,8 +79,8 @@ extension StationKitBuilder {
         chuPanel(pane.map { Map3DPoint($0.0, $0.1, side * 1.4575) }, offset: Map3DPoint(0, 0, side * 0.012), color: opaque ? Map3DPalette.shopAwnings[3] : Map3DChuKuangPassenger.glassColor)
     }
 
-    fileprivate mutating func chuBody(_ role: Map3DChuKuangPassenger.Role, far: Bool) {
-        let navy = Map3DChuKuangPassenger.bodyColor, cream = Map3DColor.rgb(0xECE2BC)
+    fileprivate mutating func chuBody(_ role: Map3DChuKuangPassenger.Role, far: Bool, paint: Map3DChuKuangPassenger.Paint) {
+        let navy = paint.body, cream = paint.line
         let dark = Self.ink, steel = Self.steel, tire = Map3DStreetModel.tyre
         let half = Map3DChuKuangPassenger.bodyHalfLength
         // Closed shell rings: the classic end sweep is IN the body surface.
