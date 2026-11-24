@@ -477,6 +477,15 @@ extension XCUIElement {
 
 @MainActor
 extension XCUIApplication {
+    /// Waits for the status banner over the top of the map to clear itself
+    /// (a message clears in 4 to 10 s, ``StatusMessage/autoDismissDelay``):
+    /// it takes a touch on the map under it. Not its ✕, which can go as
+    /// the touch is sent and leave it on the map.
+    func waitForTheBannerToGo(file: StaticString = #filePath, line: UInt = #line) {
+        let banner = buttons["banner.dismiss"]
+        XCTAssertTrue(banner.disappears(within: 12), "The status banner stayed over the map", file: file, line: line)
+    }
+
     /// The app's accessibility tree in the test's log, headed `XC27-TREE
     /// why`, for a failure only a Simulator can show (pull request #2453:
     /// the run's result bundle cannot be read where the failure is fixed).
