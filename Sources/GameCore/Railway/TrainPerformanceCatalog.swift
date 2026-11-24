@@ -21,8 +21,8 @@ public struct TrainPerformanceSpec: Hashable, Sendable {
 public enum TrainPerformanceCatalog {
     /// Every performance, in the order the menus list them. Which one a
     /// performance reads as is the first here that accelerates, brakes and
-    /// coasts as it does, so the order matters: the diesel express comes
-    /// before the diesel railcar, which runs as it does.
+    /// coasts as it does, so the order matters. Decision 952: no two rows
+    /// run alike any more (the diesel express and the DR1000 did).
     public static let builtIn: [TrainPerformanceSpec] = [
         .init(code: "standard", performance: .standard),
         .init(code: "metro", performance: .metro),

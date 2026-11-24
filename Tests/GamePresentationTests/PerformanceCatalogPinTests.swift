@@ -39,7 +39,8 @@ final class PerformanceCatalogPinTests: XCTestCase {
         .init(english: "Push-pull Tze-Chiang", chinese: "推拉式自強", acceleration: 1600, braking: 2800, topSpeed: 130),
         .init(english: "Taroko", chinese: "太魯閣", acceleration: 1880, braking: 3600, topSpeed: 135),
         .init(english: "Puyuma", chinese: "普悠瑪", acceleration: 1840, braking: 3600, topSpeed: 135),
-        .init(english: "Diesel Tze-Chiang", chinese: "柴聯自強", acceleration: 1500, braking: 2448, topSpeed: 110),
+        // Decision 952: the DR3100's own figures (it ran as the DR1000).
+        .init(english: "Diesel Tze-Chiang", chinese: "柴聯自強", acceleration: 500, braking: 3000, topSpeed: 110),
         .init(english: "DR1000 railcar", chinese: "DR1000", acceleration: 1500, braking: 2448, topSpeed: 110),
         .init(english: "Alishan Forest Railway", chinese: "阿里山林鐵", acceleration: 700, braking: 1100, topSpeed: 45),
         .init(
@@ -87,10 +88,9 @@ final class PerformanceCatalogPinTests: XCTestCase {
         for pin in Self.pinned {
             for speed in [pin.topSpeed, 60, 200] {
                 let found = PerformancePreset(matching: pin.performance.withTopSpeed(speed))
-                // The diesel railcar runs as the diesel express does, which
-                // comes first.
-                let expected = pin.english == "DR1000 railcar" ? "Diesel Tze-Chiang" : pin.english
-                XCTAssertEqual(found?.title(in: .english), expected, "\(pin.english) at \(speed)")
+                // Decision 952: the DR1000 is no longer read as the diesel
+                // express, which ran as it did.
+                XCTAssertEqual(found?.title(in: .english), pin.english, "\(pin.english) at \(speed)")
             }
         }
         XCTAssertNil(PerformancePreset(matching: TrainPerformance(acceleration: 1, braking: 2, topSpeed: 10)))
@@ -100,7 +100,8 @@ final class PerformanceCatalogPinTests: XCTestCase {
         XCTAssertEqual(TrainPerformance.standard.displayText(in: .english), "Standard · 110 km/h · 1.5 / 2.5 km/h/s")
         XCTAssertEqual(TrainPerformance.metro.displayText(in: .traditionalChinese), "捷運 · 80 km/h · 3.96 / 4.68 km/h/s")
         XCTAssertEqual(TrainPerformance.highSpeed.displayText(in: .traditionalChinese), "高鐵 · 300 km/h · 1.4 / 1.5 km/h/s")
-        XCTAssertEqual(TrainPerformance.dieselRailcar.displayText(in: .english), "Diesel Tze-Chiang · 110 km/h · 1.5 / 2.448 km/h/s")
+        XCTAssertEqual(TrainPerformance.dieselRailcar.displayText(in: .english), "DR1000 railcar · 110 km/h · 1.5 / 2.448 km/h/s")
+        XCTAssertEqual(TrainPerformance.dieselExpress.displayText(in: .traditionalChinese), "柴聯自強 · 110 km/h · 0.5 / 3 km/h/s")
         XCTAssertEqual(TrainPerformance(acceleration: 1, braking: 2, topSpeed: 10).displayText(in: .traditionalChinese), "自訂 · 10 km/h · 0.001 / 0.002 km/h/s")
         XCTAssertEqual(PerformancePreset.designSpeeds, [60, 80, 90, 100, 120, 140, 150, 160, 180, 200])
     }
