@@ -14,7 +14,7 @@ import SwiftUI
 ///
 /// One screen for three purposes (decision 915): the type and cars a line's
 /// staffing buys (nothing is bought here); the type of a train not yet on
-/// the track (`GameSession.setSelectedTrainType`, the one command, in place
+/// the track (`GameSession.setTrainType(_:to:)`, the one command, in place
 /// of the 23-row menu); and only looking, from the fleet overview.
 struct RollingStockCatalogView: View {
     enum Purpose: Equatable {
@@ -290,7 +290,8 @@ struct RollingStockCatalogView: View {
     private func standardRow(_ id: TrainID, language: DisplayLanguage) -> some View {
         let isChosen = session.world.train(id: id)?.type == nil
         return Button {
-            session.setSelectedTrainType(nil)
+            // Decision 959: the train it was opened for.
+            session.setTrainType(id, to: nil)
             dismiss()
         } label: {
             HStack {
@@ -534,8 +535,10 @@ struct RollingStockCatalogView: View {
             case .staffing:
                 type = entry.type
                 cars = shownCars
-            case .train:
-                session.setSelectedTrainType(entry.type)
+            case .train(let id):
+                // Decision 959: the train it was opened for, not the one
+                // selected now.
+                session.setTrainType(id, to: entry.type)
             case .browse:
                 break
             }

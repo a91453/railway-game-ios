@@ -3043,6 +3043,15 @@ public final class GameSession {
     /// to, if it runs high-speed sets and nothing else.
     public func setSelectedTrainType(_ type: TrainType?) {
         guard let train = requireSelectedTrain() else { return }
+        setTrainType(train.id, to: type)
+    }
+
+    /// Sets train `id`'s type as ``setSelectedTrainType(_:)`` does the
+    /// selected train's (decision 959: the train types change the train
+    /// they were opened for, whichever is selected when the choice is
+    /// made).
+    public func setTrainType(_ id: TrainID, to type: TrainType?) {
+        guard let train = world.train(id: id) else { return }
         perform(.setTrainType(train.id, type)) { outcome, before, world in
             let balance = before.economy.balance
             let text = Train.typeText(type, in: language)
