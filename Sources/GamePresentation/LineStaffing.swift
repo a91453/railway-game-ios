@@ -60,7 +60,8 @@ extension GameWorld {
         // game offers them, unless the player chose a type. An era has no
         // standard car (decision 153): its own type, as a train bought there
         // is, so re-forming with the line's default keeps it.
-        let type = type ?? (!offersStandardCar ? offeredTrainTypes.first
+        // Decision 955: a line on a guideway gets the guideway's trains.
+        let type = type ?? guidewayType(ofLine: id) ?? (!offersStandardCar ? offeredTrainTypes.first
             : line.isHighSpeed ? offeredTrainTypes.first(where: \.isHighSpeed) : nil)
         let price = purchaseCost(of: type, cars: cars)
         let (cost, overflow) = price.amount.multipliedReportingOverflow(by: Int64(trains))

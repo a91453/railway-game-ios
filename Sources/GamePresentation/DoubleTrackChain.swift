@@ -23,6 +23,9 @@ struct ChainSegment {
     let curve: TrackCurve
     let profile: TrackProfile
     let structure: TrackStructure
+    /// Decision 955: the main track's system, which the second track
+    /// beside it is laid as (`nil`: following the track it joins).
+    var system: TrackSystem?
 
     var geometry: TrackGeometry? {
         TrackGeometry(from: from, to: to, curve: curve, profile: profile)
@@ -31,6 +34,7 @@ struct ChainSegment {
     /// The stretch's own piece.
     init(_ stretch: PlayerCommand.TrackStretch) {
         self.init(from: stretch.from, to: stretch.to, curve: stretch.curve, profile: stretch.profile, structure: stretch.structure)
+        system = stretch.system
     }
 
     init(from: WorldCoordinate, to: WorldCoordinate, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure) {
@@ -56,6 +60,7 @@ struct ChainSegment {
         } else {
             self.init(from: from.position, to: to.position, curve: edge.curve, profile: edge.profile, structure: edge.structure)
         }
+        system = edge.system
     }
 }
 
@@ -185,7 +190,8 @@ extension GameSession {
             guard let geometry = TrackGeometry(from: from, to: to, curve: curve, profile: profile) else { return nil }
             stretches.append(PlayerCommand.TrackStretch(
                 start: places[index].anchor, end: places[index + 1].anchor, from: from, to: to, curve: curve, profile: profile,
-                structure: segments[index].structure, ground: [from.plan, to.plan] + NetworkBuilding.surveyedPoints(of: geometry)
+                structure: segments[index].structure, ground: [from.plan, to.plan] + NetworkBuilding.surveyedPoints(of: geometry),
+                system: segments[index].system
             ))
         }
         return stretches

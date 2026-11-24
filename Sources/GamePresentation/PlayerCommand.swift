@@ -122,10 +122,14 @@ public enum PlayerCommand: Hashable, Sendable {
         /// Decision 515: mountain track (``TrackEdge/mountain``), which
         /// only a trace of a real mountain line lays.
         public let mountain: Bool
+        /// Decision 955: the track system the player chose
+        /// (``TrackEdge/system``); `nil` follows the track it joins
+        /// (decision 951), as every stretch did before.
+        public let system: TrackSystem?
 
         public init(
             start: NetworkAnchor, end: NetworkAnchor, from: WorldCoordinate, to: WorldCoordinate, curve: TrackCurve,
-            profile: TrackProfile, structure: TrackStructure, ground: [PlanPoint], mountain: Bool = false
+            profile: TrackProfile, structure: TrackStructure, ground: [PlanPoint], mountain: Bool = false, system: TrackSystem? = nil
         ) {
             self.start = start
             self.end = end
@@ -136,6 +140,7 @@ public enum PlayerCommand: Hashable, Sendable {
             self.structure = structure
             self.ground = ground
             self.mountain = mountain
+            self.system = system
         }
 
         /// Builds it in `world`, reading ground from `heights`: the edge,
@@ -144,7 +149,8 @@ public enum PlayerCommand: Hashable, Sendable {
             try world.readGround(under: ground, from: heights)
             let first = try node(for: start, at: from, in: &world)
             let last = try node(for: end, at: to, in: &world)
-            let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure, mountain: mountain)
+            let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure, mountain: mountain,
+                                            system: system)
             return (edge, last)
         }
 
@@ -473,6 +479,9 @@ extension PlayerCommand: Codable {
         /// Decision 515: `true` for mountain track; absent for ordinary
         /// track (and in logs from before it).
         var mountain: Bool?
+        /// Decision 955: the track system chosen; absent when it follows
+        /// the track it joins (and in logs from before it).
+        var system: String?
         /// Plan points, x and y each.
         var ground: [Int64]?
         var edge: Int?
@@ -573,10 +582,16 @@ extension PlayerCommand: Codable {
             }
             guard let transitions = record.transitions, transitions.count == 2 else { throw invalid("a profile has two transitions") }
             guard let structure = record.structure.flatMap(TrackStructure.init(rawValue:)) else { throw invalid("unknown structure") }
+            var system: TrackSystem?
+            if let raw = record.system {
+                guard let known = TrackSystem(rawValue: raw) else { throw invalid("unknown track system") }
+                system = known
+            }
             return TrackStretch(
                 start: try anchor(record.start), end: try anchor(record.end), from: try coordinate(record.from), to: try coordinate(record.to),
                 curve: curve, profile: TrackProfile(startTransition: transitions[0], endTransition: transitions[1]),
-                structure: structure, ground: try points(record.ground), mountain: record.mountain ?? false
+                structure: structure, ground: try points(record.ground), mountain: record.mountain ?? false,
+                system: system
             )
         }
         switch record.kind {
@@ -783,6 +798,7 @@ extension PlayerCommand: Codable {
             record.structure = stretch.structure.rawValue
             record.ground = stretch.ground.flatMap { [$0.x, $0.y] }
             record.mountain = stretch.mountain ? true : nil
+            record.system = stretch.system?.rawValue
         }
         switch self {
         case .buildTrack(let stretch):

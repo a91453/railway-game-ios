@@ -191,14 +191,37 @@ final class Map3DGuidewayTests: XCTestCase {
         }
     }
 
-    /// The scene key's signature changes when a line takes a guideway
-    /// train, and not when an ordinary line does.
+    /// Decision 955: the scene key's signature is the guideway edges: it
+    /// changes when one is built, and not when a train comes or goes.
     func testTheSignature() throws {
         var laid = try laid(.monorail)
-        try laid.world.unassignTrain(try XCTUnwrap(laid.world.trains.first).id)
         let before = Map3DGuidewaySignature(world: laid.world)
-        XCTAssertEqual(before, Map3DGuidewaySignature(world: try self.laid(.c).world))
-        try laid.world.assignTrain(try laid.world.purchaseTrain(named: "Two", as: .monorail).id, to: laid.line)
+        XCTAssertNotEqual(before, Map3DGuidewaySignature(world: try self.laid(.c).world))
+        try laid.world.unassignTrain(try XCTUnwrap(laid.world.trains.first).id)
+        XCTAssertEqual(Map3DGuidewaySignature(world: laid.world), before)
+        let a = try laid.world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 2_048))
+        let b = try laid.world.buildTrackNode(at: WorldCoordinate(x: 8_192, y: 2_048))
+        _ = try laid.world.buildTrackEdge(from: a, to: b)
+        XCTAssertEqual(Map3DGuidewaySignature(world: laid.world), before, "ordinary track")
+        let c = try laid.world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 14_336))
+        let d = try laid.world.buildTrackNode(at: WorldCoordinate(x: 8_192, y: 14_336))
+        _ = try laid.world.buildTrackEdge(from: c, to: d, system: .maglev)
         XCTAssertNotEqual(Map3DGuidewaySignature(world: laid.world), before)
+    }
+
+    /// Decision 955: a guideway with no train on it is still drawn as its
+    /// beam, read from the track's own system.
+    func testAGuidewayWithNoTrainsIsItsBeam() throws {
+        for (system, kind) in [(TrackSystem.straddle, Map3DGuideway.Kind.straddle), (.maglev, .maglev), (.suspended, .suspended)] {
+            var laid = try laid(.c)
+            let a = try laid.world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 2_048))
+            let b = try laid.world.buildTrackNode(at: WorldCoordinate(x: 16_384, y: 2_048))
+            let beam = try laid.world.buildTrackEdge(from: a, to: b, structure: .elevated, system: system)
+            XCTAssertEqual(Map3DGuideway.edges(in: laid.world), [beam: kind], "\(kind)")
+            let builder = built(laid.world)
+            XCTAssertTrue(colours(builder.meshes).contains(kind.body[0].colour), "\(kind)")
+            XCTAssertFalse(builder.guidedTrackLines.isEmpty, "\(kind)")
+            XCTAssertTrue(colours(builder.meshes).contains(Map3DPalette.railTop), "\(kind): the ordinary line keeps its rails")
+        }
     }
 }

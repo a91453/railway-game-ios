@@ -2802,6 +2802,44 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("currency-build-cost-\(suffix)", again)
     }
 
+    /// Decision 955: the network tool's track system menu, and a monorail
+    /// beam drawn but not built, its price and note on the card.
+    func testTrackSystemChoice() {
+        let app = launch()
+        defer { app.terminate() }
+        let start = app.buttons["start.newGame"]
+        XCTAssertTrue(start.appears(within: 10))
+        app.bringStartButtonIntoView(start)
+        start.tap()
+        app.chooseBlankMap()
+        let field = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(field.appears(within: 60), "The game opens")
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        let system = app.buttons["network.system"].firstMatch
+        XCTAssertTrue(system.appears(within: 10), "The track system menu is on the card")
+        XCTAssertTrue(system.becomesHittable(within: 5))
+        system.tap()
+        let beam = app.buttons["跨座式單軌梁"].firstMatch
+        XCTAssertTrue(beam.appears(within: 5), "The menu lists the guideways")
+        settle()
+        keep("track-system-menu", app)
+        beam.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["network.systemNote"].firstMatch.appears(within: 5), "The card says what a beam joins")
+        let frame = field.frame.intersection(app.frame)
+        let middle = (app.buttons["hud.menu"].frame.maxY + build.frame.minY) / 2
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.3, dy: middle)).tap()
+        origin.withOffset(CGVector(dx: frame.minX + frame.width * 0.6, dy: middle)).tap()
+        settle()
+        keep("track-system-beam-cost", app)
+    }
+
     /// The Liu Mingchuan challenge as it opens: its map from Keelung to
     /// Hsinchu, and the station master's first words.
     func testLiuMingchuanChallenge() {

@@ -810,6 +810,13 @@ public final class GameSession {
     /// What carries the next stretch of track: what the ground asks for
     /// (decision 124) unless the player forces a structure.
     public var networkStructure: TrackStructure = .automatic
+    /// Decision 955: the track system the next stretch is built as:
+    /// ordinary track, or a monorail's or maglev's guideway
+    /// (``chooseNetworkSystem(_:)``).
+    public internal(set) var networkSystem: TrackSystem = .conventional
+    /// Whether choosing a guideway made the structure elevated, so that
+    /// choosing ordinary track again gives the automatic one back.
+    @ObservationIgnored var networkStructureRaisedForGuideway = false
     /// How high a new node goes above the ground there (decision 124; in a
     /// world without ground, above 0 m), in world units (64 to a metre).
     public var networkHeight: Int64 = 0
@@ -3048,6 +3055,8 @@ public final class GameSession {
             if outcome.highSpeed, let id = world.assignedLine(of: train.id), let line = world.line(id: id) {
                 said += language.nowHighSpeedText(line.name)
             }
+            // Decision 955: a guideway train with no guideway to run on yet.
+            said += world.guidewayFirstHint(for: type, in: language) ?? ""
             return said
         }
     }

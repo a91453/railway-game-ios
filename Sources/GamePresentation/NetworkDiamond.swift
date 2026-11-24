@@ -205,12 +205,12 @@ extension PlayerCommand.TrackStretch {
         let first = PlayerCommand.TrackStretch(
             start: start, end: .track(cut.place), from: from, to: middle, curve: curves.0,
             profile: from.z == middle.z ? .uniform : TrackProfile(startTransition: profile.startTransition),
-            structure: structure, ground: ground, mountain: mountain
+            structure: structure, ground: ground, mountain: mountain, system: system
         )
         let second = PlayerCommand.TrackStretch(
             start: .track(cut.place), end: end, from: middle, to: to, curve: curves.1,
             profile: middle.z == to.z ? .uniform : TrackProfile(endTransition: profile.endTransition),
-            structure: structure, ground: [middle.plan, to.plan], mountain: mountain
+            structure: structure, ground: [middle.plan, to.plan], mountain: mountain, system: system
         )
         return (first, second)
     }

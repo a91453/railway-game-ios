@@ -170,7 +170,7 @@ extension GameSession {
         // changes; the revision below says whether it did.
         _ = world
         let key = NetworkPreviewMemo.Key(
-            start: start, end: end, structure: networkStructure, height: networkHeight,
+            start: start, end: end, structure: networkStructure, system: networkSystem, height: networkHeight,
             startRaise: networkStartRaise, endRaise: networkEndRaise, followsTrack: networkFollowsTrack,
             buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade,
             buildsDouble: networkBuildsDouble, doubleChosen: networkDoubleChosen, doubleSide: networkDoubleSide, traces: tracesRealRailway, commandRevision: commandRevision
@@ -236,12 +236,12 @@ extension GameSession {
             message = StatusMessage(kind: .failure, text: stretchProblemText(problem, from: start, to: end))
             return
         }
-        var command = PlayerCommand.buildTrack(plan.stretch(structure: networkStructure))
+        var command = PlayerCommand.buildTrack(plan.stretch(structure: networkStructure, system: networkSystem))
         var crossovers = DoubleTrack.CrossoverOutcome.none
         if networkBuildsDouble {
             let pair = doublePlans(plan, in: prepared)
             plan = pair.main
-            command = .buildTrack(plan.stretch(structure: networkStructure))
+            command = .buildTrack(plan.stretch(structure: networkStructure, system: networkSystem))
             guard let parallel = pair.parallel else {
                 message = StatusMessage(kind: .failure, text: Self.noParallelText(in: language))
                 return
@@ -251,14 +251,14 @@ extension GameSession {
             // they are the preview's, and a refusal prices them all.
             var draft = prepared.pricingCopy()
             var stretches: [PlayerCommand.TrackStretch] = []
-            if let main = try? plan.build(in: &draft, structure: networkStructure, heights: heights),
-               let beside = try? parallel.build(in: &draft, structure: networkStructure, heights: heights) {
+            if let main = try? plan.build(in: &draft, structure: networkStructure, system: networkSystem, heights: heights),
+               let beside = try? parallel.build(in: &draft, structure: networkStructure, system: networkSystem, heights: heights) {
                 (stretches, crossovers) = doubleTrackCrossovers(
                     main: plan, parallel: parallel, mainEdge: main.edge, parallelEdge: beside.edge, before: prepared, in: &draft
                 )
             }
             command = .buildDoubleTrack(
-                plan.stretch(structure: networkStructure), parallel: parallel.stretch(structure: networkStructure), crossovers: stretches
+                plan.stretch(structure: networkStructure, system: networkSystem), parallel: parallel.stretch(structure: networkStructure, system: networkSystem), crossovers: stretches
             )
         }
         // Decision 887: across the company's track at one level, laid as a
@@ -266,7 +266,7 @@ extension GameSession {
         var diamonds = 0
         if !networkBuildsDouble {
             var draft = prepared.pricingCopy()
-            if let chain = NetworkDiamond.chain(for: plan.stretch(structure: networkStructure), in: &draft, heights: heights) {
+            if let chain = NetworkDiamond.chain(for: plan.stretch(structure: networkStructure, system: networkSystem), in: &draft, heights: heights) {
                 command = .buildTrackChain(chain.pieces)
                 diamonds = chain.nodes.count
             }
@@ -335,11 +335,11 @@ extension GameSession {
         draft = draft.trackPreviewCopy()
         let unbuilt = draft
         do throws(GameError) {
-            let built = try plan.build(in: &draft, structure: networkStructure, heights: heights)
+            let built = try plan.build(in: &draft, structure: networkStructure, system: networkSystem, heights: heights)
             longSection = draft.longSection(of: built.edge)
             if networkBuildsDouble {
                 guard let parallel else { throw .invalidTrackGeometry }
-                let beside = try parallel.build(in: &draft, structure: networkStructure, heights: heights)
+                let beside = try parallel.build(in: &draft, structure: networkStructure, system: networkSystem, heights: heights)
                 // The crossovers where it joins the track there.
                 let found = doubleTrackCrossovers(
                     main: plan, parallel: parallel, mainEdge: built.edge, parallelEdge: beside.edge, before: unbuilt, in: &draft
@@ -350,9 +350,20 @@ extension GameSession {
             }
             let total = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
             cost = total
-            problem = shortfallText(total, doing: .buildTrack(plan.stretch(structure: networkStructure)))
+            problem = shortfallText(total, doing: .buildTrack(plan.stretch(structure: networkStructure, system: networkSystem)))
             brief = problem == nil ? nil : GameError.shortOfCashBrief(in: language)
         } catch {
+            // Decision 955: a guideway and other track never cross on the
+            // level (a diamond would join them at a node).
+            if case .trackConflict(let crossed) = error,
+               let crossing = levelCrossingProblem(across: crossed, system: networkSystem, in: unbuilt) {
+                return (NetworkPreview(
+                    curve: plan.curve, profile: plan.profile, points: plan.geometry?.points ?? [plan.from, plan.to],
+                    length: plan.length, startHeight: plan.from.z, endHeight: plan.to.z,
+                    joinsStart: plan.joinsStart, joinsEnd: plan.joinsEnd, cost: nil, problem: crossing.text, problemBrief: crossing.brief,
+                    refusal: error
+                ), [])
+            }
             // Decision 887: across the company's track at one level, a
             // diamond where it may be one.
             if case .trackConflict = error, !networkBuildsDouble,
@@ -364,10 +375,10 @@ extension GameSession {
             problem = networkBuildsDouble && parallel == nil
                 ? Self.noParallelText(in: language)
                 // Decision 513: which check, where GameCore's error covers several.
-                : error.playerMessage(building: plan.stretch(structure: networkStructure), in: unbuilt, heights: heights, language: language)
+                : error.playerMessage(building: plan.stretch(structure: networkStructure, system: networkSystem), in: unbuilt, heights: heights, language: language)
             brief = networkBuildsDouble && parallel == nil
                 ? Self.noParallelBrief(in: language)
-                : error.trackBrief(building: plan.stretch(structure: networkStructure), in: unbuilt, heights: heights, language: language)
+                : error.trackBrief(building: plan.stretch(structure: networkStructure, system: networkSystem), in: unbuilt, heights: heights, language: language)
         }
         let cleared = problem == nil ? world.placedBuildings(clearedIn: draft) : []
         let besides = parallel.map { $0.geometry?.points ?? [$0.from, $0.to] } ?? []
@@ -392,7 +403,7 @@ extension GameSession {
     /// `nil` where it may not cross so.
     func diamondPreview(_ plan: EdgePlan, structure: TrackStructure, on unbuilt: GameWorld) -> NetworkPreview? {
         var draft = unbuilt
-        guard let chain = NetworkDiamond.chain(for: plan.stretch(structure: structure), in: &draft, heights: heights) else { return nil }
+        guard let chain = NetworkDiamond.chain(for: plan.stretch(structure: structure, system: networkSystem), in: &draft, heights: heights) else { return nil }
         let total = Money(GameWorld.pricingBalance.amount - draft.economy.balance.amount)
         let problem = shortfallText(total, doing: .buildTrackChain(chain.pieces))
         return NetworkPreview(
@@ -1164,15 +1175,18 @@ struct EdgePlan {
 
     /// Builds it in `world`: a node for each new end, then the edge, with
     /// the ground under its way read in first from `heights` (decision 124).
-    func build(in world: inout GameWorld, structure: TrackStructure, heights: HeightGrid?) throws(GameError) -> (edge: TrackEdgeID, to: TrackNodeID) {
-        try stretch(structure: structure).build(in: &world, heights: heights)
+    func build(
+        in world: inout GameWorld, structure: TrackStructure, system: TrackSystem? = nil, heights: HeightGrid?
+    ) throws(GameError) -> (edge: TrackEdgeID, to: TrackNodeID) {
+        try stretch(structure: structure, system: system).build(in: &world, heights: heights)
     }
 
-    /// It as a command's value (decision 193), built with `structure`.
-    func stretch(structure: TrackStructure) -> PlayerCommand.TrackStretch {
+    /// It as a command's value (decision 193), built with `structure`;
+    /// decision 955: of `system`, or following the track it joins.
+    func stretch(structure: TrackStructure, system: TrackSystem? = nil) -> PlayerCommand.TrackStretch {
         PlayerCommand.TrackStretch(
             start: start, end: end, from: from, to: to, curve: curve, profile: profile, structure: structure,
-            ground: [from.plan, to.plan] + surveyedPoints
+            ground: [from.plan, to.plan] + surveyedPoints, system: system
         )
     }
 
@@ -1672,6 +1686,8 @@ struct NetworkPreviewMemo {
         let start: NetworkAnchor
         let end: NetworkAnchor
         let structure: TrackStructure
+        /// Decision 955.
+        let system: TrackSystem
         let height: Int64
         let startRaise: Int64
         let endRaise: Int64

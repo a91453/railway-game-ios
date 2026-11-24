@@ -106,7 +106,11 @@ final class MenuChoicesTests: XCTestCase {
             let session = GameSession(world: world)
             guard let train = session.world.trains.first?.id else { return XCTFail("the demo has trains") }
             let types = session.trainTypeMenuChoices(for: train)
-            XCTAssertEqual(types.map(\.id), (session.world.offersStandardCar ? [nil] : []) + session.world.offeredTrainTypes.map { $0 })
+            // Decision 955: on its line, only what the line's track carries.
+            let offered = (session.world.offersStandardCar ? [nil] : []) + session.world.offeredTrainTypes.map { $0 }
+            let line = session.world.assignedLine(of: train)
+            XCTAssertEqual(types.map(\.id), offered.filter { type in line.map { session.world.runsOnTrack(type, ofLine: $0) } ?? true })
+            XCTAssertFalse(types.contains { $0.id == .monorail }, "the demo's lines run on ordinary track")
             XCTAssertEqual(types.map(\.title), types.map { Train.typeText($0.id, in: .english) })
             XCTAssertEqual(types.map(\.detail), types.map { session.world.trainTypeMenuText($0.id, for: train, in: .english) })
             XCTAssertEqual(session.trainTypeCardChoices.map(\.id), session.world.offeredTrainTypes)

@@ -117,6 +117,8 @@ extension NetworkCostParts {
             (language.text("Earthwork", "土方"), track.earthwork),
             (language.text("Viaducts and bridges", "高架與橋"), track.viaductsAndBridges),
             (language.text("Tunnels", "隧道"), track.tunnels),
+            // Decision 955: what a monorail or maglev guideway adds.
+            (language.text("Guideway", "軌道梁"), track.guideway),
             (language.text("Demolition", "拆遷"), demolition),
         ]
         lines += parts.filter { $0.1 != .zero }
