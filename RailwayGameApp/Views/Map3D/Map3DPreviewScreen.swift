@@ -1351,6 +1351,9 @@ struct Map3DSceneKey: Hashable {
     /// Decision 837: the freight yards, each built, taken down or switched
     /// to another kind of cargo with its own look.
     let freightYards: [Int]
+    /// Decision 947: the lines running guideway trains, whose track is
+    /// drawn as their guideway.
+    let guideways: Map3DGuidewaySignature
 
     init(world: GameWorld, hasHeights: Bool, hasRailways: Bool = false, focus: (x: Double, y: Double)? = nil, palette: LinePalette? = nil,
          facades: Bool = Map3DQuality.scenesKeepFacades) {
@@ -1372,6 +1375,7 @@ struct Map3DSceneKey: Hashable {
         expansions = Map3DStationKit.expansionSignature(of: world)
         exhibits = Map3DRailwayMuseum.shown(in: world)
         freightYards = Map3DFreightYard.signature(of: world)
+        guideways = Map3DGuidewaySignature(world: world)
     }
 
     /// Decision 517 續 (PR 3b): whether `other` differs from this only in
@@ -1381,6 +1385,7 @@ struct Map3DSceneKey: Hashable {
             && buildings == other.buildings && week == other.week && lines == other.lines && palette == other.palette
             && bought == other.bought && roads == other.roads && ownRoads == other.ownRoads && expansions == other.expansions
             && facades == other.facades && exhibits == other.exhibits && freightYards == other.freightYards
+            && guideways == other.guideways
     }
 }
 

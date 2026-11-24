@@ -147,7 +147,8 @@ extension Map3DScene.Builder {
     /// ground and track, as the bore is; where two lines meet (a portal),
     /// the second's contact wire ends where the first's does.
     mutating func addOverheadLine() {
-        let lines = trackLines.enumerated().compactMap { item in
+        // Decision 947: none over a guideway.
+        let lines = trackLines.enumerated().filter { !guidedTrackLines.contains($0.offset) }.compactMap { item in
             Map3DStreetLife.Path(item.element.points).map { (index: item.offset, path: $0, kind: item.element.kind) }
         }
         // Every piece of track in the open by 32 m cell, to find a track's
