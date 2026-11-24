@@ -30,6 +30,17 @@ public enum WhatsNew {
 
     /// The builds' news, the newest first.
     public static let entries: [Entry] = [
+        // 146.
+        Entry(
+            id: "2026-11-24-146",
+            items: [
+                Line(
+                    english: "Bicycles stand in racks by bus stops and station exits, and in a shed at the company's schools.",
+                    chinese: "腳踏車停進車架，在公車站旁與車站出口旁；公司蓋的學校有腳踏車棚。"
+                ),
+            ],
+            fixes: []
+        ),
         // 145.
         Entry(
             id: "2026-11-23-145",
