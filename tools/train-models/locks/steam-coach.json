@@ -1,7 +1,7 @@
 {
   "comment" : "Decision 782: the models of the registered train steam-coach (Map3DSteamCoach): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
   "lampCount" : 8,
-  "lamps" : "e0ef48ab4ab53cf4",
+  "lamps" : "d40be0ae5d6de1ed",
   "models" : {
     "light-set-STEAM-car" : {
       "hash" : "d90c2092c7c00d09",
@@ -44,16 +44,16 @@
       "triangles" : 566
     },
     "set-STEAMFar-head" : {
-      "hash" : "9feff3780a33c470",
-      "triangles" : 8092
+      "hash" : "7f77180b3ba124da",
+      "triangles" : 2296
     },
     "set-STEAMFar-tail" : {
       "hash" : "aba7abd4f86b4e83",
       "triangles" : 614
     },
     "set-STEAMFar-tender" : {
-      "hash" : "689798314dfa8ea9",
-      "triangles" : 3048
+      "hash" : "e22a81df6af4d634",
+      "triangles" : 1068
     }
   }
 }

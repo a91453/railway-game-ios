@@ -39,7 +39,8 @@ final class Map3DSteamCoachTests: XCTestCase {
 
     /// The steam train's set runs the coaches, its last one's two lamps
     /// lit at its back end only, and has a far set of the light coaches;
-    /// the locomotive and its tender stay #1118's.
+    /// the locomotive and its tender stay #1118's (their light versions:
+    /// ``testTheLocomotiveAndTenderHaveLightVersions``).
     func testTheSteamTrainRunsTheCoaches() throws {
         let near = try XCTUnwrap(Map3DTrainSet.named("STEAM"))
         XCTAssertEqual(near.far, "STEAMFar")
@@ -65,6 +66,34 @@ final class Map3DSteamCoachTests: XCTestCase {
         XCTAssertTrue(Map3DTrainLights.car(tail).front.tail.allSatisfy { $0.x > 0 })
         let middle = try packed("set-STEAM-car")
         XCTAssertFalse(middle.vertices.contains { $0.glows || $0.color == Map3DPalette.lantern })
+    }
+
+    /// STEAM-FAR (decision 957's later note): the duplex locomotive and
+    /// its tender have light versions under half their near triangles in
+    /// the near box (`tools/train-models/budgets.json`'s far rules), and
+    /// the far set draws them, the headlamp lit as near.
+    func testTheLocomotiveAndTenderHaveLightVersions() throws {
+        let budgetX: Float = 0.1, budgetTop: Float = 0.05, budgetGround: Float = 0.1
+        for unit in Map3DDuplexSteam.Unit.allCases {
+            let near = Map3DDuplexSteam.model(unit), far = Map3DDuplexSteam.model(unit, far: true)
+            XCTAssertLessThan(far.triangleCount * 2, near.triangleCount, "\(unit)")
+            XCTAssertEqual(far.minimum.x, near.minimum.x, accuracy: budgetX, "\(unit)")
+            XCTAssertEqual(far.maximum.x, near.maximum.x, accuracy: budgetX, "\(unit)")
+            XCTAssertEqual(far.maximum.z, near.maximum.z, accuracy: budgetTop, "\(unit)")
+            XCTAssertLessThanOrEqual(abs(far.minimum.z), budgetGround, "\(unit)")
+            XCTAssertEqual(far.minimum.y, near.minimum.y, accuracy: budgetX, "\(unit)")
+            XCTAssertEqual(far.maximum.y, near.maximum.y, accuracy: budgetX, "\(unit)")
+        }
+        let pack = Map3DModelPack.standard
+        func packed(_ name: String) throws -> Map3DModelPack.Model { pack.models[try XCTUnwrap(pack.index(of: name), name)] }
+        for part in ["head", "tender"] {
+            let near = try packed("set-STEAM-\(part)"), far = try packed("set-STEAMFar-\(part)")
+            XCTAssertLessThan(far.triangleCount * 2, near.triangleCount, part)
+        }
+        XCTAssertEqual(try packed("set-STEAMFar-head").triangleCount, 2_296)
+        XCTAssertEqual(try packed("set-STEAMFar-tender").triangleCount, 1_068)
+        let head = try packed("set-STEAMFar-head")
+        XCTAssertFalse(Map3DTrainLights.car(head).front.head.isEmpty, "the far locomotive's headlamp")
     }
 
     /// Only the studio's glass material is the coaches' window glass, and

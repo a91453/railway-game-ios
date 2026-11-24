@@ -58,10 +58,11 @@ public enum Map3DSteamCoach {
 
 extension Map3DSteamCoach {
     /// Decision 957: the steam train's sets, near and far (the duplex
-    /// locomotive and its tender have no light version yet, so are the
-    /// same from 500 m out), and their cars' triangles (the coaches 1,944
-    /// and 2,024 near, 566 and 614 far; the locomotive 8,000 to 10,500,
-    /// decision 399) and lengths (the coaches 12.12 m, the locomotive and
+    /// locomotive and its tender have light versions since the decision's
+    /// later note, ``Map3DDuplexSteam/model(_:far:)``), and their cars'
+    /// triangles (the coaches 1,944 and 2,024 near, 566 and 614 far; the
+    /// locomotive 8,000 to 10,500 near, decision 399, and 2,296 far; the
+    /// tender 3,048 and 1,068) and lengths (the coaches 12.12 m, the locomotive and
     /// its tender 9 to 15.4 m). Its showcase row stays the hand-written one.
     static let registration = Map3DTrainRegistration(
         id: "steam-coach",

@@ -17,15 +17,20 @@ public enum Map3DDuplexSteam {
     public static let cream = Map3DPalette.shopAwnings[3]
     public static let graphite = Map3DPalette.playerRim
     public static let glass = Map3DColor.shaded(Map3DPalette.glazing, 0.52)
-    public static func components(_ unit: Unit) -> [Component] {
-        var b = DuplexSteamBuilder()
+    /// `far`: STEAM-FAR's light version, drawn from 500 m out (decision
+    /// 957's later note): the same boiler, cab, firebox, tank, bunker,
+    /// wheels and outline in the same box, with fewer sides to every round
+    /// part and without the rods, spokes, pins, pipes, rails, steps,
+    /// ladders, bolts and coal lumps a 500 m camera cannot see.
+    public static func components(_ unit: Unit, far: Bool = false) -> [Component] {
+        var b = DuplexSteamBuilder(far: far)
         if unit == .locomotive { b.locomotive() } else { b.tender() }
         return b.parts
     }
-    public static func model(_ unit: Unit) -> Map3DModelPack.Model {
+    public static func model(_ unit: Unit, far: Bool = false) -> Map3DModelPack.Model {
         var b = StationKitBuilder()
-        for p in components(unit) { b.add(p.model, at: .zero) }
-        return .flat(named:"duplex-\(unit.rawValue)",from:b.mesh)
+        for p in components(unit, far: far) { b.add(p.model, at: .zero) }
+        return .flat(named:"duplex-\(unit.rawValue)"+(far ? "-far" : ""),from:b.mesh)
     }
     public static func formation() -> Map3DModelPack.Model {
         var b = StationKitBuilder()
@@ -36,10 +41,19 @@ public enum Map3DDuplexSteam {
 
 private struct DuplexSteamBuilder {
     var parts: [Map3DDuplexSteam.Component] = []
+    /// The light version: small parts left out, round parts with fewer sides.
+    var far = false
+    /// The roles and name prefixes the light version leaves out.
+    static let farRoles: Set<String> = ["spoke","pin","rod","pipe","rail","band","hub"]
+    static let farNames = ["smokebox-bolt","step-","front-platform-step-hanger","tender-step","rear-rung","rear-ladder",
+                           "coal-facet","pipe-clamp","barrel-handrail-post","front-rail-post","rear-grab-post",
+                           "reservoir-foot","hatch-handle","crosshead","slide-guide","cylinder-end","bogie-spring",
+                           "blank-centre","rear-water-hatch-base"]
     let body=Map3DDuplexSteam.body, cream=Map3DDuplexSteam.cream
     let dark=Map3DDuplexSteam.graphite, glass=Map3DDuplexSteam.glass
     let steel=Map3DPalette.tankSteel, gold=Map3DPalette.containers[3]
     mutating func piece(_ name: String, _ role: String, _ build: (inout StationKitBuilder) -> Void) {
+        if far && (Self.farRoles.contains(role) || Self.farNames.contains(where: name.hasPrefix)) { return }
         var b = StationKitBuilder(); build(&b)
         parts.append(.init(name: name, role: role, model: .flat(named: name, from: b.mesh)))
     }
@@ -49,7 +63,8 @@ private struct DuplexSteamBuilder {
     }
     mutating func tube(_ name: String, _ role: String, _ a: Map3DPoint, _ b: Map3DPoint,
                        _ radius: Float, _ c: UInt32, _ sides: Int = 12) {
-        piece(name, role) { $0.civicTube(a,b,radius:radius,color:c,sides:sides) }
+        let n = far ? (sides >= 24 ? 12 : sides >= 12 ? 8 : 6) : sides
+        piece(name, role) { $0.civicTube(a,b,radius:radius,color:c,sides:n) }
     }
     // A closed swept section. Rings are convex; each quad is explicitly split
     // into planar triangles so the roof and boiler cannot acquire missing faces.
@@ -66,6 +81,13 @@ private struct DuplexSteamBuilder {
     }
     mutating func wheel(_ name: String, _ x: Float, _ r: Float, _ side: Float, driver: Bool) {
         let lateral=side*1.10,inner=r*0.81,n=16
+        if far {
+            // A solid eight-sided steel tyre, its faces covered by a dark
+            // disc where the near wheel has its spokes and the gaps between.
+            tube(name,"wheel",Map3DPoint(x,r,lateral-0.08),Map3DPoint(x,r,lateral+0.08),r,Map3DPalette.tankSteel,12)
+            tube(name+"-web","wheel",Map3DPoint(x,r,lateral-0.09),Map3DPoint(x,r,lateral+0.09),inner,dark,12)
+            return
+        }
         piece(name,"wheel") { b in
             func p(_ i: Int,_ radius: Float,_ offset: Float)->Map3DPoint {
                 let t=Float(i)*2*Float.pi/Float(n)
