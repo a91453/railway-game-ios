@@ -20,13 +20,24 @@ extension GameWorld {
     /// the depot comes in well within it for a run it would miss.
     static let runDepotSurplusLookahead: Int64 = GameTime.secondsPerHour
 
-    /// Decision 609: whether a stop of `line` counted `way` round (see
-    /// ``runWays(of:)``) tells a waiting train one too many by the runs of
-    /// the next ``runDepotSurplusLookahead``: off a ring only without block
-    /// sections (WENHU-LATE: with them the Wenhu line's runs were later), on
-    /// a ring either way (KLRT-SPARE).
-    static func countsSurplus(on line: ServiceLine, way: RingDirection?, blockSections: Bool) -> Bool {
-        way == nil ? !blockSections : line.isRing
+    /// Decision 609: whether `station`, a stop of `line` counted `way` round
+    /// (see ``runWays(of:)``), tells a waiting train one too many by the
+    /// runs of the next ``runDepotSurplusLookahead``: on a ring either way
+    /// (KLRT-SPARE); off a ring, at every stop without block sections, and
+    /// with them at the stops between the line's two ends only.
+    ///
+    /// WENHU-LATE: with block sections, counted at every stop, the Wenhu
+    /// line's runs were later. Decision 948: counted at no stop, a train
+    /// with nothing to do stood on a through platform of the Taoyuan
+    /// Airport MRT's Terminal 2 from the morning to the evening, the
+    /// expresses turning back there held the other platform eight minutes
+    /// each, and the trains bound west waited at Terminal 1 behind them,
+    /// later and later through the afternoon peak. At a line's end a train
+    /// between runs stands where the next run leaves, and the first runs of
+    /// the morning there count on the trains left overnight.
+    static func countsSurplus(on line: ServiceLine, at station: StationID, way: RingDirection?, blockSections: Bool) -> Bool {
+        guard way == nil else { return line.isRing }
+        return !blockSections || (station != line.stops.first && station != line.stops.last)
     }
 
     /// The first departures, in seconds, of `line`'s runs that leave from
@@ -228,7 +239,7 @@ extension GameWorld {
                 // would take, and that train, due on the same platform first,
                 // waited behind it in a deadlock a minute each time (18 times
                 // in the first morning under the realistic rules).
-                if isTrafficControlEnabled, Self.countsSurplus(on: line, way: way, blockSections: blockSections), leaving.isEmpty, let last = waiting.last,
+                if isTrafficControlEnabled, Self.countsSurplus(on: line, at: station, way: way, blockSections: blockSections), leaving.isEmpty, let last = waiting.last,
                    !counted.contains(where: { $0.0 != way && $0.1.prefix($0.2).contains(last) }) {
                     let soon = pendingRunStarts(of: line, from: station, way: way).filter { $0 <= clock.now.seconds + Self.runDepotSurplusLookahead }
                     var ready = runTrainsReady(of: line, at: station, way: way)
@@ -702,7 +713,7 @@ extension GameWorld {
                 for start in starts {
                     wake(at: start - Self.runDepotLookahead)
                     // Decision 609: a run coming within the hour.
-                    if isTrafficControlEnabled, Self.countsSurplus(on: line, way: way, blockSections: blockSections) { wake(at: start - Self.runDepotSurplusLookahead) }
+                    if isTrafficControlEnabled, Self.countsSurplus(on: line, at: station, way: way, blockSections: blockSections) { wake(at: start - Self.runDepotSurplusLookahead) }
                     wake(at: start - LineRun.earliestDispatch - Self.runDepotLookahead)
                     if let lead { wake(at: start - LineRun.earliestDispatch - lead) }
                     // Decision 296: once its first departure has passed, a

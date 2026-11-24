@@ -20,7 +20,7 @@ extension TimetableCheckupBudgets {
         "trtc:BR simple": .init(notSent: 6, late: 179, lateOutOfDepot: 30, peakGapMinutes: 10),
         "trtc:BR realistic": .init(notSent: 0, late: 149, lateOutOfDepot: 0, peakGapMinutes: 7),
         "tymc:A simple": .init(notSent: 13, late: 92, lateOutOfDepot: 9, peakGapMinutes: 31),
-        "tymc:A realistic": .init(notSent: 1, late: 20, lateOutOfDepot: 6, peakGapMinutes: 13),
+        "tymc:A realistic": .init(notSent: 1, late: 8, lateOutOfDepot: 3, peakGapMinutes: 4),
     ]
 
     /// Taiwan's lines that share a station, bought together (2026-11-18).
