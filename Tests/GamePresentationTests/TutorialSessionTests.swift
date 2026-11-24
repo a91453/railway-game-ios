@@ -882,8 +882,9 @@ final class TutorialSessionTests: XCTestCase {
         }
     }
 
-    /// "Skip this step" moves on without the step's goal, passing what is
-    /// done; it does nothing on a read step or the last, and never finishes
+    /// "Skip this step" moves on without the step's goal (but a tool or a
+    /// mode it chooses, which is chosen), passing what is done, and builds
+    /// nothing; it does nothing on a read step or the last, and never finishes
     /// the tutorial (decision 177).
     func testSkippingAStepMovesOnWithoutItsGoal() async throws {
         await MainActor.run {
@@ -893,7 +894,9 @@ final class TutorialSessionTests: XCTestCase {
             session.startTutorial()
             session.skipTutorialStep()
             XCTAssertEqual(session.tutorial?.step.id, "map.move")
-            XCTAssertEqual(session.tool, .select, "the goal was not done for the player")
+            // The AI testers' round 1: a step that only chooses a tool has
+            // it chosen, as the steps after it count on it.
+            XCTAssertEqual(session.tool, .network, "the skipped step's tool is chosen for the player")
             var skips = 0
             while session.tutorial?.step.goal != .read, skips < Self.stepIDs.count {
                 session.skipTutorialStep()
