@@ -119,6 +119,8 @@ public struct TrainLivery: Hashable, Sendable {
         "EMU100": emu100, "E200CK": e200ChuKuang, "E500CK": e500ChuKuang, "R100CK": r100ChuKuang, "R200CK": r200ChuKuang,
         "HAIFENG": haiFeng, "BLUE": blueTrain, "SHANLAN": shanLan, "MINGRI": mingRi, "STAR": formosaStar,
         "SUMMER": midsummerFormosa,
+        // Decision 961: the real models that became types.
+        "TAROKO": taroko, "PUYUMA": puyuma, "EMU800": emu800, "C381": metroC381,
     ]
     /// The livery of each real model's performance, by its preset's code
     /// (``TrainPerformanceSpec/code``), for a train whose type has none.

@@ -34,7 +34,7 @@ public enum TrainHorn: String, CaseIterable, Hashable, Sendable {
         switch type.rawValue {
         // The Chu-Kuang behind an R100 or R200, and the Blue Train behind
         // its R100-class R135 (decision 286).
-        case "R100CK", "R200CK", "BLUE": return .diesel
+        case "R100CK", "R200CK", "BLUE", "DR3100", "DR1000": return .diesel
         // The era's steam train and the Midsummer Formosa's CT273.
         case "STEAM", "SUMMER": return .steam
         default: return .electric
