@@ -85,6 +85,14 @@ public enum Map3DFreightWagons {
         }
         var b = StationKitBuilder()
         b.containerWagon(far: far)
+        if far {
+            // The hand brake wheel on the front end, which the container
+            // wagon's far version leaves out (its containers stand higher).
+            // On the bare wagon it is the highest part, so without it the
+            // far wagon stood 0.09 m under the near one's box (decision 432).
+            b.civicTube(Map3DPoint(6.92, 1.02, 0.85), Map3DPoint(6.96, 1.02, 0.85), radius: 0.20,
+                        color: Map3DContainerWagon.metal, sides: 6)
+        }
         switch wagon {
         case .empty, .emptyTail: break
         case .stone, .stoneGreen, .stoneTail:

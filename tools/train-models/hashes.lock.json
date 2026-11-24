@@ -2201,6 +2201,10 @@
       "hash" : "358666eecf84c0f3",
       "triangles" : 60
     },
+    "scenery-busStopPole" : {
+      "hash" : "3bff96f2cccef641",
+      "triangles" : 58
+    },
     "scenery-coalBunker" : {
       "hash" : "e8ca818a8b6da6dd",
       "triangles" : 158
@@ -2216,6 +2220,10 @@
     "scenery-pineYoung" : {
       "hash" : "17471054d7dfed49",
       "triangles" : 40
+    },
+    "scenery-postBoxes" : {
+      "hash" : "9b28ca46cecabfc0",
+      "triangles" : 100
     },
     "scenery-tank" : {
       "hash" : "2d6d09ff2fa2f42c",
