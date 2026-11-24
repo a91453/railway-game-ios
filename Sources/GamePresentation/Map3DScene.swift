@@ -1782,6 +1782,33 @@ extension Map3DScene {
             return height
         }
 
+        /// Decision 965: the ground's smoothed way up at the 64 m grid's
+        /// corner (`row`, `column`), from the heights of the corners each
+        /// side of it (``groundCorner(row:column:)``): a slope lit as one
+        /// surface, not as each square's own face.
+        mutating func groundCornerNormal(row: Int, column: Int) -> Map3DPoint {
+            let across = Float(2 * Double(Land.cellLength) / Self.metre)
+            let east = groundCorner(row: row, column: column + 1) - groundCorner(row: row, column: column - 1)
+            let south = groundCorner(row: row + 1, column: column) - groundCorner(row: row - 1, column: column)
+            return Map3DPoint(-east / across, 1, -south / across).normalized ?? .up
+        }
+
+        /// Decision 965: the ground's smoothed way up at scene point (`x`,
+        /// `z`): its square's corners' (``groundCornerNormal(row:column:)``)
+        /// run together over the same two triangles ``drawnGround(x:z:)``
+        /// reads the heights from, so what lies on the ground is lit as the
+        /// ground under it.
+        mutating func groundNormal(x: Float, z: Float) -> Map3DPoint {
+            let cell = Double(Land.cellLength)
+            let worldX = originX + Double(x) * Self.metre, worldY = originY + Double(z) * Self.metre
+            let column = Int((worldX / cell).rounded(.down)), row = Int((worldY / cell).rounded(.down))
+            let fx = Float(worldX / cell - Double(column)), fy = Float(worldY / cell - Double(row))
+            let a = groundCornerNormal(row: row, column: column), b = groundCornerNormal(row: row + 1, column: column)
+            let c = groundCornerNormal(row: row + 1, column: column + 1), d = groundCornerNormal(row: row, column: column + 1)
+            let blended = fy >= fx ? a + (c - b) * fx + (b - a) * fy : a + (d - a) * fx + (c - d) * fy
+            return blended.normalized ?? .up
+        }
+
         /// Decision 876 (later, PERF-3D-BLOCK-FIXED): the corners worked
         /// out (``groundCorner(row:column:)``), those of the region and
         /// ``reach`` cells round it in an array, the rest by key. The
@@ -1948,11 +1975,18 @@ extension Map3DScene {
                     let flat = { (p: Map3DPoint) in Map3DBaseMap.Point(x: Double(p.x), z: Double(p.z)) }
                     let halves = [[a, b, c], [a, c, d]].map { outsideTrenches($0.map(flat)) }
                     if halves.allSatisfy({ $0 == nil }) {
+                        // Decision 965: land lit at each corner by the
+                        // slope round it; water flat, as it lies.
+                        let normals = water ? [] : [groundCornerNormal(row: row, column: column), groundCornerNormal(row: row + 1, column: column),
+                                                    groundCornerNormal(row: row + 1, column: column + 1), groundCornerNormal(row: row, column: column + 1)]
                         mesh(at: middle) {
                             // Decision 241: the ground plain, as the 2D map's land.
                             let start = $0.vertices.count
-                            $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: colour)
-                            if water { $0.makeWater(from: start) } else if $0.vertices.count == start + 4 {
+                            if water {
+                                $0.addQuad(a + lift, b + lift, c + lift, d + lift, color: colour)
+                                $0.makeWater(from: start)
+                            } else {
+                                $0.addGroundQuad(a, b, c, d, normals: normals, color: colour)
                                 $0.recolour(from: start) { index, _ in tints[index] }
                             }
                         }
@@ -1960,17 +1994,20 @@ extension Map3DScene {
                     }
                     guard let normal = Map3DMesh.normal(of: [a, b, c, d]) else { continue }
                     var pieces: [[Map3DPoint]] = []
+                    var pieceNormals: [[Map3DPoint]] = []
                     for (corners, half) in zip([[a, b, c], [a, c, d]], halves) {
                         for piece in half ?? [corners.map(flat)] {
                             pieces.append(piece.map { p in
                                 let x = Float(p.x), z = Float(p.z)
                                 return Map3DPoint(x, drawnGround(x: x, z: z), z) + lift
                             })
+                            // Decision 965: as the whole squares' corners.
+                            pieceNormals.append(piece.map { p in water ? normal : groundNormal(x: Float(p.x), z: Float(p.z)) })
                         }
                     }
                     mesh(at: middle) {
                         let start = $0.vertices.count
-                        for piece in pieces { $0.addFan(piece, normal: normal, color: colour) }
+                        for (piece, normals) in zip(pieces, pieceNormals) { $0.addFan(piece, normals: normals, color: colour) }
                         if water { $0.makeWater(from: start) } else if tints.contains(where: { $0 != colour }) {
                             // A cut square's pieces: each vertex its nearest corner's colour.
                             let corners = [a, b, c, d]
@@ -2122,8 +2159,11 @@ extension Map3DScene {
                 }
             }
             let square = groundSquare(round: base, half: half, lift: 0.02)
+            // Decision 965: lit as the ground under it.
+            let squareNormals = square.map { groundNormal(x: $0.x, z: $0.z) }
             mesh(at: base) { mesh in
-                mesh.addFlat(square, triangles: Self.squareTriangles, color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass)
+                mesh.addFlat(square, triangles: Self.squareTriangles, color: park ? Map3DPalette.park : Map3DPalette.farm, paint: Self.grass,
+                             normals: squareNormals)
                 for (spot, size) in trees {
                     if !far {
                         mesh.addBox(base: spot, length: 0.6, width: 0.6, height: size * 0.45, top: Map3DPalette.trunk, side: Map3DPalette.trunk)
