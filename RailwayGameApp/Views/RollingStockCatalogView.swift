@@ -26,6 +26,9 @@ struct RollingStockCatalogView: View {
 
     let session: GameSession
     var purpose: Purpose = .staffing
+    /// The line the trains are chosen for, when there is one: the list
+    /// shows only the types its track carries (CATALOG-TRACK-FILTER).
+    var line: LineID?
     @Binding var type: TrainType?
     @Binding var cars: Int
     @Environment(\.dismiss) private var dismiss
@@ -39,17 +42,20 @@ struct RollingStockCatalogView: View {
     @State private var order: RollingStockCatalog.Order = .family
     @State private var affordableOnly = false
 
-    /// The type and cars a line's staffing buys.
-    init(session: GameSession, type: Binding<TrainType?>, cars: Binding<Int>) {
+    /// The type and cars line `line`'s staffing buys, or its trains are
+    /// changed to.
+    init(session: GameSession, line: LineID, type: Binding<TrainType?>, cars: Binding<Int>) {
         self.session = session
+        self.line = line
         _type = type
         _cars = cars
     }
 
-    /// The type of train `train`, not yet on the track.
+    /// The type of train `train`: on a line, one its track carries.
     init(session: GameSession, train: TrainID) {
         self.session = session
         purpose = .train(train)
+        line = session.world.assignedLine(of: train)
         _type = .constant(session.world.train(id: train)?.type)
         _cars = .constant(session.world.train(id: train)?.cars ?? 4)
     }
@@ -64,7 +70,7 @@ struct RollingStockCatalogView: View {
 
     var body: some View {
         let language = session.language
-        let catalog = RollingStockCatalog(world: session.world)
+        let catalog = RollingStockCatalog(world: session.world, line: line)
         let list = catalog.listed(family: family, order: order, cars: shownCars, affordableOnly: affordableOnly, in: session.world)
         let entry = list.first(where: { $0.type == shown }) ?? list.first
         NavigationStack {
@@ -77,7 +83,7 @@ struct RollingStockCatalogView: View {
                 // type; a phone upright: the type over the list.
                 if isWide {
                     HStack(spacing: 0) {
-                        listColumn(list, entry: entry, language: language)
+                        listColumn(list, catalog, entry: entry, language: language)
                             .frame(width: 300)
                         Divider()
                         ScrollView { detail(list, entry: entry, language: language).padding(16) }
@@ -86,7 +92,7 @@ struct RollingStockCatalogView: View {
                     ScrollView {
                         VStack(spacing: 16) {
                             detail(list, entry: entry, language: language)
-                            rows(list, entry: entry, language: language)
+                            rows(list, catalog, entry: entry, language: language)
                         }
                         .padding(16)
                     }
@@ -187,10 +193,10 @@ struct RollingStockCatalogView: View {
         .accessibilityIdentifier("catalog.affordable")
     }
 
-    private func listColumn(_ list: [RollingStockCatalog.Entry], entry: RollingStockCatalog.Entry?, language: DisplayLanguage) -> some View {
+    private func listColumn(_ list: [RollingStockCatalog.Entry], _ catalog: RollingStockCatalog, entry: RollingStockCatalog.Entry?, language: DisplayLanguage) -> some View {
         ScrollViewReader { reader in
             ScrollView {
-                rows(list, entry: entry, language: language)
+                rows(list, catalog, entry: entry, language: language)
                     .padding(12)
             }
             .onAppear {
@@ -200,15 +206,23 @@ struct RollingStockCatalogView: View {
         .accessibilityIdentifier("catalog.list")
     }
 
-    private func rows(_ list: [RollingStockCatalog.Entry], entry: RollingStockCatalog.Entry?, language: DisplayLanguage) -> some View {
+    private func rows(_ list: [RollingStockCatalog.Entry], _ catalog: RollingStockCatalog, entry: RollingStockCatalog.Entry?, language: DisplayLanguage) -> some View {
         // Not lazy: some two dozen rows, and a lazy stack builds its
         // cells off the main thread (CRASHSWEEP-2).
         VStack(spacing: 6) {
-            if case let .train(id) = purpose, session.world.offersStandardCar {
+            if case let .train(id) = purpose, session.world.offersStandardCar, catalog.carriesStandardCar {
                 standardRow(id, language: language)
             }
+            if let note = catalog.trackNote(in: language) {
+                Text(verbatim: note)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("catalog.trackNote")
+            }
             if list.isEmpty {
-                Text(verbatim: language.text("No train type the company can pay for now.", "目前沒有買得起的車種。"))
+                Text(verbatim: catalog.emptyListText(in: language))
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)

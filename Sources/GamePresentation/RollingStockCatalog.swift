@@ -31,9 +31,31 @@ public struct RollingStockCatalog: Equatable, Sendable {
 
     public let entries: [Entry]
 
-    /// The types offered in `world`, family by family in the menu's order.
-    public init(world: GameWorld) {
-        let offered = world.offeredTrainTypes
+    /// The line the catalog chooses trains for, when it does: only the
+    /// types its track carries are listed (CATALOG-TRACK-FILTER, decision
+    /// 955's later note).
+    public let line: LineID?
+
+    /// Whether types were left out because line ``line``'s track does not
+    /// carry them: the catalog then says it lists only what runs there.
+    public let leavesOutForTrack: Bool
+
+    /// Whether the standard car runs on line ``line``'s track (always,
+    /// with no line).
+    public let carriesStandardCar: Bool
+
+    /// The types offered in `world`, family by family in the menu's order;
+    /// for line `line`, only those its track carries
+    /// (``GameWorld/runsOnTrack(_:ofLine:)``: a guideway's own train on
+    /// it, none of them on ordinary track, only a mountain train where
+    /// there is mountain track), as the line's type menus list them
+    /// (``GameSession/trainTypeCardChoices(forLine:)``).
+    public init(world: GameWorld, line: LineID? = nil) {
+        let all = world.offeredTrainTypes
+        let offered = line.map { line in all.filter { world.runsOnTrack($0, ofLine: line) } } ?? all
+        self.line = line
+        leavesOutForTrack = offered.count < all.count
+        carriesStandardCar = line.map { world.runsOnTrack(nil, ofLine: $0) } ?? true
         entries = Family.allCases.flatMap { family in
             offered.filter { Family($0) == family }.map {
                 Entry(
@@ -42,6 +64,25 @@ public struct RollingStockCatalog: Equatable, Sendable {
                 )
             }
         }
+    }
+
+    /// What the catalog says over its list while it leaves types out for
+    /// line ``line``'s track; `nil` when it leaves none out.
+    public func trackNote(in language: DisplayLanguage) -> String? {
+        guard leavesOutForTrack else { return nil }
+        return language.text(
+            "Only the types this line's track carries are listed.",
+            "只列這條線的軌道跑得了的車種。"
+        )
+    }
+
+    /// What the list says when it shows no type: that none runs on the
+    /// line's track, when that is why; otherwise that the company can pay
+    /// for none now (only those it can pay for being listed).
+    public func emptyListText(in language: DisplayLanguage) -> String {
+        entries.isEmpty && leavesOutForTrack
+            ? language.text("No train type runs on this line's track.", "沒有車種跑得了這條線的軌道。")
+            : language.text("No train type the company can pay for now.", "目前沒有買得起的車種。")
     }
 
     /// The first type that can be chosen, the showroom's first one shown.

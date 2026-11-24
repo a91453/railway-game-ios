@@ -2873,7 +2873,7 @@ struct LinesPanel: View {
             }
             .accessibilityIdentifier("line.refit.catalog")
             .fullScreenCover(isPresented: $showsRefitCatalog) {
-                RollingStockCatalogView(session: session, type: $refitType, cars: $refitCars)
+                RollingStockCatalogView(session: session, line: line.id, type: $refitType, cars: $refitCars)
                     .coversTheMap(session)
             }
             if let type = refitType {
@@ -2973,7 +2973,7 @@ struct LinesPanel: View {
             .accessibilityIdentifier("line.staff.catalog")
             // Decision 915: over the whole screen.
             .fullScreenCover(isPresented: $showsCatalog) {
-                RollingStockCatalogView(session: session, type: $staffType, cars: $staffCars)
+                RollingStockCatalogView(session: session, line: line.id, type: $staffType, cars: $staffCars)
                     .coversTheMap(session)
             }
             capacityWarning(line)
