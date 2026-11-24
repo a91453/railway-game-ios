@@ -318,7 +318,7 @@ private struct TutorialCardSlot: View {
     private var isFolded: Bool {
         fold.showsFolded(
             stepChoice: folded, chapterChoice: chapterFold, waitsForNext: waitsForNext, isDone: session.isTutorialStepDone,
-            isFirstStep: tutorial.isFirstStep
+            isFirstStep: tutorial.isFirstStep, isLastStep: tutorial.isLastStep
         )
     }
 
@@ -592,9 +592,16 @@ private struct TutorialCard: View {
     @ViewBuilder
     private var statusRow: some View {
         let waits = hint == nil && !isCompact && !session.isTutorialStepDone
-        if hint != nil || waits || offersSkip {
+        let finish = session.tutorialFinishPrompt
+        if hint != nil || waits || offersSkip || finish != nil {
             HStack(alignment: .center, spacing: 8) {
-                if let hint, hint.isProblem {
+                if let finish {
+                    Text(verbatim: finish)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Theme.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("tutorial.finishPrompt")
+                } else if let hint, hint.isProblem {
                     HStack(spacing: 6) {
                         lantern
                         Text(verbatim: hint.text)

@@ -12,7 +12,9 @@ extension TimetableCheckupBudgets {
     /// (871 edges to 803); with the curve limits off its realistic day
     /// is 18 late on the old ground and 16 on the new, so its peaks'
     /// knock-on delays (decision 228) swing with small changes in how it
-    /// is laid, not one stretch slower (TYMC-PEAK-CASCADE).
+    /// is laid, not one stretch slower (TYMC-PEAK-CASCADE). Decision 954
+    /// (TYMC-DAWN-TAIPEI): Taipei Main Station keeps the trains for its
+    /// first runs overnight, realistic 1, 8, 3, +4 to 1, 5, 2, +4.
     static let taiwanFull: [String: TimetableCheckup.Budget] = [
         "ntalrt:K simple": .init(notSent: 0, late: 2, lateOutOfDepot: 0, peakGapMinutes: 0),
         "ntalrt:K realistic": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 0),
@@ -20,7 +22,7 @@ extension TimetableCheckupBudgets {
         "trtc:BR simple": .init(notSent: 6, late: 179, lateOutOfDepot: 30, peakGapMinutes: 10),
         "trtc:BR realistic": .init(notSent: 0, late: 149, lateOutOfDepot: 0, peakGapMinutes: 7),
         "tymc:A simple": .init(notSent: 13, late: 92, lateOutOfDepot: 9, peakGapMinutes: 31),
-        "tymc:A realistic": .init(notSent: 1, late: 8, lateOutOfDepot: 3, peakGapMinutes: 4),
+        "tymc:A realistic": .init(notSent: 1, late: 5, lateOutOfDepot: 2, peakGapMinutes: 4),
     ]
 
     /// Taiwan's lines that share a station, bought together (2026-11-18).

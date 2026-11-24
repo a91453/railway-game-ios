@@ -1913,18 +1913,6 @@
       "hash" : "63557037382901ab",
       "triangles" : 384
     },
-    "light-set-STEAM-car" : {
-      "hash" : "16dd39ef4f1d9938",
-      "triangles" : 472
-    },
-    "light-set-STEAM-head" : {
-      "hash" : "931c28dbb6e82e29",
-      "triangles" : 32
-    },
-    "light-set-STEAM-tail" : {
-      "hash" : "5334d881abcefe8f",
-      "triangles" : 356
-    },
     "light-set-SUMMER-car" : {
       "hash" : "2d6cad0d4d66cb7",
       "triangles" : 836
@@ -3200,22 +3188,6 @@
     "set-STARFar-tail" : {
       "hash" : "5f9ca3eab08bba53",
       "triangles" : 4032
-    },
-    "set-STEAM-car" : {
-      "hash" : "cdaf3d84d3d86c31",
-      "triangles" : 1528
-    },
-    "set-STEAM-head" : {
-      "hash" : "6b11a72d6f90f585",
-      "triangles" : 8092
-    },
-    "set-STEAM-tail" : {
-      "hash" : "809f6b07576e1c79",
-      "triangles" : 1588
-    },
-    "set-STEAM-tender" : {
-      "hash" : "6e343ba409e648cb",
-      "triangles" : 3048
     },
     "set-SUMMER-car" : {
       "hash" : "9f2aebebb2477e4b",

@@ -27,6 +27,8 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
                 for unit in Map3DFukuokaAirportLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DFukuokaAirportLine.model(unit, far: far))) }
                 for unit in Map3DFukuokaKaizukaLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DFukuokaKaizukaLine.model(unit, far: far))) }
                 for unit in Map3DFukuokaNanakumaLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DFukuokaNanakumaLine.model(unit, far: far))) }
+                // Decision 957: and the steam train's wooden coaches.
+                for unit in Map3DSteamCoach.Unit.allCases { cars.append(try XCTUnwrap(Map3DSteamCoach.model(unit, far: far))) }
                 // Decision 956: and the Keikyu New 1000.
                 cars.append(try XCTUnwrap(Map3DRedCommuter.cab(far: far)))
                 cars.append(try XCTUnwrap(Map3DRedCommuter.middle(far: far)))

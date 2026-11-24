@@ -136,6 +136,84 @@ extension GameWorld {
         return missing
     }
 
+    /// Decision 954: how far an end of a line must be from the nearest of
+    /// its depots, by the empty run out, to keep trains overnight for its
+    /// first runs (see ``dawnRunsKept(of:at:for:memo:)``): 20 minutes.
+    /// Taipei Main Station is 22 from Luzhu; the other ends measured were
+    /// 17 (Hong Kong, from Siu Ho Wan) or less, where trains out of the
+    /// depot are there in time, and keeping trains at them moved the
+    /// Tung Chung and South Island lines' morning peaks later.
+    static let dawnKeepDepotRun: Int64 = 20 * GameTime.secondsPerMinute
+
+    /// Decision 954: how many of `line`'s trains waiting at `station` an
+    /// end of the line keeps through the night for its first runs of the
+    /// morning there, with block sections; 0 at any other stop, on a
+    /// ring, without block sections or while the next run to leave there
+    /// is not one of them. Those first runs are the runs from `station`
+    /// before the first train to come in on a run from the line's other
+    /// end: a train arriving on a run that began between the ends, in
+    /// the morning one just out of a depot, is not counted on. Counted
+    /// from now, run by run (each train arriving takes the next run out
+    /// after a terminal's least dwell), as the most by which the runs
+    /// leaving outnumber the trains arriving; at most one a track of the
+    /// station the train fits. Only while no such arrival comes within
+    /// ``runDepotLookahead`` before the next run to leave (through the
+    /// day the look ahead keeps a stop's trains), and only where the
+    /// empty run out of the nearest depot with a train in it takes
+    /// ``dawnKeepDepotRun`` or longer.
+    ///
+    /// On the Taoyuan Airport MRT under the realistic rules, the trains
+    /// left at Taipei Main Station overnight were those that came in once
+    /// Luzhu's sidings were full, three or two as the day had gone. The
+    /// runs from Taipei from 06:15 took the trains of the runs that began
+    /// at Chang Gung Memorial Hospital and Taishan at 05:56 to 05:58,
+    /// each out of Luzhu one behind another (decision 841), and left 5 to
+    /// 12 minutes late; with two kept, 11 runs were late. Without block
+    /// sections, where an end counts a train one too many by the hour
+    /// (decision 609), the same rule left Taipei's runs 5 to 12 minutes
+    /// late from 09:00 to 17:00 instead.
+    func dawnRunsKept(of line: ServiceLine, at station: StationID, for train: Train, memo: inout DispatchMemo) -> Int {
+        guard blockSections, !line.isRing, let first = line.stops.first, let last = line.stops.last, first != last,
+              station == first || station == last
+        else { return 0 }
+        let other = station == first ? last : first
+        let now = clock.now.seconds
+        let starts = pendingRunStarts(of: line, from: station).sorted()
+        guard let next = starts.first else { return 0 }
+        // When a train coming in on a run from the other end, by the
+        // timetable, could take a run out: a terminal's least dwell
+        // after it arrives.
+        let today = GameTime.floorDivide(now, GameTime.secondsPerDay)
+        var arrivals: [Int64] = []
+        for run in line.runs where line.stops[run.to] == station && line.stops[run.from] == other {
+            guard let arrival = run.times.last?.arrival else { continue }
+            for day in (today - 1)...(today + 1) where day >= 0 && run.runs(onDay: day) && run.fits(onDay: day) {
+                arrivals.append(day * GameTime.secondsPerDay + arrival + ServiceDwell.terminalMinimum)
+            }
+        }
+        arrivals.sort()
+        func coveredSoon(_ start: Int64) -> Bool {
+            arrivals.contains { $0 <= start && $0 > start - Self.runDepotLookahead }
+        }
+        guard !coveredSoon(next) else { return 0 }
+        var needed = 0, arrived = 0
+        var coming = arrivals.firstIndex { $0 > now } ?? arrivals.count
+        for (out, start) in starts.prefix(while: { !coveredSoon($0) }).enumerated() {
+            while coming < arrivals.count, arrivals[coming] <= start {
+                arrived += 1
+                coming += 1
+            }
+            needed = max(needed, out + 1 - arrived)
+        }
+        guard needed > 0 else { return 0 }
+        // Near a depot, trains out of it are there in time. With no train
+        // of the line in a depot, the way there is this train's own.
+        let run = runPullOut(of: line, to: station, memo: &memo)?.trip.deadhead ?? emptyRun(of: line, for: train, to: line.depots)?.deadhead
+        if let run, run.seconds < Self.dawnKeepDepotRun { return 0 }
+        let tracks = Set(berths(of: station, length: train.length).map(\.traversal.edge)).count
+        return min(needed, tracks)
+    }
+
     // MARK: - Into the depot
 
     /// The train of `line`, a line with runs and depots, to send into a
@@ -214,12 +292,16 @@ extension GameWorld {
             let counted = runWays(of: line).map { way in
                 (way, runTrainsWaiting(of: line, at: station, way: way), pendingRunStarts(of: line, from: station, way: way).count { $0 <= horizon })
             }
+            // Decision 954: an end of the line keeps the trains for its
+            // first runs of the morning.
+            let dawnKept = counted.first.flatMap { $0.1.first }.map { dawnRunsKept(of: line, at: station, for: trains[$0], memo: &memo) } ?? 0
             let kept = Set(counted.flatMap { $0.1.prefix($0.2) })
             for (way, waiting, wanted) in counted {
                 // Decision 296: a train out of a depot for a run due here is
                 // not one too many until that run leaves or is dropped.
                 let due = isTrafficControlEnabled && pendingRunStarts(of: line, from: station).contains { $0 - LineRun.earliestDispatch <= clock.now.seconds }
-                var leaving = waiting.count > wanted ? Array(waiting.suffix(waiting.count - wanted).reversed()).filter { !kept.contains($0) } : []
+                let keep = max(wanted, dawnKept)
+                var leaving = waiting.count > keep ? Array(waiting.suffix(waiting.count - keep).reversed()).filter { !kept.contains($0) } : []
                 // Decision 609: under traffic control, off a ring, the last
                 // waiting in ID order (the one its runs take last) is one too
                 // many too when the runs leaving within the hour still each

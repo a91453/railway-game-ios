@@ -163,12 +163,15 @@ final class Map3DTrainSetTests: XCTestCase {
                 let nanakuma = ["fukuokaNanakumaLine", "fukuokaNanakumaLineFar"].contains(set.key)
                 // Decision 930: the maglev car 3.70 m wide over the arms that wrap its guideway.
                 let maglev = ["MAGLEV", "MAGLEVFar"].contains(set.key)
-                XCTAssertTrue((alishan ? 2.1...2.35 : nanakuma ? 2.45...2.55 : maglev ? 3.65...3.75 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
+                // Decision 957: the steam train's wooden coaches, 2.38 m wide.
+                let steamCoach = ["STEAM", "STEAMFar"].contains(set.key) && [set.middleName, set.tailName].contains(name)
+                XCTAssertTrue((alishan ? 2.1...2.35 : nanakuma ? 2.45...2.55 : maglev ? 3.65...3.75 : steamCoach ? 2.36...2.40 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
                 let height: ClosedRange<Float> = name == set.headName && ["E500CK", "STAR", "E500CKFar", "STARFar", "pushPull", "pushPullFar", "pushPullE1000", "pushPullE1000Far"].contains(set.key) ? 5.2...5.5
                     : ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
-                    : set.key == "STEAM" ? 3.4...4.7
+                    // Decision 957: and its wooden coaches 3.40 m to their ventilators.
+                    : ["STEAM", "STEAMFar"].contains(set.key) ? 3.38...4.7
                     // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too).
                     : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;

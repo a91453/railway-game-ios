@@ -24,5 +24,6 @@ extension Map3DTrainRegistry {
         Map3DGuidedMaglev.registration,
         Map3DGuidedSkyrail.registration,
         Map3DHKPeakTram.registration,
+        Map3DSteamCoach.registration,
     ]
 }
