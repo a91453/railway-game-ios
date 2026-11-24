@@ -26,12 +26,10 @@ struct TrainControls: View {
                 // TRAIN-IDENTITY: one name for the train, the one the 3D
                 // map draws it as, with its model; how it runs and what
                 // its cars carry are figures under it.
+                // Stage C3: how it runs between calls (Stage W2c), on the
+                // same row as the picture, under the name (owner,
+                // 2026-11-24: one block, the figures on one line).
                 identity(of: train)
-                // Stage C3: how it runs between calls (Stage W2c).
-                PerformanceMenu(performance: train.performance, language: session.language, identifier: "train.performance", showsName: false) { performance in
-                    session.setSelectedTrainPerformance(performance)
-                }
-                .equatable()
                 // Stage C2: its own timetable. Decision 196, later
                 // (2026-10-16): shown whether or not the lines panel's
                 // Advanced is on; a row saying where to turn it on would
@@ -209,16 +207,23 @@ struct TrainControls: View {
     /// TRAIN-IDENTITY: the train's one name and its 3D model small.
     private func identity(of train: Train) -> some View {
         let name = train.identityName(in: session.language)
-        return HStack(spacing: 8) {
+        return HStack(alignment: .center, spacing: 10) {
             TrainPortraitView(key: TrainPortrait.key(type: train.type, performance: train.performance), cars: 2, stripe: Theme.primary)
-                .frame(width: 72, height: 26)
-            Text(verbatim: name)
-                .font(.subheadline.weight(.bold))
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 84, height: 30)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: name)
+                    .font(.subheadline.weight(.bold))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel(Text(verbatim: name))
+                    .accessibilityIdentifier("train.identity")
+                PerformanceMenu(performance: train.performance, language: session.language, identifier: "train.performance",
+                                showsName: false, compact: true) { performance in
+                    session.setSelectedTrainPerformance(performance)
+                }
+                .equatable()
+            }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text(verbatim: name))
-        .accessibilityIdentifier("train.identity")
     }
 
     /// Where the train is, the path it has left and the station it is

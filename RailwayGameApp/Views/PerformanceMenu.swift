@@ -19,11 +19,14 @@ struct PerformanceMenu: View, Equatable {
     /// TRAIN-IDENTITY: `false` on a train's card, under the train's one
     /// name: the figures alone, the preset ticked in the menu.
     var showsName = true
+    /// Under the train's name beside its picture: the figures alone on
+    /// one line, a little smaller rather than wrapped (owner, 2026-11-24).
+    var compact = false
     let choose: @MainActor (TrainPerformance) -> Void
 
     nonisolated static func == (lhs: PerformanceMenu, rhs: PerformanceMenu) -> Bool {
         lhs.performance == rhs.performance && lhs.language == rhs.language && lhs.identifier == rhs.identifier
-            && lhs.showsName == rhs.showsName
+            && lhs.showsName == rhs.showsName && lhs.compact == rhs.compact
     }
 
     var body: some View {
@@ -49,11 +52,26 @@ struct PerformanceMenu: View, Equatable {
         } label: {
             // Touched over at least 44 points: the footnote line alone was
             // some 16 points tall (full lane run 38362099969).
-            Label(text, systemImage: "speedometer")
+            if compact {
+                HStack(spacing: 4) {
+                    Text(verbatim: text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2)
+                        .imageScale(.small)
+                }
                 .font(.footnote)
                 .monospacedDigit()
                 .frame(minHeight: 44, alignment: .leading)
                 .contentShape(Rectangle())
+            } else {
+                Label(text, systemImage: "speedometer")
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .frame(minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
         }
         .accessibilityIdentifier(identifier)
         .accessibilityLabel("Performance: \(performance.displayText(in: language))")
