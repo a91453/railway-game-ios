@@ -1798,15 +1798,7 @@ struct MapView: View {
                 session.stopChoosingMapTile()
                 return
             }
-            session.startChoosingMapTile()
-            if let region = session.mapExpansionOverlay?.region {
-                if session.isFollowingVehicle { session.stopFollowingTrain() }
-                // Clear of the screen's controls and above the pill, which
-                // grows along the bottom (the PR #627–#646 review).
-                camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region,
-                                    clearOf: cover.framing(above: ScreenFrame(bottomLeadingFrame), in: viewport))
-                session.mapDidMove()
-            }
+            startChoosingMapTile(viewport: viewport, cover: cover)
         } label: {
             if session.isChoosingMapTile {
                 HStack(spacing: 8) {
@@ -1824,8 +1816,19 @@ struct MapView: View {
                 .frame(minHeight: 44)
                 .background(Theme.accent, in: Capsule())
                 .contentShape(Capsule())
+            } else if !session.namesMapExpansionButton {
+                // EXPAND-MAP-ICON (2026-11-24): once a tile has been
+                // bought the player knows where it is, so a round icon
+                // like the zoom and layer buttons, and the map behind it
+                // shows on a phone held sideways.
+                Image(systemName: "plus.square.dashed")
+                    .font(.title3)
+                    .frame(width: 44, height: 44)
+                    .glassBackground(in: Circle(), interactive: true)
+                    .contentShape(Circle())
             } else {
-                // Decision 336: named, not an icon alone.
+                // Decision 336: named, not an icon alone, until a tile has
+                // been bought, and in a lesson or the tutorial.
                 HStack(spacing: 6) {
                     Image(systemName: "plus.square.dashed")
                         .font(.title3)
@@ -1844,6 +1847,38 @@ struct MapView: View {
             ? session.language.text("Stop expanding the map", "結束擴建地圖")
             : session.language.text("Expand the map", "擴建地圖")))
         .accessibilityIdentifier("map.expansion")
+        // The round icon says what it does when held (EXPAND-MAP-ICON).
+        .contextMenu {
+            if !session.isChoosingMapTile, !session.namesMapExpansionButton {
+                Button {
+                    startChoosingMapTile(viewport: viewport, cover: cover)
+                } label: {
+                    Label {
+                        Text(verbatim: session.language.text("Expand Map", "擴建地圖"))
+                    } icon: {
+                        Image(systemName: "plus.square.dashed")
+                    }
+                }
+                Text(verbatim: session.language.text(
+                    "Buy the land beside yours to make the map larger.",
+                    "買下旁邊的地，讓地圖變大。"
+                ))
+            }
+        }
+    }
+
+    /// Starts choosing a tile to buy and shows the land owned and the
+    /// tiles for sale.
+    private func startChoosingMapTile(viewport: ScreenSize, cover: MapCover) {
+        session.startChoosingMapTile()
+        if let region = session.mapExpansionOverlay?.region {
+            if session.isFollowingVehicle { session.stopFollowingTrain() }
+            // Clear of the screen's controls and above the pill, which
+            // grows along the bottom (the PR #627–#646 review).
+            camera = PlanCamera(bounds: session.world.bounds, viewport: viewport, showing: region,
+                                clearOf: cover.framing(above: ScreenFrame(bottomLeadingFrame), in: viewport))
+            session.mapDidMove()
+        }
     }
 
     /// The tapped cell's tooltip of the layer shown (they take no touches,

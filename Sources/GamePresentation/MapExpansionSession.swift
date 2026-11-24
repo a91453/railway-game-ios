@@ -78,6 +78,18 @@ extension GameSession {
         buysMap && (isChoosingMapTile || (tool == .select && tutorial == nil))
     }
 
+    /// Whether the map's button to expand the map says its name beside its
+    /// icon (decision 336: a player could not find it as an icon alone)
+    /// rather than being a round icon like the zoom and layer buttons
+    /// (EXPAND-MAP-ICON, 2026-11-24): until a tile has been bought beyond
+    /// the one a new game owns, and in a lesson or the tutorial. Read from
+    /// the world, so no save field remembers it. While choosing a tile it
+    /// says so in words anyway (the map draws that pill itself).
+    public var namesMapExpansionButton: Bool {
+        guard let owned = world.mapExpansion?.owned else { return true }
+        return owned.count <= 1 || lesson != nil || tutorial != nil
+    }
+
     /// Decision 336: whether `problem`, shown while building or in the
     /// banner, is the refusal of land not bought yet, in a game that buys
     /// its map: beside it a button goes to expanding the map
