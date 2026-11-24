@@ -905,14 +905,13 @@ final class MapInteractionTests: XCTestCase {
         // and picked no track start (pull request #2480, full lane: the
         // card still asked where the track starts). They wait for the card
         // to rest.
-        // On a phone on its side the card stands beside the tools column
-        // at the trailing edge (decision 892): 300 pt wide, its leading
-        // edge some 434 pt in, so the map's middle (437 pt) was on the
-        // card. Picking the start folds the card there (decision 136),
-        // and an end touched while it was still folding landed on it:
-        // 3 of 4 full lanes from 2026-11-23 (559162f, 2816b43, 0ecdedc;
-        // the passing one touched 4 s after the start). So the end is
-        // touched clear of the card, once it has folded.
+        // On a phone on its side picking the start folds the card
+        // (decision 136), and the map is laid out again beside it; an end
+        // touched 0.6 s after the start, while that went on, picked
+        // nothing: 3 of the 4 full lanes from 2026-11-23 (559162f,
+        // 2816b43, 0ecdedc), the passing one touching 7 s after the start.
+        // So the end waits for the card to fold, and is touched clear of
+        // where it stood (473 pt in, 263 wide, on a 874 pt map).
         let card = app.descendants(matching: .any)["details.card"].firstMatch
         if card.exists { card.waitUntilStill() }
         let frame = map.frame
@@ -948,6 +947,45 @@ final class MapInteractionTests: XCTestCase {
         // It leaves with a transition (move and fade, 0.2 s), which the
         // idle wait does not always cover, as the legend's (#198).
         XCTAssertTrue(hud.disappears(within: 5), "MapConstructionHUD must disappear when preview is cleared")
+    }
+
+    // TEMPORARY PROBE (PR #2652, removed before merge): the old timing,
+    // the end 0.6 s after the start, three times; prints what each did.
+    func testProbeTrackEndTouchedWhileTheCardFolds() {
+        continueAfterFailure = true
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        let newGame = app.buttons["start.newGame"]
+        XCTAssertTrue(newGame.appears(within: 10))
+        newGame.tap()
+        app.chooseBlankMap()
+        let buildEntry = app.buttons["dock.build"]
+        XCTAssertTrue(buildEntry.appears(within: 10))
+        buildEntry.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 10))
+        network.waitUntilSettled()
+        network.tap()
+        let map = app.descendants(matching: .any)["map"].firstMatch
+        XCTAssertTrue(map.appears(within: 10))
+        let hud = app.otherElements["map.constructionHUD"]
+        let card = app.descendants(matching: .any)["details.card"].firstMatch
+        let cancel = app.buttons["map.build.cancel"]
+        var results: [Bool] = []
+        for round in 0..<3 {
+            if card.exists { card.waitUntilStill() }
+            let y = 0.3 + 0.1 * Double(round)
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: y)).tap()
+            map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: y)).tap()
+            let shown = hud.appears(within: 5)
+            results.append(shown)
+            print("XC27-PROBE round \(round) fast end: HUD \(shown)")
+            if shown, cancel.appears(within: 5) { cancel.tap(); _ = hud.disappears(within: 5) }
+            else if !shown { map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: y)).tap(); _ = card.appears(within: 5) }
+        }
+        print("XC27-PROBE results \(results)")
     }
 
     /// TestFlight 54.1: the track options are switches that say whether
