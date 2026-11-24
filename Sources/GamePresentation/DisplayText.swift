@@ -645,6 +645,16 @@ extension GameError {
                 "This line runs on mountain track, which only a mountain train such as the Alishan Forest Railway's can climb. Choose that type.",
                 "這條路線有登山軌道，只有阿里山林鐵這類登山列車爬得上去。請改用登山車種。"
             )
+        case .trackSystemMismatch:
+            language.text(
+                "Monorail and maglev guideways can't join ordinary track or each other. Start this track somewhere else.",
+                "單軌、磁浮的軌道梁不能和一般軌道或別種梁接在一起，請從別的地方開始鋪。"
+            )
+        case .trainTrackMismatch:
+            language.text(
+                "This train doesn't run on this kind of track: monorail and maglev trains need their own guideway, and other trains can't use one.",
+                "這種列車不能跑這種軌道：單軌和磁浮列車要走自己的軌道梁，其他列車不能上梁。"
+            )
         case .unknownCableway:
             language.text("That cableway no longer exists.", "這條纜車已經不在了。")
         case .invalidCableway:
