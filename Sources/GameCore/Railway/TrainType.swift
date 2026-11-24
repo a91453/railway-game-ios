@@ -95,6 +95,21 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// The Alishan Forest Railway's train (阿里山林鐵, decision 515): small
     /// coaches behind a diesel, the only type that climbs mountain track.
     public static let alishan = TrainType(listed: "ALISHAN")
+    /// The Taroko tilting express, TEMU1000 (decision 961).
+    public static let taroko = TrainType(listed: "TAROKO")
+    /// The Puyuma tilting express, TEMU2000 (decision 961).
+    public static let puyuma = TrainType(listed: "PUYUMA")
+    /// The Taiwan Railway's EMU800 local train (decision 961).
+    public static let emu800 = TrainType(listed: "EMU800")
+    /// The push-pull Tze-Chiang: coaches between two power cars, as one
+    /// set whose cars are the coaches (decision 961).
+    public static let pushPull = TrainType(listed: "PUSHPULL")
+    /// The DR3100 diesel Tze-Chiang (decision 961).
+    public static let dr3100 = TrainType(listed: "DR3100")
+    /// The DR1000 diesel railcar of the branch lines (decision 961).
+    public static let dr1000 = TrainType(listed: "DR1000")
+    /// Taipei Metro's C381 (decision 961).
+    public static let c381 = TrainType(listed: "C381")
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras
@@ -214,6 +229,20 @@ extension Train {
     /// climbs mountains. The standard car does not.
     public var climbsMountains: Bool {
         type?.climbsMountains ?? false
+    }
+
+    /// How its type runs (decision 961): the type's own performance, or
+    /// `nil` for a train without a type or of a type without one of its
+    /// own, which runs as its line plans.
+    public var factoryPerformance: TrainPerformance? {
+        type?.performance
+    }
+
+    /// Whether it runs otherwise than its type does (decision 961): a
+    /// performance set before the type and performance became one choice,
+    /// which a save may still hold (an EMU100 running as the Hai-Feng).
+    public var hasCustomPerformance: Bool {
+        factoryPerformance.map { $0 != performance } ?? false
     }
 
     public var passengersPerSecond: Int64 {
