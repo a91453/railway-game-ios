@@ -970,6 +970,7 @@ extension PlayerCommand {
             case .setTrainCars: language.text("add cars", "加掛車廂")
             case .setTrainType, .refitTrain: language.text("change the train's type", "更換車型")
             case .purchaseTrainOfType: language.text("buy a train", "買列車")
+            case .assignUnplacedTrain: language.text("assign the train to a line", "配屬列車")
             case .staffLine, .addLineTrains, .setLineTrains: language.text("add trains to the line", "為路線補列車")
             case .reformLine: language.text("re-form the line's trains", "改編路線的列車")
             case .placeBuilding: language.text("put up this building", "蓋這棟建物")

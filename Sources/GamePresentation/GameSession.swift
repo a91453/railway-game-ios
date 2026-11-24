@@ -2894,8 +2894,8 @@ public final class GameSession {
         let bought = perform(.purchaseTrainOfType(name: name, type, cars: cars)) { outcome, before, world in
             let spent = before.economy.balance - world.economy.balance
             return language.text(
-                "Bought \(outcome.train?.name ?? name), \(Train.typeText(type, in: language)), for \(spent.moneyText). Select a station to place it.",
-                "已購買 \(outcome.train?.name ?? name)（\(Train.typeText(type, in: language))），花費 \(spent.moneyText)。請選擇要放置它的車站。"
+                "Bought \(outcome.train?.name ?? name), \(Train.typeText(type, in: language)), for \(spent.moneyText). Assign it to a line in the fleet.",
+                "已買下 \(outcome.train?.name ?? name)（\(Train.typeText(type, in: language))），花費 \(spent.moneyText)。到車隊總覽把它配屬到路線。"
             )
         }
         if let purchased = bought?.train?.id {

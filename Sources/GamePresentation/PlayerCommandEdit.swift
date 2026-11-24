@@ -47,6 +47,10 @@ extension PlayerCommand {
         /// A train of a type with its cars bought off the track (decision
         /// 960: the train types opened from the fleet).
         case purchaseTrainOfType(name: String, TrainType?, cars: Int)
+        /// A train off the track put where a line's trips start and
+        /// assigned to its own service (decision 960, buy first, assign
+        /// later).
+        case assignUnplacedTrain(TrainID, LineID)
         case setTrainRate(TrainID, rate: Int64)
         /// ``GameWorld/useTrainPerformanceForMovement(_:)``.
         case resumeTrain(TrainID)
@@ -344,6 +348,10 @@ extension GameSession {
             if let type { train = try world.purchaseTrain(named: name, as: type) } else { train = try world.purchaseTrain(named: name) }
             if cars > Train.minimumCars { try world.setTrainCars(train.id, to: cars) }
             outcome.train = world.train(id: train.id)
+        case .assignUnplacedTrain(let id, let line):
+            try Self.placeForLine(id, of: line, in: &world)
+            try world.assignTrain(id, to: line, pattern: nil)
+            outcome.highSpeed = try world.planAtHighSpeedWhenRunByHighSpeedSets(line)
         case .setTrainRate(let id, let rate): try world.setTrainMovementRate(id, to: rate)
         case .resumeTrain(let id): try world.useTrainPerformanceForMovement(id)
         case .sendTrain(let id, let steps, let end):

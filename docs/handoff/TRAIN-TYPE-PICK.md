@@ -2,8 +2,8 @@
 
 ## 進度
 
-- 做到哪：第一張 PR #2643（決策 959，(D)）與第二張（決策 960，(B)(E)，分支 `claude/train-type-pick-2`）都開了，等 CI；評分檔在素材庫 -2 `docs/priorities/TRAIN-TYPE-PICK.md`。
-- 已驗證：Linux 上 `TrainTypePickTests` 6 個，以及 15 個相關 class 全過。
+- 做到哪：第一張 PR #2643（決策 959，(D)）與第二張 #2645（決策 960，(B)(E)，含協調者補的「先買後配」，分支 `claude/train-type-pick-2`）都開了，等 CI；評分檔在素材庫 -2 `docs/priorities/TRAIN-TYPE-PICK.md`（素材庫 -2 #432）。
+- 已驗證：Linux 上 `TrainTypePickTests`（含先買後配的 2 個），以及 15 個相關 class 全過。
 - 下一步：兩張 CI 綠了依序合（先 #2643），再合素材庫 -2 的評分 PR。
 
 ## 範圍

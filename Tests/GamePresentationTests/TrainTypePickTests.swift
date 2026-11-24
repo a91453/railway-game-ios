@@ -108,4 +108,36 @@ final class TrainTypePickTests: XCTestCase {
         XCTAssertLessThan(session.world.economy.balance, balance)
         XCTAssertEqual(session.undoCount, 1, "one edit")
     }
+
+    // MARK: Decision 960, buy first, assign later
+
+    func testABoughtTrainIsAssignedToALineFromTheFleet() throws {
+        let (session, line) = try pingxi()
+        session.purchaseTrain(of: nil, cars: 1)
+        XCTAssertTrue(session.message?.text.contains("到車隊總覽把它配屬到路線") == true, session.message?.text ?? "")
+        let id = try XCTUnwrap(session.selectedTrain?.id)
+        XCTAssertNil(session.world.train(id: id)?.position)
+        XCTAssertTrue(session.offersAssignToLine(for: id))
+        XCTAssertTrue(session.assignToLineChoices(for: id).contains { $0.id == line })
+        let edits = session.undoCount
+        session.assignUnplacedTrain(id, to: line)
+        XCTAssertEqual(session.message?.kind, .success, session.message?.text ?? "")
+        XCTAssertNotNil(session.world.train(id: id)?.position, "on the track")
+        XCTAssertEqual(session.world.assignedLine(of: id), line)
+        XCTAssertEqual(session.undoCount, edits + 1, "one edit")
+        XCTAssertFalse(session.offersAssignToLine(for: id))
+    }
+
+    func testATrainTooLongForTheLineStaysInTheFleet() throws {
+        let (session, line) = try pingxi()
+        session.purchaseTrain(of: nil, cars: Train.maximumCars)
+        let id = try XCTUnwrap(session.selectedTrain?.id)
+        let edits = session.undoCount
+        session.assignUnplacedTrain(id, to: line)
+        XCTAssertEqual(session.message?.kind, .failure, session.message?.text ?? "")
+        XCTAssertTrue(session.message?.text.contains("減少節數就停得下") == true, session.message?.text ?? "")
+        XCTAssertNil(session.world.train(id: id)?.position, "still off the track")
+        XCTAssertNil(session.world.assignedLine(of: id), "not assigned")
+        XCTAssertEqual(session.undoCount, edits, "nothing changed")
+    }
 }
