@@ -179,6 +179,31 @@ final class Map3DSharedBuild: @unchecked Sendable {
         return made
     }
 
+    // MARK: The kinds of track
+
+    private var trackKinds: (key: Int, edges: [TrackEdgeID: Map3DTrackKind])?
+
+    /// Decision 964: the kind of each edge of `snapshot`'s track that is
+    /// not ballast in `world` (``Map3DTrackKind/edges(in:)``): those kept
+    /// when they are of the same track and trains, or worked out.
+    func trackKinds(of snapshot: RailwaySnapshot, world: GameWorld) -> [TrackEdgeID: Map3DTrackKind] {
+        var hasher = Hasher()
+        hasher.combine(Map3DTrackSamples.mark(of: snapshot))
+        hasher.combine(Map3DTrackKindSignature(world: world))
+        let key = hasher.finalize()
+        lock.lock()
+        if let trackKinds, trackKinds.key == key {
+            lock.unlock()
+            return trackKinds.edges
+        }
+        lock.unlock()
+        let made = Map3DTrackKind.edges(in: world)
+        lock.lock()
+        defer { lock.unlock() }
+        trackKinds = (key, made)
+        return made
+    }
+
     // MARK: The underground stations
 
     /// What tells the underground stations of a snapshot laid in a scene:
