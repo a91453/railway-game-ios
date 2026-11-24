@@ -2,28 +2,52 @@
   "comment" : "FNV-1a of every vertex field of every model in Map3DModelPack.standard and Map3DModelPack.studies (tools/train-models/export.swift). A changed value is a deliberate model change the PR must justify.",
   "models" : {
     "set-redCommuter-head" : {
-      "hash" : "8ad705e14940899",
-      "triangles" : 1512
+      "hash" : "5f129dc30e41ecf9",
+      "triangles" : 1314
     },
     "set-redCommuter-car" : {
-      "hash" : "9eb4ecd8648bdd4e",
-      "triangles" : 1422
+      "hash" : "ba38dfb63eb974fb",
+      "triangles" : 1100
     },
     "set-redCommuter-tail" : {
-      "hash" : "8f30ddd506520750",
-      "triangles" : 1512
+      "hash" : "7d951ae6a6490d7a",
+      "triangles" : 1314
+    },
+    "set-redCommuterFar-head" : {
+      "hash" : "4a68745a0fb18444",
+      "triangles" : 634
+    },
+    "set-redCommuterFar-car" : {
+      "hash" : "c244279b75edbaae",
+      "triangles" : 532
+    },
+    "set-redCommuterFar-tail" : {
+      "hash" : "4baa69f543609c88",
+      "triangles" : 634
     },
     "light-set-redCommuter-head" : {
-      "hash" : "ccfd33d5183c7d5",
-      "triangles" : 90
+      "hash" : "728ec7ea391e8541",
+      "triangles" : 32
     },
     "light-set-redCommuter-car" : {
-      "hash" : "67330937cc850090",
-      "triangles" : 116
+      "hash" : "1aeae6bbea64266d",
+      "triangles" : 40
     },
     "light-set-redCommuter-tail" : {
-      "hash" : "72cab9bb68246bd5",
-      "triangles" : 90
+      "hash" : "bd406c25561c4841",
+      "triangles" : 32
+    },
+    "light-set-redCommuterFar-head" : {
+      "hash" : "385e267e5558f791",
+      "triangles" : 20
+    },
+    "light-set-redCommuterFar-car" : {
+      "hash" : "f899d6fe57cc6ff1",
+      "triangles" : 28
+    },
+    "light-set-redCommuterFar-tail" : {
+      "hash" : "ec7bfde15041dd91",
+      "triangles" : 20
     },
     "life-doubleDecker" : {
       "hash" : "d2d780a2f86eb765",

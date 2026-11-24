@@ -57,6 +57,11 @@ struct LinesPanel: View {
     @State private var staffCars = 1
     /// Decision 224 (2A): whether the train types' showroom is open.
     @State private var showsCatalog = false
+    /// Decision 960: the type a line that runs changes its trains to,
+    /// chosen afresh on each line; and whether its showroom is open.
+    @State private var refitType: TrainType?
+    @State private var showsRefitCatalog = false
+    @State private var refitCars = 4
     /// Decision 179: how the lines are ordered, or `nil` for the order
     /// they were made in.
     @State private var lineSort: LineReportSort?
@@ -319,6 +324,7 @@ struct LinesPanel: View {
         // The pattern's stops are indices into the selected line's:
         // another line starts from its own first two.
         .onChange(of: session.selectedLineID) {
+            refitType = nil
             patternFirst = 0
             patternLast = 1
             patternExpress = false
@@ -2456,6 +2462,10 @@ struct LinesPanel: View {
                 // with until more trains are taught.
                 headwaySection(line)
             }
+            // Decision 960: a line that runs changes its trains' type.
+            if !line.trains.isEmpty, session.allows(UnlockableTool.addTrain) {
+                refitSection(line)
+            }
         }
     }
 
@@ -2820,6 +2830,76 @@ struct LinesPanel: View {
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(identifier)
+    }
+
+    /// Decision 960: the line's trains changed to another type, each
+    /// keeping its cars; those on a trip are left as they are.
+    private func refitSection(_ line: ServiceLine) -> some View {
+        let language = session.language
+        let types = session.trainTypeCardChoices(forLine: line.id)
+        return Section {
+            TickStable(StableKey(types, refitType, language)) {
+                Menu {
+                    ForEach(types) { candidate in
+                        Button {
+                            refitType = candidate.id
+                        } label: {
+                            Text(verbatim: candidate.title)
+                            Text(verbatim: candidate.detail ?? "")
+                        }
+                    }
+                } label: {
+                    Label {
+                        Text(verbatim: refitType.map { Train.typeText($0, in: language) } ?? language.text("Choose a type", "選擇車種"))
+                    } icon: {
+                        Image(systemName: "tram")
+                    }
+                    .font(.footnote)
+                    .frame(minHeight: 44, alignment: .leading)
+                }
+                .accessibilityIdentifier("line.refit.type")
+            }
+            Button {
+                showsRefitCatalog = true
+            } label: {
+                Label {
+                    Text(verbatim: language.text("See the train types", "看車種型錄"))
+                } icon: {
+                    Image(systemName: "tram.circle")
+                }
+                .font(.footnote)
+                .frame(minHeight: 44, alignment: .leading)
+            }
+            .accessibilityIdentifier("line.refit.catalog")
+            .fullScreenCover(isPresented: $showsRefitCatalog) {
+                RollingStockCatalogView(session: session, type: $refitType, cars: $refitCars)
+                    .coversTheMap(session)
+            }
+            if let type = refitType {
+                Button {
+                    session.reformSelectedLine(type: type, cars: nil)
+                } label: {
+                    Label {
+                        Text(verbatim: language.text(
+                            "Change the line's trains to \(Train.typeText(type, in: language))",
+                            "整線換成\(Train.typeText(type, in: language))"
+                        ))
+                    } icon: {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+                .accessibilityIdentifier("line.refit.start")
+            }
+        } header: {
+            Text(verbatim: language.text("Change train type", "換車型"))
+        } footer: {
+            Text(verbatim: language.text(
+                "Trains waiting for their next trip change type and keep their cars; the refit is paid for. Trains on a trip are left as they are.",
+                "等下一趟的列車換成選的車種，節數不變，要付改裝費；正在行駛的列車維持原樣。"
+            ))
+        }
     }
 
     private func staffSection(_ line: ServiceLine) -> some View {

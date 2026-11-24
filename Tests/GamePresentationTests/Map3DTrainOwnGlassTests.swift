@@ -29,6 +29,9 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
                 for unit in Map3DFukuokaNanakumaLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DFukuokaNanakumaLine.model(unit, far: far))) }
                 // Decision 957: and the steam train's wooden coaches.
                 for unit in Map3DSteamCoach.Unit.allCases { cars.append(try XCTUnwrap(Map3DSteamCoach.model(unit, far: far))) }
+                // Decision 956: and the Keikyu New 1000.
+                cars.append(try XCTUnwrap(Map3DRedCommuter.cab(far: far)))
+                cars.append(try XCTUnwrap(Map3DRedCommuter.middle(far: far)))
             }
             return cars
         }
@@ -98,8 +101,10 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
             XCTAssertLessThanOrEqual(panes.triangleCount, byColour.triangleCount, model.name)
             // The urban line's and the airport lines' doors and window bays
             // are charcoal and their window bands dark (the Tuen Ma line's
-            // are navy, never taken for glass): those lit no longer.
-            if !model.name.hasPrefix("mtr-tuen-ma") {
+            // are navy, never taken for glass): those lit no longer. The
+            // Keikyu New 1000's (decision 956) dark is its underframe's and
+            // gangways', never taken for glass either.
+            if !model.name.hasPrefix("mtr-tuen-ma") && !model.name.hasPrefix("keikyu-new1000") {
                 XCTAssertLessThan(panes.triangleCount, byColour.triangleCount, "\(model.name): the dark greys no longer lit")
             }
         }
@@ -108,7 +113,7 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
 
     /// A recipe that does not mark its glass is guessed by colour as before.
     func testOtherTrainsAreGuessedByColourAsBefore() throws {
-        let cab = try XCTUnwrap(Map3DRedCommuter.cab())
+        let cab = Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: true).model(named: "commuter")
         XCTAssertFalse(Map3DTrainMaterial.marksOwnGlass(cab))
         XCTAssertTrue(Map3DTrainMaterial.marked(cab).vertices.contains { $0.layer == Map3DVertex.trainGlass })
     }

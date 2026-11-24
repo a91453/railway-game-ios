@@ -35,11 +35,92 @@ public enum WhatsNew {
             id: "2026-11-24-146",
             items: [
                 Line(
+                    english: "Change a train's type after it is on a line, or change a whole line's trains at once from the Lines panel.",
+                    chinese: "線上有車之後也能換車型；路線面板可以把整條線的車一次換成另一款。"
+                ),
+                Line(
+                    english: "Buy trains straight from the catalog in the fleet overview, then assign them to a line.",
+                    chinese: "在車隊總覽的型錄就能買車，買下後再配屬到路線。"
+                ),
+                Line(
+                    english: "Track laying starts with a choice: ordinary track, or a straddle monorail, maglev or suspended monorail guideway.",
+                    chinese: "鋪軌先選軌道種類：一般軌道，或跨座式單軌、磁浮、懸吊式單軌的軌道梁。"
+                ),
+                Line(
+                    english: "Monorail, maglev and suspended trains run on their own guideways, with platforms level with their doors.",
+                    chinese: "單軌、磁浮與懸吊式單軌列車在自己的軌道梁上跑，月台和車門一樣高。"
+                ),
+                Line(
+                    english: "The red commuter train is now the Keikyu New 1000, with a finer model: bogies and wheels, and its own look from afar.",
+                    chinese: "紅色通勤車正名為京急新1000形，換上更精細的模型：看得到轉向架與車輪，遠看也有自己的樣子。"
+                ),
+                Line(
+                    english: "The steam train pulls wooden coaches.",
+                    chinese: "蒸汽列車拉的客車換成木造客車。"
+                ),
+                Line(
+                    english: "The Formosa Star's coaches take the Chu-Kuang coach's body, painted pink.",
+                    chinese: "環島之星的客車換成莒光客車的車身，漆成粉紅色。"
+                ),
+                Line(
+                    english: "A train's card shows that train's own model, with its name and performance beside it.",
+                    chinese: "列車卡的縮圖畫的是這款車自己的樣子，車名與性能並在一旁。"
+                ),
+                Line(
+                    english: "Taiwan's ground follows more precise terrain data, so lines meet far fewer false slopes.",
+                    chinese: "台灣的地面高度改用更準的地形資料，沿線假的陡坡少了很多。"
+                ),
+                Line(
+                    english: "When you buy a branch line, its short bridges over streams are laid as bridges, as on the real line.",
+                    chinese: "收購支線時，過溪的短橋照真實鋪成橋。"
+                ),
+                Line(
+                    english: "The diesel express runs with the DR3100's real acceleration and braking.",
+                    chinese: "柴聯自強號照 DR3100 實車的加速與減速跑。"
+                ),
+                Line(
                     english: "Bicycles stand in racks by bus stops and station exits, and in a shed at the company's schools.",
                     chinese: "腳踏車停進車架，在公車站旁與車站出口旁；公司蓋的學校有腳踏車棚。"
                 ),
             ],
-            fixes: []
+            fixes: [
+                Line(
+                    english: "Tapping Arrange in the fleet roster no longer freezes the app, even with many trains or the phone held sideways.",
+                    chinese: "運用表點「編排」不再卡住閃退，列車多或橫拿時也一樣。"
+                ),
+                Line(
+                    english: "The type catalog opened from a train's card changes that train, not whichever train is selected.",
+                    chinese: "從列車卡打開的車種型錄，改的一定是那列車。"
+                ),
+                Line(
+                    english: "The DR1000 is no longer taken for the diesel express: its card shows the DR1000.",
+                    chinese: "DR1000 不再被當成柴聯自強號，列車卡畫的是 DR1000。"
+                ),
+                Line(
+                    english: "On a phone held sideways, the depot mode's siding choices stay in reach.",
+                    chinese: "手機橫拿時，機廠模式的股道選項不再被擠出卡片。"
+                ),
+                Line(
+                    english: "Lesson 1's last step opens its card once the first fare comes in and asks you to tap Finish Tutorial.",
+                    chinese: "教學第 1 關最後一步收到車資後，卡片會打開，請你按「完成教學」。"
+                ),
+                Line(
+                    english: "Skipping a lesson step picks the tool and mode the next steps need, and the card says what is still missing.",
+                    chinese: "略過教學的步驟後，會替你選好工具與模式，還缺什麼也會告訴你。"
+                ),
+                Line(
+                    english: "The Taoyuan Airport MRT on its real timetable runs late far less in the early morning and the afternoon peak.",
+                    chinese: "桃園機捷照真實時刻表跑時，清晨與下午尖峰的誤點少了很多。"
+                ),
+                Line(
+                    english: "Wulai's green cabin is no longer called a crystal cabin.",
+                    chinese: "烏來纜車的綠色車廂不再被叫成水晶吊廂。"
+                ),
+                Line(
+                    english: "No other temple stands inside the Wen Wu Temple any more.",
+                    chinese: "文武廟裡不再疊著另一座廟。"
+                ),
+            ]
         ),
         // 145.
         Entry(
