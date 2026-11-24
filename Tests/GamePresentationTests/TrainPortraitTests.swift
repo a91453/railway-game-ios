@@ -52,6 +52,17 @@ final class TrainPortraitTests: XCTestCase {
         }
     }
 
+    /// Owner's report, 2026-11-24: a train with no type running as the
+    /// EMU100 (or the Alishan, steam or Hai-Feng train) is pictured, and
+    /// drawn, as that type's own model, not the commuter shell.
+    func testAPresetWithAModelIsPicturedAsIt() throws {
+        for (code, key) in ["emu100": "EMU100", "forestRailway": "ALISHAN", "steam": "STEAM", "haiFeng": "HAIFENG"] {
+            let preset = try XCTUnwrap(PerformancePreset.allCases.first { $0.code == code }, code)
+            XCTAssertEqual(TrainPortrait.key(type: nil, performance: preset.performance), key, code)
+            XCTAssertNotNil(TrainPortrait.make(key: key, cars: 2), code)
+        }
+    }
+
     /// The same picture each time.
     func testThePictureIsTheSameEachTime() throws {
         let a = try XCTUnwrap(TrainPortrait.make(key: "E500CK", cars: 2))

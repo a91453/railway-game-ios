@@ -558,6 +558,10 @@ public struct Map3DTrainSet: Sendable {
     static let aliases: [String: String] = [
         "e200ChuKuang": "E200CK", "e500ChuKuang": "E500CK", "r100ChuKuang": "R100CK", "r200ChuKuang": "R200CK",
         "mingRi": "MINGRI", "formosaStar": "STAR", "midsummerFormosa": "SUMMER", "metro": "metroC381",
+        // Owner's report, 2026-11-24: a train with no type running as
+        // one of these models was drawn (and pictured on its card) as the
+        // plain commuter shell, though the type has a set of its own.
+        "emu100": Map3DEMU100.key, "forestRailway": "ALISHAN", "steam": "STEAM", "haiFeng": "HAIFENG",
     ]
 
     /// The key of a train of `type` with `performance`: its type's code
