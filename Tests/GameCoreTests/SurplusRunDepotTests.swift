@@ -25,6 +25,12 @@ import XCTest
 /// realistic rules (second day 286 → 308 trips late, the Tamsui line's
 /// Green Mountain line deadlocked) and kept one at the Taoyuan Airport
 /// MRT's Terminal 2 for five hours a night.
+///
+/// Decision 948 (TYMC-PEAK-CASCADE): with block sections the rule stands
+/// at the stops between the line's two ends, where a train with nothing
+/// to do stands on a through platform: on the Taoyuan Airport MRT one
+/// stood at Terminal 2 from the morning to the evening, and the trains
+/// held behind it ran late through the afternoon peak.
 final class SurplusRunDepotTests: XCTestCase {
     private func forward(_ edge: Int) -> TrackTraversal {
         TrackTraversal(edge: .edge(edge + 1), direction: .forward)
@@ -41,8 +47,9 @@ final class SurplusRunDepotTests: XCTestCase {
     /// At 10:00, the line Main calling at B, X, A and C, with runs from B
     /// to C at 10:30 and 11:30 and the depot D; T1 and T2, Main's, at B,
     /// T2 ahead. With traffic control when `controlled`, and block
-    /// sections when `blocks`.
-    private func makeScene(controlled: Bool = true, blocks: Bool = false) throws -> Scene {
+    /// sections when `blocks`. When `between`, the runs are from A to C
+    /// instead and the two trains at A, a stop between the line's ends.
+    private func makeScene(controlled: Bool = true, blocks: Bool = false, between: Bool = false) throws -> Scene {
         var world = try GameWorld(
             bounds: WorldBounds(width: 362_496, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 600), speed: .normal)
@@ -71,19 +78,20 @@ final class SurplusRunDepotTests: XCTestCase {
         try world.setStationDepot(depot, to: true)
         let line = try world.createLine(named: "Main", stops: [b, x, a, cStation]).id
         func run(at minute: Int64) -> LineRun {
-            let calls: [(Int64, Int64)] = [(0, 0), (2, 3), (9, 10), (16, 16)]
+            let calls: [(Int64, Int64)] = between ? [(0, 0), (6, 6)] : [(0, 0), (2, 3), (9, 10), (16, 16)]
             let times = calls.map { call in LineRunTime(arrival: (minute + call.0) * 60, departure: (minute + call.1) * 60) }
-            return LineRun(from: 0, to: 3, times: times)
+            return LineRun(from: between ? 2 : 0, to: 3, times: times)
         }
         let runs = [run(at: 630), run(at: 690)]
         try world.setLineRuns(line, to: runs)
         try world.setLineDepots(line, to: [depot])
         var trains: [TrainID] = []
-        // T1 behind T2 on B's platform.
-        for (name, offset) in [("T1", Int64(6_144)), ("T2", Int64(9_216))] {
+        // T1 behind T2 on B's platform, or on A's.
+        let end = between ? try XCTUnwrap(world.trackEdge(.edge(2))?.length) - 2_048 : 9_216
+        for (name, offset) in [("T1", end - 3_072), ("T2", end)] {
             let id = try world.purchaseTrain(named: name).id
             try world.setTrainCars(id, to: 2)
-            try world.placeTrain(id, at: .onEdge(forward(0), offset: offset))
+            try world.placeTrain(id, at: .onEdge(forward(between ? 1 : 0), offset: offset))
             try world.setTrainContinuation(id, along: [], stoppingAt: offset)
             try world.setTrainMovementRate(id, to: 4_096)
             try world.assignTrain(id, to: line)
@@ -135,16 +143,34 @@ final class SurplusRunDepotTests: XCTestCase {
         XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
     }
 
+    /// Decision 948: with block sections, at a stop between the line's
+    /// ends the rule stands as without them: T2, which no run within the
+    /// hour wants, leaves A's through platform for the depot, T1 takes the
+    /// 10:30, and T2 is back at A out of the depot for the 11:30. (Before,
+    /// T2 stood at A from 10:00 on.)
+    func testWithBlockSectionsATrainBetweenTheEndsGoesIntoTheDepot() throws {
+        var scene = try makeScene(blocks: true, between: true)
+        let a = try XCTUnwrap(scene.world.line(id: scene.line)).stops[2]
+        for _ in 0..<20 { try scene.world.advance(ticks: 1) }
+        XCTAssertTrue(scene.world.stationsStoppedAt(by: scene.t2).contains(scene.depot), "T2 went into the depot")
+        XCTAssertTrue(scene.world.stationsStoppedAt(by: scene.t1).contains(a), "T1 stayed at A")
+        for _ in 0..<70 { try scene.world.advance(ticks: 1) }
+        XCTAssertEqual(try XCTUnwrap(scene.world.line(id: scene.line)).runDays[0], 0, "the 10:30 left")
+        XCTAssertTrue(scene.world.stationsStoppedAt(by: scene.t2).contains(a), "T2 is at A for the 11:30")
+        XCTAssertEqual(WorldInvariants.violations(in: scene.world), [])
+    }
+
     /// The trains move at whole minutes, so a batch ends where minute by
-    /// minute does, with block sections or without.
+    /// minute does, with block sections or without, at the line's end or
+    /// between its ends.
     func testABatchEndsWhereMinutesDo() throws {
-        for blocks in [false, true] {
-            let scene = try makeScene(blocks: blocks)
+        for (blocks, between) in [(false, false), (true, false), (true, true)] {
+            let scene = try makeScene(blocks: blocks, between: between)
             var single = scene.world
             for _ in 0..<120 { try single.advance(ticks: 1) }
             var batched = scene.world
             try batched.advance(ticks: 120)
-            XCTAssertEqual(batched, single, "block sections \(blocks)")
+            XCTAssertEqual(batched, single, "block sections \(blocks), between the ends \(between)")
         }
     }
 }

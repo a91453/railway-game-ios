@@ -98,6 +98,7 @@ extension Map3DScene.Builder {
             }
             target = .close
             mesh(at: base) { $0.append(model, at: base, forward: facing) }
+            addLayoutBicycles(layout.bicycles, base: base, facing: facing)
             // The boxes round the models hide them: not drawn close up.
             for level in [Target.standIn, .far] {
                 target = level
@@ -140,12 +141,16 @@ extension Map3DScene.Builder {
         var boxes: [(centre: Map3DPoint, length: Float, width: Float, height: Float)]
         var pad: UInt32?
         var recolours: Bool
+        /// Decision 949: the bicycles parked in it, drawn as instances.
+        var bicycles: [Map3DBikeParking.LayoutBicycle]
 
         /// `parts`' models, each at `x` ahead and `right` of the middle,
         /// `lift` up, turned `angle` (StationKitBuilder's: clockwise seen
         /// from above), after `ground`.
-        init(_ parts: [(model: Map3DModelPack.Model, x: Float, right: Float, lift: Float, angle: Float)], pad: UInt32?, recolours: Bool,
+        init(_ parts: [(model: Map3DModelPack.Model, x: Float, right: Float, lift: Float, angle: Float)],
+             bicycles: [Map3DBikeParking.LayoutBicycle] = [], pad: UInt32?, recolours: Bool,
              ground: (inout StationKitBuilder) -> Void = { _ in }) {
+            self.bicycles = bicycles
             var builder = StationKitBuilder()
             ground(&builder)
             boxes = []
@@ -257,13 +262,19 @@ extension Map3DScene.Builder {
         // Decision 361's sequel. A school (46 m): the primary school and its
         // gym facing the street, a pitch and play things behind; or a
         // kindergarten with a playground, a court behind.
+        let pupils = Map3DBikeParking.shed(x: -6, right: 7), parents = Map3DBikeParking.rack(x: 21, right: 2, bicycles: 2)
         let schools = [
             PlacedKitLayout([civic(.primarySchool, 12, -11), civic(.schoolGym, 10, 13, .pi / 2),
                              play(.miniSoccerPitch, -13, -10, .pi / 2), play(.soccerGoal, -5, -10), play(.soccerGoal, -21, -10, .pi),
-                             play(.bleachers, -13, 6), play(.slide, -8, 14), play(.swingSet, -14, 18), play(.climbingFrame, -19, 12), play(.sandpit, -19, 19)],
+                             play(.bleachers, -13, 6), play(.slide, -8, 14), play(.swingSet, -14, 18), play(.climbingFrame, -19, 12), play(.sandpit, -19, 19)]
+                            // Decision 949: the pupils' bicycle shed between the
+                            // gym and the bleachers.
+                            + pupils.parts, bicycles: pupils.bicycles,
                             pad: forecourt, recolours: false),
             PlacedKitLayout([civic(.kindergarten, 12, -12), play(.playhouse, 12, 8), play(.slide, 16, 14), play(.swingSet, 8, 16), play(.sandpit, 6, 6),
-                             play(.basketballCourt, -12, -8, .pi / 2), play(.gazebo, -14, 15)],
+                             play(.basketballCourt, -12, -8, .pi / 2), play(.gazebo, -14, 15)]
+                            // Decision 949: the parents' bicycles in a rack by the gate.
+                            + parents.parts, bicycles: parents.bicycles,
                             pad: forecourt, recolours: false),
         ]
         // A hospital (30 m): the clinic and the day-care wing side by
@@ -280,10 +291,14 @@ extension Map3DScene.Builder {
         // and decision 935's bulbs, canopy and cart);
         // or the civic kit's market canopies and carts round tables under
         // lanterns.
+        let alleyRack = Map3DBikeParking.rack(x: 11, right: -10, bicycles: 3)
+        let marketRack = Map3DBikeParking.rack(x: 13.8, right: -3, bicycles: 3)
         let markets = [
             PlacedKitLayout([stall(.ramenYatai, -5, -8), stall(.nightMarketFryer, -5, 0), stall(.nightMarketFruit, -5, 8),
                              stall(.nightMarketGame, 5, -6, .pi), stall(.mobileFoodCart, 5, 6, .pi), stall(.commercialRecycling, 0, 12),
-                             stall(.aFrameSign, -1, -12), stall(.totemLightbox, 1, -12)],
+                             stall(.aFrameSign, -1, -12), stall(.totemLightbox, 1, -12)]
+                            // Decision 949: the shoppers' bicycles in a rack at the front.
+                            + alleyRack.parts, bicycles: alleyRack.bicycles,
                             pad: Map3DPalette.plaza, recolours: false) { builder in
                 // Decision 935: in the mesh but with no box from farther
                 // (a 4 m string of bulbs is no block).
@@ -295,7 +310,9 @@ extension Map3DScene.Builder {
                              civic(.snackCart, 10, 1), civic(.umbrellaTable, 7, 7), civic(.umbrellaTable, 11, 11), civic(.lanternString, 2, 7),
                              civic(.marketCanopy, -8, 7, .pi), civic(.marketStall, -8, 9, .pi), civic(.marketStall, -8, 5, .pi),
                              stall(.nightMarketFryer, -8, -6), civic(.umbrellaTable, -4, -11), civic(.umbrellaTable, -11, -11),
-                             civic(.lanternString, -2, -7)],
+                             civic(.lanternString, -2, -7)]
+                            // Decision 949: the shoppers' bicycles in a rack at the front.
+                            + marketRack.parts, bicycles: marketRack.bicycles,
                             pad: Map3DPalette.plaza, recolours: false),
         ]
         var layouts: [PlacedBuildingKind: [PlacedKitLayout]] = [.hotel: hotels, .departmentStore: stores, .amusementPark: [park], .wharf: [wharf],

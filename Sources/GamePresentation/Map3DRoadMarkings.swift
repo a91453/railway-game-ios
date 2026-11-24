@@ -1407,16 +1407,21 @@ extension Map3DScene.Builder {
                     }
                     // Decision 918: bicycles parked by some of the stops,
                     // further along the pavement than the shelter and
-                    // the vending machine: a row across a wide pavement
-                    // (their front wheels to the buildings), one along
-                    // the back of a narrow one.
+                    // the vending machine, their front wheels to the
+                    // buildings. Decision 949: in a rack, on a pavement
+                    // wide enough for one, as many as the region has.
                     let outward = Map3DBaseMap.Point(x: left.x * side, z: left.z * side)
-                    for bicycle in Map3DBicycle.parked(pavement: pavement, publicBikes: streetLife.region.hasPublicBicycles,
+                    let bicycles = Map3DBicycle.parked(pavement: pavement, region: streetLife.region,
                                                        random: (map3DRandom(seed.0, seed.1, salt: 359), map3DRandom(seed.0, seed.1, salt: 360),
-                                                                map3DRandom(seed.0, seed.1, salt: 361))) {
-                        guard let model = Self.bicycleModels[bicycle.unit] else { continue }
-                        place(model, at: out(width / 2 + pavement - bicycle.fromBack, ahead: bicycle.ahead), forward: bicycle.across ? outward : along,
-                              clearing: 0.5, tint: Map3DColor.rgb(0xFFFFFF), onDeck: road.bridgeLevel > 0)
+                                                                map3DRandom(seed.0, seed.1, salt: 361)))
+                    if !bicycles.isEmpty, let rack = Self.bikeParkingModels[.rack] {
+                        place(rack, at: out(width / 2 + pavement - Map3DBicycle.rackFromBack, ahead: Map3DBicycle.rackAhead), forward: outward,
+                              clearing: 1.5, tint: Map3DColor.rgb(0xFFFFFF), onDeck: road.bridgeLevel > 0)
+                        for bicycle in bicycles {
+                            guard let model = Self.bicycleModels[bicycle.unit] else { continue }
+                            place(model, at: out(width / 2 + pavement - bicycle.fromBack, ahead: bicycle.ahead), forward: outward,
+                                  clearing: 0.5, tint: Map3DColor.rgb(0xFFFFFF), onDeck: road.bridgeLevel > 0)
+                        }
                     }
                     if sheltered {
                         guard map3DRandom(seed.0, seed.1, salt: 356) < 0.4 else { continue }

@@ -4785,6 +4785,14 @@
       "hash" : "9f83ff81febf9bfa",
       "triangles" : 928
     },
+    "bike-rack" : {
+      "hash" : "15394a9471830b52",
+      "triangles" : 108
+    },
+    "bike-shed" : {
+      "hash" : "13f910bd293672ca",
+      "triangles" : 132
+    },
     "public-bike" : {
       "hash" : "5e58c5f874376aa9",
       "triangles" : 924

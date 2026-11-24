@@ -1,6 +1,7 @@
 import Foundation
 
-/// Decision 918: the bicycles parked by some of the streets' bus stops: an
+/// Decision 918: the bicycles parked by some of the streets' bus stops
+/// (decision 949: in the kits' racks, there and by the station exits): an
 /// ordinary bicycle with a front basket, and Taiwan's public hire bicycle
 /// (orange, a low step-through frame) in rows of three on Taiwan's maps.
 ///
@@ -51,34 +52,31 @@ public enum Map3DBicycle {
         var across: Bool
     }
 
-    /// Bicycles stand by this share of the bus stops.
-    static let stopShare: Float = 0.35
     /// Of those on Taiwan's maps, this share are a row of public bicycles.
     static let publicShare: Float = 0.4
-    /// A row's bicycles stand this far apart, metres (the studio's rack
-    /// spacing: their 0.62 m handlebars clear each other by 8 cm).
-    static let spacing = 0.7
-    /// The pavement a row across it needs, metres: a bicycle's 1.8 m and
+    /// The pavement a rack across it needs, metres: a bicycle's 1.8 m and
     /// room to walk past.
     static let rowPavement = 2.5
-    /// The first bicycle stands this far on from the stop's middle,
-    /// metres: clear of the shelter (its sign 2.75 m along) and of the
-    /// vending machine (3.4 m).
-    static let firstAhead = 5.2
+    /// Decision 949: the rack's middle stands this far on from the stop's
+    /// middle, metres, its first hoop 5.2 m on: clear of the shelter (its
+    /// sign 2.75 m along) and of the vending machine (3.4 m).
+    static let rackAhead = 6.2
+    /// And this far in from the pavement's back, the bicycles' middles
+    /// with it.
+    static let rackFromBack = 1.0
 
-    /// The bicycles by a stop whose pavement is `pavement` metres wide,
-    /// for three random numbers in 0..<1 (whether any, which kind, how
-    /// many); `publicBikes` where the map has Taiwan's public bicycles.
-    /// On a wide pavement a row across it of two or three (public ones
-    /// always three, as a dock's); on a narrow one a single bicycle along
-    /// its back, and no public ones.
-    static func parked(pavement: Double, publicBikes: Bool, random: (any: Float, kind: Float, count: Float)) -> [Parked] {
-        guard random.any < stopShare, pavement >= 1.2 else { return [] }
-        guard pavement >= rowPavement else {
-            return [Parked(unit: .bicycle, ahead: firstAhead + 0.9, fromBack: 0.4, across: false)]
+    /// The bicycles by a stop whose pavement is `pavement` metres wide on
+    /// `region`'s map, for three random numbers in 0..<1 (whether any,
+    /// which kind, how many). Decision 949: in the rack
+    /// (``Map3DBikeParking``) at ``rackAhead``, across the pavement
+    /// (their front wheels to the buildings), two or three, public ones
+    /// always three, as a dock's; none where the pavement is too narrow
+    /// for the rack, nor past the region's ``Map3DStreetRegion/stopRackShare``.
+    static func parked(pavement: Double, region: Map3DStreetRegion, random: (any: Float, kind: Float, count: Float)) -> [Parked] {
+        guard random.any < region.stopRackShare, pavement >= rowPavement else { return [] }
+        let load = Map3DBikeParking.rackLoad(publicBikes: region.hasPublicBicycles, publicShare: publicShare, kind: random.kind, count: random.count)
+        return zip(Map3DBikeParking.inRack(load.count), load).map { offset, unit in
+            Parked(unit: unit, ahead: rackAhead + offset, fromBack: rackFromBack, across: true)
         }
-        let isPublic = publicBikes && random.kind < publicShare
-        let count = isPublic ? 3 : random.count < 0.5 ? 2 : 3
-        return (0..<count).map { Parked(unit: isPublic ? .publicBike : .bicycle, ahead: firstAhead + Double($0) * spacing, fromBack: 1.0, across: true) }
     }
 }
