@@ -65,6 +65,7 @@ struct NetworkControls: View {
             // character to a line. In rows, each button as wide as its
             // words: one row where they fit, else two, else more.
             ChipFlow(spacing: 8) {
+                systemPicker
                 advancedButton
                 doubleToggle
                 snapToggle
@@ -73,6 +74,15 @@ struct NetworkControls: View {
             }
             .buttonStyle(.bordered)
             .font(.footnote)
+            // Decision 955: what a guideway joins and crosses, said
+            // before the player draws it.
+            if let note = session.networkSystemNote {
+                Text(verbatim: note)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("network.systemNote")
+            }
             if showsAdvanced {
                 advancedOptions
             } else {
@@ -178,6 +188,23 @@ struct NetworkControls: View {
                 .padding(.top, 2)
             }
         }
+    }
+
+    /// Decision 955: ordinary track or one of the guideways, chosen
+    /// before the track is drawn; a guideway is elevated by default.
+    private var systemPicker: some View {
+        let language = session.language
+        return TickStable(StableKey(session.networkSystem, language)) {
+            Picker(selection: Binding(get: { session.networkSystem }, set: { session.chooseNetworkSystem($0) })) {
+                ForEach(TrackSystem.offered, id: \.self) { system in
+                    Text(verbatim: system.name(in: language)).tag(system)
+                }
+            } label: {
+                Text(verbatim: language.text("Track system", "軌道種類"))
+            }
+            .pickerStyle(.menu)
+        }
+        .accessibilityIdentifier("network.system")
     }
 
     // Decision 107: how the track is built is chosen for the player

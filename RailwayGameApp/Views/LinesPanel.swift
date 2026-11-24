@@ -2851,7 +2851,7 @@ struct LinesPanel: View {
             headwayPicker
             // Decision 180: the type and the cars of the trains it buys.
             // Decision 184, later: a menu the ticks leave alone.
-            let types = session.trainTypeCardChoices
+            let types = session.trainTypeCardChoices(forLine: line.id)
             TickStable(StableKey(types, staffType, language)) {
                 Menu {
                     Button {

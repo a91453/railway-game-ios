@@ -50,8 +50,13 @@ extension GameSession {
     /// (decision 180). Decision 539: a train of a type no longer sold
     /// (``TrainType/withdrawnFromSale``) has its own type listed last, so
     /// the menu still shows what it is.
+    ///
+    /// Decision 955: on a line, only the types its track carries
+    /// (``GameWorld/runsOnTrack(_:ofLine:)``): a guideway's own trains on
+    /// it, and none of them on ordinary track.
     public func trainTypeMenuChoices(for id: TrainID) -> [MenuChoice<TrainType?>] {
         var types = trainTypes
+        if let line = world.assignedLine(of: id) { types = types.filter { world.runsOnTrack($0, ofLine: line) } }
         if let own = world.train(id: id)?.type, !types.contains(own) { types.append(own) }
         return types.map { type in
             MenuChoice(id: type, title: Train.typeText(type, in: language), detail: world.trainTypeMenuText(type, for: id, in: language))
@@ -65,6 +70,12 @@ extension GameSession {
         world.openTrainTypes.map { type in
             MenuChoice(id: type, title: Train.typeText(type, in: language), detail: world.trainTypeCard(type).text(in: language))
         }
+    }
+
+    /// ``trainTypeCardChoices`` that line `id`'s track carries (decision
+    /// 955, ``GameWorld/runsOnTrack(_:ofLine:)``).
+    public func trainTypeCardChoices(forLine id: LineID) -> [MenuChoice<TrainType>] {
+        trainTypeCardChoices.filter { world.runsOnTrack($0.id, ofLine: id) }
     }
 
     private var trainTypes: [TrainType?] {

@@ -4,7 +4,7 @@
 
 - 做到哪：第一張 PR（只 GameCore，決策 951、存檔 112）在分支 `claude/track-system`。
 - 已驗證：見 PR 說明（本機 `swift build --build-tests -Xswiftc -warnings-as-errors` 與碰到的測試類別）。
-- 下一步：第二張 PR（建造介面與 3D 換來源），從下面「第二張 PR」開始；另派 session。
+- 下一步：第二張 PR（TRACK-SYSTEM-UI，決策 955）已做，見 `docs/handoff/TRACK-SYSTEM-UI.md`。
 
 ## 派工與現況
 

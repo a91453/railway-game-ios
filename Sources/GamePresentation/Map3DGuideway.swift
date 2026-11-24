@@ -8,12 +8,10 @@ import GameCore
 /// (``Map3DGuidedSkyrail``, `SKYRAIL`), drawn on the track their lines
 /// run on in place of its rails, sleepers and ballast.
 ///
-/// Worked out by the presentation from the trains the lines run
-/// (``edges(in:)``): GameCore's track has no kind of its own for them,
-/// and the saves do not change. Track a line of guideway trains runs on
-/// becomes their guideway unless any other line runs on it too (a train
-/// of another type, or of another guideway): there it stays ordinary
-/// track, and a guideway train on it stands on the rails as before.
+/// Which track is a guideway is the track's own (decision 951's
+/// ``TrackEdge/system``, read by ``edges(in:)`` since decision 955): a
+/// guideway train left on ordinary track by an older save's mixed line
+/// stands on the rails as before.
 ///
 /// The beams' cross-sections are the local studio's beam samples
 /// (`a91453/railway-assets-private-2`, `game-art-previews/docs/art/`
@@ -41,6 +39,17 @@ enum Map3DGuideway {
             case TrainType.maglev?: self = .maglev
             case TrainType.skyRail?: self = .suspended
             default: return nil
+            }
+        }
+
+        /// The guideway of track of `system`, `nil` for ordinary track
+        /// (decision 955: one for one).
+        init?(_ system: TrackSystem) {
+            switch system {
+            case .conventional: return nil
+            case .straddle: self = .straddle
+            case .maglev: self = .maglev
+            case .suspended: self = .suspended
             }
         }
 
@@ -163,51 +172,17 @@ enum Map3DGuideway {
 
     // MARK: Which track
 
-    /// Each edge of `world`'s track that is a guideway, and whose: every
-    /// edge the journey of a line whose trains are all of one guideway
-    /// type runs on, but those any other line's runs on too (its trains
-    /// of another type, or some of them) or two guideways' lines share.
-    /// Only the lines calling at a station a guideway line calls at are
-    /// driven for the other lines' track: a line elsewhere does not reach
-    /// it. Empty when no line runs guideway trains.
+    /// Each edge of `world`'s track that is a guideway, and whose
+    /// (decision 955): the edges whose ``TrackEdge/system`` is one,
+    /// whatever runs on them. Empty when none is. Decision 947 worked
+    /// this out from the trains the lines run; decision 951 made it the
+    /// track's own, and that working out the migration of older saves
+    /// (`GameWorld.layGuideways()`).
     static func edges(in world: GameWorld) -> [TrackEdgeID: Kind] {
-        var kinds: [TrainID: Kind] = [:]
-        for train in world.trains { if let kind = Kind(train.type) { kinds[train.id] = kind } }
-        guard !kinds.isEmpty else { return [:] }
-        func kind(of line: ServiceLine) -> Kind?? {
-            let trains = line.assignedTrains
-            guard !trains.isEmpty else { return .none }
-            let found = Set(trains.map { kinds[$0] })
-            return found.count == 1 ? .some(found.first!) : .some(nil)
-        }
-        let guided = world.lines.filter { kind(of: $0).flatMap { $0 } != nil }
-        guard !guided.isEmpty else { return [:] }
-        let stations = Set(guided.flatMap(\.stops))
-        func edges(of line: ServiceLine) -> Set<TrackEdgeID> {
-            var services: [Int?] = line.trains.isEmpty ? [] : [nil]
-            for (index, pattern) in line.patterns.enumerated() where !pattern.trains.isEmpty { services.append(index) }
-            var found = Set<TrackEdgeID>()
-            for service in services {
-                guard let journey = world.lineJourney(line.id, pattern: service) else { continue }
-                for leg in GameWorld.legEdges(of: journey) { found.formUnion(leg.edges) }
-            }
-            return found
-        }
         var laid: [TrackEdgeID: Kind] = [:]
-        var shared = Set<TrackEdgeID>()
-        for line in world.lines {
-            guard case .some(let own) = kind(of: line) else { continue }
-            if own == nil, !line.stops.contains(where: stations.contains) { continue }
-            for edge in edges(of: line) {
-                guard let own else {
-                    shared.insert(edge)
-                    continue
-                }
-                if let other = laid[edge], other != own { shared.insert(edge) }
-                laid[edge] = own
-            }
+        for edge in world.network.edges {
+            if let kind = Kind(edge.system) { laid[edge.id] = kind }
         }
-        for edge in shared { laid[edge] = nil }
         return laid
     }
 
@@ -286,31 +261,16 @@ enum Map3DGuideway {
 }
 
 /// Decision 947: what tells whether the guideways can have changed without the
-/// track changing: each line running guideway trains, its stops and
-/// which guideways its trains run on. For the 3D map's scene key.
+/// track's count changing; decision 955: the guideway edges themselves
+/// and their systems (``TrackEdge/system``), since what runs on them no
+/// longer decides it. For the 3D map's scene key.
 public struct Map3DGuidewaySignature: Hashable, Sendable {
-    let lines: [Int]
+    let edges: [TrackEdgeID: TrackSystem]
 
     public init(world: GameWorld) {
-        var kinds: [TrainID: Map3DGuideway.Kind] = [:]
-        for train in world.trains { if let kind = Map3DGuideway.Kind(train.type) { kinds[train.id] = kind } }
-        guard !kinds.isEmpty else {
-            lines = []
-            return
-        }
-        var lines: [Int] = []
-        for line in world.lines {
-            let trains = line.assignedTrains
-            let mask = trains.reduce(0) { $0 | (kinds[$1].map { 1 << $0.rawValue } ?? 1 << 3) }
-            guard mask & 0b111 != 0 else { continue }
-            var hasher = Hasher()
-            hasher.combine(line.id.rawValue)
-            hasher.combine(mask)
-            hasher.combine(line.stops)
-            hasher.combine(line.patterns.map(\.trains.isEmpty))
-            lines.append(hasher.finalize())
-        }
-        self.lines = lines
+        var edges: [TrackEdgeID: TrackSystem] = [:]
+        for edge in world.network.edges where edge.system.isGuideway { edges[edge.id] = edge.system }
+        self.edges = edges
     }
 }
 

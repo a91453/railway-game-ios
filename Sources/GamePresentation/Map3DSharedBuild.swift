@@ -160,17 +160,11 @@ final class Map3DSharedBuild: @unchecked Sendable {
 
     /// Decision 947: the edges of `snapshot`'s track that are guideways in
     /// `world` (``Map3DGuideway/edges(in:)``): those kept when they are of
-    /// the same track and lines, or worked out (and kept, when none were).
+    /// the same track, or read (and kept, when none were).
     func guideways(of snapshot: RailwaySnapshot, world: GameWorld) -> [TrackEdgeID: Map3DGuideway.Kind] {
         var hasher = Hasher()
         hasher.combine(Map3DTrackSamples.mark(of: snapshot))
         hasher.combine(Map3DGuidewaySignature(world: world))
-        for line in world.lines {
-            hasher.combine(line.id.rawValue)
-            hasher.combine(line.stops)
-            hasher.combine(line.trains.isEmpty)
-            hasher.combine(line.patterns)
-        }
         let key = hasher.finalize()
         lock.lock()
         if let guideways, guideways.key == key {

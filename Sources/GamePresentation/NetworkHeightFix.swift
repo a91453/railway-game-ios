@@ -306,7 +306,7 @@ extension GameSession {
     func networkHeightFixes(now: Bool) -> [NetworkHeightFix]? {
         guard let start = networkStart, let end = networkEnd else { return nil }
         let key = NetworkHeightFixKey(preview: NetworkPreviewMemo.Key(
-            start: start, end: end, structure: networkStructure, height: networkHeight,
+            start: start, end: end, structure: networkStructure, system: networkSystem, height: networkHeight,
             startRaise: networkStartRaise, endRaise: networkEndRaise, followsTrack: networkFollowsTrack,
             buildsScissors: networkBuildsScissors, easesGrade: networkEasesGrade,
             buildsDouble: networkBuildsDouble, doubleChosen: networkDoubleChosen, doubleSide: networkDoubleSide,
