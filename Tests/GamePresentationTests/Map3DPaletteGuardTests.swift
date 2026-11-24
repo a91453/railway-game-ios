@@ -97,8 +97,9 @@ final class Map3DPaletteGuardTests: XCTestCase {
             let off = colours.filter { !palette.contains($0) }.map { String($0, radix: 16) }
             XCTAssertEqual(off, [], "\(what): colours not in Map3DPalette", file: file, line: line)
         }
-        // The red commuter car e752e7a2; its glass is the trains' own.
-        check(Map3DRedCommuter.meshPalette.filter { $0 != Map3DTrainStyle.glass }, "red commuter car")
+        // The Keikyu New 1000 (decision 956); its glass and headlamps are
+        // the trains' own.
+        check(Map3DRedCommuter.meshPalette.filter { $0 != Map3DTrainStyle.glass && $0 != Map3DTrainStyle.headlamp }, "Keikyu New 1000")
         check(Map3DSunMoonLandmark.materialColours, "Sun Moon Lake landmarks")
         check(Map3DOldIslandModule.parts.map(\.colour), "old island module and platform furniture")
         check([Map3DPlatformProps.nameBoardGreen], "platform name board")

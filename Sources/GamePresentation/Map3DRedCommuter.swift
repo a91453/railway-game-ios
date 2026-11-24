@@ -1,50 +1,60 @@
 import Foundation
 
-/// The owner's old commuter car (SwiftRailMac's model e752e7a2, 19.75 m, a
-/// red body with a light band round the windows and one cab; the earlier
-/// version's 京急新1000形, Keikyu New 1000, decision 891, later: e752e7a2
-/// is that set's simplified car, without bogies), brought into
-/// the game as the owner's untextured style asks: its flat texture cut into
-/// faces of their own (`tools/texture-palette/cut_faces.py`), one palette
-/// colour a triangle, and written here by `tools/texture-palette/to_swift.py`
-/// (``encodedCab``, ``encodedMiddle``).
+/// Decision 956 (decision 891, later): the Keikyu New 1000 (京急新1000形),
+/// the owner's old detailed cars (SwiftRailMac's 54af03fa, the cab car, and
+/// a78b3de8, the middle car: a red body, a white band round the windows,
+/// three doors a side, two bogies and eight wheels), which the local studio
+/// cut from their texture into faces of the game's palette colours
+/// (`a91453/railway-assets-private-2`,
+/// `game-art-previews/docs/art/keikyu-new1000-2026-11/revision-3`), written
+/// here by `tools/train-models/glb_to_swift.py` (``encoded``). Each car is
+/// 20.00 m from coupler to coupler (its gangways), its floor 1.00 m and its
+/// roof 3.904 m above the rail, on the 1,435 mm gauge. No number or
+/// lettering is drawn.
 ///
 /// It runs as a commuter EMU of no type four cars or longer
 /// (``Map3DTrainSet/set(forKey:count:locked:)``): the cab car at the front,
-/// the same car turned round at the back and the middle car, the cab car's
-/// back half and that half mirrored, between. About 1,500 triangles a car,
-/// fewer than the far versions of the detailed sets, so it has no far set
-/// of its own (decision 417's rule 1 is for the detailed cars).
+/// the same car turned round at the back and the middle car between, and
+/// from 500 m out its far cars.
 public enum Map3DRedCommuter {
-    /// The set's key (``Map3DTrainSet/redCommuter()``).
+    /// The set's key (``Map3DTrainSet/redCommuter(far:)``).
     static let key = "redCommuter"
 
-    /// The colour of each of the mesh's palette indices: steel (the roof,
-    /// the door frames), the grey-white body, the dark underframe and cab
-    /// panels, the light band round the windows, the red body, the blue
-    /// marks and the glass (which lights at night and catches the sky,
-    /// ``Map3DTrainLights``, ``Map3DTrainMaterial``). Decision 891: the
-    /// grey-white body and the light band are the palette's nearest
-    /// (``Map3DPalette/shedWalls`` [2] for #C9CECC, ``Map3DPalette/acUnit``
-    /// for #E9EBE5, ΔE 1.2 and 2.1).
+    /// The colours of the mesh's palette indices, in the order
+    /// `glb_to_swift.py --materials` gave them: the studio's material names
+    /// red, white, silver, roof, glass, dark, headlamp, taillamp. The red
+    /// body, the white window band (``Map3DPalette/acUnit``), the
+    /// air-conditioners' grey white (``Map3DPalette/shedWalls`` [2]), the
+    /// steel roof and door frames, the trains' glass, the dark gangways,
+    /// underframe and bogies, and the lamps (decision 891's colours, the
+    /// earlier car's blue marks left out).
     static let meshPalette: [UInt32] = [
-        Map3DPalette.steel, Map3DPalette.shedWalls[2], Map3DPalette.dark, Map3DPalette.acUnit,
-        Map3DPalette.trainRed, Map3DPalette.canopy, Map3DTrainStyle.glass,
+        Map3DPalette.trainRed, Map3DPalette.acUnit, Map3DPalette.shedWalls[2], Map3DPalette.steel,
+        Map3DTrainStyle.glass, Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern,
     ]
 
-    /// The cab car, its cab at +x; `nil` if its mesh does not decode.
-    public static func cab() -> Map3DModelPack.Model? {
-        decoded(encodedCab, named: "red-commuter-cab")
+    /// The palette index of the studio's glass material: its faces, and
+    /// only they, are the windows the game lights at night and mirrors the
+    /// sky in (decision 851).
+    static let glassIndex = 4
+
+    /// The palette indices of the lamp lenses, lit (decision 893).
+    static let lampIndices: Set<Int> = [6, 7]
+
+    /// The cab car, its cab at +x; `far`, the light version drawn from
+    /// 500 m out. `nil` if its mesh does not decode.
+    public static func cab(far: Bool = false) -> Map3DModelPack.Model? {
+        decoded("keikyu-new1000-cab" + (far ? "-far" : ""))
     }
 
     /// The middle car; `nil` if its mesh does not decode.
-    public static func middle() -> Map3DModelPack.Model? {
-        decoded(encodedMiddle, named: "red-commuter-car")
+    public static func middle(far: Bool = false) -> Map3DModelPack.Model? {
+        decoded("keikyu-new1000-middle" + (far ? "-far" : ""))
     }
 
-    static func decoded(_ text: String, named name: String) -> Map3DModelPack.Model? {
-        guard let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { return nil }
-        return decodedMesh([UInt8](data), named: name)
+    static func decoded(_ name: String) -> Map3DModelPack.Model? {
+        guard let text = encoded[name], let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { return nil }
+        return decodedMesh([UInt8](data), named: name, glass: glassIndex, lamps: lampIndices)
     }
 
     /// The model in `bytes`, little-endian: the vertex count (UInt16), each
