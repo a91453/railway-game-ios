@@ -428,12 +428,19 @@ public struct TutorialCardFold: Equatable, Sendable {
     ///   the tutorial finds Skip, and one opened by the player earlier in
     ///   the step's chapter (`chapterChoice` false): open, unless it folded
     ///   itself over what the step asks for;
+    /// - the last step (`isLastStep`), done: open, so Finish shows. It
+    ///   does not move on by itself (decision 177), and folded it had
+    ///   nothing to tap: lesson 1's guide ends on the first fares, and the
+    ///   AI testers' players (round 1, 2026-11-23) watched the fares come
+    ///   in while the folded card still read "Wait for your first fares";
     /// - otherwise folded.
     public func showsFolded(
-        stepChoice: Bool?, chapterChoice: Bool?, waitsForNext: Bool, isDone: Bool, isFirstStep: Bool = false
+        stepChoice: Bool?, chapterChoice: Bool?, waitsForNext: Bool, isDone: Bool, isFirstStep: Bool = false,
+        isLastStep: Bool = false
     ) -> Bool {
         if let stepChoice { return stepChoice }
         if waitsForNext { return isDone ? false : isFolded }
+        if isLastStep, isDone { return false }
         if isFirstStep || chapterChoice == false { return isFolded }
         return true
     }
