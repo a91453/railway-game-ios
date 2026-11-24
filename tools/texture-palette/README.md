@@ -12,6 +12,8 @@
 
 ## 舊車 e752e7a2 → 遊戲
 
+> 決策 956 起，遊戲的 `Map3DRedCommuterMesh.swift` 改由 `tools/train-models/glb_to_swift.py` 從工作室的京急新1000形精細車寫出；下面的流程只留作紀錄，**不要再跑 `to_swift.py` 寫回那個檔**（會蓋掉新網格）。
+
 ```sh
 # 1. 平塗與切面（Pillow、numpy）。OLD_ASSETS：作者的舊版素材資料夾；
 #    WORK：flatten.py 的平塗圖與色票 palette.json 所在；OUT：輸出

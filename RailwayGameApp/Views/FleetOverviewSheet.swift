@@ -189,6 +189,39 @@ struct FleetOverviewSheet: View {
         }
     }
 
+    /// Decision 960, buy first, assign later: a train off the track with
+    /// no line is given one here, put where its trips start.
+    @ViewBuilder
+    private func assignMenu(_ train: Train) -> some View {
+        if session.offersAssignToLine(for: train.id) {
+            let language = session.language
+            let lines = session.assignToLineChoices(for: train.id).map { (id: $0.id, name: $0.name) }
+            // Decision 184, later: a menu the ticks leave alone.
+            TickStable(StableKey(train.id, lines.map(\.id), lines.map(\.name), language)) {
+                Menu {
+                    ForEach(lines, id: \.id) { line in
+                        Button {
+                            session.assignUnplacedTrain(train.id, to: line.id)
+                        } label: {
+                            Text(verbatim: line.name)
+                        }
+                    }
+                } label: {
+                    Text(verbatim: language.text("Assign to line…", "配屬到路線…"))
+                        .font(.caption2.weight(.bold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Theme.primary.opacity(0.14))
+                        .foregroundStyle(Theme.primary)
+                        .clipShape(Capsule())
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityIdentifier("fleet.assign.\(train.name)")
+            }
+        }
+    }
+
     private var summaryCard: some View {
         let trains = session.world.trains
         let placedCount = trains.filter { $0.position != nil }.count
@@ -377,6 +410,7 @@ struct FleetOverviewSheet: View {
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                     Spacer()
+                    assignMenu(train)
                     sellButton(train)
                 }
             }
