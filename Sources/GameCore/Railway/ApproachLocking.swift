@@ -40,7 +40,7 @@ extension GameWorld {
     /// stop is within ``approachReach``, where decision 294 held all.
     func approachLimit(of train: Train, _ envelopes: AuthorityEnvelopes) -> Int64? {
         guard isTrafficControlEnabled, case .travellingToStop? = train.execution, envelopes.length < .max else { return nil }
-        guard blockSections else { return homeLimit(of: train, envelopes) ?? (Probe.on("dl") ? depotLimit(of: train, envelopes) : nil) }
+        guard blockSections else { return homeLimit(of: train, envelopes) }
         guard followsRealTimetable(train) else { return nil }
         guard envelopes.length > Self.approachReach else { return homeLimit(of: train, envelopes) }
         let limit = blockBoundary(envelopes, atOrBefore: envelopes.length - Self.approachHold)
@@ -56,82 +56,7 @@ extension GameWorld {
     /// A train following others short of it takes its route as before.
     func approachLimit(of train: Train, holding held: Int64, _ envelopes: AuthorityEnvelopes) -> Int64? {
         guard let limit = approachLimit(of: train, envelopes) else { return nil }
-        return (blockSections && envelopes.length > Self.approachReach) || held >= limit
-            || (!blockSections && train.isDeadheading && !Probe.on("dlfree")) ? limit : nil
-    }
-
-    // MARK: - The depot's home signal (decision 968)
-
-    /// Decision 968: how far before its route's end, in a depot, a
-    /// junction on an empty run's route counts as the depot's throat.
-    static let depotThroatReach: Int64 = 192_000
-
-    /// Decision 968: PROBE.
-    func depotLimit(of train: Train, _ envelopes: AuthorityEnvelopes) -> Int64? {
-        let length = envelopes.length
-        guard !blockSections, train.isDeadheading, length > Self.homeReach + RailwayNetwork.junctionZone,
-              case .travellingToStop(let stop, let cycle)? = train.execution, train.call(after: stop, cycle: cycle) == nil,
-              station(id: train.timetable[stop].station)?.isDepot == true, followsRealTimetable(train)
-        else { return nil }
-        let near = Probe.number("TYMC_DR") ?? Self.homeReach
-        let stretches = envelopes.stretches
-        // Where the last platform of a station that is no depot ends along
-        // the route, looked for from its end.
-        var from = 0
-        var beyond: Int64 = 0
-        if let reach = Probe.number("TYMC_DL") {
-            beyond = length - reach
-            from = envelopes.ends.firstIndex(where: { $0 > beyond }) ?? stretches.count
-        } else {
-            var found = false
-            for index in stretches.indices.reversed() {
-                let stretch = stretches[index]
-                let start = index == 0 ? 0 : envelopes.ends[index - 1]
-                guard let edge = network.edge(stretch.traversal.edge) else { continue }
-                for platform in network.platforms(on: stretch.traversal.edge) where station(id: platform.station)?.isDepot != true {
-                    // The platform the way the train travels the edge.
-                    let (low, high) = stretch.traversal.direction == .forward
-                        ? (platform.start, platform.end) : (edge.length - platform.end, edge.length - platform.start)
-                    guard high > stretch.from, low <= stretch.to else { continue }
-                    beyond = max(beyond, start + min(high, stretch.to) - stretch.from)
-                    from = index
-                    found = true
-                }
-                if found { break }
-            }
-        }
-        var limit: Int64?
-        for index in from..<stretches.count {
-            let start = index == 0 ? 0 : envelopes.ends[index - 1]
-            if let along = throatPoint(on: stretches[index], then: index + 1 < stretches.count ? stretches[index + 1] : nil) {
-                let at = start + along
-                if at >= beyond, at < length { limit = at; break }
-            }
-        }
-        guard let limit, limit > near else { return nil }
-        return limit
-    }
-
-    /// PROBE: the junctions and platforms along `train`'s route.
-    func dumpRoute(of train: Train, _ envelopes: AuthorityEnvelopes) {
-        guard case .travellingToStop(let stop, _)? = train.execution else { return }
-        let key = "\(train.timetable.first?.station.rawValue ?? -1)-\(train.timetable[stop].station.rawValue)"
-        guard !Probe.dumped.contains(key) else { return }
-        Probe.dumped.insert(key)
-        let length = envelopes.length
-        var text = "DUMP \(Probe.hm(clock.now.seconds)) train \(train.id.rawValue) \(station(id: train.timetable.first!.station)?.name ?? "?") -> \(station(id: train.timetable[stop].station)?.name ?? "?") length \(length)\n"
-        var start: Int64 = 0
-        for (index, stretch) in envelopes.stretches.enumerated() {
-            defer { start = envelopes.ends[index] }
-            for platform in network.platforms(on: stretch.traversal.edge) {
-                text += "   platform \(station(id: platform.station)?.name ?? "?") edge \(stretch.traversal.edge) at \(length - start) from end\n"
-            }
-            if let along = throatPoint(on: stretch, then: index + 1 < envelopes.stretches.count ? envelopes.stretches[index + 1] : nil) {
-                text += "   throat edge \(stretch.traversal.edge) at \(start + along) = \(length - start - along) from end\n"
-            }
-        }
-        text += "   depot limit \(depotLimit(of: train, envelopes).map { "\($0) = \(length - $0) from end" } ?? "none")\n"
-        Probe.log(text)
+        return (blockSections && envelopes.length > Self.approachReach) || held >= limit ? limit : nil
     }
 
     /// Decision 294: `candidate`, about to set off, with its route held
@@ -257,9 +182,8 @@ extension GameWorld {
     /// nothing but its nearing its stop: a train another may follow, as
     /// it would one holding its whole route.
     func holdsToItsApproach(_ train: Train) -> Bool {
-        guard !blockSections, let (left, envelopes) = authority(of: train),
-              let limit = approachLimit(of: train, holding: left, envelopes) else { return false }
-        return left >= limit
+        guard !blockSections, let (left, envelopes) = authority(of: train) else { return false }
+        return approachLimit(of: train, holding: left, envelopes) != nil
     }
 
     /// Decision 849: what `train`, holding `authority` short of its route's

@@ -444,9 +444,6 @@ extension GameWorld {
         guard !line.depots.isEmpty, line.hasRuns, clock.now.seconds >= 0 else { return nil }
         let now = clock.now.seconds
         var seen: Set<StationID> = []
-        var best: (index: Int, trip: LineTrip, deadline: Int64)?
-        var can: [(index: Int, trip: LineTrip, deadline: Int64, leaving: Train)] = []
-        var later: [(index: Int, opens: Int64, leaving: Train)] = []
         for station in line.stops where seen.insert(station).inserted {
             // Decision 535: on a ring, each way round on its own.
             for way in runWays(of: line) {
@@ -454,14 +451,9 @@ extension GameWorld {
                 // Nothing is due within the look ahead: no run out takes longer.
                 let soon = starts.filter { $0 - LineRun.earliestDispatch - Self.runDepotLookahead <= now }
                 let ready = runTrainsReady(of: line, at: station, way: way)
-                let traced = Probe.tracing(now) && now % 60 == 0
-                func note(_ why: String) {
-                    if traced { Probe.log("PULLOUT \(Probe.hm(now)) \(self.station(id: station)?.name ?? "?"): \(why); soon \(soon.sorted().prefix(4).map { Probe.hm($0) }) ready \(ready.prefix(4).map { $0 == now ? "now" : $0 == .max ? "max" : Probe.hm($0) })") }
-                }
-                guard Self.runsWithoutTrains(soon, ready: ready) > 0 else { continue }
-                guard let (index, trip) = runPullOut(of: line, to: station, way: way, memo: &memo),
+                guard Self.runsWithoutTrains(soon, ready: ready) > 0, let (index, trip) = runPullOut(of: line, to: station, way: way, memo: &memo),
                       let run = trip.deadhead
-                else { note("no train in a depot"); continue }
+                else { continue }
                 let lead = Self.lead(of: run) * GameTime.secondsPerMinute
                 // Decision 296: under traffic control, only the runs it can
                 // stand at in time for: a run out that arrives after a run's
@@ -473,66 +465,16 @@ extension GameWorld {
                 // behind its arrival there counts as there now, as before: how
                 // far it still has to go is not known.
                 let covering = isTrafficControlEnabled ? ready.map { $0 > now && $0 <= now + lead ? Int64.min : $0 }.sorted() : ready
-                guard Self.runsWithoutTrains(reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: covering) > 0 else {
-                    if Probe.on("far"), isTrafficControlEnabled, let first = Self.firstRunWithoutTrain(reachable, ready: covering),
-                       let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops) {
-                        later.append((index, first - LineRun.earliestDispatch - lead, leaving))
-                    }
-                    if reachable.count < soon.count || !reachable.filter({ $0 - LineRun.earliestDispatch - lead <= now }).isEmpty { note("not yet or covered, lead \(lead / 60), reachable \(reachable.count)") }
-                    continue
-                }
+                guard Self.runsWithoutTrains(reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }, ready: covering) > 0 else { continue }
                 // Decision 290: under traffic control, only with a berth there
                 // for it; without one it stays in the depot.
-                if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { note("no room, \(trains[index].name)"); continue }
-                let leaving = isTrafficControlEnabled ? firstDeparture(of: trains[index], on: trip, calling: line.stops) : nil
-                if isTrafficControlEnabled, let leaving,
-                   case .held(let by) = reservingDeparture(leaving, memo: &memo.directions) {
-                    note("held by \(train(id: by)?.name ?? "?") [\(train(id: by).map { String(describing: $0.execution).prefix(28) } ?? "") \(train(id: by)?.timetable.first.flatMap { self.station(id: $0.station)?.name } ?? "")>\(train(id: by)?.timetable.last.flatMap { self.station(id: $0.station)?.name } ?? "") dead \(train(id: by)?.isDeadheading ?? false)], \(trains[index].name) lead \(lead / 60)")
+                if isTrafficControlEnabled, !endHasRoom(station, for: trains[index]) { continue }
+                if isTrafficControlEnabled, let leaving = firstDeparture(of: trains[index], on: trip, calling: line.stops),
+                   case .held = reservingDeparture(leaving, memo: &memo.directions) {
                     continue
                 }
-                if Probe.on("far"), let leaving {
-                    let due = reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }.min() ?? now
-                    can.append((index, trip, due - lead, leaving))
-                    note("CAN \(trains[index].name) lead \(lead / 60) deadline \(Probe.hm(due - lead))")
-                    continue
-                }
-                if Probe.on("edf") {
-                    let due = reachable.filter { $0 - LineRun.earliestDispatch - lead <= now }.min() ?? now
-                    if best.map({ due - lead < $0.deadline }) ?? true { best = (index, trip, due - lead) }
-                    note("CAN \(trains[index].name) lead \(lead / 60) deadline \(Probe.hm(due - lead))")
-                    continue
-                }
-                note("SENT \(trains[index].name) lead \(lead / 60)")
                 return (index, trip)
             }
-        }
-        if Probe.on("far") {
-            func stops(_ one: Train, onTheWayOf other: Train) -> Bool {
-                stopsOn(cover(of: bodyStretches(of: other) + routeStretches(of: other).stretches), one)
-            }
-            // Held back for one out of the same depot going farther that
-            // is due before this one's last moment.
-            let free = can.filter { one in
-                !(now < one.deadline && later.contains { $0.index == one.index && $0.opens <= one.deadline && stops(one.leaving, onTheWayOf: $0.leaving) })
-            }
-            guard var pick = free.min(by: { $0.deadline < $1.deadline }) else { return nil }
-            var passed = 0
-            while passed < free.count, let farther = free.first(where: { $0.leaving.timetable.last?.station != pick.leaving.timetable.last?.station && $0.index == pick.index && stops(pick.leaving, onTheWayOf: $0.leaving) }) {
-                pick = farther
-                passed += 1
-            }
-            if Probe.tracing(now), now % 60 == 0 { Probe.log("PULLOUT \(Probe.hm(now)) PICK \(pick.leaving.timetable.last.flatMap { self.station(id: $0.station)?.name } ?? "?") of \(can.count), held back \(can.count - free.count)") }
-            return (pick.index, pick.trip)
-        }
-        return best.map { ($0.index, $0.trip) }
-    }
-
-    /// The first of the runs leaving at `starts` to find no train of
-    /// `ready` (see ``runsWithoutTrains(_:ready:)``).
-    static func firstRunWithoutTrain(_ starts: [Int64], ready: [Int64]) -> Int64? {
-        var next = 0
-        for start in starts.sorted() {
-            if next < ready.count, ready[next] <= start { next += 1 } else { return start }
         }
         return nil
     }
