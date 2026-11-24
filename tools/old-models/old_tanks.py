@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fukuoka's spherical gas holders and water towers from the owner's
-earlier version (SwiftRailMac's ガスタンク and 給水塔), as registered
+earlier version (SwiftRailMac's ガスタンク and 給水タンク), as registered
 landmarks (decision 895) where OpenStreetMap maps them (decision 924).
 
     python3 -I tools/old-models/old_tanks.py \
@@ -287,7 +287,7 @@ def main(gas_path, tower_path, swift):
                 data, v, t, low, high = landmarks.encode(path, MATERIALS, centre=True)
                 print(f'{key}: {t} triangles, {[round(h - l, 2) for l, h in zip(low, high)]} m')
                 models.append((key, data, v, t))
-    source = ("the earlier version's ガスタンク (item_a14610e919ffb965d418ca71) and 給水塔 (item_2cedf43508c08f24c37b0c88) "
+    source = ("the earlier version's ガスタンク (item_a14610e919ffb965d418ca71) and 給水タンク (item_2cedf43508c08f24c37b0c88) "
               "by tools/old-models/old_tanks.py")
     open(swift, 'w').write(landmarks.mesh_file('Map3DFukuokaTanks', MATERIALS, source, models, tool='tools/landmarks/glb_to_swift.py'))
 
