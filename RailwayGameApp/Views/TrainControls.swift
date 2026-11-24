@@ -97,6 +97,9 @@ struct TrainControls: View {
                     TrainTypeButton(session: session, train: train.id, type: train.type)
                     headingPicker
                 } else {
+                    // Decision 960: on the track too, changed when it
+                    // waits for its next trip.
+                    TrainTypeButton(session: session, train: train.id, type: train.type)
                     HStack {
                         VStack(alignment: .leading, spacing: 0) {
                             Label(session.world.trainSpeedText(of: train.id), systemImage: "speedometer")
