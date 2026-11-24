@@ -904,15 +904,35 @@ final class MapInteractionTests: XCTestCase {
         // 27.2 Simulator two touches 0.6 s after Network reached the app
         // and picked no track start (pull request #2480, full lane: the
         // card still asked where the track starts). They wait for the card
-        // to rest, and are made once more if no stretch is previewed.
+        // to rest.
+        // On a phone on its side the card stands beside the tools column
+        // at the trailing edge (decision 892): 300 pt wide, its leading
+        // edge some 434 pt in, so the map's middle (437 pt) was on the
+        // card. Picking the start folds the card there (decision 136),
+        // and an end touched while it was still folding landed on it:
+        // 3 of 4 full lanes from 2026-11-23 (559162f, 2816b43, 0ecdedc;
+        // the passing one touched 4 s after the start). So the end is
+        // touched clear of the card, once it has folded.
         let card = app.descendants(matching: .any)["details.card"].firstMatch
         if card.exists { card.waitUntilStill() }
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
-        map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
+        let frame = map.frame
+        let cardEdge = card.exists ? card.frame.minX - frame.minX - 40 : frame.width / 2
+        let endX = max(frame.width * 0.3, min(frame.width / 2, cardEdge))
+        print("XC27-TRACK-PREVIEW map \(frame) card \(card.exists ? card.frame : .zero) end x \(endX)")
+        func point(_ x: CGFloat, _ y: CGFloat) -> XCUICoordinate {
+            map.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: x, dy: y))
+        }
+        let start = point(frame.width * 0.2, frame.height * 0.35)
+        let end = point(endX, frame.height * 0.35)
+        start.tap()
+        // Folding is a phone's; an iPad keeps the card open.
+        _ = card.disappears(within: 3)
+        end.tap()
         if !hud.appears(within: 5) {
             app.logTree("no construction HUD after the first two touches")
-            map.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.35)).tap()
-            map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)).tap()
+            // A third point, not the start again, which would forget it:
+            // with either touch lost, the start and this make a stretch.
+            point((frame.width * 0.2 + endX) / 2, frame.height * 0.25).tap()
         }
 
         if !hud.appears(within: 5) { app.logTree("no construction HUD") }

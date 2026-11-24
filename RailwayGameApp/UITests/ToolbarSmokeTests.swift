@@ -400,11 +400,15 @@ extension XCUIElement {
     /// `isHittable` asked at once answers for where it is on its way: the
     /// second `waitForExistence(timeout:)` waited before it looked used to
     /// hide that (PR #493's run 38360304931, the tutorial's Skip right after
-    /// the phone turned).
+    /// the phone turned). One look after the deadline still counts: a
+    /// single look can take longer than the whole wait while the app is
+    /// busy (main 0ecdedc's full lane, run 45416414975: on the iPad, after
+    /// lesson 1 opened, one look at Build took some 40 s and said "not
+    /// yet", and the wait gave up without looking again).
     func becomesHittable(within timeout: TimeInterval = 2) -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while !(exists && isHittableNow) {
-            guard Date() < deadline else { return false }
+            guard Date() < deadline else { return exists && isHittableNow }
             Thread.sleep(forTimeInterval: 0.1)
         }
         return true
