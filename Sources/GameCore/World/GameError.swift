@@ -396,6 +396,15 @@ public enum GameError: Error, Hashable, Sendable {
     /// ``TrackEdge/mountain``) the line or the train's way runs on: only a
     /// mountain train (``TrainType/climbsMountains``) may.
     case trainCannotClimb(TrainID)
+    /// The new edge would join track of another system (decision 951,
+    /// ``TrackEdge/system``): a guideway joins only its own. The lowest
+    /// numbered such edge at the node; edge 0 for mountain track asked
+    /// for on a guideway.
+    case trackSystemMismatch(TrackEdgeID)
+    /// The train's type does not run on the track (decision 951,
+    /// ``TrackCompatibility``) the line or the train's way runs on: a
+    /// guideway carries only its own trains, and they run nowhere else.
+    case trainTrackMismatch(TrainID)
     /// No cableway has this number (decision 574).
     case unknownCableway(CablewayID)
     /// A cableway with fewer than 2 stops or more than

@@ -1765,6 +1765,10 @@ extension StepOutcome: Codable {
         case .rejected(.trainCannotClimb(let id)):
             try container.encode("trainCannotClimb", forKey: .result)
             try container.encode(id.rawValue, forKey: .train)
+        // Decision 951: no golden scenario lays a guideway, and the golden
+        // schema reads neither of these back.
+        case .rejected(.trackSystemMismatch), .rejected(.trainTrackMismatch):
+            try container.encode("trackSystemRefused", forKey: .result)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):

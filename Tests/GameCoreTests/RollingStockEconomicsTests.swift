@@ -17,8 +17,11 @@ final class RollingStockEconomicsTests: XCTestCase {
     private let dollar: Int64 = 300
     private func ntd(_ cents: Int64) -> Money { Money(cents * 3) }
 
-    /// A managed world on the straight line, with or without the switch.
-    private func makeWorld(economics: Bool, balance: Int64 = 20_000_000_000) throws -> GameWorld {
+    /// A managed world on the straight line, with or without the switch;
+    /// its track of `system` (decision 951: a maglev runs only on its beam).
+    private func makeWorld(economics: Bool, balance: Int64 = 20_000_000_000, system: TrackSystem? = nil) throws -> GameWorld {
+        var line = line
+        line.system = system
         var world = try GameWorld(
             bounds: WorldBounds(width: 8_192, height: 4_096), economy: GameEconomy(balance: ntd(balance), costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 0), speed: .normal)
@@ -244,7 +247,7 @@ final class RollingStockEconomicsTests: XCTestCase {
     }
 
     func testWeightIsOneThousandATrainWithoutTheSwitchWhateverItsCars() throws {
-        var world = try makeWorld(economics: false)
+        var world = try makeWorld(economics: false, system: .maglev)
         try world.createLine(named: "Main", stops: [alpha, gamma])
         try world.setLineTrainsInService(main, to: TrainsInService(peak: 1, offPeak: 1, low: 1))
         let train = try world.purchaseTrain(named: "Blue")
@@ -258,25 +261,25 @@ final class RollingStockEconomicsTests: XCTestCase {
         var world = try makeWorld(economics: true)
         try world.createLine(named: "Main", stops: [alpha, gamma])
         let blue = try world.purchaseTrain(named: "Blue")
-        try world.setTrainType(blue.id, to: .maglev)
+        try world.setTrainType(blue.id, to: .d)
         try world.setTrainCars(blue.id, to: 4)
         let idle = try world.purchaseTrain(named: "Idle")
         try world.setTrainCars(idle.id, to: 6)
         XCTAssertEqual(weight(world), 0, "no train is on a line")
         try world.assignTrain(blue.id, to: main)
-        XCTAssertEqual(weight(world), 4 * 1_800)
+        XCTAssertEqual(weight(world), 4 * 1_300)
         let green = try world.purchaseTrain(named: "Green")
         try world.setTrainType(green.id, to: .l)
         try world.setTrainCars(green.id, to: 2)
         try world.assignTrain(green.id, to: main)
-        XCTAssertEqual(weight(world), 4 * 1_800 + 2 * 700)
+        XCTAssertEqual(weight(world), 4 * 1_300 + 2 * 700)
     }
 
     /// A day of a train that runs no service: staff and energy are written at
     /// midnight, weighted. A 4-car maglev is 7,200 thousandths of a train:
     /// 480 × 7.2 = 3,456 dollars of staff and 360 × 7.2 = 2,592 of energy.
     func testTheDaysStaffAndEnergyWeighTheTrain() throws {
-        var world = try makeWorld(economics: true)
+        var world = try makeWorld(economics: true, system: .maglev)
         try world.createLine(named: "Main", stops: [alpha, gamma])
         let train = try world.purchaseTrain(named: "Blue")
         try world.setTrainType(train.id, to: .maglev)
@@ -301,7 +304,7 @@ final class RollingStockEconomicsTests: XCTestCase {
         try world.createLine(named: "First", stops: [alpha, beta])
         try world.createLine(named: "Second", stops: [beta, gamma])
         let first = LineID(rawValue: 1), second = LineID(rawValue: 2)
-        let heavy = try world.purchaseTrain(named: "Heavy", as: .maglev)
+        let heavy = try world.purchaseTrain(named: "Heavy", as: .d)
         try world.setTrainCars(heavy.id, to: 4)
         let light = try world.purchaseTrain(named: "Light", as: .l)
         try world.setTrainCars(light.id, to: 2)
@@ -314,9 +317,9 @@ final class RollingStockEconomicsTests: XCTestCase {
         XCTAssertEqual(one.staffCost + two.staffCost, company.staffCost)
         XCTAssertEqual(one.energyCost + two.energyCost, company.energyCost)
         XCTAssertEqual(one.maintenanceCost + two.maintenanceCost, company.maintenanceCost)
-        // Train staff: 4 maglev cars weigh 7,200 (3,456 dollars), 2 L cars 1,400 (672 dollars);
+        // Train staff: 4 D cars weigh 5,200 (2,496 dollars), 2 L cars 1,400 (672 dollars);
         // each line also pays its own two stations' 620.
-        XCTAssertEqual(one.staffCost, Money((620 * 2 + 3_456) * dollar))
+        XCTAssertEqual(one.staffCost, Money((620 * 2 + 2_496) * dollar))
         XCTAssertEqual(two.staffCost, Money((620 * 2 + 672) * dollar))
     }
 

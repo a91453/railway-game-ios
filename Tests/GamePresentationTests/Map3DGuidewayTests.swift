@@ -12,7 +12,7 @@ final class Map3DGuidewayTests: XCTestCase {
     }
 
     /// A 15 km straight with two stations and a line between them, its
-    /// train of `type`.
+    /// train of `type` on the track that type runs on (decision 951).
     private func laid(_ type: TrainType) throws -> Laid {
         var world = GameWorld(
             bounds: try WorldBounds(width: 65_536, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
@@ -20,7 +20,7 @@ final class Map3DGuidewayTests: XCTestCase {
         )
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 16_384, y: 8_192))
-        let edge = try world.buildTrackEdge(from: a, to: b)
+        let edge = try world.buildTrackEdge(from: a, to: b, system: type.trackSystem)
         let west = try world.buildStation(named: "West", at: PlanPoint(x: 3_072, y: 8_704)).id
         let east = try world.buildStation(named: "East", at: PlanPoint(x: 14_336, y: 8_704)).id
         try world.addTrackPlatform(west, on: edge, from: 1_024, to: 5_120)
@@ -53,22 +53,39 @@ final class Map3DGuidewayTests: XCTestCase {
         XCTAssertEqual(Map3DGuideway.edges(in: try laid(.c).world), [:])
     }
 
-    /// A line of guideway trains and another type, or another line of
-    /// ordinary trains on the same track, keep it ordinary track.
-    func testSharedTrackStaysOrdinaryTrack() throws {
-        var mixed = try laid(.monorail)
-        try mixed.world.assignTrain(try mixed.world.purchaseTrain(named: "Two", as: .c).id, to: mixed.line)
-        XCTAssertEqual(Map3DGuideway.edges(in: mixed.world), [:])
+    /// `world` as a save from before decision 951 wrote it, its trains
+    /// named in `types` made those types: any train ran on any track then.
+    private func old(_ world: GameWorld, retyping types: [String: TrainType]) throws -> GameWorld {
+        var object = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(world)) as? [String: Any])
+        var trains = try XCTUnwrap(object["trains"] as? [[String: Any]])
+        for index in trains.indices {
+            guard let name = trains[index]["name"] as? String, let type = types[name] else { continue }
+            trains[index]["type"] = type.rawValue
+        }
+        object["trains"] = trains
+        let data = try JSONSerialization.data(withJSONObject: ["saveVersion": 111, "world": object])
+        return try JSONDecoder().decode(SavedGame.self, from: data).world
+    }
 
-        var shared = try laid(.monorail)
+    /// In a save from before decision 951, a line of guideway trains and
+    /// another type, or another line of ordinary trains on the same
+    /// track, keep it ordinary track.
+    func testSharedTrackStaysOrdinaryTrack() throws {
+        var mixed = try laid(.c)
+        try mixed.world.assignTrain(try mixed.world.purchaseTrain(named: "Two", as: .c).id, to: mixed.line)
+        XCTAssertEqual(Map3DGuideway.edges(in: try old(mixed.world, retyping: ["One": .monorail])), [:])
+
+        var shared = try laid(.c)
         let other = try shared.world.createLine(named: "Other", stops: shared.stations).id
         try shared.world.assignTrain(try shared.world.purchaseTrain(named: "Two", as: .c).id, to: other)
-        XCTAssertEqual(Map3DGuideway.edges(in: shared.world), [:])
+        XCTAssertEqual(Map3DGuideway.edges(in: try old(shared.world, retyping: ["One": .monorail])), [:])
+        XCTAssertEqual(Map3DGuideway.edges(in: try old(shared.world, retyping: ["One": .monorail, "Two": .maglev])), [:])
 
-        var two = try laid(.monorail)
-        let maglev = try two.world.createLine(named: "Maglev", stops: two.stations).id
-        try two.world.assignTrain(try two.world.purchaseTrain(named: "Two", as: .maglev).id, to: maglev)
-        XCTAssertEqual(Map3DGuideway.edges(in: two.world), [:])
+        // The whole line's trains of one kind: its guideway, as the save's
+        // track itself now is.
+        let whole = try old(mixed.world, retyping: ["One": .monorail, "Two": .monorail])
+        XCTAssertEqual(Map3DGuideway.edges(in: whole), [mixed.edge: .straddle])
+        XCTAssertEqual(whole.network.edge(mixed.edge)?.system, .straddle)
 
         // A line with no trains runs on nothing.
         var idle = try laid(.monorail)
@@ -177,7 +194,8 @@ final class Map3DGuidewayTests: XCTestCase {
     /// The scene key's signature changes when a line takes a guideway
     /// train, and not when an ordinary line does.
     func testTheSignature() throws {
-        var laid = try laid(.c)
+        var laid = try laid(.monorail)
+        try laid.world.unassignTrain(try XCTUnwrap(laid.world.trains.first).id)
         let before = Map3DGuidewaySignature(world: laid.world)
         XCTAssertEqual(before, Map3DGuidewaySignature(world: try self.laid(.c).world))
         try laid.world.assignTrain(try laid.world.purchaseTrain(named: "Two", as: .monorail).id, to: laid.line)

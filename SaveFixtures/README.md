@@ -466,3 +466,10 @@ its map's airports when it opens the save).
   (`PlayerMelodyTests.testTheVersion111SaveKeepsAPlayerMelody`, written
   with `PLAYER_MELODY_SAVE_NEW=1` by the build that first made it;
   decision 883).
+- `v112-track-system.json`: a straddle monorail beam (three edges on a
+  viaduct, two stations, a line, a `MONORAIL` train running it) beside
+  ordinary track with a line and an ordinary train of its own, run 30
+  minutes at the normal speed
+  (`TrackSystemTests.testTheVersion112SaveKeepsItsGuideway`, written with
+  `TRACK_SYSTEM_SAVE_NEW=1` by the build that first made it; decision
+  951).
