@@ -170,6 +170,19 @@ final class MapExpansionSessionTests: XCTestCase {
         XCTAssertFalse(GameSession(world: GameWorld.newGame(eventSeed: 9), language: .english).showsMapExpansionButton)
     }
 
+    /// EXPAND-MAP-ICON: the button says its name until a tile has been
+    /// bought beyond the first, then is an icon alone; in the tutorial it
+    /// says its name again.
+    func testTheExpansionButtonIsNamedUntilATileIsBought() throws {
+        var world = GameWorld.newGame(balance: 3_000_000_000, eventSeed: 9, buysMap: true)
+        XCTAssertTrue(GameSession(world: world, language: .english).namesMapExpansionButton)
+        try world.buyMapTile(MapTile(row: 2, column: 3), passingMilestone: true)
+        let session = GameSession(world: world, language: .english)
+        XCTAssertFalse(session.namesMapExpansionButton)
+        session.startTutorial()
+        XCTAssertTrue(session.namesMapExpansionButton)
+    }
+
     func testBuildingOnLandNotOwnedSaysSo() {
         XCTAssertEqual(
             GameError.mapTileNotOwned(MapTile(row: 0, column: 0)).playerMessage(in: .traditionalChinese),
