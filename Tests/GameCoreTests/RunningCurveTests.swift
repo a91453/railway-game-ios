@@ -145,7 +145,7 @@ final class RunningCurveTests: XCTestCase {
         XCTAssertEqual(values(.tiltingPuyuma), [1840, 3600, 135, nil, nil, nil, nil])
         XCTAssertEqual(values(.pushPull), [1600, 2800, 130, nil, nil, nil, nil])
         XCTAssertEqual(values(.emu3000), [2520, 3600, 135, nil, nil, nil, nil])
-        XCTAssertEqual(values(.dieselExpress), [1500, 2448, 110, nil, nil, nil, nil])
+        XCTAssertEqual(values(.dieselExpress), [500, 3000, 110, nil, nil, nil, nil])
         XCTAssertEqual(values(.express), [1800, 2900, 130, nil, nil, nil, nil])
         XCTAssertEqual(values(.semiExpress), [1500, 2600, 120, nil, nil, nil, nil])
         XCTAssertEqual(values(.local), [2500, 3000, 120, nil, nil, nil, nil])
