@@ -477,6 +477,10 @@ public struct GameWorld: Equatable, Sendable {
     ///   for the first tile of the map it passes over that the company does
     ///   not own (decision 160); ``GameError/trackTooSteep``;
     ///   ``GameError/invalidTrackStructure``;
+    ///   ``GameError/trackSystemMismatch(_:)`` (decision 951) for the
+    ///   lowest numbered edge at `from`, then at `to`, of another track
+    ///   system than `system`, or for mountain track on a guideway
+    ///   (the edge it would be, numbered 0 until built);
     ///   ``GameError/trackConflict(_:)`` for the lowest numbered edge it
     ///   would meet without clearance; ``GameError/trackTooClose(_:)`` for
     ///   the lowest numbered edge it would run too close beside;
@@ -489,9 +493,10 @@ public struct GameWorld: Equatable, Sendable {
     @discardableResult
     public mutating func buildTrackEdge(
         from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform, structure: TrackStructure = .surface,
-        mountain: Bool = false
+        mountain: Bool = false, system: TrackSystem? = nil
     ) throws(GameError) -> TrackEdgeID {
-        let id = try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, mountain: mountain, checksSpacing: true)
+        let id = try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, mountain: mountain, system: system,
+                                    checksSpacing: true)
         abandonUnservedPassengers()
         return id
     }
@@ -517,7 +522,8 @@ public struct GameWorld: Equatable, Sendable {
         var built: [TrackEdgeID] = []
         for plan in plans {
             built.append(try after.buildTrackEdge(from: plan.from, to: plan.to, curve: plan.curve, profile: plan.profile,
-                                                  structure: plan.structure, mountain: plan.mountain, checksSpacing: false))
+                                                  structure: plan.structure, mountain: plan.mountain, system: plan.system,
+                                                  checksSpacing: false))
         }
         for id in built {
             if let other = after.network.firstTooClose(existing: id, besides: []) {
@@ -530,7 +536,8 @@ public struct GameWorld: Equatable, Sendable {
     }
 
     private mutating func buildTrackEdge(
-        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, mountain: Bool, checksSpacing: Bool
+        from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, mountain: Bool,
+        system wanted: TrackSystem?, checksSpacing: Bool
     ) throws(GameError) -> TrackEdgeID {
         guard let start = network.node(from) else { throw .unknownTrackNode(from) }
         guard let end = network.node(to) else { throw .unknownTrackNode(to) }
@@ -543,6 +550,13 @@ public struct GameWorld: Equatable, Sendable {
         guard geometry.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade(mountain: mountain)) else { throw .trackTooSteep }
         // Decision 124: what carries it, measured from the ground.
         let sections = try sections(of: geometry, structure: structure)
+        // Decision 951: of the system asked for, or of the track it joins;
+        // a guideway joins only its own system, and is never mountain
+        // track.
+        let joined = [from, to].compactMap { network.system(at: $0) }
+        let system = wanted ?? joined.first?.system ?? .conventional
+        if let other = joined.first(where: { $0.system != system }) { throw .trackSystemMismatch(other.edge) }
+        guard !mountain || !system.isGuideway else { throw .trackSystemMismatch(.edge(0)) }
         if let other = network.firstConflict(from: from, to: to, curve: curve, geometry: geometry) {
             throw .trackConflict(other)
         }
@@ -555,7 +569,7 @@ public struct GameWorld: Equatable, Sendable {
         }) {
             throw .trackReserved(train.id)
         }
-        let price = try edgeCost(of: geometry, structure: structure, sections: sections)
+        let price = try edgeCost(of: geometry, structure: structure, sections: sections, system: system)
         // Decision 95: the company's buildings in its way come down, for
         // what demolishing them costs; track in a tunnel passes under
         // (decision 124: an automatic edge's tunnel sections).
@@ -566,14 +580,20 @@ public struct GameWorld: Equatable, Sendable {
         try economy.spend(price)
 
         let id = network.addEdge(
-            from: from, to: to, curve: curve, profile: profile, structure: structure, sections: sections, mountain: mountain, geometry: geometry,
-            next: next
+            from: from, to: to, curve: curve, profile: profile, structure: structure, sections: sections, mountain: mountain, system: system,
+            geometry: geometry, next: next
         )
         network.dropSpacedExemptions()
         // Phase 7a: the edge is on the books at what it cost.
         acquireAsset(.track, owner: id.networkNumber ?? 0, cost: price)
         clear(cleared)
         return id
+    }
+
+    /// Decision 951: each edge of `systems` is of its system from now on
+    /// (``RailwayNetwork/setSystems(_:)``), for ``layGuideways()``.
+    mutating func setTrackSystems(_ systems: [TrackEdgeID: TrackSystem]) {
+        network.setSystems(systems)
     }
 
     /// The lower numbered of the first two placed trains, in ID order, whose
@@ -754,13 +774,15 @@ public struct GameWorld: Equatable, Sendable {
         }
         let (_, firstNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let first = after.addEdge(from: edge.from, to: node, curve: cut.first, profile: firstProfile, structure: edge.structure,
-                                  sections: firstSections, mountain: edge.mountain, geometry: firstGeometry, next: firstNext)
+                                  sections: firstSections, mountain: edge.mountain, system: edge.system, geometry: firstGeometry,
+                                  next: firstNext)
         if let other = after.firstConflict(from: node, to: edge.to, curve: cut.second, geometry: secondGeometry) {
             throw .trackConflict(other)
         }
         let (_, secondNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: secondProfile, structure: edge.structure,
-                                   sections: secondSections, mountain: edge.mountain, geometry: secondGeometry, next: secondNext)
+                                   sections: secondSections, mountain: edge.mountain, system: edge.system, geometry: secondGeometry,
+                                   next: secondNext)
         if closure != .open {
             after.setClosure(first, closure)
             after.setClosure(second, closure)
@@ -1477,8 +1499,9 @@ public struct GameWorld: Equatable, Sendable {
             var new: Int64 = 0, old: Int64 = 0
             for id in [loop.out, loop.along.id, loop.back] {
                 guard let edge = network.edge(id), let was = network.geometry(of: id), let now = geometries[id] else { throw .invalidTrackGeometry }
-                old += try edgeCost(of: was, structure: edge.structure, sections: edge.sections).amount
-                let (sum, overflow) = new.addingReportingOverflow(try edgeCost(of: now.geometry, structure: edge.structure, sections: now.sections).amount)
+                old += try edgeCost(of: was, structure: edge.structure, sections: edge.sections, system: edge.system).amount
+                let (sum, overflow) = new.addingReportingOverflow(
+                    try edgeCost(of: now.geometry, structure: edge.structure, sections: now.sections, system: edge.system).amount)
                 guard !overflow else { throw .insufficientFunds(required: Money(.max), available: economy.balance) }
                 new = sum
                 let open = TrackEdge(id: id, from: edge.from, to: edge.to, curve: curves[id] ?? edge.curve, length: now.geometry.length,
@@ -2124,6 +2147,8 @@ public struct GameWorld: Equatable, Sendable {
             if !train.climbsMountains, ([traversal.edge] + trail).contains(where: { network.edge($0)?.mountain ?? false }) {
                 throw .trainCannotClimb(id)
             }
+            // Decision 951: and only on track of its own system.
+            guard runs(train, over: [traversal.edge] + trail) else { throw .trainTrackMismatch(id) }
         }
 
         try admit(train, at: index)
@@ -2273,6 +2298,13 @@ public struct GameWorld: Equatable, Sendable {
         }
         if !(type?.climbsMountains ?? false), let line = assignedLine(of: id).flatMap({ self.line(id: $0) }), runsOnMountainTrack(line) {
             throw .trainCannotClimb(id)
+        }
+        // Decision 951: nor to a type of another track system than its
+        // line's track (a guideway train a save from before version 112
+        // has on ordinary track keeps a type of its own system).
+        if (type?.trackSystem ?? .conventional) != trains[index].trackSystem,
+           let line = assignedLine(of: id).flatMap({ self.line(id: $0) }), !runs(type, on: line) {
+            throw .trainTrackMismatch(id)
         }
         // Decision 180: a change of type is the old train sold on the sale
         // rule and the new one bought: the new type's price for the cars it
@@ -2509,6 +2541,8 @@ public struct GameWorld: Equatable, Sendable {
         if !trains[index].climbsMountains, traversals.contains(where: { network.edge($0.edge)?.mountain ?? false }) {
             throw .trainCannotClimb(id)
         }
+        // Decision 951: nor onto track of another system.
+        guard runs(trains[index], over: traversals.map(\.edge)) else { throw .trainTrackMismatch(id) }
 
         var train = trains[index]
         train.movement.edges = traversals.map(\.edge)
@@ -3232,13 +3266,17 @@ public struct GameWorld: Equatable, Sendable {
     ///   included), ``GameError/trainServiceActive(_:)`` while it runs a
     ///   service of its own (stop it first), or, since decision 515,
     ///   ``GameError/trainCannotClimb(_:)`` when the line runs on mountain
-    ///   track and the train is not a mountain train.
+    ///   track and the train is not a mountain train, or, since decision
+    ///   951, ``GameError/trainTrackMismatch(_:)`` when the line runs on
+    ///   track of another system than the train's (``TrackCompatibility``).
     public mutating func assignTrain(_ id: TrainID, to line: LineID, pattern: Int? = nil) throws(GameError) {
         let index = try trainIndex(of: id)
         let (target, service) = try lineService(line, pattern: pattern)
         guard assignedLine(of: id) == nil else { throw .trainOnLine(id) }
         guard trains[index].execution == nil else { throw .trainServiceActive(id) }
         guard trains[index].climbsMountains || !runsOnMountainTrack(lines[target]) else { throw .trainCannotClimb(id) }
+        // Decision 951: a train runs only on track of its own system.
+        guard runs(trains[index].type, on: lines[target]) else { throw .trainTrackMismatch(id) }
 
         if service == 0 {
             lines[target].trains.insert(id, at: lines[target].trains.firstIndex { $0 > id } ?? lines[target].trains.count)

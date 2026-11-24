@@ -180,11 +180,15 @@ public struct TrainTypeSpec: Hashable, Sendable {
     /// Whether a train of the type may run on mountain track (decision
     /// 515, ``TrackEdge/mountain``): a mountain train's.
     public let climbsMountains: Bool
+    /// The track system a train of the type runs on (decision 951,
+    /// ``TrackEdge/system``): ordinary track for all but the three
+    /// guideway trains.
+    public let trackSystem: TrackSystem
 
     init(
         code: String, family: TrainFamily, offer: TrainTypeOffer, capacity: Int64, doors: Int64, overloads: Bool,
         performance: TrainPerformance?, firstDollars: Int64, carDollars: Int64, operatingPermille: Int64, carMetres: (Int64, Int64),
-        sightseeingStars: Int = 0, climbsMountains: Bool = false
+        sightseeingStars: Int = 0, climbsMountains: Bool = false, trackSystem: TrackSystem = .conventional
     ) {
         self.code = code
         self.family = family
@@ -197,6 +201,7 @@ public struct TrainTypeSpec: Hashable, Sendable {
         carLength = Self.worldUnits(metres: carMetres.0, tenths: carMetres.1)
         self.sightseeingStars = sightseeingStars
         self.climbsMountains = climbsMountains
+        self.trackSystem = trackSystem
     }
 
     /// `metres.tenths` metres in world units (64 a metre), to the nearest.
@@ -223,11 +228,14 @@ public enum TrainTypeCatalog {
         .init(code: "APM", family: .metro, offer: .referenceExtra, capacity: 138, doors: 2, overloads: true,
               performance: nil, firstDollars: 330_000, carDollars: 90_000, operatingPermille: 800, carMetres: (12, 5)),
         .init(code: "MAGLEV", family: .special, offer: .referenceExtra, capacity: 240, doors: 3, overloads: true,
-              performance: nil, firstDollars: 1_800_000, carDollars: 450_000, operatingPermille: 1_800, carMetres: (15, 0)),
+              performance: nil, firstDollars: 1_800_000, carDollars: 450_000, operatingPermille: 1_800, carMetres: (15, 0),
+              trackSystem: .maglev),
         .init(code: "SKYRAIL", family: .special, offer: .referenceExtra, capacity: 140, doors: 2, overloads: true,
-              performance: nil, firstDollars: 510_000, carDollars: 150_000, operatingPermille: 1_000, carMetres: (12, 0)),
+              performance: nil, firstDollars: 510_000, carDollars: 150_000, operatingPermille: 1_000, carMetres: (12, 0),
+              trackSystem: .suspended),
         .init(code: "MONORAIL", family: .special, offer: .referenceExtra, capacity: 224, doors: 2, overloads: true,
-              performance: nil, firstDollars: 480_000, carDollars: 135_000, operatingPermille: 1_000, carMetres: (15, 0)),
+              performance: nil, firstDollars: 480_000, carDollars: 135_000, operatingPermille: 1_000, carMetres: (15, 0),
+              trackSystem: .straddle),
         .init(code: "STEAM", family: .railway, offer: .eraOnly, capacity: 50, doors: 2, overloads: true,
               performance: .steam, firstDollars: 240_000, carDollars: 60_000, operatingPermille: 1_400, carMetres: (8, 0)),
         .init(code: "HSR", family: .highSpeed, offer: .added, capacity: 80, doors: 2, overloads: false,
