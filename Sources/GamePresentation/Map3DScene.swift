@@ -1247,6 +1247,9 @@ extension Map3DScene {
         /// platforms beside a suspended beam, once worked out
         /// (``guideways(of:)``).
         var guidewayEdges: (edges: [TrackEdgeID: Map3DGuideway.Kind], hung: [[Map3DPoint]])?
+        /// Decision 964: the kind of each edge that is not ballast, once
+        /// worked out (``trackKinds(of:)``).
+        var trackKindEdges: [TrackEdgeID: Map3DTrackKind]?
         var platformLines: [[Map3DPoint]] = []
         /// Decision 321: the platforms as laid, for the station kit.
         var laidPlatforms: [LaidPlatform] = []

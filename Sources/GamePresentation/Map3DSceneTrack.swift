@@ -48,10 +48,14 @@ extension Map3DScene.Builder {
         diamonds = Map3DDiamondCrossings.find(snapshot) { point($0) + Self.lifted }
         // Decision 947: the guideway trains' lines' track, their beams.
         let guided = guideways(of: snapshot).edges
+        // Decision 964: the kinds of the rest, from the trains run on it.
+        let kinds = trackKinds(of: snapshot)
         for (number, alignment) in snapshot.edges.enumerated() {
             // Decision 407: a high-speed line's on its box girder.
-            let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : .railway
             let guideway = guided[alignment.edge.id]
+            let track = guideway == nil ? kinds[alignment.edge.id] ?? .ballast : .ballast
+            // Decision 964: a metro's or a light rail's on a metro's viaduct.
+            let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : track.ridesMetroViaduct ? .metro : .railway
             for span in samples.edges[number] where span.end > span.start && span.reaches(region) {
                 let line = span.line
                 guard line.count > 1 else { continue }
@@ -60,10 +64,11 @@ extension Map3DScene.Builder {
                 }
                 guard line.contains(where: inside) else { continue }
                 let points = line.map { point($0) + Self.lifted }
-                if guideway != nil { guidedTrackLines.insert(trackLines.count) }
+                // Decision 964: nor over a third rail or a rubber-tyred track.
+                if guideway != nil || !track.hasOverheadLine { guidedTrackLines.insert(trackLines.count) }
                 trackLines.append((points, span.kind))
                 for piece in Self.pieces(of: points) {
-                    addTrackPiece(piece, kind: span.kind, viaduct: viaduct, guideway: guideway)
+                    addTrackPiece(piece, kind: span.kind, viaduct: viaduct, guideway: guideway, track: track)
                 }
             }
         }
@@ -165,11 +170,14 @@ extension Map3DScene.Builder {
     /// distance: the real lines' tracks, which far out are most of what
     /// a scene draws.
     ///
+    /// Decision 964: `track`, what lies under the trains in place of
+    /// ballast and two rails (``Map3DTrackKind``).
+    ///
     /// `from`: how far along its whole track `line` starts, metres
     /// (a real track's, review L11-1), so a viaduct's piers stand where
     /// the whole track puts them, wherever the piece starts.
     mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway, railsNear: Bool = false,
-                                from along: Float? = nil, guideway: Map3DGuideway.Kind? = nil) {
+                                from along: Float? = nil, guideway: Map3DGuideway.Kind? = nil, track: Map3DTrackKind = .ballast) {
         let middle = line[line.count / 2]
         // Decision 947: a guideway in place of the rails, the bed and
         // the viaduct.
@@ -186,6 +194,10 @@ extension Map3DScene.Builder {
             for piece in undergroundStations.outside(line) { addBore(piece, into: &bore) }
             mesh(at: middle) { mesh in
                 mesh.append(bore)
+                guard track == .ballast else {
+                    Map3DTrackKind.addBed(track, along: line, depth: 0.6, green: false, into: &mesh)
+                    return
+                }
                 mesh.addRibbon(along: line, width: Self.bedTop, lift: -Self.bedDrop, depth: 0.6, top: Map3DPalette.ballast, side: Map3DPalette.ballast,
                                topPaint: Self.ballast, sidePaint: Self.concrete)
             }
@@ -194,6 +206,8 @@ extension Map3DScene.Builder {
             let grounds = line.map { ground(at: $0) }
             addDeckShadow(line, grounds: grounds, width: viaduct.look(over: kind).deckWidth)
             viaducts.add(line, grounds: grounds, kind: kind, viaduct: viaduct, from: along)
+            // Decision 964: an embedded track's paving on the deck.
+            if track == .embedded { mesh(at: middle) { Map3DTrackKind.addEmbeddedSurface(along: line, green: false, into: &$0) } }
         case .surface, .embankment, .cutting:
             let lifts = line.map { $0.y - ground(at: $0) }
             let depth = max(0.45, (lifts.reduce(0, +) / Float(lifts.count)) - Self.bedDrop)
@@ -218,6 +232,10 @@ extension Map3DScene.Builder {
                         mesh.addQuad(foot + across, foot - across, top - across, top + across, color: bank, paint: Self.bank)
                     }
                 }
+                guard track == .ballast else {
+                    Map3DTrackKind.addBed(track, along: line, depth: min(depth, 0.6), green: true, into: &mesh)
+                    return
+                }
                 mesh.addRibbon(along: line, width: Self.bedTop, lift: -Self.bedDrop, depth: min(depth, 0.6), top: Map3DPalette.ballast, side: Map3DPalette.ballast,
                                topPaint: Self.ballast, sidePaint: Self.concrete)
             }
@@ -226,13 +244,29 @@ extension Map3DScene.Builder {
         // Decision 799: at the map's gauge (Finland's 1,524 mm).
         let offset = (look.gauge + Self.railWidth) / 2
         let target = self.target
-        if railsNear { self.target = .near }
         defer { self.target = target }
+        // Decision 964: the kind's small parts, close up only.
+        defer {
+            if track != .ballast {
+                self.target = .near
+                mesh(at: middle) { Map3DTrackKind.addDetails(track, along: line, railOffset: offset, into: &$0) }
+            }
+        }
+        // Decision 964: a rubber-tyred track's pads in place of rails.
+        guard track.hasRails else {
+            mesh(at: middle) { Map3DTrackKind.addPads(along: line, into: &$0) }
+            return
+        }
+        if railsNear { self.target = .near }
         // Decision 888: at a diamond, short of the rail it crosses.
         let gaps = [Float(-1), 1].map { diamondGaps(line, offset: $0 * offset) }
         mesh(at: middle) { mesh in
             for (number, side) in [Float(-1), 1].enumerated() {
                 for piece in gaps[number].isEmpty ? [line] : Map3DDiamondCrossings.cut(line, without: gaps[number]) {
+                    guard track != .embedded else {
+                        Map3DTrackKind.addEmbeddedRail(along: piece, offset: side * offset, into: &mesh)
+                        continue
+                    }
                     mesh.addRibbon(along: piece, width: Self.railWidth, offset: side * offset, lift: 0, depth: Self.railHeight,
                                    top: Map3DPalette.railTop, side: Map3DPalette.rail)
                 }
