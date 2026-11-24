@@ -5577,6 +5577,18 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("term-loans-balance-sheet-\(suffix)", app)
     }
 
+    /// Decision 958: lesson 1's last step, the first fares, once they are
+    /// in: the card opens by itself and says to tap Finish. For the
+    /// screenshot review of the pull request that made it so.
+    func testTutorialLastStepDone() {
+        let app = launch(extra: ["-tutorial-step", "first.fare"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The game opens")
+        XCTAssertTrue(app.staticTexts["tutorial.finishPrompt"].appears(within: 240), "The fares came in and the card says to tap Finish")
+        settle(seconds: 2)
+        keep("tutorial-last-step-done", app)
+    }
+
     private func launch(extra: [String] = [], english: Bool = false) -> XCUIApplication {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
