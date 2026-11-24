@@ -1,7 +1,9 @@
 import Foundation
 
 /// The owner's old commuter car (SwiftRailMac's model e752e7a2, 19.75 m, a
-/// red body with a light band round the windows and one cab), brought into
+/// red body with a light band round the windows and one cab; the earlier
+/// version's 京急新1000形, Keikyu New 1000, decision 891, later: e752e7a2
+/// is that set's simplified car, without bogies), brought into
 /// the game as the owner's untextured style asks: its flat texture cut into
 /// faces of their own (`tools/texture-palette/cut_faces.py`), one palette
 /// colour a triangle, and written here by `tools/texture-palette/to_swift.py`

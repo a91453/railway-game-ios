@@ -1,7 +1,7 @@
 /// Decision 924: Fukuoka's spherical gas holders and water towers where
 /// OpenStreetMap maps them (`man_made=gasometer`, `man_made=water_tower`),
 /// drawn as the owner's earlier version drew them (SwiftRailMac's
-/// ガスタンク `item_a14610e919ffb965d418ca71` and 給水塔
+/// ガスタンク `item_a14610e919ffb965d418ca71` and 給水タンク
 /// `item_2cedf43508c08f24c37b0c88`), as registered landmarks (decision
 /// 895), so the surveyed outline under each is not drawn again. The
 /// models are `tools/old-models/old_tanks.py`'s (``encoded``): the gas
