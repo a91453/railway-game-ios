@@ -471,35 +471,64 @@ public struct Map3DMesh: Sendable {
     /// Decision 375: a convex polygon as a fan round its first corner,
     /// lit as facing `normal`.
     public mutating func addFan(_ corners: [Map3DPoint], normal: Map3DPoint, color: UInt32) {
+        addFan(corners, normals: corners.map { _ in normal }, color: color)
+    }
+
+    /// Decision 965: the same fan, each corner lit as facing its own of
+    /// `normals`.
+    mutating func addFan(_ corners: [Map3DPoint], normals: [Map3DPoint], color: UInt32) {
         guard corners.count >= 3 else { return }
+        precondition(normals.count == corners.count)
         let base = UInt32(vertices.count)
-        for corner in corners { vertices.append(Map3DVertex(corner, normal: normal, color: color, u: 0, v: 0, layer: Map3DVertex.plain)) }
+        for (corner, normal) in zip(corners, normals) {
+            vertices.append(Map3DVertex(corner, normal: normal, color: color, u: 0, v: 0, layer: Map3DVertex.plain))
+        }
         for index in 1..<UInt32(corners.count - 1) { indices += [base, base + index, base + index + 1] }
     }
 
     /// Triangles lying on the ground (decision 234): `triangles` index
     /// `points`, three to a triangle in either turn, each turned to face up
     /// and painted with `paint` as a top is.
-    public mutating func addFlat(_ points: [Map3DPoint], triangles: [Int], color: UInt32, paint: Map3DPaint? = nil) {
+    /// Decision 965: each point lit as facing its own of `normals` when
+    /// they are given (one a point: the ground's smoothed way up under
+    /// it), as its triangle faces otherwise; the paint is laid by the
+    /// triangle's own face either way.
+    public mutating func addFlat(_ points: [Map3DPoint], triangles: [Int], color: UInt32, paint: Map3DPaint? = nil,
+                                 normals: [Map3DPoint]? = nil) {
+        precondition(normals == nil || normals?.count == points.count)
         let layer = paint.map { $0.layer } ?? Map3DVertex.plain
         var index = 0
         while index + 2 < triangles.count {
-            var a = points[triangles[index]], b = points[triangles[index + 1]], c = points[triangles[index + 2]]
+            var turn = [triangles[index], triangles[index + 1], triangles[index + 2]]
             index += 3
+            let a = points[turn[0]], b = points[turn[1]], c = points[turn[2]]
             guard var normal = (b - a).cross(c - a).normalized else { continue }
             if normal.y < 0 {
-                swap(&b, &c)
+                turn.swapAt(1, 2)
                 normal = normal * -1
             }
-            let corners = [a, b, c]
+            let corners = turn.map { points[$0] }
             let texture = paint?.coordinates(corners, normal: normal)
             let base = UInt32(vertices.count)
             for (at, corner) in corners.enumerated() {
                 let place: (u: Float, v: Float) = texture?[at] ?? (0, 0)
-                vertices.append(Map3DVertex(corner, normal: normal, color: color, u: place.u, v: place.v, layer: layer))
+                vertices.append(Map3DVertex(corner, normal: normals?[turn[at]] ?? normal, color: color, u: place.u, v: place.v, layer: layer))
             }
             indices += [base, base + 1, base + 2]
         }
+    }
+
+    /// Decision 965: the ground's square `a b c d` (counter-clockwise
+    /// seen from above, split `a c` as ``addQuad(_:_:_:_:color:paint:)``
+    /// splits it), each corner lit as facing its own of `normals`.
+    mutating func addGroundQuad(_ a: Map3DPoint, _ b: Map3DPoint, _ c: Map3DPoint, _ d: Map3DPoint,
+                                normals: [Map3DPoint], color: UInt32) {
+        precondition(normals.count == 4)
+        let base = UInt32(vertices.count)
+        for (corner, normal) in zip([a, b, c, d], normals) {
+            vertices.append(Map3DVertex(corner, normal: normal, color: color, u: 0, v: 0, layer: Map3DVertex.plain))
+        }
+        indices += [base, base + 1, base + 2, base, base + 2, base + 3]
     }
 
     /// Decision 235: a flat face through `corners` (three or more, counter-clockwise seen

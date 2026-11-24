@@ -396,9 +396,13 @@ extension Map3DScene.Builder {
                     guard !triangles.isEmpty else { continue }
                     let middle = Map3DPoint(Float((westX + gridLine(column + 1, origin: originX)) / 2), 0,
                                             Float((northZ + gridLine(row + 1, origin: originY)) / 2))
+                    // Decision 965: the land's cover lit as the ground
+                    // under it (the woods on a valley's side were the
+                    // squares' triangles, light and dark); water flat.
+                    let normals = area.cover == .water ? nil : points.map { groundNormal(x: $0.x, z: $0.z) }
                     mesh(at: middle) {
                         let start = $0.vertices.count
-                        $0.addFlat(points, triangles: triangles, color: color, paint: paint)
+                        $0.addFlat(points, triangles: triangles, color: color, paint: paint, normals: normals)
                         // Decision 356: water mirrors the sky.
                         if area.cover == .water { $0.makeWater(from: start) }
                     }
