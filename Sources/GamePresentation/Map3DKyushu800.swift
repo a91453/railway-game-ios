@@ -12,10 +12,12 @@ import Foundation
 /// The old game drew every car 21 m long and 2.80 m wide; here they are
 /// the real cars' size again: the middle car 25 m from coupling to
 /// coupling and the cab car 27.35 m, 3.38 m wide and 3.65 m to the roof,
-/// on the 1,435 mm gauge. The cab car is the old one made longer as a
-/// whole, its nose not stretched or reshaped on its own (the owner,
-/// 2026-11-25). No company mark, lettering or number is drawn, and no
-/// pantograph (the old cars have none).
+/// on the 1,435 mm gauge. The cab car is put back at the same scale as
+/// the middle car, so its nose, windows and doors are not stretched; the
+/// length it is still short of the real car's is added to its straight
+/// body, as two more windows in the row and 0.37 m of plain wall behind
+/// the driver's door (the owner, 2026-11-25). No company mark, lettering
+/// or number is drawn, and no pantograph (the old cars have none).
 public enum Map3DKyushu800 {
     /// The cars the game draws: the cab car and the middle car.
     public enum Unit: String, CaseIterable, Sendable {
@@ -82,7 +84,7 @@ public enum Map3DKyushu800 {
     public static func doors(_ unit: Unit) -> [Door] {
         switch unit {
         case .cab:
-            [Door(x: 4.396...5.141, z: 1.247...3.119, crew: true), Door(x: -12.782 ... -11.771, z: 1.247...3.119, crew: false)]
+            [Door(x: 5.193...5.875, z: 1.247...3.119, crew: true), Door(x: -12.859 ... -11.935, z: 1.247...3.119, crew: false)]
         case .middle:
             [Door(x: 10.531...11.647, z: 1.247...3.119, crew: false), Door(x: -7.924 ... -6.761, z: 1.247...3.119, crew: false)]
         }
@@ -98,7 +100,7 @@ public enum Map3DKyushu800 {
 
 extension Map3DKyushu800 {
     /// Decision 782: its set, its showcase row (six cars) and its cars'
-    /// triangles (1,487 the cab car, 1,066 the middle car: few enough to be
+    /// triangles (1,824 the cab car, 1,066 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(
@@ -108,7 +110,7 @@ extension Map3DKyushu800 {
             Map3DShowcase.Entry(key, "Kyushu Shinkansen 800 series", "九州新幹線 800 系", .japan, cars: cars, fixed: true,
                                 gauge: 1.435),
         ],
-        triangles: 1_000...1_600, length: 24.9...27.4)
+        triangles: 1_000...1_900, length: 24.9...27.4)
 }
 
 extension Map3DTrainSet {

@@ -24,9 +24,35 @@ final class Map3DKyushu800Tests: XCTestCase {
             XCTAssertTrue(Map3DKyushu800.registration.length.contains(model.length), unit.rawValue)
         }
         // The real cars: the middle car 25 m, the cab car 27.35 m (the old
-        // cab car made longer as a whole, not its nose alone).
+        // cab car at the middle car's scale, its straight body made longer).
         XCTAssertEqual(Map3DKyushu800.Unit.middle.pitch, 25)
         XCTAssertEqual(Map3DKyushu800.Unit.cab.pitch, 27.35)
+    }
+
+    /// The cab car is at the middle car's scale, so its nose and windows
+    /// are not stretched: the nose is the old one's 6.58 m times the middle
+    /// car's 25 / 21, and the length still missing is in the straight
+    /// body, two more windows in the row (thirteen in the old car).
+    func testTheCabCarIsMadeLongerInItsStraightBody() throws {
+        let cab = faces(try XCTUnwrap(Map3DKyushu800.model(.cab)))
+        let crew = try XCTUnwrap(Map3DKyushu800.doors(.cab).first { $0.crew })
+        let tip = try XCTUnwrap(cab.map(\.x).max())
+        XCTAssertEqual(Map3DKyushu800.Unit.cab.pitch / 2 - crew.x.upperBound, 6.58 * 25 / 21, accuracy: 0.05, "the nose")
+        XCTAssertGreaterThan(tip, crew.x.upperBound + 7)
+        // The row's windows on one wall, between the doors: runs of glass
+        // along the car.
+        let doors = Map3DKyushu800.doors(.cab)
+        let glass = cab.filter { face in
+            face.colour == Map3DTrainStyle.glass && face.y > 1.6
+                && !doors.contains { $0.x.lowerBound - 0.1 < face.x && face.x < $0.x.upperBound + 0.1 }
+        }.map(\.x).sorted()
+        var windows: [ClosedRange<Float>] = []
+        for x in glass {
+            if let last = windows.last, x - last.upperBound < 0.5 { windows[windows.count - 1] = last.lowerBound...x } else { windows.append(x...x) }
+        }
+        XCTAssertEqual(windows.count, 15)
+        let steps = zip(windows.dropFirst(), windows).map { ($0.lowerBound + $0.upperBound - $1.lowerBound - $1.upperBound) / 2 }
+        XCTAssertTrue(steps.allSatisfy { $0 > 0.93 && $0 < 1.01 }, "no wider apart than the old windows at the middle car's scale: \(steps)")
     }
 
     /// The wheels stand on standard-gauge rails: 1,435 mm between the

@@ -64,7 +64,6 @@ HEIGHT = 3.65 / 3.964    # 屋頂 3.964 → 3.65
 CAB_LENGTH = 27.35        # 真車的頭車
 NOSE_FROM = -4.03         # 頭車：直線車身從這裡（乘務員門的前緣）往後
 BAYS = 2                  # 頭車多插幾格窗
-WALL_ZONE = 0.2           # 乘務員門後那段牆上，拿來加長的一小段（舊版的公尺）
 BOGIE_FROM_END = 3.75     # 真車：轉向架中心離連結面
 BOGIE_CENTRES = 17.5      # 真車：轉向架中心距
 
@@ -274,28 +273,22 @@ def lengthen(triangles):
     if rest < 0:
         raise SystemExit("插的窗格比要補的長度還長")
     bay = (centres[middle - 1] + centres[middle]) / 2          # 兩格窗中間的牆
-    plain = (doors_at[0][1] + windows[0][0]) / 2 - WALL_ZONE / 2   # 乘務員門與第一格窗之間
-    if not (doors_at[0][1] < plain and plain + WALL_ZONE < windows[0][0]):
-        raise SystemExit("乘務員門與第一格窗之間沒有空的牆")
-    for value in (plain, plain + WALL_ZONE, bay, bay + BAYS * pitch):
+    plain = (doors_at[0][1] + windows[0][0]) / 2             # 乘務員門與第一格窗之間的牆的正中
+    # 牆：這個面以後的頂點往後移，跨過它的三角形跟著變長（那裡的車身是直的，
+    # 形狀不變，不用多切面）。窗格：把兩個面之間那一段切出來，照樣再排一次。
+    triangles = [(c + np.outer(np.where(c[:, 2] >= plain, rest, 0), [0, 0, 1]), kind) for c, kind in triangles]
+    start = bay + rest
+    for value in (start, start + BAYS * pitch):
         triangles = cut_at(triangles, value)
     out = []
     for c, kind in triangles:
         at = float(c[:, 2].mean())
-        c = c.copy()
-        if at < plain:
-            pass
-        elif at < plain + WALL_ZONE:
-            c[:, 2] = plain + (c[:, 2] - plain) * (WALL_ZONE + rest) / WALL_ZONE
-        elif at < bay:
-            c[:, 2] += rest
-        elif at < bay + BAYS * pitch:
-            c[:, 2] += rest
+        if start < at < start + BAYS * pitch:
             again = c.copy()
             again[:, 2] += BAYS * pitch
             out.append((again, kind))
-        else:
-            c[:, 2] += rest + BAYS * pitch
+        elif at > start:
+            c = c + np.array([0, 0, BAYS * pitch])
         out.append((c, kind))
 
     def moved(points: np.ndarray) -> np.ndarray:
