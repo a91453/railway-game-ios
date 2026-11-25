@@ -135,6 +135,18 @@
 //   metro it sells, Fukuoka's 1,067 mm Kūkō Line too, so they have no
 //   gauge: they run on any ordinary track but the forest railway's. The
 //   guideway trains have none either (decision 951's rule is theirs).
+// - The Keikyu New 1000 (京急新1000形, decision 986), the commuter EMU the
+//   3D map already drew a train of no type as (decision 956), is a type of
+//   its own so that its cars stand the real 18 m apart and a train of them
+//   fits its platform car for car: a train of no type stands its cars 20 m
+//   apart. The Japanese Wikipedia's page of the type (京急1000形電車 (2代),
+//   read 2026-11-25): 18,000 mm long, 1,435 mm gauge, 120 km/h in service,
+//   3.5 km/h a second to start and 4.0 of service braking
+//   (``TrainPerformance/keikyuNew1000``); the aluminium cars the model is
+//   (the red body with the white window band) are rated 122 a cab car and
+//   130 a middle car, an eight-car set's 1,024 over 8, so 128 a car. Three
+//   doors a side, as the model has. Its prices are this project's (gap):
+//   the EMU800's, a commuter EMU's.
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -328,6 +340,10 @@ public enum TrainTypeCatalog {
               gauge: .cape),
         .init(code: "C381", family: .metro, offer: .added, capacity: 310, doors: 4, overloads: true,
               performance: .metroC381, firstDollars: 450_000, carDollars: 120_000, operatingPermille: 1_000, carMetres: (22, 0),
+              gauge: .standard),
+        // Decision 986: the Keikyu New 1000, at its real 18 m.
+        .init(code: "KEIKYU1000", family: .railway, offer: .added, capacity: 128, doors: 3, overloads: true,
+              performance: .keikyuNew1000, firstDollars: 540_000, carDollars: 120_000, operatingPermille: 1_000, carMetres: (18, 0),
               gauge: .standard),
     ]
 

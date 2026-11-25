@@ -70,8 +70,10 @@ final class Map3DKeikyuNew1000Tests: XCTestCase {
         let pack = Map3DModelPack.standard
         let layout = try XCTUnwrap(pack.layout(forType: Map3DRedCommuter.key, count: 4))
         XCTAssertEqual(layout.map(\.length).reduce(0, +), 80.0, accuracy: 0.05)
-        XCTAssertEqual(Map3DShowcase.entry(Map3DRedCommuter.key)?.category, .japan)
-        XCTAssertEqual(Map3DShowcase.entry(Map3DRedCommuter.key)?.chinese, "京急新1000形")
+        // Decision 986: the general train's look; the Keikyu New 1000 has
+        // a row of its own at 18 m (``Map3DKeikyuNew1000At18Tests``).
+        XCTAssertEqual(Map3DShowcase.entry(Map3DRedCommuter.key)?.category, .other)
+        XCTAssertEqual(Map3DShowcase.entry(Map3DRedCommuter.key)?.chinese, "通用列車")
     }
 
     /// Decision 956's comparison: the car clears the bore, the footbridge's
