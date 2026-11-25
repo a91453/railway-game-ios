@@ -1,0 +1,978 @@
+# One line a model of Map3DModelPack.standard the train registry does not own, sorted
+# (Map3DModelPackLockTests.testTheOrderAndTheLampsAreAsBefore): its name, then
+# "lamps <windows' model or -> <hash>" for a running car and "sign <sign>" for one with
+# a destination sign. merge=union (.gitattributes): add your models' lines, change no other.
+aircraft-commuter19-single
+aircraft-commuter19-single-far
+aircraft-narrowJet-single
+aircraft-narrowJet-single-far
+aircraft-regional70-single
+aircraft-regional70-single-far
+aircraft-wideJet-single
+aircraft-wideJet-single-far
+airfield-baggageCart-single
+airfield-boardingStairs-single
+airfield-fuelTruck-single
+airfield-tug-single
+bicycle
+bike-rack
+bike-shed
+blue-seven-formation
+blue-seven-leading
+blue-seven-middleFive
+blue-seven-middleFour
+blue-seven-middleOne
+blue-seven-middleThree
+blue-seven-middleTwo
+blue-seven-trailing
+cablecar-cabin-crystal
+cablecar-cabin-crystal-far
+cablecar-cabin-ngongping-crystal
+cablecar-cabin-ngongping-crystal-far
+cablecar-cabin-ngongping-standard
+cablecar-cabin-ngongping-standard-far
+cablecar-cabin-standard
+cablecar-cabin-standard-far
+cablecar-cabin-sunmoon-blue
+cablecar-cabin-sunmoon-blue-far
+cablecar-cabin-sunmoon-crystal
+cablecar-cabin-sunmoon-crystal-far
+cablecar-cabin-sunmoon-red
+cablecar-cabin-sunmoon-red-far
+cablecar-cabin-sunmoon-yellow
+cablecar-cabin-sunmoon-yellow-far
+cablecar-cabin-wulai-green
+cablecar-cabin-wulai-green-far
+cablecar-cabin-wulai-red
+cablecar-cabin-wulai-red-far
+cablecar-rope
+cablecar-station-corner
+cablecar-station-corner-far
+cablecar-station-terminal
+cablecar-station-terminal-far
+cablecar-station-through
+cablecar-station-through-far
+cablecar-tower
+cablecar-tower-far
+coach-stop-roadside-far
+coach-stop-roadside-near
+commuter-cab lamps light-commuter-cab 67305cbe2a7667ba
+commuter-car lamps light-commuter-car cbf29ce484222325
+crossing-warning-arm
+duplex-formation
+duplex-locomotive
+duplex-tender
+express-cab lamps light-express-cab 85fa8204f05d2eeb
+express-car lamps light-express-car cbf29ce484222325
+ferry-cijin-single
+ferry-cijin-single-far
+ferry-hongKong-single
+ferry-hongKong-single-far
+ferry-hongKongOutlying-single
+ferry-hongKongOutlying-single-far
+ferry-pier-finger-single
+ferry-pier-finger-single-far
+ferry-pier-hall-single
+ferry-pier-hall-single-far
+ferry-pier-single
+ferry-pier-single-far
+ferry-tamsui-single
+ferry-tamsui-single-far
+fi-bus-stop
+fi-crossing-sign
+fi-give-way-sign
+fi-lamp
+fi-lamp-double
+fi-shelter
+fi-signal-amber
+fi-signal-green
+fi-signal-red
+fi-signal-red-amber
+fi-walk-dark
+fi-walk-stop
+fi-walk-walk
+green-commuter-formation
+green-commuter-leading
+green-commuter-trailing
+green-tram-formation
+green-tram-head
+green-tram-middle
+green-tram-tail
+highSpeed-cab lamps light-highSpeed-cab e0eaa74420910bd0
+highSpeed-car lamps light-highSpeed-car cbf29ce484222325
+highSpeed-panto lamps light-highSpeed-panto a72a8b4fa90b1eb5
+hk-signal-amber
+hk-signal-green
+hk-signal-red
+hk-signal-red-amber
+jp-bus-stop
+jp-pole
+jp-pole-lamp
+jp-pole-plain
+jp-pole-transformer
+jp-pole-transformers
+jp-signal-amber
+jp-signal-green
+jp-signal-red
+jp-walk-dark
+jp-walk-stop
+jp-walk-walk
+life-bus
+life-car
+life-coachBus
+life-coachBus-blue-white-far
+life-coachBus-blue-white-near
+life-coachBus-forest-white-far
+life-coachBus-forest-white-near
+life-coachBus-gold-navy-far
+life-coachBus-gold-navy-near
+life-coachBus-sea-green-far
+life-coachBus-sea-green-near
+life-coachBus-sky-slate-far
+life-coachBus-sky-slate-near
+life-coachBus-slate-cream-far
+life-coachBus-slate-cream-near
+life-coachBus-warm-red-far
+life-coachBus-warm-red-near
+life-commuterStanding
+life-commuterWalking
+life-deliveryScooter
+life-doubleDecker
+life-electricScooter
+life-garbageTruck
+life-lowFloorBus
+life-lowFloorBus-route
+life-midiBus
+life-minibus
+life-recyclingTruck
+life-scooter
+life-scooterPair
+life-shuttleBus
+life-standing
+life-stepScooter
+life-stepScooterPair
+life-suv
+life-taxi
+life-van
+life-walking
+life-yellowTaxi
+light-commuter-cab
+light-commuter-car
+light-express-cab
+light-express-car
+light-highSpeed-cab
+light-highSpeed-car
+light-highSpeed-panto
+light-metro-cab
+light-metro-car
+light-peopleMover-cab
+light-peopleMover-car
+light-set-ALISHAN-car
+light-set-ALISHAN-tail
+light-set-ALISHANFar-car
+light-set-ALISHANFar-tail
+light-set-BLUE-car
+light-set-BLUE-fourth
+light-set-BLUE-head
+light-set-BLUE-panto
+light-set-BLUE-tail
+light-set-BLUEFar-car
+light-set-BLUEFar-fourth
+light-set-BLUEFar-head
+light-set-BLUEFar-panto
+light-set-BLUEFar-tail
+light-set-E200CK-car
+light-set-E200CK-tail
+light-set-E200CKFar-car
+light-set-E200CKFar-tail
+light-set-E500CK-car
+light-set-E500CK-tail
+light-set-E500CKFar-car
+light-set-E500CKFar-tail
+light-set-HAIFENG-car
+light-set-HAIFENG-head
+light-set-HAIFENG-panto
+light-set-HAIFENG-tail
+light-set-HAIFENGFar-car
+light-set-HAIFENGFar-head
+light-set-HAIFENGFar-panto
+light-set-HAIFENGFar-tail
+light-set-MINGRI-car
+light-set-MINGRI-tail
+light-set-MINGRIFar-car
+light-set-MINGRIFar-tail
+light-set-R100CK-car
+light-set-R100CK-head
+light-set-R100CK-tail
+light-set-R100CKFar-car
+light-set-R100CKFar-tail
+light-set-R200CK-car
+light-set-R200CK-head
+light-set-R200CK-tail
+light-set-R200CKFar-car
+light-set-R200CKFar-head
+light-set-R200CKFar-tail
+light-set-SHANLAN-car
+light-set-SHANLAN-head
+light-set-SHANLAN-panto
+light-set-SHANLAN-tail
+light-set-SHANLANFar-car
+light-set-SHANLANFar-head
+light-set-SHANLANFar-panto
+light-set-SHANLANFar-tail
+light-set-STAR-car
+light-set-STAR-tail
+light-set-STARFar-car
+light-set-STARFar-tail
+light-set-SUMMER-car
+light-set-SUMMER-tail
+light-set-SUMMERFar-car
+light-set-SUMMERFar-tail
+light-set-ankengLRT-head
+light-set-ankengLRT-tail
+light-set-ankengLRTFar-head
+light-set-ankengLRTFar-tail
+light-set-blueSeven-car
+light-set-blueSeven-head
+light-set-blueSeven-tail
+light-set-circular610-car
+light-set-circular610-carBack
+light-set-circular610-head
+light-set-circular610-tail
+light-set-circular610Far-car
+light-set-circular610Far-carBack
+light-set-circular610Far-head
+light-set-circular610Far-tail
+light-set-danhaiLRT-head
+light-set-danhaiLRT-tail
+light-set-danhaiLRTFar-head
+light-set-danhaiLRTFar-tail
+light-set-dieselExpress-car
+light-set-dieselExpress-head
+light-set-dieselExpress-single
+light-set-dieselExpress-tail
+light-set-dieselExpressFar-car
+light-set-dieselExpressFar-head
+light-set-dieselExpressFar-single
+light-set-dieselExpressFar-tail
+light-set-dieselRailcar-car
+light-set-dieselRailcar-head
+light-set-dieselRailcar-single
+light-set-dieselRailcar-tail
+light-set-dieselRailcarFar-car
+light-set-dieselRailcarFar-head
+light-set-dieselRailcarFar-single
+light-set-dieselRailcarFar-tail
+light-set-emu3000-car
+light-set-emu3000-em6
+light-set-emu3000-ep10
+light-set-emu3000-ep7
+light-set-emu3000-et
+light-set-emu3000-head
+light-set-emu3000-panto
+light-set-emu3000-tail
+light-set-emu3000Far-car
+light-set-emu3000Far-em6
+light-set-emu3000Far-ep10
+light-set-emu3000Far-ep7
+light-set-emu3000Far-et
+light-set-emu3000Far-head
+light-set-emu3000Far-panto
+light-set-emu3000Far-tail
+light-set-emu500-car
+light-set-emu500-carBack
+light-set-emu500-centre
+light-set-emu500-centreBack
+light-set-emu500-head
+light-set-emu500-panto
+light-set-emu500-pantoBack
+light-set-emu500-tail
+light-set-emu500Far-car
+light-set-emu500Far-carBack
+light-set-emu500Far-centre
+light-set-emu500Far-centreBack
+light-set-emu500Far-head
+light-set-emu500Far-panto
+light-set-emu500Far-pantoBack
+light-set-emu500Far-tail
+light-set-emu700-car
+light-set-emu700-carBack
+light-set-emu700-centre
+light-set-emu700-centreBack
+light-set-emu700-head
+light-set-emu700-panto
+light-set-emu700-pantoBack
+light-set-emu700-tail
+light-set-emu700Far-car
+light-set-emu700Far-carBack
+light-set-emu700Far-centre
+light-set-emu700Far-centreBack
+light-set-emu700Far-head
+light-set-emu700Far-panto
+light-set-emu700Far-pantoBack
+light-set-emu700Far-tail
+light-set-emu800-car
+light-set-emu800-carBack
+light-set-emu800-centre
+light-set-emu800-centreBack
+light-set-emu800-head
+light-set-emu800-panto
+light-set-emu800-pantoBack
+light-set-emu800-tail
+light-set-emu800Far-car
+light-set-emu800Far-carBack
+light-set-emu800Far-centre
+light-set-emu800Far-centreBack
+light-set-emu800Far-head
+light-set-emu800Far-panto
+light-set-emu800Far-pantoBack
+light-set-emu800Far-tail
+light-set-emu900-car
+light-set-emu900-carBack
+light-set-emu900-centre
+light-set-emu900-centreBack
+light-set-emu900-fourth
+light-set-emu900-fourthBack
+light-set-emu900-head
+light-set-emu900-panto
+light-set-emu900-pantoBack
+light-set-emu900-tail
+light-set-emu900Far-car
+light-set-emu900Far-carBack
+light-set-emu900Far-centre
+light-set-emu900Far-centreBack
+light-set-emu900Far-fourth
+light-set-emu900Far-fourthBack
+light-set-emu900Far-head
+light-set-emu900Far-panto
+light-set-emu900Far-pantoBack
+light-set-emu900Far-tail
+light-set-fiveSectionLRT-head
+light-set-fiveSectionLRT-tail
+light-set-fourCarMetro-car
+light-set-fourCarMetro-head
+light-set-fourCarMetro-tail
+light-set-greenCommuter-car
+light-set-greenCommuter-head
+light-set-greenCommuter-tail
+light-set-greenTram-car
+light-set-greenTram-head
+light-set-greenTram-single
+light-set-greenTram-tail
+light-set-highSpeed-car
+light-set-highSpeed-head
+light-set-highSpeed-panto
+light-set-highSpeed-tail
+light-set-highSpeedFar-car
+light-set-highSpeedFar-head
+light-set-highSpeedFar-panto
+light-set-highSpeedFar-tail
+light-set-kaohsiung-car
+light-set-kaohsiung-head
+light-set-kaohsiung-tail
+light-set-kaohsiungFar-car
+light-set-kaohsiungFar-head
+light-set-kaohsiungFar-tail
+light-set-klrtCAF-head
+light-set-klrtCAF-tail
+light-set-klrtCAFFar-head
+light-set-klrtCAFFar-tail
+light-set-klrtCitadis-head
+light-set-klrtCitadis-tail
+light-set-klrtCitadisFar-head
+light-set-klrtCitadisFar-tail
+light-set-metroC341-car
+light-set-metroC341-centre
+light-set-metroC341-head
+light-set-metroC341-tail
+light-set-metroC341Far-car
+light-set-metroC341Far-centre
+light-set-metroC341Far-head
+light-set-metroC341Far-tail
+light-set-metroC371-car
+light-set-metroC371-centre
+light-set-metroC371-head
+light-set-metroC371-tail
+light-set-metroC371Far-car
+light-set-metroC371Far-centre
+light-set-metroC371Far-head
+light-set-metroC371Far-tail
+light-set-metroC381-car
+light-set-metroC381-centre
+light-set-metroC381-head
+light-set-metroC381-tail
+light-set-metroC381Far-car
+light-set-metroC381Far-centre
+light-set-metroC381Far-head
+light-set-metroC381Far-tail
+light-set-metroGeneric-car
+light-set-metroGeneric-head
+light-set-metroGeneric-tail
+light-set-n700sG-car
+light-set-n700sG-carBack
+light-set-n700sG-head
+light-set-n700sG-panto
+light-set-n700sG-pantoBack
+light-set-n700sG-tail
+light-set-n700sGFar-car
+light-set-n700sGFar-carBack
+light-set-n700sGFar-head
+light-set-n700sGFar-panto
+light-set-n700sGFar-pantoBack
+light-set-n700sGFar-tail
+light-set-pushPull-car
+light-set-pushPullE1000-car
+light-set-pushPullE1000Far-car
+light-set-pushPullFar-car
+light-set-puyuma-car
+light-set-puyuma-centre
+light-set-puyuma-head
+light-set-puyuma-panto
+light-set-puyuma-pantoBack
+light-set-puyuma-tail
+light-set-puyumaFar-car
+light-set-puyumaFar-centre
+light-set-puyumaFar-head
+light-set-puyumaFar-panto
+light-set-puyumaFar-pantoBack
+light-set-puyumaFar-tail
+light-set-redCommuter-car
+light-set-redCommuter-head
+light-set-redCommuter-tail
+light-set-redCommuterFar-car
+light-set-redCommuterFar-head
+light-set-redCommuterFar-tail
+light-set-sanying-head
+light-set-sanying-tail
+light-set-sanyingFar-head
+light-set-sanyingFar-tail
+light-set-sevenSectionLRT-car
+light-set-sevenSectionLRT-head
+light-set-sevenSectionLRT-tail
+light-set-taichungGreen-head
+light-set-taichungGreen-tail
+light-set-taichungGreenFar-head
+light-set-taichungGreenFar-tail
+light-set-taoyuanAirport1000-car
+light-set-taoyuanAirport1000-centre
+light-set-taoyuanAirport1000-head
+light-set-taoyuanAirport1000-tail
+light-set-taoyuanAirport1000Far-car
+light-set-taoyuanAirport1000Far-centre
+light-set-taoyuanAirport1000Far-head
+light-set-taoyuanAirport1000Far-tail
+light-set-taoyuanAirport2000-car
+light-set-taoyuanAirport2000-centre
+light-set-taoyuanAirport2000-fourth
+light-set-taoyuanAirport2000-head
+light-set-taoyuanAirport2000-tail
+light-set-taoyuanAirport2000Far-car
+light-set-taoyuanAirport2000Far-centre
+light-set-taoyuanAirport2000Far-fourth
+light-set-taoyuanAirport2000Far-head
+light-set-taroko-car
+light-set-taroko-head
+light-set-taroko-panto
+light-set-taroko-tail
+light-set-tarokoFar-car
+light-set-tarokoFar-head
+light-set-tarokoFar-panto
+light-set-tarokoFar-tail
+light-set-threeCarUrban-car
+light-set-threeCarUrban-head
+light-set-threeCarUrban-tail
+light-set-wenhu-car
+light-set-wenhu-head
+light-set-wenhu-tail
+light-set-wenhu370-car
+light-set-wenhu370-centre
+light-set-wenhu370-head
+light-set-wenhu370-tail
+light-set-wenhu370Far-car
+light-set-wenhu370Far-centre
+light-set-wenhu370Far-head
+light-set-wenhu370Far-tail
+light-set-wenhuVAL256-car
+light-set-wenhuVAL256-centre
+light-set-wenhuVAL256-head
+light-set-wenhuVAL256-tail
+light-set-wenhuVAL256Far-car
+light-set-wenhuVAL256Far-centre
+light-set-wenhuVAL256Far-head
+light-set-wenhuVAL256Far-tail
+lrt-five-formation
+lrt-five-leading
+lrt-five-middle
+lrt-five-suspendedFront
+lrt-five-suspendedRear
+lrt-five-trailing
+lrt-seven-formation
+lrt-seven-leading
+lrt-seven-middleFront
+lrt-seven-middleRear
+lrt-seven-suspendedCentre
+lrt-seven-suspendedFront
+lrt-seven-suspendedRear
+lrt-seven-trailing
+metro-cab lamps light-metro-cab 9bcf28f9c2825f8b
+metro-car lamps light-metro-car cbf29ce484222325
+metro-four-formation
+metro-four-leading
+metro-four-middleFront
+metro-four-middleRear
+metro-four-trailing
+ped-elderly-standing
+ped-elderly-walking
+ped-office-standing
+ped-office-walking
+ped-student-standing
+ped-student-walking
+ped-traveller-standing
+ped-traveller-walking
+ped-umbrella-standing
+ped-umbrella-walking
+peopleMover-cab lamps light-peopleMover-cab 82ea7634ef3dcabf
+peopleMover-car lamps light-peopleMover-car e863433f6f5722e5
+prop-busStop
+prop-lamp
+prop-pole
+prop-signalAmber
+prop-signalGo
+prop-signalStop
+prop-tree
+prop-vending
+public-bike
+refresh-700t-cab
+refresh-700t-middle
+refresh-700t-panto
+refresh-700t-tail
+refresh-e200
+reindeer-grazing
+reindeer-grazing-far
+reindeer-sled-ride
+reindeer-sled-ride-far
+reindeer-standing
+reindeer-standing-far
+santa-sleigh-single
+scenery-busStopPole
+scenery-bushes
+scenery-bushesLarge
+scenery-coalBunker
+scenery-pine
+scenery-pineTall
+scenery-pineYoung
+scenery-postBoxes
+scenery-tank
+set-ALISHAN-car lamps light-set-ALISHAN-car 2951ea3ef52e656d
+set-ALISHAN-head lamps - 3b3b5ccc91dde5e9
+set-ALISHAN-tail lamps light-set-ALISHAN-tail 2951ea3ef52e656d
+set-ALISHANFar-car lamps light-set-ALISHANFar-car df578168bd36df35
+set-ALISHANFar-head lamps - 721c9588ac72ed75
+set-ALISHANFar-tail lamps light-set-ALISHANFar-tail df578168bd36df35
+set-BLUE-car lamps light-set-BLUE-car 3f5c40cfe6655375
+set-BLUE-fourth lamps light-set-BLUE-fourth 3f5c40cfe6655375
+set-BLUE-head lamps light-set-BLUE-head f0f8562b853c29d
+set-BLUE-panto lamps light-set-BLUE-panto 3f5c40cfe6655375
+set-BLUE-tail lamps light-set-BLUE-tail 51d28323a7f820b1
+set-BLUEFar-car lamps light-set-BLUEFar-car 3f5c40cfe6655375
+set-BLUEFar-fourth lamps light-set-BLUEFar-fourth 3f5c40cfe6655375
+set-BLUEFar-head lamps light-set-BLUEFar-head 7222ea488d916161
+set-BLUEFar-panto lamps light-set-BLUEFar-panto 3f5c40cfe6655375
+set-BLUEFar-tail lamps light-set-BLUEFar-tail 51d28323a7f820b1
+set-E200CK-car lamps light-set-E200CK-car 11d2f995c7c1ed25
+set-E200CK-head lamps - acaea01801bfd60d
+set-E200CK-tail lamps light-set-E200CK-tail 69d8015de59d0bd
+set-E200CKFar-car lamps light-set-E200CKFar-car 11d2f995c7c1ed25
+set-E200CKFar-head lamps - ba3f6d8d46c9f2d5
+set-E200CKFar-tail lamps light-set-E200CKFar-tail 69d8015de59d0bd
+set-E500CK-car lamps light-set-E500CK-car 11d2f995c7c1ed25
+set-E500CK-head lamps - 17bc5856fa550585
+set-E500CK-tail lamps light-set-E500CK-tail 69d8015de59d0bd
+set-E500CKFar-car lamps light-set-E500CKFar-car 11d2f995c7c1ed25
+set-E500CKFar-head lamps - c5464a1784a559ed
+set-E500CKFar-tail lamps light-set-E500CKFar-tail 69d8015de59d0bd
+set-FREIGHT-car lamps - 2b0cc64da8d3d885
+set-FREIGHT-centre lamps - 2b0cc64da8d3d885
+set-FREIGHT-fourth lamps - b2d446d171a585c5
+set-FREIGHT-tail lamps - 515321ac43193821
+set-FREIGHTFar-car lamps - 8af33e1a52eda26d
+set-FREIGHTFar-centre lamps - 8af33e1a52eda26d
+set-FREIGHTFar-fourth lamps - 72c5024b4bf5c95d
+set-FREIGHTFar-tail lamps - e4640016fc5f0079
+set-HAIFENG-car lamps light-set-HAIFENG-car a57a70a155fef955
+set-HAIFENG-head lamps light-set-HAIFENG-head e7b331b7b301d25d
+set-HAIFENG-panto lamps light-set-HAIFENG-panto cbf29ce484222325
+set-HAIFENG-tail lamps light-set-HAIFENG-tail 2df9ee899a6046bd
+set-HAIFENGFar-car lamps light-set-HAIFENGFar-car a57a70a155fef955
+set-HAIFENGFar-head lamps light-set-HAIFENGFar-head c8be0144a21c0b1d
+set-HAIFENGFar-panto lamps light-set-HAIFENGFar-panto cbf29ce484222325
+set-HAIFENGFar-tail lamps light-set-HAIFENGFar-tail e686c99481cdbf9d
+set-MINGRI-car lamps light-set-MINGRI-car 11d2f995c7c1ed25
+set-MINGRI-head lamps - acaea01801bfd60d
+set-MINGRI-tail lamps light-set-MINGRI-tail 69d8015de59d0bd
+set-MINGRIFar-car lamps light-set-MINGRIFar-car 11d2f995c7c1ed25
+set-MINGRIFar-head lamps - ba3f6d8d46c9f2d5
+set-MINGRIFar-tail lamps light-set-MINGRIFar-tail 69d8015de59d0bd
+set-R100CK-car lamps light-set-R100CK-car 11d2f995c7c1ed25
+set-R100CK-head lamps light-set-R100CK-head d9f86bff786cea19
+set-R100CK-tail lamps light-set-R100CK-tail 69d8015de59d0bd
+set-R100CKFar-car lamps light-set-R100CKFar-car 11d2f995c7c1ed25
+set-R100CKFar-head lamps - 9106474e6ed7363d
+set-R100CKFar-tail lamps light-set-R100CKFar-tail 69d8015de59d0bd
+set-R200CK-car lamps light-set-R200CK-car 11d2f995c7c1ed25
+set-R200CK-head lamps light-set-R200CK-head 5afd919c5371a81d
+set-R200CK-tail lamps light-set-R200CK-tail 69d8015de59d0bd
+set-R200CKFar-car lamps light-set-R200CKFar-car 11d2f995c7c1ed25
+set-R200CKFar-head lamps light-set-R200CKFar-head 41af808d82a95f11
+set-R200CKFar-tail lamps light-set-R200CKFar-tail 69d8015de59d0bd
+set-SHANLAN-car lamps light-set-SHANLAN-car a57a70a155fef955
+set-SHANLAN-head lamps light-set-SHANLAN-head e7b331b7b301d25d
+set-SHANLAN-panto lamps light-set-SHANLAN-panto cbf29ce484222325
+set-SHANLAN-tail lamps light-set-SHANLAN-tail 2df9ee899a6046bd
+set-SHANLANFar-car lamps light-set-SHANLANFar-car a57a70a155fef955
+set-SHANLANFar-head lamps light-set-SHANLANFar-head c8be0144a21c0b1d
+set-SHANLANFar-panto lamps light-set-SHANLANFar-panto cbf29ce484222325
+set-SHANLANFar-tail lamps light-set-SHANLANFar-tail e686c99481cdbf9d
+set-STAR-car lamps light-set-STAR-car 11d2f995c7c1ed25
+set-STAR-head lamps - 17bc5856fa550585
+set-STAR-tail lamps light-set-STAR-tail 69d8015de59d0bd
+set-STARFar-car lamps light-set-STARFar-car 11d2f995c7c1ed25
+set-STARFar-head lamps - c5464a1784a559ed
+set-STARFar-tail lamps light-set-STARFar-tail 69d8015de59d0bd
+set-SUMMER-car lamps light-set-SUMMER-car 11d2f995c7c1ed25
+set-SUMMER-head lamps - 9330b163b2f33091
+set-SUMMER-tail lamps light-set-SUMMER-tail 69d8015de59d0bd
+set-SUMMER-tender lamps - b19bce14f52a483d
+set-SUMMERFar-car lamps light-set-SUMMERFar-car 11d2f995c7c1ed25
+set-SUMMERFar-head lamps - 82b16b80f25eb4b9
+set-SUMMERFar-tail lamps light-set-SUMMERFar-tail 69d8015de59d0bd
+set-SUMMERFar-tender lamps - 4430c38fed4e3825
+set-ankengLRT-head lamps light-set-ankengLRT-head ed79c6c211c76421
+set-ankengLRT-tail lamps light-set-ankengLRT-tail cfbcab3a930defd6
+set-ankengLRTFar-head lamps light-set-ankengLRTFar-head 4ad83989123157e9
+set-ankengLRTFar-tail lamps light-set-ankengLRTFar-tail 69673237a00b877
+set-blueSeven-car lamps light-set-blueSeven-car cbf29ce484222325
+set-blueSeven-head lamps light-set-blueSeven-head dbd2fb339d1ad625
+set-blueSeven-tail lamps light-set-blueSeven-tail 5155eb2de69c0265
+set-circular610-car lamps light-set-circular610-car 673bf2ff1ca522b5
+set-circular610-carBack lamps light-set-circular610-carBack 673bf2ff1ca522b5
+set-circular610-head lamps light-set-circular610-head c8a506400da160fd
+set-circular610-tail lamps light-set-circular610-tail 1f5eaf51573abcfd
+set-circular610Far-car lamps light-set-circular610Far-car 673bf2ff1ca522b5
+set-circular610Far-carBack lamps light-set-circular610Far-carBack 673bf2ff1ca522b5
+set-circular610Far-head lamps light-set-circular610Far-head c8a506400da160fd
+set-circular610Far-tail lamps light-set-circular610Far-tail 1f5eaf51573abcfd
+set-danhaiLRT-head lamps light-set-danhaiLRT-head ed79c6c211c76421
+set-danhaiLRT-tail lamps light-set-danhaiLRT-tail cfbcab3a930defd6
+set-danhaiLRTFar-head lamps light-set-danhaiLRTFar-head 4ad83989123157e9
+set-danhaiLRTFar-tail lamps light-set-danhaiLRTFar-tail 69673237a00b877
+set-dieselExpress-car lamps light-set-dieselExpress-car f88f3cb3239d1f9d
+set-dieselExpress-head lamps light-set-dieselExpress-head f88f3cb3239d1f9d
+set-dieselExpress-single lamps light-set-dieselExpress-single f88f3cb3239d1f9d
+set-dieselExpress-tail lamps light-set-dieselExpress-tail f85073c7b522c43d
+set-dieselExpressFar-car lamps light-set-dieselExpressFar-car c355a09143719afd
+set-dieselExpressFar-head lamps light-set-dieselExpressFar-head c355a09143719afd
+set-dieselExpressFar-single lamps light-set-dieselExpressFar-single c355a09143719afd
+set-dieselExpressFar-tail lamps light-set-dieselExpressFar-tail ee7691bfd770576d
+set-dieselRailcar-car lamps light-set-dieselRailcar-car f88f3cb3239d1f9d
+set-dieselRailcar-head lamps light-set-dieselRailcar-head f88f3cb3239d1f9d
+set-dieselRailcar-single lamps light-set-dieselRailcar-single f88f3cb3239d1f9d
+set-dieselRailcar-tail lamps light-set-dieselRailcar-tail f85073c7b522c43d
+set-dieselRailcarFar-car lamps light-set-dieselRailcarFar-car c355a09143719afd
+set-dieselRailcarFar-head lamps light-set-dieselRailcarFar-head c355a09143719afd
+set-dieselRailcarFar-single lamps light-set-dieselRailcarFar-single c355a09143719afd
+set-dieselRailcarFar-tail lamps light-set-dieselRailcarFar-tail ee7691bfd770576d
+set-emu3000-car lamps light-set-emu3000-car 4ceead8ca134235
+set-emu3000-em6 lamps light-set-emu3000-em6 4ceead8ca134235
+set-emu3000-ep10 lamps light-set-emu3000-ep10 bfe4ce9ae585fc55
+set-emu3000-ep7 lamps light-set-emu3000-ep7 bfe4ce9ae585fc55
+set-emu3000-et lamps light-set-emu3000-et 4ceead8ca134235
+set-emu3000-head lamps light-set-emu3000-head b27df00487145399 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 8.564, y: 0.0, z: 3.0219998), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-emu3000-panto lamps light-set-emu3000-panto bfe4ce9ae585fc55
+set-emu3000-tail lamps light-set-emu3000-tail 5880bb438307ca39 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -8.564, y: 0.0, z: 3.0219998), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-emu3000Far-car lamps light-set-emu3000Far-car 4ceead8ca134235
+set-emu3000Far-em6 lamps light-set-emu3000Far-em6 4ceead8ca134235
+set-emu3000Far-ep10 lamps light-set-emu3000Far-ep10 aa3678cdaa7edb65
+set-emu3000Far-ep7 lamps light-set-emu3000Far-ep7 aa3678cdaa7edb65
+set-emu3000Far-et lamps light-set-emu3000Far-et 4ceead8ca134235
+set-emu3000Far-head lamps light-set-emu3000Far-head eea79d98ecc9165d sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 8.564, y: 0.0, z: 3.0), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-emu3000Far-panto lamps light-set-emu3000Far-panto aa3678cdaa7edb65
+set-emu3000Far-tail lamps light-set-emu3000Far-tail cec3cfcbcdce2461 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -8.564, y: 0.0, z: 3.0), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-emu500-car lamps light-set-emu500-car 1ba77e7a8d13379d
+set-emu500-carBack lamps light-set-emu500-carBack 595b38ffa683697d
+set-emu500-centre lamps light-set-emu500-centre a57a70a155fef955
+set-emu500-centreBack lamps light-set-emu500-centreBack a57a70a155fef955
+set-emu500-head lamps light-set-emu500-head 595b38ffa683697d sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 10.106999, y: 0.0, z: 3.22), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu500-panto lamps light-set-emu500-panto cbf29ce484222325
+set-emu500-pantoBack lamps light-set-emu500-pantoBack cbf29ce484222325
+set-emu500-tail lamps light-set-emu500-tail 1ba77e7a8d13379d sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -10.106999, y: 0.0, z: 3.22), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu500Far-car lamps light-set-emu500Far-car f9d2d64a229e1381
+set-emu500Far-carBack lamps light-set-emu500Far-carBack 5bca967f4650c171
+set-emu500Far-centre lamps light-set-emu500Far-centre a57a70a155fef955
+set-emu500Far-centreBack lamps light-set-emu500Far-centreBack a57a70a155fef955
+set-emu500Far-head lamps light-set-emu500Far-head 5bca967f4650c171 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 10.069, y: 0.0, z: 3.22), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu500Far-panto lamps light-set-emu500Far-panto cbf29ce484222325
+set-emu500Far-pantoBack lamps light-set-emu500Far-pantoBack cbf29ce484222325
+set-emu500Far-tail lamps light-set-emu500Far-tail f9d2d64a229e1381 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -10.069, y: 0.0, z: 3.22), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu700-car lamps light-set-emu700-car f956cf007dcc9565
+set-emu700-carBack lamps light-set-emu700-carBack f956cf007dcc9565
+set-emu700-centre lamps light-set-emu700-centre f956cf007dcc9565
+set-emu700-centreBack lamps light-set-emu700-centreBack f956cf007dcc9565
+set-emu700-head lamps light-set-emu700-head 27a5ddaaae2f5be5
+set-emu700-panto lamps light-set-emu700-panto ef652b918ae137e5
+set-emu700-pantoBack lamps light-set-emu700-pantoBack ef652b918ae137e5
+set-emu700-tail lamps light-set-emu700-tail a3a0b3f62b2ddf65
+set-emu700Far-car lamps light-set-emu700Far-car f956cf007dcc9565
+set-emu700Far-carBack lamps light-set-emu700Far-carBack f956cf007dcc9565
+set-emu700Far-centre lamps light-set-emu700Far-centre f956cf007dcc9565
+set-emu700Far-centreBack lamps light-set-emu700Far-centreBack f956cf007dcc9565
+set-emu700Far-head lamps light-set-emu700Far-head 3e6b045a5329e2d5
+set-emu700Far-panto lamps light-set-emu700Far-panto b862a3daece7b265
+set-emu700Far-pantoBack lamps light-set-emu700Far-pantoBack b862a3daece7b265
+set-emu700Far-tail lamps light-set-emu700Far-tail ae77791a7fdf8355
+set-emu800-car lamps light-set-emu800-car f956cf007dcc9565
+set-emu800-carBack lamps light-set-emu800-carBack f956cf007dcc9565
+set-emu800-centre lamps light-set-emu800-centre f956cf007dcc9565
+set-emu800-centreBack lamps light-set-emu800-centreBack f956cf007dcc9565
+set-emu800-head lamps light-set-emu800-head b4a31e63d2ffad51 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 9.499008, y: 0.0, z: 3.208), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu800-panto lamps light-set-emu800-panto cbf29ce484222325
+set-emu800-pantoBack lamps light-set-emu800-pantoBack cbf29ce484222325
+set-emu800-tail lamps light-set-emu800-tail ab33203793a0fb61 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -9.499008, y: 0.0, z: 3.208), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu800Far-car lamps light-set-emu800Far-car 9fd1f51d5eac805
+set-emu800Far-carBack lamps light-set-emu800Far-carBack 9fd1f51d5eac805
+set-emu800Far-centre lamps light-set-emu800Far-centre 9fd1f51d5eac805
+set-emu800Far-centreBack lamps light-set-emu800Far-centreBack 9fd1f51d5eac805
+set-emu800Far-head lamps light-set-emu800Far-head d39427f5db191a61 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 9.427378, y: 0.0, z: 3.1990001), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu800Far-panto lamps light-set-emu800Far-panto cbf29ce484222325
+set-emu800Far-pantoBack lamps light-set-emu800Far-pantoBack cbf29ce484222325
+set-emu800Far-tail lamps light-set-emu800Far-tail 783bee1bbb1c80f1 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -9.427378, y: 0.0, z: 3.1990001), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu900-car lamps light-set-emu900-car 4e72cb78a1a74055
+set-emu900-carBack lamps light-set-emu900-carBack 4e72cb78a1a74055
+set-emu900-centre lamps light-set-emu900-centre 4e72cb78a1a74055
+set-emu900-centreBack lamps light-set-emu900-centreBack 4e72cb78a1a74055
+set-emu900-fourth lamps light-set-emu900-fourth 4e72cb78a1a74055
+set-emu900-fourthBack lamps light-set-emu900-fourthBack cbf29ce484222325
+set-emu900-head lamps light-set-emu900-head dc23e878e997048 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 9.684999, y: 0.0, z: 3.24), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu900-panto lamps light-set-emu900-panto cbf29ce484222325
+set-emu900-pantoBack lamps light-set-emu900-pantoBack cbf29ce484222325
+set-emu900-tail lamps light-set-emu900-tail a03fd5aa11f73010 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -9.684999, y: 0.0, z: 3.24), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu900Far-car lamps light-set-emu900Far-car 4e72cb78a1a74055
+set-emu900Far-carBack lamps light-set-emu900Far-carBack 4e72cb78a1a74055
+set-emu900Far-centre lamps light-set-emu900Far-centre 4e72cb78a1a74055
+set-emu900Far-centreBack lamps light-set-emu900Far-centreBack 4e72cb78a1a74055
+set-emu900Far-fourth lamps light-set-emu900Far-fourth 4e72cb78a1a74055
+set-emu900Far-fourthBack lamps light-set-emu900Far-fourthBack cbf29ce484222325
+set-emu900Far-head lamps light-set-emu900Far-head fd26d1562a281011 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 9.76323, y: 0.0, z: 3.24), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-emu900Far-panto lamps light-set-emu900Far-panto cbf29ce484222325
+set-emu900Far-pantoBack lamps light-set-emu900Far-pantoBack cbf29ce484222325
+set-emu900Far-tail lamps light-set-emu900Far-tail 3aeefbbffc90941 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -9.76323, y: 0.0, z: 3.24), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.local)
+set-fiveSectionLRT-head lamps light-set-fiveSectionLRT-head f25d6fddb911a955
+set-fiveSectionLRT-tail lamps light-set-fiveSectionLRT-tail 7242a422a8842841
+set-fourCarMetro-car lamps light-set-fourCarMetro-car cbf29ce484222325
+set-fourCarMetro-head lamps light-set-fourCarMetro-head b7daea36cd0e8731
+set-fourCarMetro-tail lamps light-set-fourCarMetro-tail aa82cf7c910ec111
+set-greenCommuter-car lamps light-set-greenCommuter-car 425bfa915439ae25
+set-greenCommuter-head lamps light-set-greenCommuter-head 425bfa915439ae25
+set-greenCommuter-tail lamps light-set-greenCommuter-tail e7d033ca31159f25
+set-greenTram-car lamps light-set-greenTram-car cbf29ce484222325
+set-greenTram-head lamps light-set-greenTram-head 3d82fc72f631f06d
+set-greenTram-single lamps light-set-greenTram-single 128598e5b9011519
+set-greenTram-tail lamps light-set-greenTram-tail a69d4aab27201eb1
+set-highSpeed-car lamps light-set-highSpeed-car f756fe3759f5cc35
+set-highSpeed-head lamps light-set-highSpeed-head 8810e7b0d57be709
+set-highSpeed-panto lamps light-set-highSpeed-panto cbf29ce484222325
+set-highSpeed-tail lamps light-set-highSpeed-tail 4a4948e9fbb14bb5
+set-highSpeedFar-car lamps light-set-highSpeedFar-car cbf29ce484222325
+set-highSpeedFar-head lamps light-set-highSpeedFar-head dd992ccc8bd554a1
+set-highSpeedFar-panto lamps light-set-highSpeedFar-panto cbf29ce484222325
+set-highSpeedFar-tail lamps light-set-highSpeedFar-tail 52ee0a009a2cd045
+set-kaohsiung-car lamps light-set-kaohsiung-car 65507ba9710a09d5
+set-kaohsiung-head lamps light-set-kaohsiung-head a4faa34f4ae330d2
+set-kaohsiung-tail lamps light-set-kaohsiung-tail 885fe00b774a5b1a
+set-kaohsiungFar-car lamps light-set-kaohsiungFar-car 65507ba9710a09d5
+set-kaohsiungFar-head lamps light-set-kaohsiungFar-head fddae2d1c388e086
+set-kaohsiungFar-tail lamps light-set-kaohsiungFar-tail a4340b9af7d1392e
+set-klrtCAF-head lamps light-set-klrtCAF-head 8da75de6c3ab1a5f
+set-klrtCAF-tail lamps light-set-klrtCAF-tail 976e069ac744e0fe
+set-klrtCAFFar-head lamps light-set-klrtCAFFar-head 65f07a66affd7805
+set-klrtCAFFar-tail lamps light-set-klrtCAFFar-tail e91c2446e45a8748
+set-klrtCitadis-head lamps light-set-klrtCitadis-head 236478935f228b04
+set-klrtCitadis-tail lamps light-set-klrtCitadis-tail 315886091c03a8f3
+set-klrtCitadisFar-head lamps light-set-klrtCitadisFar-head dc0df0c622043200
+set-klrtCitadisFar-tail lamps light-set-klrtCitadisFar-tail 354c300c9ad2688e
+set-metroC341-car lamps light-set-metroC341-car df28de3f8d6375a5
+set-metroC341-centre lamps light-set-metroC341-centre df28de3f8d6375a5
+set-metroC341-head lamps light-set-metroC341-head 108aeafb783418fd
+set-metroC341-tail lamps light-set-metroC341-tail 2c002415fd934559
+set-metroC341Far-car lamps light-set-metroC341Far-car df28de3f8d6375a5
+set-metroC341Far-centre lamps light-set-metroC341Far-centre df28de3f8d6375a5
+set-metroC341Far-head lamps light-set-metroC341Far-head 843a700f1c366761
+set-metroC341Far-tail lamps light-set-metroC341Far-tail 6b5c882d8ab72a4d
+set-metroC371-car lamps light-set-metroC371-car cbf29ce484222325
+set-metroC371-centre lamps light-set-metroC371-centre cbf29ce484222325
+set-metroC371-head lamps light-set-metroC371-head 5500644af0f1a319
+set-metroC371-tail lamps light-set-metroC371-tail 8da7d150e4e58f9d
+set-metroC371Far-car lamps light-set-metroC371Far-car cbf29ce484222325
+set-metroC371Far-centre lamps light-set-metroC371Far-centre cbf29ce484222325
+set-metroC371Far-head lamps light-set-metroC371Far-head 7ce9b92ec2929d61
+set-metroC371Far-tail lamps light-set-metroC371Far-tail 15815b5f8635e655
+set-metroC381-car lamps light-set-metroC381-car cbf29ce484222325
+set-metroC381-centre lamps light-set-metroC381-centre cbf29ce484222325
+set-metroC381-head lamps light-set-metroC381-head 36becc723e791cc1
+set-metroC381-tail lamps light-set-metroC381-tail d49859a6d9aff6e1
+set-metroC381Far-car lamps light-set-metroC381Far-car cbf29ce484222325
+set-metroC381Far-centre lamps light-set-metroC381Far-centre cbf29ce484222325
+set-metroC381Far-head lamps light-set-metroC381Far-head 9704e68e2adf2dd
+set-metroC381Far-tail lamps light-set-metroC381Far-tail 86f91059592c46e1
+set-metroGeneric-car lamps light-set-metroGeneric-car cbf29ce484222325
+set-metroGeneric-head lamps light-set-metroGeneric-head d38aa112f8f8b8d6
+set-metroGeneric-tail lamps light-set-metroGeneric-tail a8d9f4d24ca2f2ae
+set-n700sG-car lamps light-set-n700sG-car 833588564ac0fe85
+set-n700sG-carBack lamps light-set-n700sG-carBack 833588564ac0fe85
+set-n700sG-head lamps light-set-n700sG-head 5c0359b4106350d7
+set-n700sG-panto lamps light-set-n700sG-panto cbf29ce484222325
+set-n700sG-pantoBack lamps light-set-n700sG-pantoBack cbf29ce484222325
+set-n700sG-tail lamps light-set-n700sG-tail a8fd30ffe4015687
+set-n700sGFar-car lamps light-set-n700sGFar-car cbf29ce484222325
+set-n700sGFar-carBack lamps light-set-n700sGFar-carBack cbf29ce484222325
+set-n700sGFar-head lamps light-set-n700sGFar-head 2eb1c726f99b6757
+set-n700sGFar-panto lamps light-set-n700sGFar-panto cbf29ce484222325
+set-n700sGFar-pantoBack lamps light-set-n700sGFar-pantoBack cbf29ce484222325
+set-n700sGFar-tail lamps light-set-n700sGFar-tail c354889dde635f87
+set-pushPull-car lamps light-set-pushPull-car ced4ddc2a7ce4405
+set-pushPull-head lamps - 17bc5856fa550585
+set-pushPullE1000-car lamps light-set-pushPullE1000-car ced4ddc2a7ce4405
+set-pushPullE1000-head lamps - 262ae2e8c60e4d7d
+set-pushPullE1000Far-car lamps light-set-pushPullE1000Far-car ced4ddc2a7ce4405
+set-pushPullE1000Far-head lamps - e06286a975961b45
+set-pushPullFar-car lamps light-set-pushPullFar-car ced4ddc2a7ce4405
+set-pushPullFar-head lamps - c5464a1784a559ed
+set-puyuma-car lamps light-set-puyuma-car cbf29ce484222325
+set-puyuma-centre lamps light-set-puyuma-centre cbf29ce484222325
+set-puyuma-head lamps light-set-puyuma-head f762a22f90b27898 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 8.889, y: 0.0, z: 3.242), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-puyuma-panto lamps light-set-puyuma-panto cbf29ce484222325
+set-puyuma-pantoBack lamps light-set-puyuma-pantoBack cbf29ce484222325
+set-puyuma-tail lamps light-set-puyuma-tail 551bb3c14a3a0940 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -8.889, y: 0.0, z: 3.242), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-puyumaFar-car lamps light-set-puyumaFar-car cbf29ce484222325
+set-puyumaFar-centre lamps light-set-puyumaFar-centre cbf29ce484222325
+set-puyumaFar-head lamps light-set-puyumaFar-head f8af0fb6b25a84ea sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 8.648, y: 0.0, z: 3.242), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-puyumaFar-panto lamps light-set-puyumaFar-panto cbf29ce484222325
+set-puyumaFar-pantoBack lamps light-set-puyumaFar-pantoBack cbf29ce484222325
+set-puyumaFar-tail lamps light-set-puyumaFar-tail fe0ea4448219aa62 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -8.648, y: 0.0, z: 3.242), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-redCommuter-car lamps light-set-redCommuter-car 9b7958466538d205
+set-redCommuter-head lamps light-set-redCommuter-head 678772d796c42e35
+set-redCommuter-tail lamps light-set-redCommuter-tail 3de8907a3ea1bbf5
+set-redCommuterFar-car lamps light-set-redCommuterFar-car 9b7958466538d205
+set-redCommuterFar-head lamps light-set-redCommuterFar-head f5d327d59437f259
+set-redCommuterFar-tail lamps light-set-redCommuterFar-tail 6a8f581317efdb09
+set-sanying-head lamps light-set-sanying-head 14f4b8640463303d
+set-sanying-tail lamps light-set-sanying-tail c822630e517bdc5d
+set-sanyingFar-head lamps light-set-sanyingFar-head 14f4b8640463303d
+set-sanyingFar-tail lamps light-set-sanyingFar-tail c822630e517bdc5d
+set-sevenSectionLRT-car lamps light-set-sevenSectionLRT-car cbf29ce484222325
+set-sevenSectionLRT-head lamps light-set-sevenSectionLRT-head f2a18caa4332ef49
+set-sevenSectionLRT-tail lamps light-set-sevenSectionLRT-tail 36533950ac145415
+set-taichungGreen-head lamps light-set-taichungGreen-head 6d252a74b3364bee
+set-taichungGreen-tail lamps light-set-taichungGreen-tail 9442a090628d1776
+set-taichungGreenFar-head lamps light-set-taichungGreenFar-head 1cdc92925dfd6f49
+set-taichungGreenFar-tail lamps light-set-taichungGreenFar-tail 780f6fc5de022f79
+set-taoyuanAirport1000-car lamps light-set-taoyuanAirport1000-car 277def51c5f1c195
+set-taoyuanAirport1000-centre lamps light-set-taoyuanAirport1000-centre 277def51c5f1c195
+set-taoyuanAirport1000-head lamps light-set-taoyuanAirport1000-head 5f77e6eeb32d95e1
+set-taoyuanAirport1000-tail lamps light-set-taoyuanAirport1000-tail eeaa9bdb83484cd1
+set-taoyuanAirport1000Far-car lamps light-set-taoyuanAirport1000Far-car 277def51c5f1c195
+set-taoyuanAirport1000Far-centre lamps light-set-taoyuanAirport1000Far-centre 277def51c5f1c195
+set-taoyuanAirport1000Far-head lamps light-set-taoyuanAirport1000Far-head c9775bfd3a9e586d
+set-taoyuanAirport1000Far-tail lamps light-set-taoyuanAirport1000Far-tail e695e60e2fee1eed
+set-taoyuanAirport2000-car lamps light-set-taoyuanAirport2000-car 277def51c5f1c195
+set-taoyuanAirport2000-centre lamps light-set-taoyuanAirport2000-centre 277def51c5f1c195
+set-taoyuanAirport2000-fourth lamps light-set-taoyuanAirport2000-fourth 277def51c5f1c195
+set-taoyuanAirport2000-head lamps light-set-taoyuanAirport2000-head 5f77e6eeb32d95e1
+set-taoyuanAirport2000-tail lamps light-set-taoyuanAirport2000-tail eeaa9bdb83484cd1
+set-taoyuanAirport2000Far-car lamps light-set-taoyuanAirport2000Far-car 277def51c5f1c195
+set-taoyuanAirport2000Far-centre lamps light-set-taoyuanAirport2000Far-centre 277def51c5f1c195
+set-taoyuanAirport2000Far-fourth lamps light-set-taoyuanAirport2000Far-fourth 277def51c5f1c195
+set-taoyuanAirport2000Far-head lamps light-set-taoyuanAirport2000Far-head c9775bfd3a9e586d
+set-taoyuanAirport2000Far-tail lamps - e695e60e2fee1eed
+set-taroko-car lamps light-set-taroko-car 587758db87d2caf5
+set-taroko-head lamps light-set-taroko-head a7b218c297619e99 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 8.94, y: 0.0, z: 3.2800002), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-taroko-panto lamps light-set-taroko-panto 587758db87d2caf5
+set-taroko-tail lamps light-set-taroko-tail 61b034d8ec80519 sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -8.94, y: 0.0, z: 3.2800002), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-tarokoFar-car lamps light-set-tarokoFar-car 587758db87d2caf5
+set-tarokoFar-head lamps light-set-tarokoFar-head 9c5a500e07eee0df sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: 8.94, y: 0.0, z: 3.2800002), facing: 1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-tarokoFar-panto lamps light-set-tarokoFar-panto 587758db87d2caf5
+set-tarokoFar-tail lamps light-set-tarokoFar-tail adf5c43f153b2b9f sign Map3DHeadSign(middle: GamePresentation.Map3DPoint(x: -8.94, y: 0.0, z: 3.2800002), facing: -1.0, service: GamePresentation.Map3DHeadSign.Service.express)
+set-threeCarUrban-car lamps light-set-threeCarUrban-car cbf29ce484222325
+set-threeCarUrban-head lamps light-set-threeCarUrban-head 90b3b7a183c1956d
+set-threeCarUrban-tail lamps light-set-threeCarUrban-tail e6d4a2bada855351
+set-wenhu-car lamps light-set-wenhu-car f1640982c4e85b15
+set-wenhu-head lamps light-set-wenhu-head a411928436850d34
+set-wenhu-tail lamps light-set-wenhu-tail de792720241c21bc
+set-wenhu370-car lamps light-set-wenhu370-car 4d905922f06f7089
+set-wenhu370-centre lamps light-set-wenhu370-centre b038bcd27287107d
+set-wenhu370-head lamps light-set-wenhu370-head b038bcd27287107d
+set-wenhu370-tail lamps light-set-wenhu370-tail 4d905922f06f7089
+set-wenhu370Far-car lamps light-set-wenhu370Far-car 802710c136f54a41
+set-wenhu370Far-centre lamps light-set-wenhu370Far-centre b1c7f3927c6a712d
+set-wenhu370Far-head lamps light-set-wenhu370Far-head b1c7f3927c6a712d
+set-wenhu370Far-tail lamps light-set-wenhu370Far-tail 802710c136f54a41
+set-wenhuVAL256-car lamps light-set-wenhuVAL256-car b5962d98d486cbd1
+set-wenhuVAL256-centre lamps light-set-wenhuVAL256-centre c452d503fd0c6a45
+set-wenhuVAL256-head lamps light-set-wenhuVAL256-head c452d503fd0c6a45
+set-wenhuVAL256-tail lamps light-set-wenhuVAL256-tail b5962d98d486cbd1
+set-wenhuVAL256Far-car lamps light-set-wenhuVAL256Far-car e61dcb2cfa5d2ff1
+set-wenhuVAL256Far-centre lamps light-set-wenhuVAL256Far-centre 2072be3d94c5f29
+set-wenhuVAL256Far-head lamps light-set-wenhuVAL256Far-head 2072be3d94c5f29
+set-wenhuVAL256Far-tail lamps light-set-wenhuVAL256Far-tail e61dcb2cfa5d2ff1
+steam-formation
+steam-locomotive
+steam-tender
+temu1000-formation
+temu1000-leading
+temu1000-middle
+temu1000-pantograph
+temu1000-trailing
+tw-yellow-tit-glide
+tw-yellow-tit-perch
+tw-yellow-tit-wings-down
+tw-yellow-tit-wings-up
+urban-three-formation
+urban-three-leading
+urban-three-middle
+urban-three-trailing
+walk-0
+walk-1
+walk-2
+walk-3
+walk-4
+walk-5
+walk-6
+walk-dark
+walk-ones-0
+walk-ones-1
+walk-ones-2
+walk-ones-3
+walk-ones-4
+walk-ones-5
+walk-ones-6
+walk-ones-7
+walk-ones-8
+walk-ones-9
+walk-plain-dark
+walk-plain-stop
+walk-plain-walk
+walk-stop
+walk-tens-1
+walk-tens-2
+walk-tens-3
+walk-tens-4
+walk-tens-5
+walk-tens-6
+walk-tens-7
+walk-tens-8
+walk-tens-9
+winter-light-string-4m
+winter-xmas-tree-large
+winter-xmas-tree-large-far
+winter-xmas-tree-medium
+winter-xmas-tree-medium-far

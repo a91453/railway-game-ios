@@ -6,3 +6,6 @@ Sources/GamePresentation/Map3DLandmarkRegistryList.swift merge=union
 # Decision 910: one step of the way out of a deadlock a line, the same way
 # (DeadlockRescueListTests checks the result).
 Sources/GameCore/Railway/DeadlockRescue/DeadlockRescueList.swift merge=union
+# MODEL-PACK-PINS-SPLIT: one model of the pack a line, the same way
+# (Map3DModelPackLockTests checks the result).
+tools/train-models/pack.lock.txt merge=union
