@@ -878,6 +878,7 @@ extension Map3DScene.Builder {
         guard path.points.count == stretch.count, path.length > 0 else { return nil }
         let carried = structures?.stretches(along: path, frame: frame, system: system) ?? []
         let viaduct = Map3DViaduct(system: system)
+        let gauges = Map3DTrackGauge.drawn(realLine: system, map: look.gauge)
         let rise = TrackRise(path: path, ground: { Double(ground(x: $0.x, y: $0.y)) * Self.metre }, water: { _ in false }, levels: [],
                              carried: carried)
         let spacing = Map3DRealTrains.spacing * Self.metre
@@ -928,7 +929,8 @@ extension Map3DScene.Builder {
             guard kind != .tunnel else { return }
             var kept = stride(from: 0, to: run.count, by: 2).map { points[run[$0]] }
             if run.count % 2 == 0, let last = run.last { kept.append(points[last]) }
-            for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind, viaduct: viaduct) }
+            // Decision 984: at the real line's gauge.
+            for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind, viaduct: viaduct, gauges: gauges) }
             // Decision 941 (later): where a road may cross it on the level.
             if kind == .surface { state.realTrains.realSurfaceLines.append(run.map { points[$0] }) }
             let cell = Double(Land.cellLength)
@@ -1237,6 +1239,8 @@ extension Map3DScene.Builder {
             }
             let siteBought = bought[track.system]
             let viaduct = Map3DViaduct(system: track.system)
+            // Decision 984: at the real line's gauge.
+            let gauges = Map3DTrackGauge.drawn(realLine: track.system, map: look.gauge)
             var points: [Map3DPoint?] = Array(repeating: nil, count: samples.count)
             var kinds: [TrackSectionKind] = Array(repeating: .tunnel, count: samples.count)
             var shown: [Bool] = Array(repeating: false, count: samples.count)
@@ -1279,7 +1283,7 @@ extension Map3DScene.Builder {
                                    isService: track.isService), system: track.system)
                 }
                 layRealRun(range, points: points, kinds: kinds, shown: shown, cells: samples.map { ($0.x, $0.y) },
-                           along: samples.map(\.along), viaduct: viaduct)
+                           along: samples.map(\.along), viaduct: viaduct, gauges: gauges)
             }
         }
         return laid
@@ -1296,7 +1300,7 @@ extension Map3DScene.Builder {
     /// of it, which stand within ``Map3DSceneRebuild/reach`` of the change:
     /// the rest of the track, kilometres on, is laid as before.
     private mutating func layRealRun(_ range: ClosedRange<Int>, points: [Map3DPoint?], kinds: [TrackSectionKind], shown: [Bool],
-                                     cells: [(x: Double, y: Double)], along: [Double], viaduct: Map3DViaduct) {
+                                     cells: [(x: Double, y: Double)], along: [Double], viaduct: Map3DViaduct, gauges: [Float]) {
         var run: [Int] = []
         func lay() {
             defer { run = [] }
@@ -1307,7 +1311,8 @@ extension Map3DScene.Builder {
             let kept = run.filter { $0 == first || $0 == last || $0 % 2 == 0 }.filter { points[$0] != nil }
             // Decision 600: the rails near only.
             for piece in Self.pieces(of: kept, along: along) {
-                addTrackPiece(piece.compactMap { points[$0] }, kind: kind, viaduct: viaduct, railsNear: true, from: Float(along[piece[0]]))
+                addTrackPiece(piece.compactMap { points[$0] }, kind: kind, viaduct: viaduct, railsNear: true, from: Float(along[piece[0]]),
+                              gauges: gauges)
             }
             // Decision 941 (later): where a road may cross it on the level.
             if kind == .surface { state.realTrains.realSurfaceLines.append(run.compactMap { points[$0] }) }
