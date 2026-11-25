@@ -25,6 +25,10 @@ public struct Map3DTrainRegistration: Sendable {
     /// rules every train keeps.
     let triangles: ClosedRange<Int>
     let length: ClosedRange<Float>
+    /// Decision 983: the paints a player can choose for it on a line's
+    /// page beside its own (``TrainPaintFamily``, its `sets` this train's
+    /// near and far keys); `nil` for a train with only its own.
+    var paints: TrainPaintFamily? = nil
 
     /// Whether the model `name` (a car, `set-<key>-…`, or its windows,
     /// `light-set-<key>-…`) is one of this train's.

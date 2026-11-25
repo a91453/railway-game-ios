@@ -2,6 +2,8 @@
 
 `export.swift` 把幾款車的頭車（和路線公車）寫成 M3DM：完整、遊戲的簡化器（`Map3DMeshSimplifier`）50 %／25 %／10 %、程式版遠景車、盒子，並印出三角形數與時間；`render.mjs`（`tools/train-modeling-410/render.mjs` 改來）同一組相機畫斜前與正側；`overview.py` 拼成 `docs/art/mesh-lod-2026-10-26/` 的總圖。
 
+決策 988（2026-11-25）：700T 換成作者舊版的 700 系，沒有遠景那一組了，`export.swift` 的 700T 那一列不再有「程式版遠景車」；總圖上的是當時的紀錄。
+
 ```sh
 swift build --build-tests -Xswiftc -warnings-as-errors
 bin="$(swift build --show-bin-path)"

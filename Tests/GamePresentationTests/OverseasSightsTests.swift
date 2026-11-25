@@ -19,7 +19,7 @@ final class OverseasSightsTests: XCTestCase {
     /// Each country's table: Taiwan's first, then Hong Kong's, Finland's
     /// and Japan's; every id and name once across them all.
     func testEachCountryHasATableOfItsOwn() {
-        XCTAssertEqual(AttractionCatalog.byCountry.map(\.count), [217, 21, 10, 13])
+        XCTAssertEqual(AttractionCatalog.byCountry.map(\.count), [217, 21, 10, 67])
         XCTAssertEqual(AttractionCatalog.allSpots.map(\.id), AttractionCatalog.byCountry.flatMap { $0 }.map(\.id))
         XCTAssertEqual(Set(AttractionCatalog.allSpots.map(\.id)).count, AttractionCatalog.allSpots.count)
         XCTAssertEqual(Set(AttractionCatalog.allSpots.map(\.name)).count, AttractionCatalog.allSpots.count)
@@ -34,9 +34,22 @@ final class OverseasSightsTests: XCTestCase {
     /// none of another's, two or three of them asking for a line.
     func testANewGameOnEachMapHoldsItsOwnCountrysSights() throws {
         for (city, spots, _) in tables {
-            let world = GameWorld.newOverseasGame(try ground(city))
+            // As the player gets it: a map that grew (Japan's, to Kumamoto)
+            // gets the sights of its new ground when the game opens.
+            let world = AttractionCatalog.withSights(GameWorld.newOverseasGame(try ground(city)))
             let names = world.tourism?.attractions.map(\.englishName) ?? []
-            XCTAssertEqual(names, spots.map(\.englishName), "\(city)")
+            // Decision 994: Japan's table covers three prefectures; a map
+            // holds the ones inside its bounds, in the table's order.
+            let frame = try XCTUnwrap(RealWorldFrame(world: world))
+            let inside = AttractionCatalog.attractions(in: frame, bounds: world.bounds, only: Set(spots.map(\.id))).map(\.englishName)
+            XCTAssertEqual(Set(names), Set(inside), "\(city)")
+            XCTAssertEqual(names.count, inside.count, "\(city)")
+            if city == .fukuoka {
+                XCTAssertTrue(Set(spots.prefix(13).map(\.englishName)).isSubset(of: Set(names)), "Fukuoka city's thirteen are all on the map")
+                XCTAssertTrue(inside.contains("Kumamoto Castle"), "the map reaches Kumamoto")
+            } else {
+                XCTAssertEqual(names, spots.map(\.englishName), "\(city)")
+            }
             let alerted = spots.filter { $0.stars >= GameWorld.alertedSightStars }.count
             XCTAssertTrue((2...3).contains(alerted), "\(city): \(alerted)")
         }
@@ -60,6 +73,26 @@ final class OverseasSightsTests: XCTestCase {
         XCTAssertEqual(sights.map(\.englishName), AttractionCatalog.hongKongSpots.map(\.englishName))
         XCTAssertEqual(sights.map(\.id.rawValue), Array(1...AttractionCatalog.hongKongSpots.count))
         XCTAssertEqual(AttractionCatalog.withSights(opened), opened)
+    }
+
+    /// Decision 994: every Japanese sight lies in Fukuoka, Saga or
+    /// Kumamoto prefecture (their box: 32.0–34.3 N, 129.7–131.4 E), and a
+    /// Fukuoka game saved before them gets those inside its map after its
+    /// own, keeping its own numbers.
+    func testJapansSightsCoverTheThreePrefecturesAndReachOlderSaves() throws {
+        for spot in AttractionCatalog.japanSpots {
+            XCTAssertTrue((32.0...34.3).contains(spot.latitude) && (129.7...131.4).contains(spot.longitude), spot.name)
+        }
+        var world = AttractionCatalog.withSights(GameWorld.newOverseasGame(try ground(.fukuoka)))
+        let all = try XCTUnwrap(world.tourism?.attractions)
+        XCTAssertGreaterThan(all.count, 13)
+        let older = Set(AttractionCatalog.japanSpots.prefix(13).map(\.englishName))
+        world.setTourism(all.filter { older.contains($0.englishName) })
+        let opened = AttractionCatalog.withSights(world)
+        let sights = try XCTUnwrap(opened.tourism?.attractions)
+        XCTAssertEqual(Set(sights.map(\.englishName)), Set(all.map(\.englishName)))
+        XCTAssertEqual(Array(sights.prefix(13)), Array(world.tourism?.attractions ?? []))
+        XCTAssertEqual(sights.map(\.id.rawValue), Array(1...sights.count))
     }
 
     /// Taiwan's maps are left as they are: none of the overseas sights lie

@@ -1,0 +1,55 @@
+{
+  "comment" : "Decision 782: the models of the registered train n700s: FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 6,
+  "lamps" : "91c7c1a89b3f05fc",
+  "models" : {
+    "light-set-n700s-car" : {
+      "hash" : "a6a154ebb57e53e5",
+      "triangles" : 137
+    },
+    "light-set-n700s-carBack" : {
+      "hash" : "e5bd490779932de5",
+      "triangles" : 137
+    },
+    "light-set-n700s-head" : {
+      "hash" : "d39614012e2f0d79",
+      "triangles" : 140
+    },
+    "light-set-n700s-panto" : {
+      "hash" : "ddac8b0d80aeedc4",
+      "triangles" : 146
+    },
+    "light-set-n700s-pantoBack" : {
+      "hash" : "a2714f412bc63c4",
+      "triangles" : 146
+    },
+    "light-set-n700s-tail" : {
+      "hash" : "e03f9bbb134f9979",
+      "triangles" : 140
+    },
+    "set-n700s-car" : {
+      "hash" : "8377363cf4e9033e",
+      "triangles" : 2217
+    },
+    "set-n700s-carBack" : {
+      "hash" : "47a2a2c50754c7c8",
+      "triangles" : 2217
+    },
+    "set-n700s-head" : {
+      "hash" : "8b675d87733dcb53",
+      "triangles" : 3622
+    },
+    "set-n700s-panto" : {
+      "hash" : "c73aab95bbfc1954",
+      "triangles" : 2439
+    },
+    "set-n700s-pantoBack" : {
+      "hash" : "f52d6537767c5e79",
+      "triangles" : 2439
+    },
+    "set-n700s-tail" : {
+      "hash" : "2042203492dcd0ce",
+      "triangles" : 3622
+    }
+  }
+}

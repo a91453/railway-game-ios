@@ -29,7 +29,7 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
     }
     func testColouredShoulderWrapsTheNoseWithoutExtendingItsLength() {
         let cab=Map3DTrainShapeRefresh.model("refresh-700t-cab")
-        let teal=Map3DPalette.shopAwnings[0]
+        let teal=Map3DTrainShapeRefresh.highSpeedBandColor
         let band=cab.vertices.filter { $0.color==teal && $0.x>5.7 && $0.x<9.2 }
         XCTAssertGreaterThan(band.map(\.z).max()!,1.9,"Coloured shoulder remains a narrow lower stripe")
         let front=cab.vertices.filter { $0.color==teal && $0.x>11.8 }
@@ -52,7 +52,7 @@ final class Map3DTrainShapeRefreshTests: XCTestCase {
         let insetWidth=front.map(\.y).max()!-front.map(\.y).min()!
         XCTAssertGreaterThan((lipWidth-insetWidth)/2,0.10,"White inset erases the front coloured rim")
         // Check the body join on both sides from actual coloured vertices.
-        let band=m.vertices.filter { $0.color==Map3DPalette.shopAwnings[0] }
+        let band=m.vertices.filter { $0.color==Map3DTrainShapeRefresh.highSpeedBandColor }
         let h0=band.filter { abs($0.x)<0.0001 }.map(\.z).max()!
         let h1=band.filter { abs($0.x-3.7)<0.0001 }.map(\.z).max()!
         XCTAssertLessThan(abs(h1-h0),0.015,"Body paint join has a step")

@@ -5,7 +5,7 @@ import XCTest
 /// The traffic-control speed-ups that keep every result the same, checked
 /// against the way each was worked out before.
 final class TrafficSpeedTests: XCTestCase {
-    /// The way to another berth (decision 57, ``GameWorld/alternativeRoute(of:to:avoiding:memo:)``)
+    /// The way to another berth (decision 57, ``GameWorld/alternativeRoute(of:to:avoiding:keepingNoWay:memo:)``)
     /// asks the other trains' directions a traversal at a time, and takes
     /// the free way whole when it runs against none of them: the same way
     /// as the search with all of them gathered into a set. Every running

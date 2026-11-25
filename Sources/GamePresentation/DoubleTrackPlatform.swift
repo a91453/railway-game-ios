@@ -28,6 +28,12 @@ import GameCore
 // crossover no longer keeps the second station, at the line's far end, on
 // one track.
 
+// Decision 990 (同月台不同軌距換乘, the owner, 2026-11-25): the track
+// beside may be of another gauge (decision 970), a conventional line
+// beside a Shinkansen as at Shin-Yatsushiro in 2004–2011. It still gets
+// the same station's platform, so the two lines' passengers change across
+// it (decision 912), but no crossover: no train could cross one.
+
 /// ``GameSession/networkPlatformBeside`` as last looked for (L3-11).
 struct PlatformBesideMemo {
     struct Key: Equatable {
@@ -175,7 +181,10 @@ extension GameSession {
             guard min(near, far) >= margin, max(near, far) <= geometry.length - margin,
                   let beside = trackBeside(stretch.edge, near: geometry.location(at: far).position.plan, in: track)?.beside,
                   let other = track.trackGeometry(of: beside.edge),
-                  beside.distance >= margin, beside.distance <= other.length - margin
+                  beside.distance >= margin, beside.distance <= other.length - margin,
+                  // Decision 990: none between tracks of different gauges,
+                  // which no train could cross.
+                  track.sharesRailGauge(stretch.edge, beside.edge)
             else { continue }
             pairs.append((other.location(at: beside.distance).position, geometry.location(at: near).position))
         }
@@ -195,12 +204,18 @@ extension GameSession {
     }
 
     /// What the platform tool's message adds when the track beside got a
-    /// platform too.
-    func besidePlatformText() -> String {
-        language.text(
-            " The track beside it gets a platform too, so trains on either track call here.",
-            "旁邊的軌道也設了月台，兩條軌道的列車都能停這一站。"
-        )
+    /// platform too; decision 990: when that track is of another gauge,
+    /// that passengers change between them across the platform.
+    func besidePlatformText(otherGauge: Bool = false) -> String {
+        otherGauge
+            ? language.text(
+                " The track beside it, of another gauge, gets a platform too: passengers change between the two across the platform.",
+                "旁邊那股是不同軌距的軌道，也設了月台：乘客走過月台就能換到另一邊的列車。"
+            )
+            : language.text(
+                " The track beside it gets a platform too, so trains on either track call here.",
+                "旁邊的軌道也設了月台，兩條軌道的列車都能停這一站。"
+            )
     }
 
     /// What the platform tool's preview and message add for the station's
