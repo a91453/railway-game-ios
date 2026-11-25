@@ -4,8 +4,8 @@
   "lamps" : "9e968ec9728624c3",
   "models" : {
     "light-set-kyushu800-car" : {
-      "hash" : "e069475dde148a6e",
-      "triangles" : 84
+      "hash" : "3f2eb990468bb245",
+      "triangles" : 92
     },
     "light-set-kyushu800-head" : {
       "hash" : "47b36092a4e95b3",
@@ -16,8 +16,8 @@
       "triangles" : 80
     },
     "set-kyushu800-car" : {
-      "hash" : "5a59d46da7e1fb7",
-      "triangles" : 1066
+      "hash" : "ea1676e113564929",
+      "triangles" : 1467
     },
     "set-kyushu800-head" : {
       "hash" : "530ae11071f059b6",

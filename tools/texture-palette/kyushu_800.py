@@ -29,6 +29,9 @@
   單獨拉長或改造型，整節等比放大可以）。轉向架只平移不縮放，頭車的照真車
   的位置放（後轉向架中心離連結面 3.75 m、中心距 17.5 m）：輪子中心距
   1.50 m，就是 1,435 mm 軌距的鋼軌中心。
+- 中間車的窗帶多排兩格（14 → 16）、沿車身乘 0.9，窗的寬與窗距和頭車一樣
+  （1.04–1.08 m，真車約 1 m）；窗帶後面那扇門往車端移 0.5 m，門後的空牆收短
+  同樣的長度（`more_windows`）。車長、另一扇門、車端不動。
 - 輸出的軸與 `glb_to_swift.py` 讀的一樣：+y 上、車沿 x、駕駛室在 +x、連結面
   在 ±半車長、軌面 y 0。
 """
@@ -60,6 +63,8 @@ LENGTH = 12.5 / 10.501   # 連結面 ±10.501 → ±12.5（車距 25 m）
 WIDTH = 3.38 / 2.80      # 側牆 ±1.40 → ±1.69
 HEIGHT = 3.65 / 3.964    # 屋頂 3.964 → 3.65
 CAB = 27.35 / 21.001     # 頭車整節：鼻尖 −10.5、連結面 +10.501 → 27.35 m
+MORE_WINDOWS = 2          # 中間車的窗帶多排幾格（14 → 16）
+WINDOW_SCALE = 0.9        # 中間車的窗帶沿車身再乘多少：窗距 1.155、1.203 m → 1.04、1.08 m，和頭車一樣
 BOGIE_FROM_END = 3.75     # 真車：轉向架中心離連結面
 BOGIE_CENTRES = 17.5      # 真車：轉向架中心距
 
@@ -205,6 +210,131 @@ def along(z: np.ndarray, cab: bool) -> np.ndarray:
     return z * (CAB if cab else LENGTH)
 
 
+def cut_at(triangles, value):
+    """沿車身在 z = value 把三角形切開，切完沒有一個跨過這個面。"""
+    out = []
+    for c, kind in triangles:
+        z = c[:, 2]
+        if z.max() <= value + 1e-9 or z.min() >= value - 1e-9:
+            out.append((c, kind))
+            continue
+        for low in (True, False):
+            polygon = []
+            for i in range(3):
+                a, b = c[i], c[(i + 1) % 3]
+                a_in = a[2] <= value if low else a[2] >= value
+                b_in = b[2] <= value if low else b[2] >= value
+                if a_in:
+                    polygon.append(a)
+                if a_in != b_in:
+                    point = a + (b - a) * (value - a[2]) / (b[2] - a[2])
+                    point[2] = value
+                    polygon.append(point)
+            out += [(np.array([polygon[0], polygon[i], polygon[i + 1]]), kind) for i in range(1, len(polygon) - 1)]
+    return out
+
+
+def spans(pieces, gap=0.05):
+    """一堆面沿車身佔的區間，接在一起的併成一段。"""
+    out = []
+    for low, high in sorted((float(c[:, 2].min()), float(c[:, 2].max())) for c in pieces):
+        if out and low - out[-1][1] < gap:
+            out[-1][1] = max(out[-1][1], high)
+        else:
+            out.append([low, high])
+    return out
+
+
+def more_windows(triangles):
+    """中間車的窗和頭車排得一樣密（舊版的座標）：多排 MORE_WINDOWS 格窗，窗帶後面那扇門往車端移一點。
+
+    舊版的中間車一側 14 格窗，放回 25 m 之後窗距 1.13–1.22 m；真車每排座位一格窗，
+    窗距約 1 m（2 號車 80 席、20 格），頭車放大後是 1.04–1.08 m。做法：窗帶
+    （第一格窗前半個窗距到最後一格窗後半個窗距）中間切出一段、照樣再排一次，
+    整條窗帶沿車身乘 WINDOW_SCALE，窗的寬與窗距就和頭車一樣。窗帶因此長了約
+    0.5 m：後面那扇門整扇往車端平移這麼多，門與車端之間那段沒有東西的牆（舊版
+    有 4.3 m）收短同樣的長度（作者 2026-11-25：中間車 16 格，車門稍微移動）。
+    車長、另一扇門、車端、車端的裙板都不動。回傳改好的面與報告用的數字。"""
+    wall = [(c, kind) for c, kind in triangles if np.abs(c[:, 0]).min() > 1.39]
+    doors_at = spans([c for c, kind in wall if kind == DOOR])
+    windows = [w for w in spans([c for c, kind in wall if kind == GLASS])
+               if not any(low - 0.1 < w[0] and w[1] < high + 0.1 for low, high in doors_at)]
+    centres = [(low + high) / 2 for low, high in windows]
+    steps = np.diff(centres)
+    # 窗分幾組，每組的窗距差一點（貼圖沿車身用了幾次）。在最長的一組等距的窗
+    # 中間再排，用那一組自己的窗距。
+    runs, first = [], 0
+    for i in range(1, len(steps) + 1):
+        if i == len(steps) or abs(steps[i] - steps[first]) > 0.004:
+            runs.append((first, i))       # 窗 first … i 等距
+            first = i
+    front, back = centres[0] - steps[0] / 2, centres[-1] + steps[-1] / 2
+    if not all(high < front or low > back for low, high in doors_at):
+        raise SystemExit("窗帶碰到門了")
+
+    def outline(pieces, value):
+        """切開以後，這些面落在 z = value 上的邊：每種顏色的總長與範圍。"""
+        out = {}
+        for c, kind in pieces:
+            on = c[np.abs(c[:, 2] - value) < 1e-9]
+            if len(on) == 2:
+                total, low, high = out.get(kind, (0.0, np.full(2, np.inf), np.full(2, -np.inf)))
+                out[kind] = (total + float(np.linalg.norm(on[0, :2] - on[1, :2])),
+                             np.minimum(low, on[:, :2].min(0)), np.maximum(high, on[:, :2].max(0)))
+        return {kind: [round(total, 2), *np.round(low, 2), *np.round(high, 2)] for kind, (total, low, high) in out.items()}
+
+    # 要照樣再排一次的那一段，兩頭的斷面要一樣（裙板的斜端、機器箱的端面落在
+    # 裡面就不行）。從最長的一組等距的窗的正中找起，找到第一個兩頭一樣的。
+    choice = None
+    for first, last in sorted(runs, key=lambda run: run[0] - run[1]):
+        centre = (first + last) / 2
+        for middle in sorted(range(max(first, 1), last - MORE_WINDOWS + 1), key=lambda i: abs(i + MORE_WINDOWS / 2 - 0.5 - centre)):
+            pitch = float(centres[middle + MORE_WINDOWS] - centres[middle]) / MORE_WINDOWS
+            start = (centres[middle - 1] + centres[middle]) / 2          # 兩格窗中間的牆
+            added = MORE_WINDOWS * pitch
+            cut = cut_at(cut_at(triangles, start), start + added)
+            slab = [(c, kind) for c, kind in cut if start < c[:, 2].mean() < start + added]
+            if outline(slab, start) == outline(slab, start + added):
+                choice = (start, added, cut)
+                break
+        if choice:
+            break
+    if not choice:
+        raise SystemExit(f"中間車找不到兩頭斷面一樣的一段窗：{[round(float(v), 3) for v in steps]}")
+    start, added, triangles = choice
+    out = []
+    for c, kind in triangles:
+        at = float(c[:, 2].mean())
+        if start < at < start + added:
+            again = c.copy()
+            again[:, 2] += added
+            out.append((again, kind))
+        elif at > start:
+            c = c + np.array([0, 0, added])
+        out.append((c, kind))
+    moved = (back - front + added) * WINDOW_SCALE - (back - front)      # 窗帶長了多少＝門往車端移多少
+    frames = spans([c for c, kind in wall if kind in (DOOR, GREY) and c[:, 1].min() > 1.0])
+    behind = [high for low, high in frames if low > back]
+    skirts = [low for low, high in spans([c for c, kind in triangles if kind == GREY and c[:, 1].max() < 1.0]) if behind and low > behind[0]]
+    if moved <= 0 or len(behind) != 1 or not skirts:
+        raise SystemExit("窗帶後面要剛好一扇門，門後面要有車端的裙板")
+    door, plain = behind[0] + 0.05, min(skirts) - 0.02       # 門框後緣；車端的裙板前緣
+    if plain - door < 3 * moved:
+        raise SystemExit("門與車端之間的牆不夠收")
+    shrink = (plain - door - moved) / (plain - door)
+
+    def settled(z: np.ndarray) -> np.ndarray:
+        return np.where(z <= front, z,
+               np.where(z < back + added, front + (z - front) * WINDOW_SCALE,
+               np.where(z <= door + added, z - added + moved,
+               np.where(z < plain + added, plain - (plain + added - z) * shrink, z - added))))
+
+    out = [(np.stack([c[:, 0], c[:, 1], settled(c[:, 2])], 1), kind) for c, kind in out]
+    numbers = {"windows": len(windows) + MORE_WINDOWS, "window_scale": WINDOW_SCALE, "door_moved_m": round(moved * LENGTH, 3),
+               "plain_wall_scale": round(shrink, 4), "band_m": [round(front * LENGTH, 3), round((back + moved) * LENGTH, 3)]}
+    return out, numbers
+
+
 def build(path: Path, cab: bool, debug_dir: Path | None):
     gltf, blob, digest = base.read_glb(path)
     pieces = base.parts(gltf, blob)
@@ -217,6 +347,9 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         canvas = Image.blend(canvas, Image.new("RGB", canvas.size, (0, 0, 0)), 0.6)
         draw = ImageDraw.Draw(canvas)
     triangles = cut_body(body, table, draw)
+    numbers = {}
+    if not cab:
+        triangles, numbers = more_windows(triangles)
     if debug_dir:
         canvas.save(debug_dir / f"{path.stem[:13]}-uv-cut.png")
 
@@ -263,7 +396,7 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
             continue
         seen.add(key)
         out.append((corners, kind))
-    return out, digest
+    return out, digest, numbers
 
 
 def doors(triangles, cab: bool):
@@ -298,14 +431,14 @@ def main():
     args.out_dir.mkdir(parents=True, exist_ok=True)
     report = {}
     for name, path, cab in (("kyushu-800-cab", args.cab, True), ("kyushu-800-middle", args.middle, False)):
-        triangles, digest = build(path.expanduser(), cab, args.out_dir if args.debug else None)
+        triangles, digest, numbers = build(path.expanduser(), cab, args.out_dir if args.debug else None)
         expected = SHA256["cab" if cab else "middle"]
         if digest != expected:
             raise SystemExit(f"{path.name}: 不是這個工具認得的原檔（SHA-256 {digest}）")
         base.write_glb(args.out_dir / f"{name}.glb", triangles, MATERIALS, PREVIEW, "tools/texture-palette/kyushu_800.py")
         points = np.concatenate([c for c, _ in triangles])
         counts = {MATERIALS[k]: sum(1 for _, kind in triangles if kind == k) for k in range(len(MATERIALS))}
-        report[name] = {"sha256": digest, "triangles": len(triangles), "materials": counts, "doors": doors(triangles, cab),
+        report[name] = {"sha256": digest, "triangles": len(triangles), "materials": counts, "doors": doors(triangles, cab), **({"more_windows": numbers} if numbers else {}),
                         "min": [round(float(v), 3) for v in points.min(0)], "max": [round(float(v), 3) for v in points.max(0)]}
     (args.out_dir / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(report, ensure_ascii=False, indent=2))

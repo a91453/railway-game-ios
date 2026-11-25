@@ -14,8 +14,13 @@ import Foundation
 /// coupling and the cab car 27.35 m, 3.38 m wide and 3.65 m to the roof,
 /// on the 1,435 mm gauge. The cab car is the old one made longer as a
 /// whole, its nose not stretched or reshaped on its own (the owner,
-/// 2026-11-25). No company mark, lettering or number is drawn, and no
-/// pantograph (the old cars have none).
+/// 2026-11-25). The middle car's row of windows is drawn closer, sixteen
+/// a side where the old car has fourteen, so that they are as wide and
+/// as far apart as the cab car's and about the real train's (a window to
+/// each row of seats, a metre apart); the door behind the row stands
+/// half a metre nearer the car's end for it, taken out of the plain
+/// wall there (the owner, 2026-11-25). No company mark, lettering or
+/// number is drawn, and no pantograph (the old cars have none).
 public enum Map3DKyushu800 {
     /// The cars the game draws: the cab car and the middle car.
     public enum Unit: String, CaseIterable, Sendable {
@@ -84,7 +89,7 @@ public enum Map3DKyushu800 {
         case .cab:
             [Door(x: 4.396...5.141, z: 1.247...3.119, crew: true), Door(x: -12.782 ... -11.771, z: 1.247...3.119, crew: false)]
         case .middle:
-            [Door(x: 10.531...11.647, z: 1.247...3.119, crew: false), Door(x: -7.924 ... -6.761, z: 1.247...3.119, crew: false)]
+            [Door(x: 10.531...11.647, z: 1.247...3.119, crew: false), Door(x: -8.438 ... -7.276, z: 1.247...3.119, crew: false)]
         }
     }
 
@@ -98,7 +103,7 @@ public enum Map3DKyushu800 {
 
 extension Map3DKyushu800 {
     /// Decision 782: its set, its showcase row (six cars) and its cars'
-    /// triangles (1,487 the cab car, 1,066 the middle car: few enough to be
+    /// triangles (1,487 the cab car, 1,467 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(

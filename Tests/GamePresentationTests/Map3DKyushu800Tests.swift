@@ -29,6 +29,58 @@ final class Map3DKyushu800Tests: XCTestCase {
         XCTAssertEqual(Map3DKyushu800.Unit.cab.pitch, 27.35)
     }
 
+    /// The windows of a car's row on one wall, between its doors: each is
+    /// the glass triangles that touch along the car, from its back to its
+    /// front.
+    private func windows(_ unit: Map3DKyushu800.Unit) throws -> [ClosedRange<Float>] {
+        let doors = Map3DKyushu800.doors(unit)
+        let vertices = try XCTUnwrap(Map3DKyushu800.model(unit)).vertices
+        var panes: [ClosedRange<Float>] = []
+        for first in stride(from: 0, to: vertices.count, by: 3) where vertices[first].color == Map3DTrainStyle.glass {
+            let corners = vertices[first..<first + 3]
+            let xs = corners.map(\.x)
+            guard corners.allSatisfy({ $0.y > 1.6 }), let low = xs.min(), let high = xs.max(),
+                  !doors.contains(where: { $0.x.lowerBound - 0.1 < low && high < $0.x.upperBound + 0.1 }) else { continue }
+            panes.append(low...high)
+        }
+        var runs: [ClosedRange<Float>] = []
+        for pane in panes.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+            if let last = runs.last, pane.lowerBound <= last.upperBound + 0.01 {
+                runs[runs.count - 1] = last.lowerBound...max(last.upperBound, pane.upperBound)
+            } else {
+                runs.append(pane)
+            }
+        }
+        return runs
+    }
+
+    /// A window to each row of seats, about a metre apart, as on the real
+    /// train: thirteen on the cab car and sixteen on the middle car (the
+    /// old middle car has fourteen, 1.13 to 1.22 m apart at this size),
+    /// and the two cars' windows as wide and as far apart as each other's.
+    /// The middle car's door behind the row stands nearer the car's end
+    /// than the old one (6.76 to 7.92 m from the middle) to make room.
+    func testTheWindowsAreAboutAMetreApartOnBothCars() throws {
+        var widths: [Map3DKyushu800.Unit: ClosedRange<Float>] = [:]
+        for (unit, count) in [(Map3DKyushu800.Unit.cab, 13), (.middle, 16)] {
+            let row = try windows(unit)
+            XCTAssertEqual(row.count, count, unit.rawValue)
+            let apart = zip(row.dropFirst(), row).map { ($0.lowerBound + $0.upperBound - $1.lowerBound - $1.upperBound) / 2 }
+            XCTAssertTrue(apart.allSatisfy { $0 > 1.0 && $0 < 1.11 }, "\(unit.rawValue): \(apart)")
+            let wide = row.map { $0.upperBound - $0.lowerBound }
+            widths[unit] = try XCTUnwrap(wide.min())...(try XCTUnwrap(wide.max()))
+            // Upright windows, narrower than they are high (0.65 m).
+            XCTAssertTrue(wide.allSatisfy { $0 > 0.47 && $0 < 0.52 }, "\(unit.rawValue): \(wide)")
+        }
+        // The middle car's row stays between its two doors.
+        let doors = Map3DKyushu800.doors(.middle)
+        let row = try windows(.middle)
+        XCTAssertGreaterThan(try XCTUnwrap(row.first).lowerBound, doors[1].x.upperBound + 0.3)
+        XCTAssertLessThan(try XCTUnwrap(row.last).upperBound, doors[0].x.lowerBound - 0.3)
+        XCTAssertEqual(doors[1].x.upperBound, -6.761 - 0.515, accuracy: 0.01)
+        XCTAssertEqual(doors[1].x.upperBound - doors[1].x.lowerBound, 1.163, accuracy: 0.01, "the door itself as wide as it was")
+    }
+
     /// The wheels stand on standard-gauge rails: 1,435 mm between the
     /// rails' inner faces, the wheels' outer faces a little wider.
     func testTheWheelsStandOnStandardGauge() throws {
