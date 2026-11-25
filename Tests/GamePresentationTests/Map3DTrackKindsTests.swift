@@ -20,7 +20,10 @@ final class Map3DTrackKindsTests: XCTestCase {
         )
         let a = try world.buildTrackNode(at: WorldCoordinate(x: 1_024, y: 8_192))
         let b = try world.buildTrackNode(at: WorldCoordinate(x: 16_384, y: 8_192))
-        let edge = try world.buildTrackEdge(from: a, to: b)
+        // Decision 970: track of the train's own gauge (the high-speed
+        // set's is the Shinkansen's).
+        let gauge = type?.gauge.map { TrackGauge($0.rail, loading: $0.loading) }
+        let edge = try world.buildTrackEdge(from: a, to: b, gauge: gauge)
         let west = try world.buildStation(named: "West", at: PlanPoint(x: 3_072, y: 8_704)).id
         let east = try world.buildStation(named: "East", at: PlanPoint(x: 14_336, y: 8_704)).id
         try world.addTrackPlatform(west, on: edge, from: 1_024, to: 5_120)

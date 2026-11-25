@@ -10,11 +10,13 @@ final class RollingStockSessionTests: XCTestCase {
     private static let line = TestLine(tiles: 9, row: 1)
     private static let main = LineID(rawValue: 1)
 
-    private func lineWorld(economics: Bool = true) throws -> GameWorld {
+    private func lineWorld(economics: Bool = true, gauge: TrackGauge? = nil) throws -> GameWorld {
         var world = try makeWorld(width: 9_216, height: 4_096, balance: Money(5_000_000_000), speed: .normal)
         world.setEconomyMode(.management)
         world.setRollingStockEconomics(economics)
-        try Self.line.build(in: &world)
+        var line = Self.line
+        line.gauge = gauge
+        try line.build(in: &world)
         var stops: [StationID] = []
         for (name, x) in [("Alpha", 1), ("Beta", 3), ("Gamma", 5), ("Delta", 7)] {
             stops.append(try Self.line.buildStation(named: name, beside: x, at: 0, in: &world))
@@ -61,7 +63,13 @@ final class RollingStockSessionTests: XCTestCase {
     }
 
     func testAHighSpeedLineIsStaffedWithHighSpeedSetsAtTheirPrice() throws {
-        var world = try lineWorld()
+        // Decision 970: only where its track takes them; on 1,067 mm track
+        // a high-speed line gets the standard car.
+        var narrow = try lineWorld()
+        try narrow.setLinePerformance(Self.main, to: .highSpeed)
+        XCTAssertNil(try XCTUnwrap(narrow.lineStaffingPlan(Self.main, headway: 10)).type)
+
+        var world = try lineWorld(gauge: .shinkansen)
         try world.setLinePerformance(Self.main, to: .highSpeed)
         let session = GameSession(world: world)
         let plan = try XCTUnwrap(world.lineStaffingPlan(Self.main, headway: 10))
@@ -189,7 +197,17 @@ final class RollingStockSessionTests: XCTestCase {
     /// is planned at high speed in the same edit, whether the sets were
     /// put on one by one, bought by "Start Service" or re-formed.
     func testStaffingOrReformingWithHighSpeedSetsMakesAHighSpeedLine() throws {
-        let staffed = GameSession(world: try lineWorld())
+        // Decision 970: high-speed sets run only on Shinkansen-size
+        // 1,435 mm track, whether bought for the line or re-formed into.
+        let narrow = GameSession(world: try lineWorld())
+        let balance = narrow.world.economy.balance
+        narrow.staffSelectedLine(headway: 10, type: .highSpeed)
+        XCTAssertEqual(narrow.message?.kind, .failure, narrow.message?.text ?? "")
+        XCTAssertTrue(narrow.world.trains.isEmpty, "none bought")
+        XCTAssertEqual(narrow.world.economy.balance, balance)
+        XCTAssertEqual(narrow.world.line(id: Self.main)?.performance, .standard)
+
+        let staffed = GameSession(world: try lineWorld(gauge: .shinkansen))
         staffed.staffSelectedLine(headway: 10, type: .highSpeed)
         XCTAssertEqual(staffed.message?.kind, .success, staffed.message?.text ?? "")
         XCTAssertTrue(staffed.world.trains.allSatisfy { $0.type == .highSpeed })
@@ -198,7 +216,7 @@ final class RollingStockSessionTests: XCTestCase {
         staffed.undo()
         XCTAssertEqual(staffed.world.line(id: Self.main)?.performance, .standard, "one edit")
 
-        let reformed = GameSession(world: try lineWorld())
+        let reformed = GameSession(world: try lineWorld(gauge: .shinkansen))
         reformed.staffSelectedLine(headway: 30)
         XCTAssertEqual(reformed.world.line(id: Self.main)?.isHighSpeed, false)
         reformed.reformSelectedLine(type: .highSpeed, cars: 1)

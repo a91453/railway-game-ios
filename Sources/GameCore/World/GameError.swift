@@ -405,6 +405,13 @@ public enum GameError: Error, Hashable, Sendable {
     /// ``TrackCompatibility``) the line or the train's way runs on: a
     /// guideway carries only its own trains, and they run nowhere else.
     case trainTrackMismatch(TrainID)
+    /// The train's wheels or size do not fit the gauge of the ordinary
+    /// track (decision 970, ``TrackEdge/gauge``,
+    /// ``TrackCompatibility/runs(_:onGauge:)``) the line or the train's way
+    /// runs on: the Taiwan Railway's trains need 1,067 mm track, a
+    /// Shinkansen train the Shinkansen's loading gauge, the forest
+    /// railway's 762 mm track.
+    case trainGaugeMismatch(TrainID)
     /// No cableway has this number (decision 574).
     case unknownCableway(CablewayID)
     /// A cableway with fewer than 2 stops or more than

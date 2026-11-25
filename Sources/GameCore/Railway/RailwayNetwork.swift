@@ -67,9 +67,13 @@ public struct TrackEdgePlan: Hashable, Sendable {
     /// Its track system (decision 951, ``TrackEdge/system``); `nil` for
     /// that of the track it joins, ordinary track where it joins none.
     public let system: TrackSystem?
+    /// Its gauge on ordinary track (decision 970, ``TrackEdge/gauge``);
+    /// `nil` for that of the ordinary track it joins
+    /// (``GameWorld/joinedGauge(from:to:mountain:)``).
+    public let gauge: TrackGauge?
 
     public init(from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform,
-                structure: TrackStructure = .surface, mountain: Bool = false, system: TrackSystem? = nil) {
+                structure: TrackStructure = .surface, mountain: Bool = false, system: TrackSystem? = nil, gauge: TrackGauge? = nil) {
         self.from = from
         self.to = to
         self.curve = curve
@@ -77,6 +81,7 @@ public struct TrackEdgePlan: Hashable, Sendable {
         self.structure = structure
         self.mountain = mountain
         self.system = system
+        self.gauge = gauge
     }
 }
 
@@ -117,11 +122,19 @@ public struct TrackEdge: Hashable, Sendable {
     /// and which joins only track of its own system. Track built before
     /// decision 951 is ordinary track.
     public let system: TrackSystem
+    /// Its rail and loading gauges on ordinary track (decision 970): which
+    /// trains' wheels fit it and which trains its clearances take
+    /// (``TrackCompatibility/runs(_:onGauge:)``). Set when it is built and
+    /// kept by its parts when it is split; a guideway holds
+    /// ``TrackGauge/default`` and nothing reads it. Track built before
+    /// decision 970 was laid at a gauge when its save was read
+    /// (``GameWorld/layGauges()``).
+    public let gauge: TrackGauge
 
     init(
         id: TrackEdgeID, from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, length: Int64,
         profile: TrackProfile = .uniform, structure: TrackStructure = .surface, sections: [TrackSection] = [],
-        speedLimits: [TrackSpeedLimit] = [], mountain: Bool = false, system: TrackSystem = .conventional
+        speedLimits: [TrackSpeedLimit] = [], mountain: Bool = false, system: TrackSystem = .conventional, gauge: TrackGauge = .default
     ) {
         self.id = id
         self.from = from
@@ -134,6 +147,7 @@ public struct TrackEdge: Hashable, Sendable {
         self.speedLimits = speedLimits
         self.mountain = mountain
         self.system = system
+        self.gauge = system.isGuideway ? .default : gauge
     }
 
     /// The steepest grade it may have (decision 515).
@@ -474,13 +488,13 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// both nodes.
     mutating func addEdge(
         from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, sections: [TrackSection] = [],
-        mountain: Bool = false, system: TrackSystem = .conventional, geometry: TrackGeometry, next: Int
+        mountain: Bool = false, system: TrackSystem = .conventional, gauge: TrackGauge = .default, geometry: TrackGeometry, next: Int
     ) -> TrackEdgeID {
         let id = TrackEdgeID.edge(nextEdgeNumber)
         edges.append(TrackEdge(
             id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections,
             speedLimits: TrackSystem.speedLimits(of: geometry, curve: curve, mountain: mountain, system: system), mountain: mountain,
-            system: system
+            system: system, gauge: gauge
         ))
         nextEdgeNumber = next
         attach(id, direction: geometry.startDirection, at: from)
@@ -564,7 +578,7 @@ public struct RailwayNetwork: Hashable, Sendable {
         let restored = TrackEdge(
             id: edge.id, from: edge.from, to: edge.to, curve: curve, length: geometry.length, profile: edge.profile, structure: edge.structure,
             sections: sections, speedLimits: TrackSystem.speedLimits(of: geometry, curve: curve, mountain: edge.mountain, system: edge.system),
-            mountain: edge.mountain, system: edge.system
+            mountain: edge.mountain, system: edge.system, gauge: edge.gauge
         )
         edges.insert(restored, at: edges.firstIndex { $0.id > edge.id } ?? edges.count)
         attach(edge.id, direction: geometry.startDirection, at: edge.from)
@@ -593,7 +607,29 @@ public struct RailwayNetwork: Hashable, Sendable {
                 id: edge.id, from: edge.from, to: edge.to, curve: edge.curve, length: edge.length, profile: edge.profile,
                 structure: edge.structure, sections: edge.sections,
                 speedLimits: TrackSystem.speedLimits(of: geometry, curve: edge.curve, mountain: edge.mountain, system: system),
-                mountain: edge.mountain, system: system
+                mountain: edge.mountain, system: system, gauge: edge.gauge
+            )
+        }
+    }
+
+    /// The gauge of the ordinary track that ends at node `id`, the lowest
+    /// numbered edge's (decision 970), or `nil` at a node no ordinary track
+    /// ends at.
+    public func gauge(at id: TrackNodeID) -> TrackGauge? {
+        node(id)?.ends.map(\.edge).sorted().lazy.compactMap { self.edge($0) }.first { !$0.system.isGuideway }?.gauge
+    }
+
+    /// Decision 970: each edge of `gauges` is of its gauge from now on; for
+    /// a save from before version 114 (``GameWorld/layGauges()``).
+    mutating func setGauges(_ gauges: [TrackEdgeID: TrackGauge]) {
+        guard !gauges.isEmpty else { return }
+        for index in edges.indices {
+            let edge = edges[index]
+            guard let gauge = gauges[edge.id], gauge != edge.gauge, !edge.system.isGuideway else { continue }
+            edges[index] = TrackEdge(
+                id: edge.id, from: edge.from, to: edge.to, curve: edge.curve, length: edge.length, profile: edge.profile,
+                structure: edge.structure, sections: edge.sections, speedLimits: edge.speedLimits, mountain: edge.mountain,
+                system: edge.system, gauge: gauge
             )
         }
     }
@@ -650,7 +686,7 @@ extension RailwayNetwork: Codable {
     }
 
     private enum EdgeKeys: String, CodingKey {
-        case id, from, to, curve, profile, structure, sections, mountain, system
+        case id, from, to, curve, profile, structure, sections, mountain, system, gauge
     }
 
     /// Decodes `{"nodes", "edges", "nextNodeID", "nextEdgeID"}`: nodes as
@@ -660,7 +696,9 @@ extension RailwayNetwork: Codable {
     /// `"mountain": true` for mountain track (a Stage S3 edge has
     /// neither and reads as uniform surface track), and since decision 951
     /// `"system"` for a guideway (ordinary track writes none; never on
-    /// mountain track, and every edge at a node is of one system). Both lists are in
+    /// mountain track, and every edge at a node is of one system), and
+    /// since decision 970 `"gauge"` (``TrackGauge``) for ordinary track not
+    /// of ``TrackGauge/default``. Both lists are in
     /// ascending ID order, IDs from 1 and below the next ID. Every derived
     /// value (each edge's length, each node's ends) is worked out again, not
     /// read. Rejects, rather than repairing: an ID out of order, repeated or
@@ -724,6 +762,12 @@ extension RailwayNetwork: Codable {
                 throw corrupt("Track edge \(number) writes the system of ordinary track, which has none written.")
             }
             guard !mountain || !system.isGuideway else { throw corrupt("Track edge \(number) is mountain track and a guideway.") }
+            // Decision 970: its gauge, written only for ordinary track not
+            // of the default gauge.
+            let gauge = edge.contains(.gauge) ? try edge.decode(TrackGauge.self, forKey: .gauge) : .default
+            guard !edge.contains(.gauge) || (gauge != .default && !system.isGuideway) else {
+                throw corrupt("Track edge \(number) writes the default gauge, or a guideway's, which have none written.")
+            }
             guard number >= 1, number < nextEdgeNumber, number > lastEdge else {
                 throw corrupt("Track edge IDs must be ascending, from 1 and below nextEdgeID.")
             }
@@ -747,7 +791,7 @@ extension RailwayNetwork: Codable {
             edges.append(TrackEdge(
                 id: id, from: from, to: to, curve: curve, length: geometry.length, profile: profile, structure: structure, sections: sections,
                 speedLimits: TrackSystem.speedLimits(of: geometry, curve: curve, mountain: mountain, system: system), mountain: mountain,
-                system: system
+                system: system, gauge: gauge
             ))
             attach(id, direction: geometry.startDirection, at: from)
             attach(id, direction: geometry.endDirection, at: to)
@@ -824,6 +868,8 @@ extension RailwayNetwork: Codable {
             }
             if edge.system.isGuideway {
                 try entry.encode(edge.system, forKey: .system)
+            } else if edge.gauge != .default {
+                try entry.encode(edge.gauge, forKey: .gauge)
             }
         }
         try container.encode(nextNodeNumber, forKey: .nextNodeID)

@@ -93,265 +93,68 @@ final class Map3DModelPackLockTests: XCTestCase {
         XCTAssertEqual(wrong, [], "models unlike hashes.lock.json")
     }
 
-    /// The standard pack's models in their order with every vertex, each
-    /// running car's lamps and windows' model, and the destination signs,
-    /// as main (a037d9e) made them one after another. Decision 554 added
-    /// the Hai-Feng and Shan-Lan sets last (16 cars, 16 lamp sets); with
-    /// them left out, the names, hashes, lamps and signs are main e7cb277's
-    /// to the digest. Decision 558 added the Wenhu line's VAL256 and 370
-    /// sets, near and far, after them (32 cars, 16 lamp sets); decision 560
-    /// the EMU700 sets after those (16 cars, 16 lamp sets, no sign:
-    /// `Map3DHeadSigns.services` has no `emu700`); decision 561 the
-    /// Taoyuan Airport MRT's 1000 and 2000 sets after those (18 cars, 18
-    /// lamp sets, no sign). The models before them are as they were
-    /// (`hashes.lock.json`).
-    ///
-    /// Decision 782: the registered trains' models (``Map3DTrainRegistry``)
-    /// are left out of every digest here, and the indices are counted as
-    /// if they were not in the pack, so a new train changes none of these
-    /// values; each train's own models and lamps are pinned by its lock
-    /// file (`testEveryRegisteredTrainIsAsLocked`).
-    func testTheOrderAndTheLampsAreAsBefore() {
-        let full = Map3DModelPack.standard
-        let registered = full.models.indices.filter { Map3DTrainRegistry.registration(ofModel: full.models[$0].name) != nil }
-        /// A model's index with the registered trains' models before it
-        /// left out.
-        func coreIndex(_ index: Int) -> Int { index - registered.prefix { $0 < index }.count }
-        let isRegistered = Set(registered)
-        let models = full.models.indices.filter { !isRegistered.contains($0) }.map { full.models[$0] }
-        var lights: [Int: Map3DTrainLights.Car] = [:]
-        for (index, car) in full.lights where !isRegistered.contains(index) {
-            var car = car
-            car.windows = car.windows.map(coreIndex)
-            lights[coreIndex(index)] = car
+    /// The standard pack's models with each running car's lamps and
+    /// windows' model and each destination sign, one line a model in
+    /// `tools/train-models/pack.lock.txt` (MODEL-PACK-PINS-SPLIT,
+    /// 2026-11-25). It took over from the whole pack's digests of names,
+    /// hashes, lamps and signs, which every pull request that added a
+    /// model rewrote and so conflicted on (their history is in git). A
+    /// model's bits are its hash in `hashes.lock.json`
+    /// (`testEveryModelIsAsLocked`); here its lamps by their hash and its
+    /// windows and sign by their model's name, not by index, so a model
+    /// added anywhere changes no other model's line. The registered trains
+    /// (``Map3DTrainRegistry``) are left out: their lock files pin them
+    /// (`testEveryRegisteredTrainIsAsLocked`). The file is `merge=union`
+    /// (`.gitattributes`): two branches that each add a model keep both
+    /// lines.
+    func testTheOrderAndTheLampsAreAsBefore() throws {
+        let now = Self.packLines(Map3DModelPack.standard)
+        // `MAP3D_WRITE_PACK_LOCK=1 swift test --filter Map3DModelPackLockTests/testTheOrderAndTheLampsAreAsBefore`
+        // rewrites the file; check its diff is only the models you meant.
+        if ProcessInfo.processInfo.environment["MAP3D_WRITE_PACK_LOCK"] != nil {
+            try (Self.packLockHeader + now.joined(separator: "\n") + "\n").write(to: Self.packLockFile, atomically: true, encoding: .utf8)
         }
-        let pack = (models: models, lights: lights,
-                    headSigns: Dictionary(uniqueKeysWithValues: full.headSigns.map { (coreIndex($0.key), $0.value) }))
-        // Decision 575 續 (CABLEMAP): the cable car's 13 models just
-        // before the route bus, and the windows' models after (which each move 13 on);
-        // with them left out and the windows moved back, all as before.
-        // Decision 585 PR-3 (FERRY3): the ferries' 6 models right after
-        // them, before the route bus; left out with the cable car's.
-        // Decision 615: the cable car's 8 Sun Moon Lake cabins after its
-        // 13 and its cabins' glass see-through: the whole pack's names and
-        // hashes and the windows' indices move, the rest as before.
-        let cable = Set(Map3DCableCar.drawn.map(\.name))
-        let ferry = Set(Map3DFerry.drawn.map(\.name))
-        // Decision 699: the 12 aircraft and airfield vehicles right after
-        // the ferries, before the route bus; left out with them (the
-        // whole pack's names and hashes and the windows' indices move by
-        // 12, the rest as before).
-        let air = Set(Map3DAircraft.drawn.map(\.name))
-        // Decision 708: the 14 coaches and 2 coach stops right after the
-        // aircraft, before the route bus; left out with them (the whole
-        // pack's names and hashes and the windows' indices move by 16,
-        // the rest as before).
-        let coach = Set(Map3DCoaches.drawn.map(\.name))
-        // Decision 732: Hong Kong's four traffic signals right after the
-        // coaches, before the route bus; left out with them (the whole
-        // pack's names and hashes and the windows' indices move by 4, the
-        // rest as before).
-        // Decision 743: Hong Kong's vehicles after its signals.
-        let hongKong = Map3DHongKongSignal.drawn.map(\.name) + Map3DHongKongVehicles.models.map(\.modelName)
-        let hk = Set(hongKong)
-        // Decision 787: the close-up commuter's two models after Hong
-        // Kong's vehicles, before the route bus; left out with them (the
-        // whole pack's names and hashes and the windows' indices move by 2,
-        // the rest as before).
-        let commuter = Map3DCommuterFigure.models.map(\.modelName)
-        let figures = Set(commuter)
-        // Decision 794: the winter event's five models after the commuter,
-        // before the route bus; left out with them (the whole pack's names
-        // and hashes and the windows' indices move by 5, the rest as before).
-        let winterNames = Map3DWinterLights.drawn.map(\.name)
-        let winter = Set(winterNames)
-        // Decision 831: Santa's sleigh's stand-in after the winter
-        // decorations, before the route bus; left out with them (the
-        // whole pack's names and hashes and the windows' indices move by
-        // 1, the rest as before).
-        let santa = Set([SantaFlight.Model.name])
-        // Decision 838: Taiwan's SUV's and yellow taxi's stand-ins after
-        // the sleigh, before the route bus; left out with them (the whole
-        // pack's names and hashes and the windows' indices move by 2, the
-        // rest as before).
-        let taiwanCars = Set(Map3DTaiwanCars.drawn.map(\.name))
-        // Decision 840: the Santa Claus village's reindeer after Taiwan's
-        // cars, before the route bus; left out with them (the whole pack's
-        // names and hashes and the windows' indices move by 6, the rest as
-        // before).
-        let herd = Set(Map3DReindeerHerd.drawn.map(\.name))
-        // Decision 846: the pedestrian signals with no countdown's box
-        // after the reindeer, before the route bus; left out with them (the
-        // whole pack's names and hashes and the windows' indices move by 3,
-        // the rest as before).
-        let plain = Set(Map3DPedestrianSignal.plainDrawn.map(\.name))
-        // Decision 846's later note: Finland's street furniture after them,
-        // before the route bus; left out with them (the whole pack's names
-        // and hashes and the windows' indices move by 10, the rest as
-        // before).
-        let finland = Set(Map3DFinlandStreet.drawn.map(\.name))
-        // Decision 889: the yellow tit's four poses after Finland's street
-        // furniture, before the route bus; left out with them (the whole
-        // pack's names and hashes and the windows' indices move by 4, the
-        // rest as before).
-        let tits = Set(Map3DYellowTit.drawn.map(\.name))
-        // Decision 921: Japan's traffic signals after the yellow tit, before
-        // the route bus; left out with them (the whole pack's names and
-        // hashes and the windows' indices move by 3, the rest as before).
-        let japan = Set(Map3DJapanSignal.drawn.map(\.name))
-        // Decision 923: Japan's utility poles, pedestrian signals and bus
-        // stop after them, before the route bus; left out with them (the
-        // whole pack's names and hashes and the windows' indices move by 9).
-        let japanStreet = Set(Map3DJapanStreet.drawn.map(\.name))
-        // Decision 918: the parked bicycles after them, before the route
-        // bus; left out with them (the whole pack's names and hashes and
-        // the windows' indices move by 2).
-        let bicycles = Set(Map3DBicycle.drawn.map(\.name))
-        // And the five more close-up people, standing and mid-stride,
-        // after the bicycles (by 10 more).
-        let pedestrians = Set(Map3DPedestrian.drawn.map(\.name))
-        // Decision 941: the level crossings' boom after the people, before the
-        // route bus; left out with them (the whole pack's names and hashes
-        // and the windows' indices move by 1).
-        let crossingBoom = Set(Map3DCrossingGate.drawn.map(\.name))
-        // Decision 949: the bicycle rack and shed after the boom, before
-        // the route bus; left out with them (the whole pack's names and
-        // hashes and the windows' indices move by 2).
-        let bikeParking = Set(Map3DBikeParking.drawn.map(\.name))
-        // Decision 767: the coal bunker's stand-in after the other scenery
-        // props: every model after it, the cars' windows and the head
-        // signs move by one, so the digests are made again; the models
-        // themselves are as they were (`hashes.lock.json`).
-        // The owner's old red commuter car (Map3DRedCommuter), the last set:
-        // its three cars and their windows before the cable car (every
-        // model after them, the windows' indices and the signs move by
-        // six, so the digests are made again; 3 lamp sets more).
-        // Decision 825: the E200 drawn from photographs, its far version
-        // and the Ming-Ri's E200 with it (the same names and order; their
-        // models and the head lamps are new, `hashes.lock.json`).
-        let firstCable = pack.models.firstIndex { cable.contains($0.name) }!
-        let before = pack.models.filter { !cable.contains($0.name) && !ferry.contains($0.name) && !air.contains($0.name) && !coach.contains($0.name) && !hk.contains($0.name)
-            && !figures.contains($0.name) && !winter.contains($0.name) && !santa.contains($0.name) && !taiwanCars.contains($0.name) && !herd.contains($0.name)
-            && !plain.contains($0.name) && !finland.contains($0.name) && !tits.contains($0.name)
-            && !japan.contains($0.name) && !japanStreet.contains($0.name) && !bicycles.contains($0.name)
-            && !pedestrians.contains($0.name) && !crossingBoom.contains($0.name) && !bikeParking.contains($0.name) }
-        // Decision 956: the Keikyu New 1000's far set after the red
-        // commuter's (its 3 cars and their windows).
-        XCTAssertEqual(Self.digest(before.map(\.name)), "55d69302e97afad2")
-        // Decision 891: the red commuter car's body and band in the
-        // palette's colours (its three models in `hashes.lock.json`).
-        // Decision 930: the Midsummer Formosa's locomotive and tender the
-        // studio's CT273, near and far (the same names and order; their
-        // four models and the head lamps are new, `hashes.lock.json`).
-        // Decision 940: the post boxes' stand-in in the studio's shape.
-        // Decision 953: the Formosa Star's coaches the Chu-Kuang coach in
-        // pink, near and far (the same names and order; four models new).
-        // Decision 956: the red commuter's cars the Keikyu New 1000's, near
-        // and far.
-        XCTAssertEqual(Self.digest(before.map { $0.name + " " + Self.hash($0) }), "a4945233f16d4756")
-        XCTAssertEqual(Array(pack.models[firstCable..<firstCable + cable.count].map(\.name)), Map3DCableCar.drawn.map(\.name))
-        XCTAssertEqual(Array(pack.models[firstCable + cable.count..<firstCable + cable.count + ferry.count].map(\.name)),
-                       Map3DFerry.drawn.map(\.name))
-        XCTAssertEqual(Array(pack.models[firstCable + cable.count + ferry.count..<firstCable + cable.count + ferry.count + air.count].map(\.name)),
-                       Map3DAircraft.drawn.map(\.name))
-        let firstCoach = firstCable + cable.count + ferry.count + air.count
-        XCTAssertEqual(Array(pack.models[firstCoach..<firstCoach + coach.count].map(\.name)), Map3DCoaches.drawn.map(\.name))
-        let firstHK = firstCoach + coach.count
-        XCTAssertEqual(Array(pack.models[firstHK..<firstHK + hk.count].map(\.name)), hongKong)
-        XCTAssertEqual(Array(pack.models[firstHK + hk.count..<firstHK + hk.count + figures.count].map(\.name)), commuter)
-        let firstWinter = firstHK + hk.count + figures.count
-        XCTAssertEqual(Array(pack.models[firstWinter..<firstWinter + winter.count].map(\.name)), winterNames)
-        XCTAssertEqual(pack.models[firstWinter + winter.count].name, SantaFlight.Model.name)
-        XCTAssertEqual(Array(pack.models[firstWinter + winter.count + 1..<firstWinter + winter.count + 1 + taiwanCars.count].map(\.name)),
-                       Map3DTaiwanCars.drawn.map(\.name))
-        let firstHerd = firstWinter + winter.count + 1 + taiwanCars.count
-        XCTAssertEqual(Array(pack.models[firstHerd..<firstHerd + herd.count].map(\.name)), Map3DReindeerHerd.drawn.map(\.name))
-        XCTAssertEqual(Array(pack.models[firstHerd + herd.count..<firstHerd + herd.count + plain.count].map(\.name)),
-                       Map3DPedestrianSignal.plainDrawn.map(\.name))
-        let firstFinland = firstHerd + herd.count + plain.count
-        XCTAssertEqual(Array(pack.models[firstFinland..<firstFinland + finland.count].map(\.name)), Map3DFinlandStreet.Unit.allCases.map(\.rawValue))
-        let firstTit = firstFinland + finland.count
-        XCTAssertEqual(Array(pack.models[firstTit..<firstTit + tits.count].map(\.name)), Map3DYellowTit.Pose.allCases.map(\.rawValue))
-        let firstJapan = firstTit + tits.count
-        XCTAssertEqual(Array(pack.models[firstJapan..<firstJapan + japan.count].map(\.name)), Map3DJapanSignal.Unit.allCases.map(\.rawValue))
-        let firstJapanStreet = firstJapan + japan.count
-        XCTAssertEqual(Array(pack.models[firstJapanStreet..<firstJapanStreet + japanStreet.count].map(\.name)),
-                       Map3DJapanStreet.Unit.allCases.map(\.rawValue))
-        let firstBicycle = firstJapanStreet + japanStreet.count
-        XCTAssertEqual(Array(pack.models[firstBicycle..<firstBicycle + bicycles.count].map(\.name)), Map3DBicycle.Unit.allCases.map(\.rawValue))
-        XCTAssertEqual(Array(pack.models[firstBicycle + bicycles.count..<firstBicycle + bicycles.count + pedestrians.count].map(\.name)),
-                       Map3DPedestrian.drawn.map(\.name))
-        XCTAssertEqual(pedestrians.count, 10)
-        XCTAssertEqual(pack.models[firstBicycle + bicycles.count + pedestrians.count].name, Map3DCrossingGate.boomName)
-        XCTAssertEqual(Array(pack.models[firstBicycle + bicycles.count + pedestrians.count + 1..<firstBicycle + bicycles.count + pedestrians.count + 1
-                                         + bikeParking.count].map(\.name)), Map3DBikeParking.Unit.allCases.map(\.rawValue))
-        // Decision 840: the reindeer after Taiwan's cars (the whole
-        // pack's names, hashes and lamps' window indices move).
-        // Decision 846: and the pedestrian signals with no countdown's box
-        // after the reindeer; its later note: and Finland's street
-        // furniture after them; its fourth later note: and its second
-        // batch (shelter, double street light, give-way sign) after those.
-        // Decision 889: and the yellow tit's four poses after those.
-        // Decision 897: and the Ngong Ping cabins' four after the Sun
-        // Moon Lake cabins (every model after them moves by 4).
-        // Decision 921: and Japan's traffic signals after the yellow tit.
-        // Decision 923: and Japan's poles, pedestrian signals and bus stop.
-        // Decision 930: and Hong Kong's outlying island catamaran, near
-        // and far, after its ferry's piers (every model after them moves
-        // by 2).
-        // Decision 918: and the two bicycles and the ten people after them.
-        // Decision 941: and the level crossings' boom after the people.
-        // Decision 949: and the bicycle rack and shed after the boom.
-        // Decision 956: and the Keikyu New 1000's far set (every model
-        // after it moves by 6).
-        XCTAssertEqual(Self.digest(pack.models.map(\.name)), "324daddd0e463a9d")
-        // Decision 840: and the studio's sleigh in the stand-in's place
-        // (the same name and order; its model is new, `hashes.lock.json`);
-        // its later amendment: dark brown antlers, the sleigh's team brown.
-        // Decision 897: every cabin and hall lit after dark (their new
-        // hashes in `hashes.lock.json`).
-        // Decision 923's later note: Japan's pedestrian signals' heads
-        // dark (the studio's second round; the same triangles).
-        // Decision 940: the post boxes' stand-in in the studio's shape.
-        // Decision 918: the two bicycles and the ten people join the pack.
-        // Decision 941: and the level crossings' boom.
-        // Decision 949: and the bicycle rack and shed.
-        // Decision 953: the Formosa Star's coaches (and their lamps and
-        // windows) the Chu-Kuang coach's in pink.
-        // Decision 957: the steam train a registered train
-        // (``Map3DSteamCoach``): its seven models leave the hand-written
-        // sets (every model after them, the windows and the signs move
-        // back by seven; four lamp sets fewer), the rest as they were.
-        // Decision 956: the Keikyu New 1000, near and far.
-        XCTAssertEqual(Self.digest(pack.models.map { $0.name + " " + Self.hash($0) }), "f58c97fe8c3477c5")
-        func lamps(movingBack moved: Int) -> [String] {
-            pack.lights.keys.sorted().map { index -> String in
-                let car = pack.lights[index]!
+        let locked = try Self.lockedPackLines()
+        XCTAssertEqual(Set(now).count, now.count, "two models of one name")
+        XCTAssertEqual(Set(locked).count, locked.count, "a line twice in pack.lock.txt")
+        // With what it is now, for the lock: add the missing lines, remove the stale ones.
+        let missing = Set(now).subtracting(locked).sorted()
+        let stale = Set(locked).subtracting(now).sorted()
+        XCTAssertEqual(missing, [], "lines pack.lock.txt lacks:\n" + missing.joined(separator: "\n"))
+        XCTAssertEqual(stale, [], "lines in pack.lock.txt the pack no longer makes:\n" + stale.joined(separator: "\n"))
+    }
+
+    static let packLockFile = toolDirectory.appendingPathComponent("pack.lock.txt")
+    static let packLockHeader = """
+        # One line a model of Map3DModelPack.standard the train registry does not own, sorted
+        # (Map3DModelPackLockTests.testTheOrderAndTheLampsAreAsBefore): its name, then
+        # "lamps <windows' model or -> <hash>" for a running car and "sign <sign>" for one with
+        # a destination sign. merge=union (.gitattributes): add your models' lines, change no other.
+
+        """
+
+    /// One line a model of `pack` the registry does not own, sorted: its
+    /// name, then ` lamps <windows' model or -> <hash>` for a running car
+    /// and ` sign <sign>` for one with a destination sign.
+    static func packLines(_ pack: Map3DModelPack) -> [String] {
+        pack.models.indices.compactMap { index -> String? in
+            let name = pack.models[index].name
+            guard Map3DTrainRegistry.registration(ofModel: name) == nil else { return nil }
+            var line = name
+            if let car = pack.lights[index] {
                 let vertices = car.front.head + car.front.tail + car.back.head + car.back.tail
-                let model = Map3DModelPack.Model(name: "", vertices: vertices, minimum: .zero, maximum: .zero)
-                let windows = car.windows.map { $0 > firstCable ? $0 - moved : $0 } ?? -1
-                return "\(index) \(windows) \(Self.hash(model))"
+                let lamps = Map3DModelPack.Model(name: "", vertices: vertices, minimum: .zero, maximum: .zero)
+                line += " lamps \(car.windows.map { pack.models[$0].name } ?? "-") \(hash(lamps))"
             }
-        }
-        XCTAssertLessThan(pack.lights.keys.max()!, firstCable)
-        // Decision 956: the Keikyu New 1000's far set's 3 lamp sets.
-        XCTAssertEqual(lamps(movingBack: 0).count, 372)
-        XCTAssertEqual(Self.digest(lamps(movingBack: cable.count + ferry.count + air.count + coach.count + hk.count + figures.count + winter.count
-                                                          + santa.count + taiwanCars.count + herd.count + plain.count + finland.count + tits.count
-                                                          + japan.count + japanStreet.count + bicycles.count + pedestrians.count + crossingBoom.count
-                                                          + bikeParking.count)), "1828442c053edda0")
-        // Decision 889: the windows after the cable car move by the
-        // yellow tit's 4; decision 897: and by the Ngong Ping cabins' 4;
-        // decision 921: and by Japan's traffic signals' 3; decision 923: and
-        // by Japan's street furniture's 9; decision 918: and by the
-        // bicycles' and people's 12.
-        // Decision 930: the CT273's head lamp, and the windows after the
-        // ferries move by the catamaran's 2. Decision 941: and by the
-        // level crossings' boom's 1. Decision 949: and by the bicycle
-        // rack's and shed's 2. Decision 956: the Keikyu New 1000's own
-        // lamps, and the windows after it move by its far set's 6.
-        XCTAssertEqual(Self.digest(lamps(movingBack: 0)), "165feed5670f8a3")
-        XCTAssertEqual(Self.digest(pack.headSigns.keys.sorted().map { "\($0) \(pack.headSigns[$0]!)" }), "8a7369acb220bf30")
+            if let sign = pack.headSigns[index] { line += " sign \(sign)" }
+            return line
+        }.sorted()
+    }
+
+    /// `pack.lock.txt`'s lines, sorted, without its `#` comments and blank lines.
+    static func lockedPackLines() throws -> [String] {
+        try String(contentsOf: packLockFile, encoding: .utf8).split(separator: "\n").map(String.init)
+            .filter { !$0.isEmpty && !$0.hasPrefix("#") }.sorted()
     }
 
     /// Decision 782: each registered train's models are exactly those its

@@ -247,7 +247,7 @@ extension GameSession {
             var previous: TrackNodeID?
             var edges: [TrackEdgeID] = []
             var last: (edge: TrackEdgeID, to: TrackNodeID)?
-            for stretch in stretches {
+            for stretch in stretches.joiningGauge(in: world) {
                 let built = try stretch.starting(at: previous).build(in: &world, heights: heights)
                 edges.append(built.edge)
                 previous = built.to

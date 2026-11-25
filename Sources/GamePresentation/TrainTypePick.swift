@@ -36,6 +36,7 @@ extension GameSession {
                 said += language.nowHighSpeedText(line.name)
             }
             said += world.guidewayFirstHint(for: type, in: language) ?? ""
+            said += world.gaugeFirstHint(for: type, in: language) ?? ""
             return said
         }
     }
