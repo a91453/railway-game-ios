@@ -490,7 +490,10 @@ public enum RealWorldDemo {
                 // cubic sways a little off its path, and two tracks a few
                 // centimetres apart past a junction would touch.
                 let longest = isClose ? min(longestEdge, closeLongestEdge ?? longestEdge) : longestEdge
-                if length <= longest, turn <= sharpestTurn, near, level { return }
+                // SHINKANSEN-SALE (decision 975): and no edge rises more
+                // than GameCore takes (``TrackRise/greatestEdgeRise``).
+                let low = rise.map { abs($0.node(at: b) - $0.node(at: a)) <= TrackRise.greatestEdgeRise } ?? true
+                if length <= longest, turn <= sharpestTurn, near, level, low { return }
                 guard length > 2 * shortestEdge else { return }
                 var cut = (a + b) / 2
                 if let zone = keepOut.first(where: { $0.contains(cut) }) {
@@ -507,11 +510,18 @@ public enum RealWorldDemo {
                     // way; none in a deep tunnel, which stays one edge.
                     let step = 16 * metre
                     let places = (1...Int(length / step)).flatMap { [cut - Double($0) * step, cut + Double($0) * step] }
-                    guard let place = places.first(where: { place in
+                    if let place = places.first(where: { place in
                         place > a + shortestEdge && place < b - shortestEdge && rise.allowsNode(at: place)
                             && !keepOut.contains { $0.contains(place) }
-                    }) else { return }
-                    cut = place
+                    }) {
+                        cut = place
+                    } else if low || !rise.allowsDeepNode(at: cut) {
+                        return
+                    }
+                    // SHINKANSEN-SALE (decision 975): else a node deep in
+                    // the tunnel, where one edge would rise too far: the
+                    // Kyushu Shinkansen's Chikushi Tunnel falls 160 m in
+                    // 6.3 km, all of it more than 60 m under the hills.
                 }
                 split(a, cut)
                 cuts.append(cut)

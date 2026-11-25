@@ -22,6 +22,11 @@ final class PlatformNameBoardStylesTests: XCTestCase {
         var numbers: [String: Set<String>] = [:]
         for feature in try XCTUnwrap(json["features"] as? [[String: Any]]) {
             let properties = try XCTUnwrap(feature["properties"] as? [String: Any])
+            // SHINKANSEN-SALE (decision 975): the pack has the Kyushu
+            // Shinkansen's stations too, which have no station numbers
+            // (their codes are this project's) and keep decision 882's
+            // boards.
+            guard properties["sys"] as? String == "fksubway" else { continue }
             numbers[try XCTUnwrap(properties["name"] as? String), default: []].insert(try XCTUnwrap(properties["code"] as? String))
         }
         XCTAssertEqual(Set(table.keys), Set(numbers.keys))

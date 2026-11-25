@@ -411,7 +411,7 @@ public enum StationStampCounties {
             guard seen.insert(key).inserted else { continue }
             // Decision 712: a station of a city outside Taiwan is in that
             // city's group, after Taiwan's counties.
-            if let city = OverseasMap.allCases.first(where: { $0.system == station.system.id }) {
+            if let city = OverseasMap.map(ofSystem: station.system.id) {
                 found[key] = city.name(in: .traditionalChinese)
             } else if let county = places.county(containing: station.coordinate) {
                 found[key] = county

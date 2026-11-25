@@ -139,7 +139,8 @@ public struct TrackGauge: Hashable, Sendable {
     /// The gauge a bought real line is laid at (decision 970), by its name
     /// in the app's data (``LineAcquisition/realLine``, `tra:PINGXI`,
     /// `hkmtr:TCL`): the Taiwan Railway's 1,067 mm; the high-speed
-    /// railway's 1,435 mm at the Shinkansen's loading gauge; the forest
+    /// railway's and the Kyushu Shinkansen's (decision 975) 1,435 mm at
+    /// the Shinkansen's loading gauge; the forest
     /// railway's 762; standard gauge for Taiwan's metros and light rails
     /// and Hong Kong's MTR (1,432 mm, 3 mm under standard gauge; the game
     /// lays it at 1,435); Finland's 1,524; the Fukuoka City Subway's
@@ -150,7 +151,7 @@ public struct TrackGauge: Hashable, Sendable {
         guard let system = parts.first else { return nil }
         switch system {
         case "tra", "tra_sched": return .cape
-        case "thsr", "thsr_sched": return .shinkansen
+        case "thsr", "thsr_sched", "kyushushinkansen": return .shinkansen
         case "afr", "afr_sched": return .forest
         case "trtc", "mrt", "tmrt", "krtc", "tymc", "ntdlrt", "ntalrt", "sanying", "hkmtr": return .standard
         case "vr": return .broad

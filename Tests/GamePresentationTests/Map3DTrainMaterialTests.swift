@@ -74,7 +74,9 @@ final class Map3DTrainMaterialTests: XCTestCase {
                                             // Decision 957: the steam train's wooden coaches.
                                             "set-STEAM-car", "set-STEAM-tail", "set-STEAMFar-car", "set-STEAMFar-tail",
                                             // Decision 956: the Keikyu New 1000, near and far.
-                                            "set-redCommuter"].contains { recipe.name.hasPrefix($0) },
+                                            "set-redCommuter",
+                                            // Decision 977: the Kyushu Shinkansen's N700 series.
+                                            "set-kyushuN700"].contains { recipe.name.hasPrefix($0) },
                                   "\(recipe.name): only a cabin or a studio train marks its own glass")
                     continue
                 }

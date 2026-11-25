@@ -31,7 +31,9 @@ let package = Package(
     ],
     targets: [
         .target(name: "GameCore", swiftSettings: core),
-        .target(name: "GamePresentation", dependencies: ["GameCore"], swiftSettings: presentation),
+        // Decision 415's amendment: the next build's news, a text file each,
+        // read by WhatsNewTests and moved into the code at a release.
+        .target(name: "GamePresentation", dependencies: ["GameCore"], exclude: ["WhatsNewNext"], swiftSettings: presentation),
         // Decision 260: the game with no screen, for tools (`swift run GameSim --help`).
         .executableTarget(name: "GameSim", dependencies: ["GamePresentation"]),
         .testTarget(name: "GameCoreTests", dependencies: ["GameCore"], swiftSettings: coreTests),
