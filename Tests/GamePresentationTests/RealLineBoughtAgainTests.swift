@@ -165,6 +165,13 @@ final class RealLineBoughtAgainTests: XCTestCase {
         try Self.boughtAgain(["fksubway:K", "fksubway:H", "fksubway:N"]) { try FukuokaRailwaysTests.fukuoka() }
     }
 
+    /// SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen, sold by
+    /// itself, removed and bought again: its viaduct, its deep tunnels
+    /// and its depot past Kumamoto where the first purchase stood them.
+    func testTheKyushuShinkansenIsBoughtAgain() throws {
+        try Self.boughtAgain([KyushuShinkansenTests.id]) { try FukuokaRailwaysTests.fukuoka() }
+    }
+
     func testHongKongsAirportThreeAreBoughtAgain() throws {
         try Self.boughtAgain(["hkmtr:AEL", "hkmtr:TCL", "hkmtr:DRL"]) { try HongKongMapTests.hongKong() }
     }
