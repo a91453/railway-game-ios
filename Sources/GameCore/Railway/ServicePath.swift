@@ -321,6 +321,29 @@ extension GameWorld {
         }
     }
 
+    /// Decision 980: ``path(from:toStation:length:avoiding:forbidden:only:)``
+    /// that also gives, in `refused`, every step it asked that `blocked`
+    /// kept it from, as the track each covers (none when nothing is
+    /// blocked). The way found is the same.
+    func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: BlockedTrack, refused: inout [TrackCover]) -> TrainPath? {
+        switch start {
+        case .onEdge(let traversal, let offset):
+            guard !blocked.isEmpty else {
+                refused = []
+                return networkPath(from: traversal, offset: offset, toStation: id, length: length)
+            }
+            var kept: [TrackCover] = []
+            let found = networkPath(from: traversal, offset: offset, toStation: id, length: length, clear: { step in
+                let cover = cover(of: [step])
+                guard blocked.blocks(cover, in: network) else { return true }
+                kept.append(cover)
+                return false
+            })
+            refused = kept
+            return found
+        }
+    }
+
     /// ``path(from:toStation:length:avoiding:forbidden:only:)`` with the
     /// traversals it may not run along asked one at a time.
     func path(from start: TrainPosition, toStation id: StationID, length: Int64, avoiding blocked: BlockedTrack, forbids: @escaping (TrackTraversal) -> Bool) -> TrainPath? {
