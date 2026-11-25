@@ -99,7 +99,7 @@ final class Map3DPPIntegrationTests: XCTestCase {
     }
 
     func testTrainPackAndFallbackRulesRemainIndependentOfThePPDisplayAssets() throws {
-        XCTAssertEqual(TrainPack.sets, ["threeCarUrban", "fiveSectionLRT", "sevenSectionLRT", "fourCarMetro", "blueSeven", "n700sG", "pushPullE1000"])
+        XCTAssertEqual(TrainPack.sets, ["threeCarUrban", "fiveSectionLRT", "sevenSectionLRT", "fourCarMetro", "blueSeven", "n700s", "pushPullE1000"])
         var locked = pack
         locked.locked = TrainPack.locked(unlocked: false)
         for count in [3, 12] {
@@ -109,7 +109,7 @@ final class Map3DPPIntegrationTests: XCTestCase {
             }
         }
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: locked.locked), "HSR")
-        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700sG")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700s")
         XCTAssertNil(pack.models(forType: "pp-e500-display"))
     }
 

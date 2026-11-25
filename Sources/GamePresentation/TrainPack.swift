@@ -16,12 +16,13 @@ public enum TrainPack {
     /// The pack's sets (``Map3DTrainSet/key``): the three-car urban EMU
     /// and, later, the light metro's five- and seven-section LRTs; decision
     /// 399: the four-car metro and the seven-section car; decision 338
-    /// (second later): the N700S-G, not a Taiwanese train. While it is
+    /// (second later): the N700S-G, not a Taiwanese train (decision 979:
+    /// the owner's old N700S in its place). While it is
     /// locked every high-speed train is the 700T
     /// (``Map3DTrainSet/variant(of:number:locked:)``); decision 427: and the
     /// push-pull Tze-Chiang's E1000 look, which the pack's second switch
     /// turns on.
-    public static let sets: Set<String> = ["threeCarUrban", "fiveSectionLRT", "sevenSectionLRT", "fourCarMetro", "blueSeven", "n700sG", "pushPullE1000"]
+    public static let sets: Set<String> = ["threeCarUrban", "fiveSectionLRT", "sevenSectionLRT", "fourCarMetro", "blueSeven", "n700s", "pushPullE1000"]
 
     /// The settings switch that unlocks the pack in a test build.
     public static let testUnlockKey = "trainPack.testUnlocked"

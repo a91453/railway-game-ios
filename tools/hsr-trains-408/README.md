@@ -13,7 +13,11 @@ python3 tools/train-pack-lrt/sheet.py OUT hsr.png "之前=hsr-before-iso,hsr-bef
 
 `export.swift` 用 `@testable import`，所以要 debug 版（從 `tools/codex-trains-399/` 改來）。`render.mjs` 同 399 的，但把 station-kit 繪圖器一個模型 15,000 個三角形的上限在它的副本裡放寬到 200,000（700T 一列七萬多）。Chromium 用 `/opt/pw-browsers/chromium-1243`（或 `CHROMIUM_PATH`），playwright 從全域 node_modules 讀（或 `NODE_GLOBAL`）。WebGL 的圖不代表 iPhone 的 Metal。
 
-## N700S-G 的減面（`decimate.py`）
+決策 988（2026-11-25）：700T 換成作者舊版的 700 系（`Map3DTHSR700T`，`tools/texture-palette/thsr_700t.py`），遠景那一組（`highSpeedFar`，也就是這張圖的「之前」）沒有了。`export.swift` 不再寫 `hsr-before` 和 `hsr-700t-far`，高鐵那幾列只剩現在的 700T 和 N700S；上面指令裡那兩張是當時的紀錄。
+
+## N700S-G 的減面（`decimate.py`，已刪）
+
+決策 979（2026-11-25）：N700S-G 換成作者舊版的 N700S（`Map3DN700S`，`tools/texture-palette/n700s.py`）。`decimate.py` 與它產生的 `Map3DN700SGMesh.swift` 已刪，要看在 git 歷史；`export.swift` 的 N700S-G 那一列改畫 N700S（沒有遠景那一張）。下面是當時的紀錄，現在跑不了。
 
 N700S-G 近處的三節（頭 A、中間 C、集電弓車 D）是作者自己的模型減面、換成遊戲的色票（決策 408 第 3 條）。原檔只在私庫，**不要複製進這個 repo**：從私庫的 checkout 讀。
 

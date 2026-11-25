@@ -139,8 +139,6 @@ Map3DModels.swift C5C9CD
 Map3DModels.swift F2F3F1
 Map3DModels.swift F6F6F4
 Map3DModels.swift FFF4D6
-Map3DN700SG.swift 8F959B
-Map3DN700SG.swift F6F6F4
 Map3DNordicBuildings.swift C6CBD8
 Map3DNordicBuildings.swift DAD8D2
 Map3DNordicBuildings.swift E6EAF2
