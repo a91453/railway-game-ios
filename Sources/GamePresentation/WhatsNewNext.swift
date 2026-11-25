@@ -16,5 +16,6 @@ extension WhatsNew {
     ]
 
     public static let nextFixes: [Line] = [
+        Line(english: "The Danhai, Ankeng and Kaohsiung light rail trains are drawn at their real length, no longer stretched.", chinese: "淡海、安坑、高雄輕軌的列車照真車長度畫，不再被拉長。"),
     ]
 }
