@@ -177,7 +177,8 @@ extension Map3DTrainSet {
     /// pantograph covers face each other. The nose has a white lamp and a
     /// red one side by side: the white ones are lit on the car that leads
     /// and the red ones on the last car, the others left as unlit lenses
-    /// (``litLenses(_:front:)`` would light both at each end).
+    /// (``litEnd(_:leading:)``, the 700T's; ``litLenses(_:front:)`` would
+    /// light both at each end).
     static func n700s() -> Map3DTrainSet {
         Map3DTrainSet(key: Map3DN700S.key, pantographCars: [3, 8], ownLengths: true) {
             func model(_ unit: Map3DN700S.Unit) -> Map3DModelPack.Model {
@@ -186,16 +187,8 @@ extension Map3DTrainSet {
                 Map3DN700S.model(unit)
                     ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: unit.isCab).model(named: unit.rawValue)
             }
-            func lit(_ model: Map3DModelPack.Model, leading: Bool) -> Map3DModelPack.Model {
-                let lamp = leading ? Map3DTrainStyle.headlamp : Map3DPalette.lantern
-                var vertices = model.vertices
-                for start in stride(from: 0, to: vertices.count, by: 3) where vertices[start].color == lamp {
-                    for i in start..<start + 3 { vertices[i].layer = Map3DVertex.glowing }
-                }
-                return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum, maximum: model.maximum)
-            }
             let cab = model(.cab), middle = model(.middle), pantograph = model(.pantograph)
-            return Cars(head: lit(cab, leading: true), middle: middle, tail: lit(cab.turned, leading: false), single: nil,
+            return Cars(head: litEnd(cab, leading: true), middle: middle, tail: litEnd(cab.turned, leading: false), single: nil,
                         pantograph: pantograph, middleBack: middle.turned, pantographBack: pantograph.turned)
         }
     }
