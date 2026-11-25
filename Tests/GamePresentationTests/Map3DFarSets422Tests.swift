@@ -1,9 +1,10 @@
 import XCTest
 @testable import GamePresentation
 
-/// Decision 422: the 700T's and the N700S-G's far cars are made from each
-/// train's own near cars (the 700T's recipe, the N700S-G's mesh), and the
-/// near cars stay as they were.
+/// Decision 422: the 700T's far cars are made from its own near cars (its
+/// recipe), and the near cars stay as they were. The N700S-G's were
+/// checked here too until decision 979 replaced it with the owner's old
+/// N700S, which has no far set.
 final class Map3DFarSets422Tests: XCTestCase {
     private var pack: Map3DModelPack { .unbaked }  // the recipes before decision 439's shade
 
@@ -13,7 +14,6 @@ final class Map3DFarSets422Tests: XCTestCase {
 
     private static let units = [
         "highSpeed": ["head", "car", "panto", "tail"],
-        "n700sG": ["head", "car", "panto", "tail", "carBack", "pantoBack"],
     ]
 
     func testTheFarCarsAreTheNearCarsLighter() throws {
@@ -21,7 +21,7 @@ final class Map3DFarSets422Tests: XCTestCase {
             for unit in units {
                 let near = try model("set-\(key)-\(unit)"), far = try model("set-\(key)Far-\(unit)")
                 // The same box: a train laid from the near cars fits the far
-                // ones (the N700S-G's resampled ends stop 1 to 5 cm short).
+                // ones.
                 XCTAssertEqual(far.minimum.x, near.minimum.x, accuracy: 0.06, "\(key) \(unit)")
                 XCTAssertEqual(far.maximum.x, near.maximum.x, accuracy: 0.06, "\(key) \(unit)")
                 XCTAssertEqual(far.maximum.z, near.maximum.z, accuracy: 0.1, "\(key) \(unit)")
@@ -29,7 +29,7 @@ final class Map3DFarSets422Tests: XCTestCase {
                 // In the near car's own colours, the line among them.
                 let colours = Set(far.vertices.map(\.color))
                 XCTAssertTrue(colours.isSubset(of: Set(near.vertices.map(\.color))), "\(key) \(unit)")
-                XCTAssertTrue(colours.contains(key == "n700sG" ? Map3DN700SG.green : Map3DPalette.shopAwnings[0]), "\(key) \(unit): the line")
+                XCTAssertTrue(colours.contains(Map3DPalette.shopAwnings[0]), "\(key) \(unit): the line")
                 // About 1,000 to 1,500 triangles a car at most, a third of the near car's or fewer.
                 XCTAssertLessThanOrEqual(far.triangleCount, 1_500, "\(key) \(unit)")
                 XCTAssertLessThan(far.triangleCount * 3, near.triangleCount, "\(key) \(unit): \(far.triangleCount) of \(near.triangleCount)")
@@ -44,17 +44,6 @@ final class Map3DFarSets422Tests: XCTestCase {
         }
     }
 
-    /// Each N700S-G unit the game draws has its far mesh; B and E none.
-    func testTheN700SGFarMeshes() {
-        for unit in [Map3DN700SG.Unit.a, .c, .d] {
-            let far = Map3DN700SG.farMesh(unit)
-            XCTAssertNotNil(far, "\(unit)")
-            XCTAssertEqual(far?.length ?? 0, Map3DN700SG.length(unit), accuracy: 0.1, "\(unit)")
-        }
-        XCTAssertNil(Map3DN700SG.farMesh(.b))
-        XCTAssertNil(Map3DN700SG.farMesh(.e))
-    }
-
     /// The near cars are as they were on main: the far sets only change.
     func testTheNearCarsAreUnchanged() throws {
         for (key, (triangles, hash)) in Self.mainNear {
@@ -67,7 +56,6 @@ final class Map3DFarSets422Tests: XCTestCase {
     /// Measured on main before decision 422.
     private static let mainNear: [String: ([Int], UInt64)] = [
         "highSpeed": ([9126, 5602, 9126, 5730], 15067286180718250026),
-        "n700sG": ([6989, 6024, 6989, 6016, 6024, 6016], 5689086315284109035),
     ]
 
     /// FNV-1a over every vertex's bits, the same on every run.

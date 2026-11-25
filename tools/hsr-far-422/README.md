@@ -1,7 +1,8 @@
 # 高鐵兩款車的遠景（決策 422）
 
-- `n700sg_far.swift`：從 N700S-G 近景網格（`Map3DN700SG.encodedMeshes`）重新取樣出遠景車身，寫成 `Sources/GamePresentation/Map3DN700SGFarMesh.swift`。做法寫在檔頭；同樣的輸入每次輸出逐位元相同。
-- `export.swift`：把 `highSpeed`、`highSpeedFar`、`n700sG`、`n700sGFar` 每種車廂寫成 M3DM（`tools/mesh-lod-420/render.mjs` 的格式）與 `manifest.json`，印出每節與十二節一列的三角形、頂點資料 MB、建好每組的時間。
+> 決策 979（2026-11-25）：N700S-G 換成作者舊版的 N700S（`Map3DN700S`，一節兩三千面，不另做遠景）。`n700sg_far.swift` 與它產生的 `Map3DN700SGFarMesh.swift` 已刪，要看在 git 歷史；下面 N700S-G 的指令是當時的紀錄，現在跑不了。
+
+- `export.swift`：把 `highSpeed`、`highSpeedFar` 每種車廂寫成 M3DM（`tools/mesh-lod-420/render.mjs` 的格式）與 `manifest.json`，印出每節與十二節一列的三角形、頂點資料 MB、建好每組的時間。
 - `distance.py`：把算好的圖排成 `docs/art/hsr-far-2026-10-26/overview.png`。
 
 700T 的遠景不用工具：`Map3DTrainShapeRefresh.model(_:far:)` 在遊戲裡從近景的配方產生。

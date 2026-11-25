@@ -408,18 +408,6 @@ light-set-metroC381Far-tail
 light-set-metroGeneric-car
 light-set-metroGeneric-head
 light-set-metroGeneric-tail
-light-set-n700sG-car
-light-set-n700sG-carBack
-light-set-n700sG-head
-light-set-n700sG-panto
-light-set-n700sG-pantoBack
-light-set-n700sG-tail
-light-set-n700sGFar-car
-light-set-n700sGFar-carBack
-light-set-n700sGFar-head
-light-set-n700sGFar-panto
-light-set-n700sGFar-pantoBack
-light-set-n700sGFar-tail
 light-set-pushPull-car
 light-set-pushPullE1000-car
 light-set-pushPullE1000Far-car
@@ -827,18 +815,6 @@ set-metroC381Far-tail lamps light-set-metroC381Far-tail 86f91059592c46e1
 set-metroGeneric-car lamps light-set-metroGeneric-car cbf29ce484222325
 set-metroGeneric-head lamps light-set-metroGeneric-head d38aa112f8f8b8d6
 set-metroGeneric-tail lamps light-set-metroGeneric-tail a8d9f4d24ca2f2ae
-set-n700sG-car lamps light-set-n700sG-car 833588564ac0fe85
-set-n700sG-carBack lamps light-set-n700sG-carBack 833588564ac0fe85
-set-n700sG-head lamps light-set-n700sG-head 5c0359b4106350d7
-set-n700sG-panto lamps light-set-n700sG-panto cbf29ce484222325
-set-n700sG-pantoBack lamps light-set-n700sG-pantoBack cbf29ce484222325
-set-n700sG-tail lamps light-set-n700sG-tail a8fd30ffe4015687
-set-n700sGFar-car lamps light-set-n700sGFar-car cbf29ce484222325
-set-n700sGFar-carBack lamps light-set-n700sGFar-carBack cbf29ce484222325
-set-n700sGFar-head lamps light-set-n700sGFar-head 2eb1c726f99b6757
-set-n700sGFar-panto lamps light-set-n700sGFar-panto cbf29ce484222325
-set-n700sGFar-pantoBack lamps light-set-n700sGFar-pantoBack cbf29ce484222325
-set-n700sGFar-tail lamps light-set-n700sGFar-tail c354889dde635f87
 set-pushPull-car lamps light-set-pushPull-car ced4ddc2a7ce4405
 set-pushPull-head lamps - 17bc5856fa550585
 set-pushPullE1000-car lamps light-set-pushPullE1000-car ced4ddc2a7ce4405

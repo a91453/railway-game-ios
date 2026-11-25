@@ -332,7 +332,8 @@ public enum Map3DTrains {
         let count = TrainCars.count(length: run.length, carPitch: run.carPitch)
         let steady = run.steadyHead(at: progress, over: Self.steadySpan)
         // Decision 408: half the high-speed trains the N700S-G (decision
-        // 338, second later: none while the train pack is locked).
+        // 979: the owner's old N700S; decision 338, second later: none
+        // while the train pack is locked).
         // Decision 539: a freight train, whatever its type, the R200 and
         // its container wagons. Decision 837: its wagons as it is loaded,
         // bare when it runs empty.

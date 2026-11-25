@@ -13,6 +13,8 @@
 extension WhatsNew {
     public static let nextItems: [Line] = [
         Line(english: "The garage has the Kyushu Shinkansen's N700 series: white-blue with a navy and gold line, eight cars.", chinese: "車庫多了九州新幹線 N700 系：白藍車身、窗下深藍鑲金的線，八節。"),
+        Line(english: "The garage has the Kyushu Shinkansen's N700 series: pale blue with a navy line, eight cars.", chinese: "車庫多了九州新幹線 N700 系：白藍車身、窗下深藍細線，八節。"),
+        Line(english: "The Train Pack's white high-speed train is now the N700S of the game's earlier version: white with two blue lines, twelve cars.", chinese: "列車包的白色高速列車換成舊版遊戲的 N700S：白色車身、窗下兩道藍線，十二節。"),
     ]
 
     public static let nextFixes: [Line] = [

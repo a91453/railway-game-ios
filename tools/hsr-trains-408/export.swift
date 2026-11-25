@@ -98,13 +98,13 @@ for curved in [false, true] {
     let (t700, t700Note) = train(after, "HSR", 12, curved: curved)
     let (t700far, midNote) = train(after, "HSR", 12, curved: curved, far: true)
     try write("hsr-700t-far\(suffix)", t700far, group: "hsr" + suffix)
-    let (n700, n700Note) = train(after, "n700sG", 12, curved: curved)
-    let (n700far, n700FarNote) = train(after, "n700sG", 12, curved: curved, far: true)
-    try write("hsr-n700sg-far\(suffix)", n700far, group: "hsr" + suffix)
+    // Decision 979: the N700S-G is gone; the owner's old N700S has its
+    // place and no far set.
+    let (n700, n700Note) = train(after, Map3DN700S.key, 12, curved: curved)
     try write("hsr-before\(suffix)", old, group: "hsr" + suffix)
     try write("hsr-700t\(suffix)", t700, group: "hsr" + suffix)
-    try write("hsr-n700sg\(suffix)", n700, group: "hsr" + suffix)
-    // The three side by side, 5 m apart: before, the 700T, the N700S-G.
+    try write("hsr-n700s\(suffix)", n700, group: "hsr" + suffix)
+    // The three side by side, 5 m apart: before, the 700T, the N700S.
     try write("hsr-together\(suffix)", shifted(old, 5) + t700 + shifted(n700, -5), group: "together" + suffix)
     let (e200old, eOldNote) = train(before, "E200CK", 4, curved: curved)
     let (e200new, eNewNote) = train(after, "E200CK", 4, curved: curved)
@@ -112,14 +112,13 @@ for curved in [false, true] {
     try write("e200-after\(suffix)", e200new, group: "e200" + suffix)
     if !curved {
         report += ["high speed before (#900, 20 m a car): \(oldNote)", "700T: \(t700Note)", "700T from 500 m (#900 at the 700T's lengths): \(midNote)",
-                   "N700S-G: \(n700Note)", "N700S-G from 500 m (the light rebuild): \(n700FarNote)", "E200 Chu-Kuang before: \(eOldNote)", "E200 Chu-Kuang after: \(eNewNote)"]
+                   "N700S: \(n700Note)", "E200 Chu-Kuang before: \(eOldNote)", "E200 Chu-Kuang after: \(eNewNote)"]
     }
 }
-// The cars close up: the N700S-G (the author's mesh, fewer triangles), the
-// 700T, the light rebuild of the author's shape.
-for (name, model) in [("cab-n700sg", Map3DN700SG.mesh(.a)!), ("cab-700t", Map3DTrainShapeRefresh.model("refresh-700t-cab")),
-                      ("cab-n700sg-light", Map3DN700SG.model(.a)), ("panto-n700sg", Map3DN700SG.mesh(.d)!),
-                      ("car-n700sg", Map3DN700SG.mesh(.c)!)] {
+// The cars close up: the N700S (decision 979: the owner's old cars) and
+// the 700T.
+for (name, model) in [("cab-n700s", Map3DN700S.model(.cab)!), ("cab-700t", Map3DTrainShapeRefresh.model("refresh-700t-cab")),
+                      ("panto-n700s", Map3DN700S.model(.pantograph)!), ("car-n700s", Map3DN700S.model(.middle)!)] {
     report.append("\(name): \(model.triangleCount) triangles, \(String(format: "%.2f", model.length)) m")
     try write(name, shifted(model.vertices, 0), group: "cabs")
 }

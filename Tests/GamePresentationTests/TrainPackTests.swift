@@ -51,11 +51,14 @@ final class TrainPackTests: XCTestCase {
         XCTAssertFalse(TrainPack.isUnlocked(testBuild: false, switchOn: true), "the App Store's build ignores the switch")
     }
 
-    /// Decision 338 (second later): the N700S-G is in the pack; locked,
-    /// every high-speed train is the 700T, near and far; unlocked, decision
-    /// 408's odd-numbered trains are the N700S-G.
+    /// Decision 338 (second later): the N700S-G is in the pack (decision
+    /// 979: the owner's old N700S in its place); locked, every high-speed
+    /// train is the 700T, near and far; unlocked, decision 408's
+    /// odd-numbered trains are the N700S, which has no far set and is
+    /// drawn as itself from 500 m out too.
     func testALockedPackDrawsEveryHighSpeedTrainAsThe700T() {
-        XCTAssertTrue(TrainPack.sets.contains("n700sG"))
+        XCTAssertTrue(TrainPack.sets.contains("n700s"))
+        XCTAssertFalse(TrainPack.sets.contains("n700sG"))
         var pack = Map3DModelPack.standard
         pack.locked = TrainPack.locked(unlocked: false)
         for number in 1...4 {
@@ -67,12 +70,12 @@ final class TrainPackTests: XCTestCase {
             XCTAssertEqual(far, "set-highSpeedFar-head", "train \(number) from 500 m out")
         }
         pack.locked = TrainPack.locked(unlocked: true)
-        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: pack.locked), "n700sG")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: pack.locked), "n700s")
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 2, locked: pack.locked), "HSR")
-        let head = pack.modelIndex(forType: "n700sG", carIndex: 0, count: 12)!
-        XCTAssertEqual(pack.models[head].name, "set-n700sG-head")
-        XCTAssertEqual(pack.model(head, forType: "n700sG", count: 12, at: Map3DTrainSet.tramReach + 100).map { pack.models[$0].name },
-                       "set-n700sGFar-head")
+        let head = pack.modelIndex(forType: "n700s", carIndex: 0, count: 12)!
+        XCTAssertEqual(pack.models[head].name, "set-n700s-head")
+        XCTAssertEqual(pack.model(head, forType: "n700s", count: 12, at: Map3DTrainSet.tramReach + 100).map { pack.models[$0].name },
+                       "set-n700s-head")
     }
 
     func testTheCityBusKeepsTheLock() {
@@ -107,8 +110,8 @@ final class TrainPackTests: XCTestCase {
                 XCTAssertEqual(Map3DTrainSet.variant(of: "pushPull", number: number, locked: locked), expected,
                                "unlocked \(unlocked), switch \(switchOn), train \(number)")
             }
-            // N700S-G: odd-numbered trains, only while the pack is unlocked.
-            XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: locked), unlocked ? "n700sG" : "HSR")
+            // N700S: odd-numbered trains, only while the pack is unlocked.
+            XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: locked), unlocked ? "n700s" : "HSR")
             XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 2, locked: locked), "HSR")
             XCTAssertEqual(Map3DTrainSet.variant(of: "taroko", number: 1, locked: locked), "taroko", "other trains are not touched")
         }

@@ -1717,54 +1717,6 @@
       "hash" : "63557037382901ab",
       "triangles" : 384
     },
-    "light-set-n700sG-car" : {
-      "hash" : "60aebedbf2ea42ae",
-      "triangles" : 711
-    },
-    "light-set-n700sG-carBack" : {
-      "hash" : "f21b3daad14eb2ae",
-      "triangles" : 711
-    },
-    "light-set-n700sG-head" : {
-      "hash" : "a550b4b9e8b55f36",
-      "triangles" : 654
-    },
-    "light-set-n700sG-panto" : {
-      "hash" : "7cdd54ec73ae485f",
-      "triangles" : 694
-    },
-    "light-set-n700sG-pantoBack" : {
-      "hash" : "2ff78c262a13d35f",
-      "triangles" : 694
-    },
-    "light-set-n700sG-tail" : {
-      "hash" : "6f2cd1e24fc6f936",
-      "triangles" : 654
-    },
-    "light-set-n700sGFar-car" : {
-      "hash" : "807caddda2c25858",
-      "triangles" : 88
-    },
-    "light-set-n700sGFar-carBack" : {
-      "hash" : "90f60f89252e6758",
-      "triangles" : 88
-    },
-    "light-set-n700sGFar-head" : {
-      "hash" : "b281f2c796df5fad",
-      "triangles" : 68
-    },
-    "light-set-n700sGFar-panto" : {
-      "hash" : "17d67f882238998c",
-      "triangles" : 88
-    },
-    "light-set-n700sGFar-pantoBack" : {
-      "hash" : "fff4daa33560788c",
-      "triangles" : 88
-    },
-    "light-set-n700sGFar-tail" : {
-      "hash" : "a3e2d50020cc3ead",
-      "triangles" : 68
-    },
     "light-set-pushPull-car" : {
       "hash" : "35168b648bcda0cf",
       "triangles" : 764
@@ -2968,54 +2920,6 @@
     "set-MINGRIFar-tail" : {
       "hash" : "239b493d71d5c3d7",
       "triangles" : 4032
-    },
-    "set-n700sG-car" : {
-      "hash" : "fe277683a96a6eb9",
-      "triangles" : 6024
-    },
-    "set-n700sG-carBack" : {
-      "hash" : "63360d14533da296",
-      "triangles" : 6024
-    },
-    "set-n700sG-head" : {
-      "hash" : "9c32fe3a7f7d461f",
-      "triangles" : 6989
-    },
-    "set-n700sG-panto" : {
-      "hash" : "ef764ac1461f8482",
-      "triangles" : 6016
-    },
-    "set-n700sG-pantoBack" : {
-      "hash" : "40c72ea8e129f33b",
-      "triangles" : 6016
-    },
-    "set-n700sG-tail" : {
-      "hash" : "1634df96fa8b095a",
-      "triangles" : 6989
-    },
-    "set-n700sGFar-car" : {
-      "hash" : "d1c0cc51f0191625",
-      "triangles" : 408
-    },
-    "set-n700sGFar-carBack" : {
-      "hash" : "fe7ae1fc9467b114",
-      "triangles" : 408
-    },
-    "set-n700sGFar-head" : {
-      "hash" : "d6c1d9ef9025d08f",
-      "triangles" : 977
-    },
-    "set-n700sGFar-panto" : {
-      "hash" : "c9c9589da3c4c14d",
-      "triangles" : 1488
-    },
-    "set-n700sGFar-pantoBack" : {
-      "hash" : "b0ddcbf7bfe2a967",
-      "triangles" : 1488
-    },
-    "set-n700sGFar-tail" : {
-      "hash" : "15bbd7d70a378557",
-      "triangles" : 977
     },
     "set-pushPull-car" : {
       "hash" : "1a9e1a1fcc4a9bb",

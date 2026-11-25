@@ -123,8 +123,8 @@ public enum Map3DShowcase {
         Entry("MINGRI", "Ming-Ri sightseeing train", "鳴日號", .taiwanRailway, cars: 8, most: 10),
         Entry("SUMMER", "Midsummer Formosa steam train", "仲夏寶島號", .taiwanRailway, cars: 6, most: 10),
         Entry("STAR", "Formosa Star sightseeing train", "環島之星", .taiwanRailway, cars: 8, most: 10),
-        // High-speed rail.
-        Entry("n700sG", "N700S-G", "N700S-G", .highSpeed, cars: 12),
+        // High-speed rail (decision 979: the N700S is a registered
+        // train, its row its own).
         Entry("highSpeed", "THSR 700T", "台灣高鐵 700T", .highSpeed, cars: 12),
         // Metro: the Wenhu line's car in its brown, as its band takes a
         // line's colour. Decision 461: the Circular line's 610 and the

@@ -32,7 +32,9 @@ var records: [[String: Any]] = []
 let pack = Map3DModelPack.standard
 let vertexStride = MemoryLayout<Map3DVertex>.stride
 var lines: [String] = []
-for (key, type) in [("highSpeed", "HSR"), ("highSpeedFar", "HSR"), ("n700sG", "n700sG"), ("n700sGFar", "n700sG")] {
+// Decision 979: the N700S-G's two sets are gone (the owner's old N700S has
+// their place, with no far set), so only the 700T's are written.
+for (key, type) in [("highSpeed", "HSR"), ("highSpeedFar", "HSR")] {
     let set = Map3DTrainSet.byKey[key]!
     let started = Date()
     _ = set.build()
