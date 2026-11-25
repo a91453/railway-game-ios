@@ -607,15 +607,35 @@ extension GameSession {
         if case .point = end, let position = draft.position(of: end, height: networkHeight) { to = position }
 
         let mapped = draft.ground.isMapped
+        // Decision 974: on flat ground (decision 198) the track the tool
+        // lays itself still goes over the map's rivers, lakes and sea on a
+        // bridge, level everywhere else.
+        let bridgesWater = !mapped && networkStructure == .automatic
         let height = Double(networkHeight)
         let planning = draft
         func ground(_ point: WorldVector) -> Double {
             Double(planning.groundHeight(at: point.plan) ?? 0) + height
         }
-        func water(_ point: WorldVector) -> Bool {
-            guard mapped else { return false }
+        func cell(_ point: WorldVector) -> CellPosition {
             let plan = point.plan
-            return planning.terrain.isWater(row: Int(plan.y / Land.cellLength), column: Int(plan.x / Land.cellLength))
+            return CellPosition(row: Int(plan.y / Land.cellLength), column: Int(plan.x / Land.cellLength))
+        }
+        // Decision 974: the whole of each of the real line's bridges that
+        // crosses the map's water, which marks only the river's channel
+        // (a 64 m cell of the Lanyang River's kilometre).
+        var bridgedCells: Set<CellPosition> = []
+        if bridgesWater, let traces = realRailwayTraces, let frame = RealWorldFrame(world: draft),
+           let snap = traces.snap(WorldVector(from.plan), within: reach), let structures = railways?.structures {
+            for stretch in structures.stretches(along: path, frame: frame, system: traces.lines[snap.place.line].system) where stretch.kind == .bridge {
+                let along = Array(stride(from: max(0, stretch.range.lowerBound), through: min(path.length, stretch.range.upperBound), by: TrackRise.spacing))
+                let cells = along.map { cell(path.point(at: $0)) }
+                if cells.contains(where: { planning.terrain.isWater(row: $0.row, column: $0.column) }) { bridgedCells.formUnion(cells) }
+            }
+        }
+        func water(_ point: WorldVector) -> Bool {
+            guard mapped || bridgesWater else { return false }
+            let at = cell(point)
+            return planning.terrain.isWater(row: at.row, column: at.column) || bridgedCells.contains(at)
         }
         // An end on track keeps that track's height; a new end stands near
         // the ground, or as the tool sets it above.
@@ -697,7 +717,16 @@ extension GameSession {
         }
         let grade = Self.traceGrade(ofSystem: lineSystem)
         let climbs = grade > Self.traceGrade
-        guard var rise = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: grade, carried: carried) else {
+        // Decision 974: on flat ground, over the water or, where no grade
+        // reaches a bridge (an end on track at the water's edge), level
+        // as before; never under it, as flat ground has no tunnels.
+        func rising(_ levels: [TrackRise.Level]) -> TrackRise? {
+            let over = TrackRise(path: path, ground: ground, water: water, levels: levels, grade: grade, carried: carried)
+            guard bridgesWater else { return over }
+            if let over, !zip(over.heights, over.ground).contains(where: { $0 < $1 }) { return over }
+            return TrackRise(path: path, ground: ground, water: { _ in false }, levels: levels, grade: grade, carried: carried)
+        }
+        guard var rise = rising(levels) else {
             var refused = TracePlan(stretches: [], buildable: 0, problem: climbs ? language.text(
                 "The track cannot climb from one end to the other along this line within the steepest grade of mountain track, 70‰.",
                 "沿這段真實鐵路，從一端到另一端的高低差超過登山軌道的坡度上限 70‰，鋪不上去。"
@@ -723,7 +752,7 @@ extension GameSession {
                     level, on: structure, ground: along.filter { structure.range.contains($0) }.map { ground(path.point(at: $0)) }
                 )
             }
-            if let levelled = TrackRise(path: path, ground: ground, water: water, levels: levels + flat, grade: grade, carried: carried) {
+            if let levelled = rising(levels + flat) {
                 rise = levelled
             }
         }
@@ -750,8 +779,13 @@ extension GameSession {
                 endDirection = WorldVector(x: Double(direction.dx), y: Double(direction.dy)).unit.reversed
             }
         }
+        let forced: [Double] = [0, path.length] + levelSpans.flatMap { span -> [Double] in [span.lowerBound, span.upperBound] }
+        // Decision 974: each bridge over water on flat ground, a node at
+        // each end.
+        let bridges: [ClosedRange<Double>] = bridgesWater ? Self.flatWaterBridges(rise, along: path, water: water, forced: forced, keepOut: levelSpans) : []
+        let bridgeEnds: [Double] = bridges.flatMap { bridge -> [Double] in [bridge.lowerBound, bridge.upperBound] }
         let plan = RealWorldDemo.TrackPlan(
-            path, forced: [0, path.length] + levelSpans.flatMap { [$0.lowerBound, $0.upperBound] }, avoiding: levelSpans,
+            path, forced: forced + bridgeEnds, avoiding: levelSpans,
             start: (from.plan, startDirection), end: (to.plan, endDirection),
             rise: rise, structure: networkStructure
         )
@@ -790,9 +824,15 @@ extension GameSession {
             // Decision 515: on a mountain line, only what is steeper than
             // the game's grade is mountain track.
             let steep = climbs && geometry.map { !$0.steepestGrade.isNoSteeper(than: TrackProfile.maximumGrade) } ?? false
+            // Decision 974: a bridge within one over water on flat ground,
+            // both ends above the ground (a bridge stands at or above it,
+            // and the grade between them is straight).
+            let bridged = !bridges.isEmpty && Self.bridgesFlatWater(
+                from: plan.distances[index], to: plan.distances[index + 1], heights: (a, b), bridges: bridges, in: planning
+            )
             stretches.append(PlayerCommand.TrackStretch(
                 start: index == 0 ? start : .point(a.plan), end: index + 1 == last ? end : .point(b.plan),
-                from: a, to: b, curve: curve, profile: .uniform, structure: networkStructure,
+                from: a, to: b, curve: curve, profile: .uniform, structure: bridged ? .bridge : networkStructure,
                 ground: [a.plan, b.plan] + surveyed, mountain: steep, gauge: gauge
             ))
         }
@@ -877,6 +917,67 @@ extension GameSession {
 }
 
 extension GameSession {
+    /// Decision 974: the stretches of `path`, by distance along it, that
+    /// cross water on flat ground with `rise` over it: each run of samples
+    /// over `water` (as ``TrackRise`` groups them) and the sample beyond
+    /// it at either end, where the track is at least
+    /// ``TrackRise/waterClearance`` over the ground all the way (where no
+    /// grade reached a bridge, the track is level over the water and none
+    /// is laid). An end within ``RealWorldDemo/shortestEdge`` of one in
+    /// `forced` moves to it, as do two stretches that near each other;
+    /// none reaches into `keepOut` (the platforms) and its margin, and
+    /// each end is where `rise` allows a node.
+    static func flatWaterBridges(
+        _ rise: TrackRise, along path: WorldPath, water: (WorldVector) -> Bool, forced: [Double], keepOut: [ClosedRange<Double>]
+    ) -> [ClosedRange<Double>] {
+        let distances = rise.distances
+        var runs: [ClosedRange<Int>] = []
+        for index in distances.indices where water(path.point(at: distances[index])) {
+            if let last = runs.last, last.upperBound >= index - 2 {
+                runs[runs.count - 1] = last.lowerBound...index
+            } else {
+                runs.append(index...index)
+            }
+        }
+        let clearance = TrackRise.waterClearance - 0.5
+        let shortest = RealWorldDemo.shortestEdge
+        func snapped(_ distance: Double) -> Double {
+            forced.first { abs($0 - distance) < shortest } ?? distance
+        }
+        var found: [ClosedRange<Double>] = []
+        for run in runs {
+            let low = max(0, run.lowerBound - 1), high = min(distances.count - 1, run.upperBound + 1)
+            guard (low...high).allSatisfy({ rise.heights[$0] - rise.ground[$0] >= clearance }) else { continue }
+            let range = snapped(distances[low])...snapped(distances[high])
+            if let last = found.last, range.lowerBound - last.upperBound < 2 * shortest {
+                found[found.count - 1] = last.lowerBound...range.upperBound
+            } else {
+                found.append(range)
+            }
+        }
+        let margin = RealWorldDemo.platformMargin
+        let zones = keepOut.map { ($0.lowerBound - margin)...($0.upperBound + margin) }
+        return found.filter { range in
+            range.upperBound - range.lowerBound >= shortest && !zones.contains { $0.overlaps(range) }
+                && [range.lowerBound, range.upperBound].allSatisfy { end in forced.contains(end) || rise.allowsNode(at: end) }
+        }
+    }
+
+    /// Decision 974: whether the edge from `start` to `end` along the
+    /// path, its ends at `heights`, lies within one of `bridges` and is
+    /// over the ground of `world` at both ends, by
+    /// ``RealLineAcquisition/shortBridgeLift`` to
+    /// ``TrackSectionRules/highestDeck``.
+    static func bridgesFlatWater(
+        from start: Double, to end: Double, heights: (WorldCoordinate, WorldCoordinate), bridges: [ClosedRange<Double>], in world: GameWorld
+    ) -> Bool {
+        func over(_ point: WorldCoordinate) -> Bool {
+            let z = point.z - (world.groundHeight(at: point.plan) ?? 0)
+            return z >= RealLineAcquisition.shortBridgeLift && z <= TrackSectionRules.highestDeck
+        }
+        return bridges.contains { $0.lowerBound - 1 <= start && end <= $0.upperBound + 1 } && over(heights.0) && over(heights.1)
+    }
+
     /// The tightest curve a traced edge may have on the TRA and the High
     /// Speed Rail: 40 m, the forest railway's tightest. GameCore has no curve radius (a stretch may turn
     /// up to 90° where it joins, decision 103); this only stops a trace
