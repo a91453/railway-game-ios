@@ -35,6 +35,9 @@ struct Map3DDiamondCrossing: Equatable, Sendable {
     /// The two tracks' ways through it, level and of unit length.
     let first: Map3DPoint
     let second: Map3DPoint
+    /// Decision 984: the gauge each track's rails are laid at, metres.
+    var firstGauge: Float = Map3DTrackGauge.cape
+    var secondGauge: Float = Map3DTrackGauge.cape
 
     /// The sine of the angle the tracks cross at.
     var sine: Float { abs(first.x * second.z - first.z * second.x) }
@@ -58,22 +61,33 @@ enum Map3DDiamondCrossings {
 
     /// The diamonds of `snapshot`: each node where four edges end in two
     /// pairs leaving it opposite ways, crossing at 1 in 5 or more. In the
-    /// order of the nodes' IDs.
-    static func find(_ snapshot: RailwaySnapshot, scene: (WorldCoordinate) -> Map3DPoint) -> [Map3DDiamondCrossing] {
+    /// order of the nodes' IDs. Decision 984: `gauge`, the gauge an
+    /// edge's rails are laid at, metres (each track's the wider of its
+    /// two edges'); Taiwan's without.
+    static func find(_ snapshot: RailwaySnapshot, gauge: (TrackEdge) -> Float = { _ in Map3DTrackGauge.cape },
+                     scene: (WorldCoordinate) -> Map3DPoint) -> [Map3DDiamondCrossing] {
         func level(_ v: PlanVector) -> Map3DPoint? { Map3DPoint(Float(v.dx), 0, Float(v.dy)).normalized }
         var ends: [TrackNodeID: [Map3DPoint]] = [:]
+        var gauges: [TrackNodeID: [Float]] = [:]
         for alignment in snapshot.edges where alignment.edge.from != alignment.edge.to {
-            if let start = level(alignment.geometry.startDirection) { ends[alignment.edge.from, default: []].append(start) }
-            if let end = level(alignment.geometry.endDirection) { ends[alignment.edge.to, default: []].append(end) }
+            if let start = level(alignment.geometry.startDirection) {
+                ends[alignment.edge.from, default: []].append(start)
+                gauges[alignment.edge.from, default: []].append(gauge(alignment.edge))
+            }
+            if let end = level(alignment.geometry.endDirection) {
+                ends[alignment.edge.to, default: []].append(end)
+                gauges[alignment.edge.to, default: []].append(gauge(alignment.edge))
+            }
         }
         var crossings: [Map3DDiamondCrossing] = []
         for node in snapshot.nodes {
-            guard let ways = ends[node.id], ways.count == 4,
+            guard let ways = ends[node.id], let laid = gauges[node.id], ways.count == 4,
                   let partner = (1..<4).first(where: { ways[0].dot(ways[$0]) < opposite })
             else { continue }
             let others = (1..<4).filter { $0 != partner }
             guard ways[others[0]].dot(ways[others[1]]) < opposite else { continue }
-            let crossing = Map3DDiamondCrossing(point: scene(node.position), world: node.position, first: ways[0], second: ways[others[0]])
+            let crossing = Map3DDiamondCrossing(point: scene(node.position), world: node.position, first: ways[0], second: ways[others[0]],
+                                                firstGauge: max(laid[0], laid[partner]), secondGauge: max(laid[others[0]], laid[others[1]]))
             if crossing.sine >= flattest { crossings.append(crossing) }
         }
         return crossings
@@ -129,7 +143,8 @@ extension Map3DScene.Builder {
             // The way out along this track, and the other track's.
             let ways = [diamond.first, diamond.first * -1, diamond.second, diamond.second * -1]
             guard let way = ways.max(by: { $0.dot(chord) < $1.dot(chord) }) else { continue }
-            let other = abs(way.dot(diamond.first)) > abs(way.dot(diamond.second)) ? diamond.second : diamond.first
+            let isFirst = abs(way.dot(diamond.first)) > abs(way.dot(diamond.second))
+            let other = isFirst ? diamond.second : diamond.first
             // The rail's offset across the way out (the line's own right,
             // ``Map3DMesh/acrossDirections(_:)``, at the start; its left
             // at the end, the line running the other way).
@@ -137,7 +152,8 @@ extension Map3DScene.Builder {
             let normal = Map3DPoint(-other.z, 0, other.x)
             let towards = way.dot(normal)
             guard abs(towards) > 0.01 else { continue }
-            let half = abs(offset)
+            // Decision 984: the other track's rails at its own gauge.
+            let half = ((isFirst ? diamond.secondGauge : diamond.firstGauge) + Self.railWidth) / 2
             let corners = [half, -half].map { ($0 - across.dot(normal)) / towards }.filter { $0 > 0 }
             guard let corner = corners.min() else { continue }
             let sine = abs(towards)
@@ -156,7 +172,7 @@ extension Map3DScene.Builder {
         for diamond in state.track.diamonds {
             let x = Double(diamond.world.x), y = Double(diamond.world.y)
             guard x >= region.minX, x <= region.maxX, y >= region.minY, y <= region.maxY else { continue }
-            let wings = Map3DDiamondCrossings.wings(of: diamond, gauge: look.gauge)
+            let wings = Map3DDiamondCrossings.wings(of: diamond)
             mesh(at: diamond.point) { mesh in
                 for wing in wings {
                     mesh.addRibbon(along: wing, width: Self.railWidth, lift: 0, depth: Self.railHeight, top: Map3DPalette.railTop, side: Map3DPalette.rail)
@@ -167,12 +183,13 @@ extension Map3DScene.Builder {
 }
 
 extension Map3DDiamondCrossings {
-    /// Decision 888: `diamond`'s eight wing rails at `gauge`, each from
-    /// its start to its end: at each corner, one beside each track's rail
-    /// on its gauge side, from the other track's rail outwards.
-    static func wings(of diamond: Map3DDiamondCrossing, gauge: Float) -> [[Map3DPoint]] {
+    /// Decision 888: `diamond`'s eight wing rails, each from its start to
+    /// its end: at each corner, one beside each track's rail on its gauge
+    /// side, from the other track's rail outwards. Decision 984: each
+    /// track's rails at its own gauge.
+    static func wings(of diamond: Map3DDiamondCrossing) -> [[Map3DPoint]] {
         typealias Builder = Map3DScene.Builder
-        let offset = (gauge + Builder.railWidth) / 2
+        let offsetA = (diamond.firstGauge + Builder.railWidth) / 2, offsetB = (diamond.secondGauge + Builder.railWidth) / 2
         let spacing = Builder.railWidth + flangeway
         let a = diamond.first, b = diamond.second
         let normalA = Map3DPoint(-a.z, 0, a.x), normalB = Map3DPoint(-b.z, 0, b.x)
@@ -182,8 +199,8 @@ extension Map3DDiamondCrossings {
             for j: Float in [-1, 1] {
                 // The corner where rail i of the first track meets rail j
                 // of the second, from the node.
-                let along = (j * offset - i * offset * normalA.dot(normalB)) / a.dot(normalB)
-                let corner = normalA * (i * offset) + a * along
+                let along = (j * offsetB - i * offsetA * normalA.dot(normalB)) / a.dot(normalB)
+                let corner = normalA * (i * offsetA) + a * along
                 let outA = corner.dot(a) >= 0 ? a : a * -1, outB = corner.dot(b) >= 0 ? b : b * -1
                 // Beside the second track's rail j, on its gauge side, from
                 // the first track's rail outwards; and the same beside the

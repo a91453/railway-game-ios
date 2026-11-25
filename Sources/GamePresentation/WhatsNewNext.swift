@@ -12,6 +12,7 @@
 // form and that none is left here once it is in a released entry.
 extension WhatsNew {
     public static let nextItems: [Line] = [
+        Line(english: "In the 3D map, each track's rails are as far apart as its gauge: standard gauge is wider, 762 mm narrower.", chinese: "3D 地圖裡，每段軌道的鋼軌照它的軌距畫：標準軌比較寬，762 mm 比較窄。"),
     ]
 
     public static let nextFixes: [Line] = [
