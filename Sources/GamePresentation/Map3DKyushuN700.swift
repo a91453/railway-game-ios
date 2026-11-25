@@ -3,10 +3,12 @@ import Foundation
 /// Decision 977: the Kyushu Shinkansen's N700 series 7000 and 8000 (the
 /// through trains "Mizuho" and "Sakura"), the owner's old cars
 /// (SwiftRailMac's bc97d3e5, the cab car, and fd0310c2, the middle car: a
-/// long nose, a pale blue body, a navy line under the windows, grey
-/// skirts, two bogies and eight wheels), their texture cut into faces of
-/// the game's palette colours by `tools/texture-palette/kyushu_n700.py` and
+/// long nose, two bogies and eight wheels), their texture cut into faces
+/// of the palette's colours by `tools/texture-palette/kyushu_n700.py` and
 /// written here by `tools/train-models/glb_to_swift.py` (``encoded``).
+/// The colours are the real train's (the owner, 2026-11-25): a pale
+/// white-blue body to the skirts' foot, and under the windows a navy line
+/// with a thin gold line along each edge.
 ///
 /// The old game drew every car 21 m long and 2.80 m wide; here they are
 /// the real cars' size again: 25 m from coupling to coupling (the cab car
@@ -30,14 +32,12 @@ public enum Map3DKyushuN700 {
     public static let cars = 8
 
     /// The colours of the mesh's palette indices, in the order
-    /// `glb_to_swift.py --materials` gave them: paleBlue, navy, grey,
-    /// glass, dark, headlamp, taillamp. The body's pale blue is the Fukuoka
-    /// Airport line's sky blue (``Map3DPalette/skyBlue``, #BFE3E5, beside
-    /// the livery's 白藍 #C1E4E9), the line the EMU900's navy, the skirts
-    /// steel, the trains' glass, the dark bogies, gangways and floor, and
-    /// the lamps: no new colour.
+    /// `glb_to_swift.py --materials` gave them: whiteBlue, navy, gold,
+    /// glass, dark, headlamp, taillamp. The first three are the real
+    /// train's (``Map3DPalette/kyushuWhiteBlue``); then the trains' glass,
+    /// the dark bogies, gangways and floor, and the lamps.
     static let meshPalette: [UInt32] = [
-        Map3DPalette.skyBlue, Map3DEMU900.navy, Map3DPalette.steel, Map3DTrainStyle.glass,
+        Map3DPalette.kyushuWhiteBlue, Map3DPalette.kyushuNavy, Map3DPalette.kyushuGold, Map3DTrainStyle.glass,
         Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern,
     ]
 
@@ -53,9 +53,21 @@ public enum Map3DKyushuN700 {
     }
 }
 
+extension Map3DPalette {
+    /// Decision 977: the Kyushu Shinkansen N700's livery, measured on a
+    /// photograph of the real car in soft light (the body, the line and
+    /// its gold edges on the same picture, scaled together so the body is
+    /// a bright white-blue): the body's 白藍, far paler than the colour
+    /// of that name in a colour chart (#C1E4E9), the line's 濃藍 and its
+    /// gold. Registered by the owner's word (2026-11-25).
+    public static let kyushuWhiteBlue = Map3DColor.rgb(0xD8E5EB)
+    public static let kyushuNavy = Map3DColor.rgb(0x214168)
+    public static let kyushuGold = Map3DColor.rgb(0x897455)
+}
+
 extension Map3DKyushuN700 {
     /// Decision 782: its set, its showcase row (eight cars) and its cars'
-    /// triangles (1,168 the cab car, 932 the middle car: few enough to be
+    /// triangles (1,146 the cab car, 964 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(

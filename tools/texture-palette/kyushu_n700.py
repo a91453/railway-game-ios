@@ -9,14 +9,15 @@
 
 原檔是作者自己的作品，留在作者的電腦，不進這個公開 repo；這裡只有轉檔的
 做法。和 `cut_faces.py`（沿色塊的輪廓切）不同，這款車的側牆是幾個大三角形、
-細節全在貼圖，所以先把貼圖讀成「長方形」（車窗、門窗、藍帶、裙板、車底）
+細節全在貼圖，所以先把貼圖讀成「長方形」（車窗、門窗、藍帶）
 再照長方形的邊把三角形切成格子，窗就是整齊的長方形；前窗不是長方形，照
 量出來的三個凸多邊形（`WINDSCREEN`）切；其餘的格子照多數的顏色定。
 
 做的事：
 
-- 貼圖分類成 車身／玻璃／藍帶／灰裙板／深色，標誌與文字塗回車身色（遊戲
-  不畫字）；藍帶的兩條細線併成一條（遊戲大小下細線讀不出來）。
+- 貼圖分類成 車身／玻璃／藍帶／深色，標誌與文字塗回車身色（遊戲不畫字）；
+  藍帶的兩條細線併成一條，上下各切出兩成當金線（真車是深藍帶鑲兩條金色細
+  線）；貼圖畫成灰色的裙板歸回車身色（真車的裙板是車身色）。
 - 車頭兩頰的燈各切成兩格：外側頭燈、內側尾燈。
 - 拿掉：凸出側牆 2 cm 的行先表示器薄片（和牆面相距不到 5 cm 的平行面）、
   車鼻外露的連結器（實車有蓋）、通道幌的兩個端面（編組時兩節的端面會疊在
@@ -41,9 +42,9 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 # 類別，也是輸出材質的順序（`glb_to_swift.py --materials` 用同一順序）。
-MATERIALS = ["paleBlue", "navy", "grey", "glass", "dark", "headlamp", "taillamp"]
-BODY, NAVY, GREY, GLASS, DARK, HEAD, TAIL = range(7)
-PREVIEW = [(0xBF, 0xE3, 0xE5), (0x26, 0x2C, 0x57), (0x8A, 0x90, 0x99), (0x40, 0x55, 0x60),
+MATERIALS = ["whiteBlue", "navy", "gold", "glass", "dark", "headlamp", "taillamp"]
+BODY, NAVY, GOLD, GLASS, DARK, HEAD, TAIL = range(7)
+PREVIEW = [(0xD8, 0xE5, 0xEB), (0x21, 0x41, 0x68), (0x89, 0x74, 0x55), (0x40, 0x55, 0x60),
            (0x2B, 0x2F, 0x36), (0xFF, 0xF1, 0xCF), (0xD9, 0x47, 0x3F)]
 
 # 作者原檔的 SHA-256（頭車 bc97d3e5…、中間車 fd0310c2…）：不是這兩個檔就停。
@@ -54,6 +55,9 @@ SHA256 = {
 
 # 貼圖（512 × 256）上塗回車身色的框：兩處公司標誌與文字。
 TEXT_MASKS = [(150, 60, 222, 112), (132, 168, 196, 190)]
+# 真車的線是深藍帶、上下各鑲一條金色細線（實車照片：金 2.5 cm、深藍 10 cm）。
+# 貼圖上的藍帶 15 cm 高，上下各切出這個比例當金線。
+GOLD_SHARE = 0.2
 # 車頭兩頰的燈在貼圖上的位置，切成外側頭燈、內側尾燈。
 LAMP = (8, 211, 22, 219)
 
@@ -197,7 +201,8 @@ def classify(image: Image.Image) -> np.ndarray:
     high, low = rgb.max(-1), rgb.min(-1)
     labels = np.full(high.shape, BODY, np.int32)
     labels[high < 100] = GLASS
-    labels[(high - low < 8) & (high >= 20) & (high < 150)] = GREY
+    # 貼圖下緣畫成灰色的裙板：真車的裙板是車身色，歸回車身（不歸玻璃）。
+    labels[(high - low < 8) & (high >= 20) & (high < 150)] = BODY
     labels[(b - np.maximum(r, g) > 22) & (high < 140)] = NAVY
     labels[high < 12] = DARK
     # 藍帶的兩條細線之間（隔一到兩個像素的車身色）也算藍帶；門框線切斷的
@@ -256,7 +261,12 @@ def read_rectangles(labels: np.ndarray):
         area = (x1 - x0) * (y1 - y0)
         if part["count"] < 6 or min(x1 - x0, y1 - y0) < 2:
             continue  # 雜點，與一個像素寬的門框線
-        if part["count"] >= 0.86 * area:
+        if part["count"] >= 0.86 * area and part["kind"] == NAVY and x1 - x0 > 4 * (y1 - y0):
+            edge = (y1 - y0) * GOLD_SHARE
+            rectangles.append((x0, y0, x1, y0 + edge, GOLD))
+            rectangles.append((x0, y0 + edge, x1, y1 - edge, NAVY))
+            rectangles.append((x0, y1 - edge, x1, y1, GOLD))
+        elif part["count"] >= 0.86 * area:
             rectangles.append((x0, y0, x1, y1, part["kind"]))
         elif part["kind"] == GLASS and part["count"] > 800:
             continue  # 前窗：照 WINDSCREEN 的多邊形切

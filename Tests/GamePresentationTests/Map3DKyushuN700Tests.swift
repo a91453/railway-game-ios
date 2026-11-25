@@ -30,25 +30,38 @@ final class Map3DKyushuN700Tests: XCTestCase {
         }
     }
 
-    /// The real livery: a pale blue body, the navy line along its side
-    /// under the windows, a grey skirt, and no colour that is not the
+    /// The real train's colours (the owner, 2026-11-25): a pale white-blue
+    /// body down to the skirts' foot, and under the windows a navy line
+    /// with a thin gold line along each edge. No colour that is not the
     /// palette's.
-    func testTheBodyIsPaleBlueWithTheNavyLine() throws {
+    func testTheBodyIsWhiteBlueWithTheNavyAndGoldLine() throws {
+        XCTAssertEqual(Map3DPalette.kyushuWhiteBlue, Map3DColor.rgb(0xD8E5EB))
+        XCTAssertEqual(Map3DPalette.kyushuNavy, Map3DColor.rgb(0x214168))
+        XCTAssertEqual(Map3DPalette.kyushuGold, Map3DColor.rgb(0x897455))
         let colours: Set<UInt32> = [
-            Map3DPalette.skyBlue, Map3DEMU900.navy, Map3DPalette.steel, Map3DTrainStyle.glass,
+            Map3DPalette.kyushuWhiteBlue, Map3DPalette.kyushuNavy, Map3DPalette.kyushuGold, Map3DTrainStyle.glass,
             Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern,
         ]
+        XCTAssertEqual(Set(Map3DKyushuN700.meshPalette), colours)
         for unit in Map3DKyushuN700.Unit.allCases {
             let model = try XCTUnwrap(Map3DKyushuN700.model(unit))
             XCTAssertTrue(Set(model.vertices.map(\.color)).isSubset(of: colours), unit.rawValue)
             let side = model.vertices.filter { abs($0.x) < 5 && abs($0.y) > 1.5 }
-            XCTAssertFalse(side.filter { $0.color == Map3DPalette.skyBlue && $0.z > 2.6 }.isEmpty, unit.rawValue)
-            let navy = side.filter { $0.color == Map3DEMU900.navy }.map(\.z)
-            XCTAssertFalse(navy.isEmpty, unit.rawValue)
+            let body = side.filter { $0.color == Map3DPalette.kyushuWhiteBlue }.map(\.z)
+            XCTAssertGreaterThan(body.max() ?? 0, 2.6, unit.rawValue)
+            XCTAssertLessThan(body.min() ?? 9, 0.5, "\(unit.rawValue): the skirts the body's colour")
+            let navy = side.filter { $0.color == Map3DPalette.kyushuNavy }.map(\.z)
+            let gold = side.filter { $0.color == Map3DPalette.kyushuGold }.map(\.z)
             let glass = side.filter { $0.color == Map3DTrainStyle.glass }.map(\.z)
+            XCTAssertFalse(navy.isEmpty, unit.rawValue)
+            XCTAssertFalse(gold.isEmpty, unit.rawValue)
             XCTAssertFalse(glass.isEmpty, unit.rawValue)
-            XCTAssertLessThan(navy.max() ?? 9, glass.min() ?? 0, "\(unit.rawValue): the line under the windows")
-            XCTAssertFalse(side.filter { $0.color == Map3DPalette.steel && $0.z < 1 }.isEmpty, "\(unit.rawValue): the grey skirt")
+            // The gold lines 3 cm each, the navy line 9 cm between them.
+            let foot = try XCTUnwrap(gold.min()), top = try XCTUnwrap(gold.max())
+            XCTAssertEqual(try XCTUnwrap(navy.min()) - foot, 0.03, accuracy: 0.006, unit.rawValue)
+            XCTAssertEqual(top - (try XCTUnwrap(navy.max())), 0.03, accuracy: 0.006, unit.rawValue)
+            XCTAssertEqual(top - foot, 0.153, accuracy: 0.01, unit.rawValue)
+            XCTAssertLessThan(top, glass.min() ?? 0, "\(unit.rawValue): the line under the windows")
         }
     }
 
