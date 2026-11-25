@@ -535,7 +535,7 @@ public struct RealRailways: Sendable {
     private static func system(_ id: String) throws -> System {
         // Taiwan's, or an overseas city's (decision 697), whose features
         // only an open city's files hold.
-        guard let system = System.all.first(where: { $0.id == id }) ?? System.overseas.values.first(where: { $0.id == id }) else {
+        guard let system = System.all.first(where: { $0.id == id }) ?? System.everyOverseas.first(where: { $0.id == id }) else {
             throw LoadError.unknownSystem(id)
         }
         return system
@@ -786,9 +786,11 @@ extension RealRailways {
                   let stations = packed("track_stations", "geojson"),
                   let names = packed("station_names", "json") else { continue }
             overseasFiles.append(OverseasFiles(lines: lines, stations: stations, names: names))
-            let key = city.system
-            systems[key] = packed(key, "json")
-            timetables[key] = { try pack.file("\(key)_times", "json") }
+            // SHINKANSEN-SALE (decision 975): each of its systems' files.
+            for key in city.systems {
+                systems[key] = packed(key, "json")
+                timetables[key] = { try pack.file("\(key)_times", "json") }
+            }
             if let data = packed("metro_runs", "json"),
                let runs = parse("MapPacks/\(folder)/metro_runs.json", { try RealLineRuns.metroLines(data: data) }) {
                 overseasRuns.merge(runs) { first, _ in first }

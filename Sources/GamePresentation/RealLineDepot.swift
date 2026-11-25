@@ -328,12 +328,28 @@ struct RealLineDepotSite: Sendable {
         sidings: 19, beyond: "橋本", compact: true
     )
 
+    /// SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen's depot, laid
+    /// past Kumamoto, the line's end on Japan's map, on from its track
+    /// there along the real line's way south (way 705285309), as
+    /// Hashimoto's is. The real one, JR Kyushu's Kumamoto General Rolling
+    /// Stock Depot (熊本総合車両所) at Tomiai, leaves the main line 8.45 km
+    /// further south (`tools/fukuoka-map/kyushu-shinkansen/depot.json`),
+    /// past the stretch the game sells; so ``junction`` and ``yard`` are
+    /// the game's own. JR Kyushu publishes no stabling plan; its sidings
+    /// hold the line's eight trains, one each.
+    static let kumamoto = RealLineDepotSite(
+        line: "kyushushinkansen:KS", english: "Kumamoto Depot", chinese: "熊本車輛基地",
+        junction: (32.788870, 130.687550),
+        yard: ((32.788383, 130.687278), (32.785904, 130.686023)),
+        sidings: 8, beyond: "熊本", compact: true
+    )
+
     /// The real depots line `line` is bought with (decision 535: the
     /// Wenhu Line has one past each end; its continuation, the Ankeng LRT
     /// one past Shuangcheng; decision 556, the Taoyuan Airport MRT two
     /// beside the line).
     static func sites(of line: String) -> [RealLineDepotSite] {
-        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan, hashimoto].filter { $0.line == line }
+        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan, hashimoto, kumamoto].filter { $0.line == line }
     }
 
     /// Decision 556: whether its sidings fan out away from the line, not

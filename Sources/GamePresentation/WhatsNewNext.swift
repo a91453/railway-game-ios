@@ -12,6 +12,7 @@
 // form and that none is left here once it is in a released entry.
 extension WhatsNew {
     public static let nextItems: [Line] = [
+        Line(english: "The Kyushu Shinkansen from Hakata to Kumamoto is on sale on the Japan map.", chinese: "日本地圖可以買九州新幹線（博多到熊本）。"),
         Line(english: "Hong Kong: the transit tool's ferry mode lays the two harbour crossings, Central and Wan Chai to Tsim Sha Tsui.", chinese: "香港：接駁工具的渡輪模式可以照真實航線開中環、灣仔到尖沙咀的兩條港內渡輪。"),
     ]
 

@@ -467,7 +467,11 @@ SOURCES = {
     "rail_structures.json": {"structures": OSM},
     "fksubway.json": {"stations": MLIT, "shape": OSM, "segs.run, dwellSec (estimated from distance)": OURS},
     "fksubway_times.json": {"sets (laid out from estimated headways)": OURS},
-    "metro_runs.json": {"runs (fksubway_times.json's trips)": OURS, "overnight, tracks, positioning runs": OURS},
+    "metro_runs.json": {"runs (fksubway_times.json's and kyushushinkansen_times.json's trips)": OURS,
+                        "overnight, tracks, positioning runs": OURS},
+    # SHINKANSEN-SALE (decision 975): `build_kyushu_shinkansen.py merge`.
+    "kyushushinkansen.json": {"stations": MLIT, "shape": OSM, "segs.run, dwellSec (estimated from distance and 260 km/h)": OURS},
+    "kyushushinkansen_times.json": {"sets (laid out from estimated headways)": OURS},
 }
 MLIT_CREDIT = ("「国土数値情報（鉄道データ）」（国土交通省）"
                "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html を加工して作成, CC BY 4.0")
@@ -486,9 +490,9 @@ def write_manifest(folder):
     write(folder, "pack.json", {
         "id": "fukuoka", "system": SYSTEM, "decision": 854,
         "english": "Fukuoka", "chinese": "福岡",
-        "_readme": "Fukuoka's map pack: the Fukuoka City Subway's three lines, with estimated headways, in the formats "
-                   "and under the file names of Taiwan's real railways, read from this folder alone. Made by "
-                   "tools/fukuoka-map (README.md there).",
+        "_readme": "Fukuoka's map pack: the Fukuoka City Subway's three lines and the Kyushu Shinkansen from Hakata to "
+                   "Kumamoto, with estimated headways, in the formats and under the file names of Taiwan's real "
+                   "railways, read from this folder alone. Made by tools/fukuoka-map (README.md there).",
         "bytes": sum(f["bytes"] for f in files.values()),
         "extent": EXTENT,
         "earlier": EARLIER,
