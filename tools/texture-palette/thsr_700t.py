@@ -324,11 +324,14 @@ class Paint:
             tip = self.z(CAB_OLD[0])
             # 車鼻上橘色的頂緣由斜的那一塊定，橘帶從頂緣回到帶頂的地方才開始。
             self.bands = [(tip + 4.2, ORANGE[0], far, ORANGE[1], ORANGE_KIND)]
-            # 車鼻朝上的面全是白的（從上面看，（z, x））：真車的車鼻上面是白的，橘色
-            # 只在兩側與鼻尖的邊。先前是一條鼻尖窄、往後變寬的白「舌頭」，兩肩
-            # 朝上的面照橘色的頂緣畫，正面看起來橘色有兩層；作者看了對照圖後
-            # 改成全白（2026-11-25）。鼻尖最前面 0.2 m 留給橘色的邊。
-            self.tongue = [(tip + 0.2, -2.0), (tip + 0.2, 2.0), (tip + 9.0, 2.0), (tip + 9.0, -2.0)]
+            # 白色的頂（從上面看，（z, x））：真車的車鼻上面是白的。鼻尖後 NOSE_TOP[0] m
+            # 起寬 ±NOSE_TOP[1]，到 NOSE_TOP[2] m 寬 ±NOSE_TOP[3]，到 NOSE_TOP[4] m 超出
+            # 車寬，一直到鼻尖後 40 m（只到 9 m 的話後面的車頂也會變橘）。朝上的面在它
+            # 外面（鼻尖與兩肩）是橘色：作者先要全白（2026-11-25），看了圖又在上面把
+            # 鼻尖與兩肩塗成橘色，「塗多一點比較像」；三版裡選第 2 版（橘色最多）。
+            front, w1, mid, w2, full = NOSE_TOP
+            self.tongue = [(tip + front, -w1), (tip + front, w1), (tip + mid, w2), (tip + full, 2.0), (tip + 40.0, 2.0),
+                           (tip + 40.0, -2.0), (tip + full, -2.0), (tip + mid, -w2)]
             door = self.doors[0][1]              # 前門的後緣
             lean = 1.0 / (ORANGE[0] - SKIRT_TOP)   # 斜邊：每高 1 m 往後多少
             low = SKIRT_TOP - 0.15
@@ -408,6 +411,8 @@ class Paint:
         return out
 
 
+# 車鼻白色的頂：鼻尖後幾 m 起、寬 ±幾 m，到幾 m 寬 ±幾 m，到幾 m 超出車寬（見 Paint）。
+NOSE_TOP = (1.8, 0.2, 3.0, 0.8, 5.5)
 ORANGE_KIND = 1  # `ORANGE` 是橘帶的高度，類別另外記
 
 
@@ -451,7 +456,9 @@ def cut_body(part, paint: Paint):
         inside, outside = carve(polygon, paint.tongue, across=0)
         if inside:
             add(inside, WHITE)
-        return outside
+        for piece in outside:
+            add(piece, ORANGE_KIND)
+        return []
 
     for face in part["faces"]:
         old = part["world"][face]

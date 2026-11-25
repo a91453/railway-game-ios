@@ -79,7 +79,7 @@ public enum Map3DTHSR700T {
     /// and the line not carried across it.
     public static let hoodGap: Float = 0.02
 
-    /// What a car may have, triangles (1,873 the cab car, 1,360 the middle
+    /// What a car may have, triangles (1,879 the cab car, 1,360 the middle
     /// car, 1,444 the car under the pantograph: a twelve-car train some
     /// 17,500, few enough to be drawn at any distance a train's model is,
     /// so no far set).
