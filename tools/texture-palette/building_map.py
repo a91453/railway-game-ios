@@ -17,7 +17,7 @@ import csv
 import os
 
 # 色票名（t001 palette.json 的 name）→ 遊戲裡的位置。
-# 來源：Sources/GamePresentation/Map3DScene.swift 的 Map3DPalette。
+# 來源：Sources/GamePresentation/Map3DPalette.swift 的 Map3DPalette。
 IN_GAME = {
     "水泥灰屋頂": "Map3DPalette.roof",
     "深灰鐵皮": "Map3DPalette.cityRoofs[1]",

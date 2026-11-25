@@ -18,7 +18,7 @@ source = Path(__file__).resolve().parents[2]
 # Reject a fabricated / stale producer: every recipe and batch tool must be
 # byte-identical to that real commit. Metadata cannot substitute for this.
 recipes=['Map3DGreenTram.swift','Map3DGreenCommuter.swift','Map3DThreeCarUrban.swift']
-common=['Sources/GamePresentation/Map3DModels.swift','Sources/GamePresentation/Map3DGeometry.swift','Sources/GamePresentation/Map3DStationKitGeometry.swift','Sources/GamePresentation/Map3DCivicKitGeometry.swift','Sources/GamePresentation/Map3DScene.swift','Sources/GamePresentation/Map3DBuildings.swift','tools/station-kit/renderer.js','tools/station-kit/package.mjs']
+common=['Sources/GamePresentation/Map3DModels.swift','Sources/GamePresentation/Map3DGeometry.swift','Sources/GamePresentation/Map3DStationKitGeometry.swift','Sources/GamePresentation/Map3DCivicKitGeometry.swift','Sources/GamePresentation/Map3DScene.swift','Sources/GamePresentation/Map3DPalette.swift','Sources/GamePresentation/Map3DBuildings.swift','tools/station-kit/renderer.js','tools/station-kit/package.mjs']
 producer_files = [source/'Sources/GamePresentation'/name for name in recipes] + [source/name for name in common] + sorted((source/'tools/train-colors').glob('*'))
 for path in producer_files:
     if not path.is_file(): continue

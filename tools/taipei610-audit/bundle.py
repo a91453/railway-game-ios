@@ -2,7 +2,7 @@ import json,hashlib,sys,subprocess,zipfile,tempfile
 from pathlib import Path
 root=Path(sys.argv[1]);producer=sys.argv[2]
 assert subprocess.check_output(['git','rev-parse',producer],text=True).strip()==producer
-paths=['Sources/GamePresentation/Map3DTaipei610.swift','Sources/GamePresentation/Map3DModels.swift','Sources/GamePresentation/Map3DStationKitGeometry.swift','Sources/GamePresentation/Map3DGeometry.swift','Sources/GamePresentation/Map3DProps.swift','Sources/GamePresentation/Map3DScene.swift','Tests/GamePresentationTests/Map3DTaipei610Tests.swift']
+paths=['Sources/GamePresentation/Map3DTaipei610.swift','Sources/GamePresentation/Map3DModels.swift','Sources/GamePresentation/Map3DStationKitGeometry.swift','Sources/GamePresentation/Map3DGeometry.swift','Sources/GamePresentation/Map3DProps.swift','Sources/GamePresentation/Map3DScene.swift','Sources/GamePresentation/Map3DPalette.swift','Tests/GamePresentationTests/Map3DTaipei610Tests.swift']
 for folder in ['tools/train-models','tools/taipei610-audit']:
  paths+=subprocess.check_output(['git','ls-tree','-r','--name-only',producer,'--',folder],text=True).splitlines()
 records=[]
