@@ -12,14 +12,19 @@ import Foundation
 /// The old game drew every car 21 m long and 2.80 m wide; here they are
 /// the real cars' size again: the middle car 25 m from coupling to
 /// coupling and the cab car 27.35 m, 3.38 m wide and 3.65 m to the roof,
-/// on the 1,435 mm gauge. The cab car is the old one made longer as a
-/// whole, its nose not stretched or reshaped on its own (the owner,
-/// 2026-11-25). The middle car's row of windows is drawn closer, sixteen
-/// a side where the old car has fourteen, so that they are as wide and
-/// as far apart as the cab car's and about the real train's (a window to
-/// each row of seats, a metre apart); the door behind the row stands
-/// half a metre nearer the car's end for it, taken out of the plain
-/// wall there (the owner, 2026-11-25). Each coupled end has a dark hood
+/// on the 1,435 mm gauge. The cab car has the real car's proportions,
+/// measured on photographs of it with its windows as the rule (a window
+/// to each row of seats, 1.04 m apart): its body from the crew door back
+/// is the old one 1.30 times as long with one window more, fourteen a
+/// side, and its nose takes the rest, 1.14 times as long as the old one
+/// (it is 1.21 times as wide, so it keeps its shape), the crew door's
+/// middle 7.86 m from the nose's tip where the real one's is some 7.85 m
+/// (the owner, 2026-11-25: judge by the real train). The middle car's
+/// row of windows is drawn closer, sixteen a side where the old car has
+/// fourteen, so that they are as wide and as far apart as the cab car's
+/// and about the real train's; the door behind the row stands half a
+/// metre nearer the car's end for it, taken out of the plain wall there
+/// (the owner, 2026-11-25). Each coupled end has a dark hood
 /// all the way round, the end's outline run on to 2 cm short of the
 /// joint, as the real train's outer hood stands flush with its body; the
 /// old cars had a narrow gangway alone and 0.6 m of daylight around it.
@@ -91,7 +96,7 @@ public enum Map3DKyushu800 {
     public static func doors(_ unit: Unit) -> [Door] {
         switch unit {
         case .cab:
-            [Door(x: 4.396...5.141, z: 1.247...3.119, crew: true), Door(x: -12.782 ... -11.771, z: 1.247...3.119, crew: false)]
+            [Door(x: 5.446...6.19, z: 1.247...3.119, crew: true), Door(x: -12.784 ... -11.774, z: 1.247...3.119, crew: false)]
         case .middle:
             [Door(x: 10.531...11.647, z: 1.247...3.119, crew: false), Door(x: -8.438 ... -7.276, z: 1.247...3.119, crew: false)]
         }
@@ -107,7 +112,7 @@ public enum Map3DKyushu800 {
 
 extension Map3DKyushu800 {
     /// Decision 782: its set, its showcase row (six cars) and its cars'
-    /// triangles (1,509 the cab car, 1,523 the middle car: few enough to be
+    /// triangles (1,825 the cab car, 1,523 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(
@@ -117,7 +122,7 @@ extension Map3DKyushu800 {
             Map3DShowcase.Entry(key, "Kyushu Shinkansen 800 series", "九州新幹線 800 系", .japan, cars: cars, fixed: true,
                                 gauge: 1.435),
         ],
-        triangles: 1_000...1_600, length: 24.9...27.4)
+        triangles: 1_000...1_900, length: 24.9...27.4)
 }
 
 extension Map3DTrainSet {

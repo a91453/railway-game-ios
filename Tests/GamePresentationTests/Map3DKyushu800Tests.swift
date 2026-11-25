@@ -23,8 +23,7 @@ final class Map3DKyushu800Tests: XCTestCase {
             XCTAssertTrue(Map3DKyushu800.registration.triangles.contains(model.triangleCount), unit.rawValue)
             XCTAssertTrue(Map3DKyushu800.registration.length.contains(model.length), unit.rawValue)
         }
-        // The real cars: the middle car 25 m, the cab car 27.35 m (the old
-        // cab car made longer as a whole, not its nose alone).
+        // The real cars: the middle car 25 m, the cab car 27.35 m.
         XCTAssertEqual(Map3DKyushu800.Unit.middle.pitch, 25)
         XCTAssertEqual(Map3DKyushu800.Unit.cab.pitch, 27.35)
     }
@@ -55,14 +54,14 @@ final class Map3DKyushu800Tests: XCTestCase {
     }
 
     /// A window to each row of seats, about a metre apart, as on the real
-    /// train: thirteen on the cab car and sixteen on the middle car (the
+    /// train: fourteen on the cab car, as the real one, and sixteen on the middle car (the
     /// old middle car has fourteen, 1.13 to 1.22 m apart at this size),
     /// and the two cars' windows as wide and as far apart as each other's.
     /// The middle car's door behind the row stands nearer the car's end
     /// than the old one (6.76 to 7.92 m from the middle) to make room.
     func testTheWindowsAreAboutAMetreApartOnBothCars() throws {
         var widths: [Map3DKyushu800.Unit: ClosedRange<Float>] = [:]
-        for (unit, count) in [(Map3DKyushu800.Unit.cab, 13), (.middle, 16)] {
+        for (unit, count) in [(Map3DKyushu800.Unit.cab, 14), (.middle, 16)] {
             let row = try windows(unit)
             XCTAssertEqual(row.count, count, unit.rawValue)
             let apart = zip(row.dropFirst(), row).map { ($0.lowerBound + $0.upperBound - $1.lowerBound - $1.upperBound) / 2 }
@@ -126,6 +125,27 @@ final class Map3DKyushu800Tests: XCTestCase {
             // panel), up the wall above the red line.
             XCTAssertFalse(all.filter { $0.colour == Map3DPalette.steel && $0.z > 1.6 && $0.z < 3.3 }.isEmpty, "\(unit.rawValue): the door frames")
         }
+    }
+
+    /// The cab car has the real one's proportions, measured on photographs
+    /// of it with the windows as the rule (1.04 m apart): from the joint to
+    /// the first window's middle some 2.8 to 3.1 m, fourteen windows, and
+    /// the crew door's middle some 19.5 m from the joint, 7.85 m from the
+    /// nose's tip. The old car made longer as a whole had the door 8.9 m
+    /// from the tip and thirteen windows.
+    func testTheCabCarHasTheRealCarsProportions() throws {
+        let model = try XCTUnwrap(Map3DKyushu800.model(.cab))
+        let doors = Map3DKyushu800.doors(.cab)
+        let crew = try XCTUnwrap(doors.first { $0.crew })
+        XCTAssertEqual(model.maximum.x - (crew.x.lowerBound + crew.x.upperBound) / 2, 7.85, accuracy: 0.1, "the nose")
+        let row = try windows(.cab)
+        let first = try XCTUnwrap(row.first), last = try XCTUnwrap(row.last)
+        XCTAssertEqual((first.lowerBound + first.upperBound) / 2 - model.minimum.x, 2.95, accuracy: 0.25, "the first window")
+        XCTAssertEqual((last.lowerBound + last.upperBound) / 2 - model.minimum.x, 16.5, accuracy: 0.25, "the last window")
+        // The row stands between the two doors.
+        let passenger = try XCTUnwrap(doors.first { !$0.crew })
+        XCTAssertGreaterThan(first.lowerBound, passenger.x.upperBound + 0.3)
+        XCTAssertLessThan(last.upperBound, crew.x.lowerBound - 0.3)
     }
 
     /// Between two cars the real train has a dark hood all the way round,

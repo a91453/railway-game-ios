@@ -25,9 +25,11 @@
 - 車端的牆塗深色，每個連結端再補一圈全周幌（`hoods`）：真車兩節之間是和車身
   齊平、全高的黑色外幌，舊版只有中間一條窄的通道幌，兩節之間 0.6 m 看得穿。
 - 舊版把車壓成 21 m × 2.80 m × 3.96 m；這裡放回真車的尺寸：中間車 25.00 m、
-  寬 3.38 m、屋頂高 3.65 m，頭車 27.35 m。頭車是整節沿車身等比放大（舊版
-  21.0 m → 27.35 m），車鼻不單獨拉長、不改形（作者 2026-11-25：車頭不可
-  單獨拉長或改造型，整節等比放大可以）。轉向架只平移不縮放，頭車的照真車
+  寬 3.38 m、屋頂高 3.65 m，頭車 27.35 m。頭車照真車的比例（作者 2026-11-25：
+  看真車來評比；在真車照片上用窗格當尺量的，決策 978 第 3 點）：乘務員門
+  起往後的車身沿車身乘 1.30、窗帶多排一格（13 → 14 格，窗距和中間車一樣），
+  車鼻拿剩下的長度（乘 1.14，寬乘 1.21，形狀幾乎不變），鼻尖到乘務員門正
+  中 7.86 m（真車約 7.85 m）。轉向架只平移不縮放，頭車的照真車
   的位置放（後轉向架中心離連結面 3.75 m、中心距 17.5 m）：輪子中心距
   1.50 m，就是 1,435 mm 軌距的鋼軌中心。
 - 中間車的窗帶多排兩格（14 → 16）、沿車身乘 0.9，窗的寬與窗距和頭車一樣
@@ -63,7 +65,10 @@ SHA256 = {
 LENGTH = 12.5 / 10.501   # 連結面 ±10.501 → ±12.5（車距 25 m）
 WIDTH = 3.38 / 2.80      # 側牆 ±1.40 → ±1.69
 HEIGHT = 3.65 / 3.964    # 屋頂 3.964 → 3.65
-CAB = 27.35 / 21.001     # 頭車整節：鼻尖 −10.5、連結面 +10.501 → 27.35 m
+CAB_LENGTH = 27.35        # 真車的頭車
+CAB_BODY = 1.30           # 頭車的車身（乘務員門起往後）沿車身乘多少：窗距 0.80、0.83 → 1.04、1.08 m，和中間車一樣
+CAB_BAYS = 1              # 頭車的窗帶多排幾格（13 → 14，真車 14 格）
+NOSE_TO = -3.948          # 頭車：鼻尖 −10.5 到這裡（乘務員門門框的前緣）是車鼻，剩下的長度給它
 MORE_WINDOWS = 2          # 中間車的窗帶多排幾格（14 → 16）
 WINDOW_SCALE = 0.9        # 中間車的窗帶沿車身再乘多少：窗距 1.155、1.203 m → 1.04、1.08 m，和頭車一樣
 BOGIE_FROM_END = 3.75     # 真車：轉向架中心離連結面
@@ -207,9 +212,12 @@ def cut_body(part, table, debug=None):
     return out
 
 
-def along(z: np.ndarray, cab: bool) -> np.ndarray:
-    """舊版沿車身的位置 → 真車尺寸的位置。頭車整節等比放大，車鼻不單獨拉長。"""
-    return z * (CAB if cab else LENGTH)
+def along(z: np.ndarray, nose: float | None = None) -> np.ndarray:
+    """舊版沿車身的位置 → 真車尺寸的位置。中間車整節乘 LENGTH。頭車（給 `nose`，
+    車鼻沿車身乘多少）：乘務員門起往後乘 CAB_BODY，車鼻乘 `nose`。"""
+    if nose is None:
+        return z * LENGTH
+    return np.where(z <= NOSE_TO, (z - NOSE_TO) * nose, (z - NOSE_TO) * CAB_BODY)
 
 
 def cut_at(triangles, value):
@@ -247,17 +255,11 @@ def spans(pieces, gap=0.05):
     return out
 
 
-def more_windows(triangles):
-    """中間車的窗和頭車排得一樣密（舊版的座標）：多排 MORE_WINDOWS 格窗，窗帶後面那扇門往車端移一點。
-
-    舊版的中間車一側 14 格窗，放回 25 m 之後窗距 1.13–1.22 m；真車每排座位一格窗，
-    窗距約 1 m（2 號車 80 席、20 格），頭車放大後是 1.04–1.08 m。做法：窗帶
-    （第一格窗前半個窗距到最後一格窗後半個窗距）中間切出一段、照樣再排一次，
-    整條窗帶沿車身乘 WINDOW_SCALE，窗的寬與窗距就和頭車一樣。窗帶因此長了約
-    0.5 m：後面那扇門整扇往車端平移這麼多，門與車端之間那段沒有東西的牆（舊版
-    有 4.3 m）收短同樣的長度（作者 2026-11-25：中間車 16 格，車門稍微移動）。
-    車長、另一扇門、車端、車端的裙板都不動。回傳改好的面與報告用的數字。"""
-    wall = [(c, kind) for c, kind in triangles if np.abs(c[:, 0]).min() > 1.39]
+def more_bays(triangles, bays: int, behind: float = -np.inf):
+    """側牆的窗帶多排 `bays` 格窗（舊版的座標）：在一組等距的窗中間切出一段、照樣
+    再排一次，後面的東西往後移。只看 z 大於 `behind` 的牆（頭車：車鼻以後）。
+    回傳改好的面、多出來的長度，與原本的牆、門、窗的位置。"""
+    wall = [(c, kind) for c, kind in triangles if np.abs(c[:, 0]).min() > 1.39 and c[:, 2].min() > behind]
     doors_at = spans([c for c, kind in wall if kind == DOOR])
     windows = [w for w in spans([c for c, kind in wall if kind == GLASS])
                if not any(low - 0.1 < w[0] and w[1] < high + 0.1 for low, high in doors_at)]
@@ -270,9 +272,6 @@ def more_windows(triangles):
         if i == len(steps) or abs(steps[i] - steps[first]) > 0.004:
             runs.append((first, i))       # 窗 first … i 等距
             first = i
-    front, back = centres[0] - steps[0] / 2, centres[-1] + steps[-1] / 2
-    if not all(high < front or low > back for low, high in doors_at):
-        raise SystemExit("窗帶碰到門了")
 
     def outline(pieces, value):
         """切開以後，這些面落在 z = value 上的邊：每種顏色的總長與範圍。"""
@@ -290,10 +289,10 @@ def more_windows(triangles):
     choice = None
     for first, last in sorted(runs, key=lambda run: run[0] - run[1]):
         centre = (first + last) / 2
-        for middle in sorted(range(max(first, 1), last - MORE_WINDOWS + 1), key=lambda i: abs(i + MORE_WINDOWS / 2 - 0.5 - centre)):
-            pitch = float(centres[middle + MORE_WINDOWS] - centres[middle]) / MORE_WINDOWS
+        for middle in sorted(range(max(first, 1), last - bays + 1), key=lambda i: abs(i + bays / 2 - 0.5 - centre)):
+            pitch = float(centres[middle + bays] - centres[middle]) / bays
             start = (centres[middle - 1] + centres[middle]) / 2          # 兩格窗中間的牆
-            added = MORE_WINDOWS * pitch
+            added = bays * pitch
             cut = cut_at(cut_at(triangles, start), start + added)
             slab = [(c, kind) for c, kind in cut if start < c[:, 2].mean() < start + added]
             if outline(slab, start) == outline(slab, start + added):
@@ -302,7 +301,7 @@ def more_windows(triangles):
         if choice:
             break
     if not choice:
-        raise SystemExit(f"中間車找不到兩頭斷面一樣的一段窗：{[round(float(v), 3) for v in steps]}")
+        raise SystemExit(f"找不到兩頭斷面一樣的一段窗：{[round(float(v), 3) for v in steps]}")
     start, added, triangles = choice
     out = []
     for c, kind in triangles:
@@ -314,6 +313,23 @@ def more_windows(triangles):
         elif at > start:
             c = c + np.array([0, 0, added])
         out.append((c, kind))
+    return out, added, wall, doors_at, windows, centres, steps
+
+
+def more_windows(triangles):
+    """中間車的窗和頭車排得一樣密（舊版的座標）：多排 MORE_WINDOWS 格窗，窗帶後面那扇門往車端移一點。
+
+    舊版的中間車一側 14 格窗，放回 25 m 之後窗距 1.13–1.22 m；真車每排座位一格窗，
+    窗距約 1 m（2 號車 80 席、20 格），頭車放大後是 1.04–1.08 m。做法：窗帶
+    （第一格窗前半個窗距到最後一格窗後半個窗距）中間切出一段、照樣再排一次，
+    整條窗帶沿車身乘 WINDOW_SCALE，窗的寬與窗距就和頭車一樣。窗帶因此長了約
+    0.5 m：後面那扇門整扇往車端平移這麼多，門與車端之間那段沒有東西的牆（舊版
+    有 4.3 m）收短同樣的長度（作者 2026-11-25：中間車 16 格，車門稍微移動）。
+    車長、另一扇門、車端、車端的裙板都不動。回傳改好的面與報告用的數字。"""
+    out, added, wall, doors_at, windows, centres, steps = more_bays(triangles, MORE_WINDOWS)
+    front, back = centres[0] - steps[0] / 2, centres[-1] + steps[-1] / 2
+    if not all(high < front or low > back for low, high in doors_at):
+        raise SystemExit("窗帶碰到門了")
     moved = (back - front + added) * WINDOW_SCALE - (back - front)      # 窗帶長了多少＝門往車端移多少
     frames = spans([c for c, kind in wall if kind in (DOOR, GREY) and c[:, 1].min() > 1.0])
     behind = [high for low, high in frames if low > back]
@@ -353,17 +369,18 @@ def hull(points: np.ndarray) -> list[tuple[float, float]]:
     return half(found) + half(found[::-1])
 
 
-def hoods(body, cab: bool):
+def hoods(body, cab: bool, joint: float):
     """全周幌：每個連結端，把車身端面的輪廓整圈往連結面延伸到差 `HOOD_SHORT`，
     口封起來，深色。真車兩節之間是和車身齊平、從屋頂到裙板的深色外幌；舊版
     只有中間一條 1.2 m 寬的通道幌，兩節車身之間 0.6 m 看得穿。
 
-    `body` 是放大後、還沒轉軸的車身（x 右、y 上、z 沿車身）。"""
+    `body` 是放大後、還沒轉軸的車身（x 右、y 上、z 沿車身）；`joint` 是連結面的 z
+    （中間車兩頭是 ±`joint`）。"""
     points = np.concatenate([corners for corners, _ in body])
     out = []
     for sign in ((1,) if cab else (-1, 1)):
         wall = float((points[:, 2] * sign).max())
-        mouth = float(along(np.array([10.501]), cab)[0]) - HOOD_SHORT
+        mouth = joint - HOOD_SHORT
         if mouth - wall < 0.05:
             raise SystemExit("車身已經到連結面，沒有地方放幌")
         ring = hull(points[points[:, 2] * sign > wall - 0.02][:, :2])
@@ -390,18 +407,28 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         canvas = Image.blend(canvas, Image.new("RGB", canvas.size, (0, 0, 0)), 0.6)
         draw = ImageDraw.Draw(canvas)
     triangles = cut_body(body, table, draw)
-    numbers = {}
-    if not cab:
+    nose, added, behind = None, 0.0, np.inf
+    if cab:
+        # 頭車照真車的比例：車身乘 CAB_BODY、窗帶多排 CAB_BAYS 格，車鼻拿剩下的長度。
+        triangles, added, _, crew, windows, centres, _ = more_bays(triangles, CAB_BAYS, NOSE_TO)
+        behind = centres[len(centres) // 2]          # 這以後的東西（通道幌）跟著往後移
+        nose = (CAB_LENGTH - (10.501 + added - NOSE_TO) * CAB_BODY) / (NOSE_TO + 10.5)
+        door = (crew[0][0] + crew[0][1]) / 2         # 乘務員門的正中
+        numbers = {"windows": len(windows) + CAB_BAYS, "nose_scale": round(nose, 4), "body_scale": CAB_BODY,
+                   "bay_m": round(added * CAB_BODY, 3),
+                   "tip_to_crew_door_centre_m": round(float((NOSE_TO + 10.5) * nose + (door - NOSE_TO) * CAB_BODY), 3)}
+    else:
         triangles, numbers = more_windows(triangles)
+    joint = float(along(np.array([10.501 + added]), nose)[0])
     if debug_dir:
         canvas.save(debug_dir / f"{path.stem[:13]}-uv-cut.png")
 
     def grown(points: np.ndarray) -> np.ndarray:
-        return np.stack([points[:, 0] * WIDTH, points[:, 1] * HEIGHT, along(points[:, 2], cab)], 1)
+        return np.stack([points[:, 0] * WIDTH, points[:, 1] * HEIGHT, along(points[:, 2], nose)], 1)
 
     # 原座標：x 右、y 上、z 沿車身（頭車的車鼻在 -z）。車體照真車尺寸放大。
     scaled = [(grown(corners), kind) for corners, kind in triangles]
-    scaled += hoods(scaled, cab)
+    scaled += hoods(scaled, cab, joint)
     for piece in pieces:
         if piece is body:
             continue
@@ -411,9 +438,9 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         if size[2] > 2.5:
             # 轉向架：本身不縮放；中間車的位置跟著車體，頭車的照真車的位置。
             middle = (low[2] + high[2]) / 2
-            target = float(along(np.array([middle]), cab)[0])
+            target = float(along(np.array([middle]), nose)[0])
             if cab:
-                rear = 10.501 * CAB - BOGIE_FROM_END
+                rear = joint - BOGIE_FROM_END
                 target = rear if middle > 0 else rear - BOGIE_CENTRES
             moved = world + np.array([0, 0, target - middle])
             scaled += [(moved[face], DARK) for face in piece["faces"]]
@@ -421,7 +448,7 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
             # 舊版中間那條窄的通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在
             # 連結面上）。它幾乎整條在全周幌裡面，只有到連結面的最後 2 cm 露出來，
             # 車的全長也靠它量到連結面。
-            hood = grown(world)
+            hood = grown(world + np.array([0, 0, added if low[2] > behind else 0]))
             for face in piece["faces"]:
                 corners = hood[face]
                 if np.ptp(corners[:, 2]) < 1e-6:
