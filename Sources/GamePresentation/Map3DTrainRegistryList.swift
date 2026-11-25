@@ -26,5 +26,6 @@ extension Map3DTrainRegistry {
         Map3DHKPeakTram.registration,
         Map3DSteamCoach.registration,
         Map3DKeikyuNew1000.registration,
+        Map3DKyushuN700.registration,
     ]
 }

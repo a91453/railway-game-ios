@@ -76,7 +76,9 @@ final class Map3DTrainMaterialTests: XCTestCase {
                                             // Decision 956: the Keikyu New 1000, near and far.
                                             "set-redCommuter",
                                             // Decision 986: the same cars at 18 m.
-                                            "set-keikyuNew1000"].contains { recipe.name.hasPrefix($0) },
+                                            "set-keikyuNew1000",
+                                            // Decision 977: the Kyushu Shinkansen's N700 series.
+                                            "set-kyushuN700"].contains { recipe.name.hasPrefix($0) },
                                   "\(recipe.name): only a cabin or a studio train marks its own glass")
                     continue
                 }

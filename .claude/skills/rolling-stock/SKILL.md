@@ -31,6 +31,15 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 
 `Map3DModelPackSizeTests`、`Map3DModelPackLockTests` 讀的 `pack.lock.txt` 只列手寫的車，加註冊車**不用改**；註冊的 set 一律接在 `Map3DTrainSet.all` 最後（手寫的之後），所以前面的模型都不會移位。要接到真實路線（`Map3DRealTrains`、`set(forKey:count:locked:)`、`byType`）時才會改到共用的表，那是一格一格的改，和別款車通常不在同一行。
 
+### 2.2 一款車多套塗裝（決策 983）
+
+玩家在路線頁逐線選塗裝。塗裝不是另一份模型：`TrainPaint`（`TrainPaint.swift`）是一串換色，車上某個顏色的每一種深淺換成另一個顏色的同一種深淺，App 第一次畫時才做第二份頂點緩衝，所以模型包與雜湊都不變。
+
+- 註冊車：在 `Map3DTrainRegistration` 加 `paints: TrainPaintFamily(id:sets:english:chinese:ownEnglish:ownChinese:ownSwatch:paints:)`；`sets` 列近景與遠景的 key。手寫的 set 照 `Map3DTrainShapeRefresh.highSpeedPaints`，加進 `TrainPaintFamily.all`。
+- **配方畫真車色，原本的遊戲色做成可選塗裝**（作者 11-20）。`id` 發布後不能改。
+- 要換的顏色最好是車上獨有的；白、灰會認到所有同比例的灰，用 `Swap(heights:)` 限高度。玻璃、燈、路線色帶（alpha 小於 1）不會被換。
+- 拍圖：`run.sh OUT --ids … --paint <id>`。`TrainPaintTests` 會擋換不到任何頂點的塗裝。
+
 ## 3. 近景與遠景
 
 - 近景：500 m 內（`Map3DTrainSet.reach(of:)`），一節一個實例。
