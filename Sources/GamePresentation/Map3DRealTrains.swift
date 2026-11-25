@@ -910,6 +910,8 @@ extension Map3DScene.Builder {
             var kept = stride(from: 0, to: run.count, by: 2).map { points[run[$0]] }
             if run.count % 2 == 0, let last = run.last { kept.append(points[last]) }
             for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind, viaduct: viaduct) }
+            // Decision 941 (later): where a road may cross it on the level.
+            if kind == .surface { realSurfaceLines.append(run.map { points[$0] }) }
             let cell = Double(Land.cellLength)
             for index in run {
                 let at = path.point(at: distances[index])
@@ -1288,6 +1290,8 @@ extension Map3DScene.Builder {
             for piece in Self.pieces(of: kept, along: along) {
                 addTrackPiece(piece.compactMap { points[$0] }, kind: kind, viaduct: viaduct, railsNear: true, from: Float(along[piece[0]]))
             }
+            // Decision 941 (later): where a road may cross it on the level.
+            if kind == .surface { realSurfaceLines.append(run.compactMap { points[$0] }) }
             let cell = Double(Land.cellLength)
             for index in run {
                 realTrackCells.insert(Map3DScene.ChunkKey(column: Int((cells[index].x / cell).rounded(.down)),
