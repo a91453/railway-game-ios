@@ -300,7 +300,7 @@ extension GameSession {
                 reached = false
                 break
             }
-            existing.append((stretches.count, run.points.map { WorldCoordinate(x: Int64($0.x.rounded()), y: Int64($0.y.rounded()), z: 0) }))
+            existing.append((stretches.count, run.points.map { $0.coordinate() }))
             cursor = (.node(run.exit), WorldVector(exit.plan), run.range.upperBound, true)
         }
         var endNode: TrackNodeID?

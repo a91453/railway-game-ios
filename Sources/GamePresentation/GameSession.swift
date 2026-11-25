@@ -894,6 +894,13 @@ public final class GameSession {
     @ObservationIgnored var tracedWayMemo: (key: TracedWayKey, way: [WorldCoordinate])?
     /// How many times ``networkTracedWay`` was worked out (for the tests).
     @ObservationIgnored var tracedWaysWorkedOut = 0
+    /// The way along the real lines ``tracedRoute(from:to:reach:)`` last
+    /// found, and between which points: the map's lit line, the preview
+    /// and the track it joins each ask for it in one move of a drag.
+    @ObservationIgnored var tracedRouteMemo: (key: TracedRouteKey, route: (points: [WorldVector], hops: [Int])?)?
+    /// How many times ``tracedRoute(from:to:reach:)`` was worked out (for
+    /// the tests).
+    @ObservationIgnored var tracedRoutesWorkedOut = 0
     /// Which side of the picked track a passing loop goes (decision 204).
     public var networkLoopSide: PlatformTrackSide = .left
     /// The depot tool's sidings (decision 214, ``DepotYard``): how many,

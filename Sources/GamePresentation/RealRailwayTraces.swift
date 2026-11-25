@@ -77,7 +77,7 @@ struct RealRailwayTraces: Sendable {
             lines.append(Line(id: lines.count, system: line.system.id, path: path, minX: minX, minY: minY, maxX: maxX, maxY: maxY))
         }
         self.lines = lines
-        drawn = lines.map { line in line.path.points.map { WorldCoordinate(x: Int64($0.x.rounded()), y: Int64($0.y.rounded()), z: 0) } }
+        drawn = lines.map { line in line.path.points.map { $0.coordinate() } }
 
         // Each line's two ends, joined to the nearest place on another line
         // of its system within reach.
@@ -431,4 +431,12 @@ struct TracedWayKey: Equatable {
     let lines: RealRailwayTracesKey
     let from: WorldCoordinate
     let to: WorldCoordinate
+}
+
+/// What ``GameSession/tracedRoute(from:to:reach:)`` was worked out for.
+struct TracedRouteKey: Equatable {
+    let lines: RealRailwayTracesKey
+    let from: PlanPoint
+    let to: PlanPoint
+    let reach: Double
 }

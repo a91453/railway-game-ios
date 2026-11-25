@@ -668,6 +668,11 @@ struct WorldVector: Hashable, Sendable {
         PlanPoint(x: Int64(x.rounded()), y: Int64(y.rounded()))
     }
 
+    /// The nearest whole point, at height `z`.
+    func coordinate(z: Int64 = 0) -> WorldCoordinate {
+        WorldCoordinate(x: Int64(x.rounded()), y: Int64(y.rounded()), z: z)
+    }
+
     var length: Double {
         (x * x + y * y).squareRoot()
     }
