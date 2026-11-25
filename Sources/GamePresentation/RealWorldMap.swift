@@ -67,10 +67,27 @@ public struct RealWorldFrame: Hashable, Sendable {
         middleY = (region.minY + region.maxY) / 2
     }
 
-    /// `world`'s frame, or `nil` for a blank map.
+    /// `world`'s frame, or `nil` for a blank map. Decision 969: the
+    /// anchor is the middle of the part of the world it was before the
+    /// map grew (``GameWorld/geoAnchorBounds``), so what stood in it lies
+    /// over the same places of the Earth; of the whole world on a map that
+    /// never grew.
     public init?(world: GameWorld) {
         guard let anchor = world.geoAnchor else { return nil }
-        self.init(anchor: anchor, bounds: world.bounds)
+        self.init(anchor: anchor, bounds: world.geoAnchorBounds ?? world.bounds)
+    }
+
+    /// Decision 969: the place of the Earth at the middle of `region`,
+    /// where to look round for what lies on it (the real railways near the
+    /// map): the anchor itself, to the last digit, when the middle of
+    /// `region` is the frame's (a map that never grew, `region` the whole
+    /// world), otherwise the point there rounded to ten-millionths of a
+    /// degree.
+    public func place(atMiddleOf region: WorldRegion) -> GeoAnchor {
+        let x = (region.minX + region.maxX) / 2, y = (region.minY + region.maxY) / 2
+        guard x != middleX || y != middleY else { return anchor }
+        let at = coordinate(worldX: x, worldY: y)
+        return GeoAnchor(latitudeDegrees: at.latitude, longitudeDegrees: at.longitude) ?? anchor
     }
 
     /// How far the world point (`x`, `y`) lies east and south of the
