@@ -80,6 +80,8 @@ struct Map3DPreviewScreen: View {
     @State private var airportMarks = Map3DAirportMarkState()
     /// Decision 403 (續二): the photo of the 3D map just taken, to share.
     @State private var photo = Map3DPhotoState()
+    /// Decision 987 (PHOTO-MODE): the photo mode while it is open.
+    @State private var photoMode = Map3DPhotoModeState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 437: plays the evening garbage truck's tune.
     @Environment(GameAudio.self) private var audio: GameAudio?
@@ -114,17 +116,20 @@ struct Map3DPreviewScreen: View {
                       follow: followed(ambient: ambient),
                       departure: departure, world: session.world, modelsReady: modelsReady,
                       stationTag: stationTag, airportMarks: airportMarks, showsUnderground: showsUnderground,
-                      onTap: openStation == nil || ambient != nil ? nil : { @MainActor camera, point in tapped(camera, at: point) },
+                      onTap: mapTap(ambient: ambient), tapsWhileFollowing: photoMode.isOpen,
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
-            Map3DTrainLabelsView(state: trainLabels, world: session.world)
-                .ignoresSafeArea()
-            if ambient == nil, !Self.screenshotClean {
+            // Decision 987: the photo mode's picture is of the map alone.
+            if !photoMode.isOpen {
+                Map3DTrainLabelsView(state: trainLabels, world: session.world)
+                    .ignoresSafeArea()
+            }
+            if ambient == nil, !Self.screenshotClean, !photoMode.isOpen {
                 Map3DAirportMarksView(state: airportMarks, open: openAirports.map { open in { leave { plan in open(plan) } } })
                     .ignoresSafeArea()
             }
-            if let openStation, ambient == nil {
+            if let openStation, ambient == nil, !photoMode.isOpen {
                 Map3DStationTagView(state: stationTag, session: session) { rename in
                     leave { plan in openStation(plan, rename) }
                 }
@@ -197,6 +202,11 @@ struct Map3DPreviewScreen: View {
                             .accessibilityHint(Text(verbatim: language.text("Goes back to the flat map, here, with the track, train and building tools.",
                                                                             "回到這裡的平面地圖，打開軌道、列車與建物的工具。")))
                             .accessibilityIdentifier("map3D.build")
+                        }
+                        // Decision 987: the photo mode, not while the
+                        // player drives or a lesson points at the map.
+                        if driving == nil, session.tutorial == nil {
+                            Map3DPhotoModeButton(language: language, open: openPhotoMode)
                         }
                         if !session.isFollowingVehicle {
                             Map3DCompassButton(state: compass)
@@ -317,6 +327,12 @@ struct Map3DPreviewScreen: View {
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driver?.prompt == nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driving)
             .ambientHidden(ambient != nil)
+            // Decision 987: not there at all while the photo mode is open.
+            .putAway(photoMode.isOpen)
+            if photoMode.isOpen, ambient == nil {
+                Map3DPhotoBar(state: photoMode, session: session, isReady: scene != nil,
+                              go: goToPhotoSpot, shoot: shootPhoto, close: closePhotoMode)
+            }
             // Decision 414: the idle mode's veil and caption, and its tap.
             if ambient != nil, let ambientScreen, let endAmbient {
                 AmbientCurtain(screen: ambientScreen, language: language, end: endAmbient)
@@ -338,6 +354,8 @@ struct Map3DPreviewScreen: View {
         }
         .animation((session.airFlightWindow == nil ? MotionRule.loadingOut : .loadingIn).running(reduceMotion: reduceMotion)?.animation,
                    value: session.airFlightWindow != nil)
+        // Decision 987: the map's own controls go as the photo mode's come.
+        .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: photoMode.isOpen)
         .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: linePalette)) {
             let built = await Map3DSceneCache.shared.scene(for: session, focus: focus, palette: linePalette)
             // A newer world or the heights file started another build: a
@@ -426,6 +444,8 @@ struct Map3DPreviewScreen: View {
             feed.aircraftChanged = { [weak session] state, flight in session?.noteFollowedAircraft(state, of: flight) }
         }
         .onDisappear {
+            // Decision 987: a train the photo mode followed is let go.
+            if photoMode.close() { session.stopFollowingTrain() }
             session.endManualDrive()
             session.setMap3DOpen(false)
             FrameTimeRecorder.shared.show3D(false)
@@ -459,6 +479,97 @@ struct Map3DPreviewScreen: View {
         }
     }
 
+    // MARK: - The photo mode (decision 987)
+
+    /// What a tap on the map does: in the photo mode it puts the mode's
+    /// buttons away or brings them back; else decision 517 續's tap, where
+    /// stations can be opened.
+    private func mapTap(ambient: AmbientScreen?) -> (@MainActor (Map3DCamera, CGPoint) -> Void)? {
+        if ambient != nil { return nil }
+        if photoMode.isOpen {
+            let photoMode = photoMode
+            return { @MainActor _, _ in photoMode.toggleControls() }
+        }
+        if openStation == nil { return nil }
+        return { @MainActor camera, point in tapped(camera, at: point) }
+    }
+
+    private func openPhotoMode() {
+        photoMode.open(language: DisplayLanguage.app)
+    }
+
+    /// Goes to the next of `spot`: a train followed, a station or the
+    /// skyline flown to (``PhotoSpots``).
+    private func goToPhotoSpot(_ spot: PhotoSpot) {
+        guard let scene, let view = cameraLink.view else { return }
+        let language = DisplayLanguage.app, world = session.world
+        let near = scene.worldPosition(of: view.camera.target)
+        switch spot {
+        case .train:
+            guard let next = photoMode.tour.nextTrain(among: PhotoSpots.trains(in: world), nearX: near.x, y: near.y) else {
+                if let none = spot.none(in: language) { photoMode.say(none, symbol: "exclamationmark.circle.fill") }
+                return
+            }
+            photoMode.follows(from: next.view)
+            session.followTrain(next.train)
+        case .station:
+            // Where the camera builds ahead it can go anywhere on the map;
+            // elsewhere only as far as the scene reaches.
+            let region = Map3DStreaming.streams(world) ? nil : scene.region
+            guard let station = photoMode.tour.nextStation(among: PhotoSpots.stations(in: world, within: region), nearX: near.x, y: near.y) else {
+                if let none = spot.none(in: language) { photoMode.say(none, symbol: "exclamationmark.circle.fill") }
+                return
+            }
+            leavePhotoFollow()
+            view.fly(reduceMotion: reduceMotion) { camera in
+                PhotoSpots.camera(station: station, in: world, scene: scene, from: camera)
+            }
+        case .skyline:
+            let turn = photoMode.tour.nextSkylineTurn()
+            leavePhotoFollow()
+            view.fly(reduceMotion: reduceMotion) { camera in
+                PhotoSpots.skylineCamera(from: camera, turn: turn, in: world, scene: scene)
+            }
+        }
+    }
+
+    /// A spot the camera flies to follows nothing: a follow still held
+    /// would take the camera back.
+    private func leavePhotoFollow() {
+        photoMode.follows(from: nil)
+        if session.isFollowingVehicle { session.stopFollowingTrain() }
+    }
+
+    /// The map as drawn next, without anything over it, saved to Photos;
+    /// where the player has not allowed that, the share sheet instead
+    /// (``takePhoto()``).
+    private func shootPhoto() {
+        guard let view = cameraLink.view else { return }
+        let language = DisplayLanguage.app
+        let title = session.followedTrain.map(\.name) ?? language.text("3D Map", "3D 地圖")
+        let credit = DataSourceCredits.map3DPhoto(realWorld: session.world.geoAnchor != nil, in: language)
+        let photo = photo, photoMode = photoMode
+        view.capture { image in
+            guard let image else { return }
+            let picture = Self.credited(image, credit)
+            Map3DPhotoSaver.shared.save(picture) { saved in
+                if saved {
+                    photoMode.savedPicture(language: language)
+                } else {
+                    photo.snapshot = Map3DSnapshot(image: picture, title: title)
+                }
+            }
+        }
+    }
+
+    /// Leaves the photo mode: a train it followed is let go, and the
+    /// camera tilts as the map's own again.
+    private func closePhotoMode() {
+        if photoMode.close() { session.stopFollowingTrain() }
+        guard !session.isFollowingVehicle, let view = cameraLink.view else { return }
+        view.fly(reduceMotion: reduceMotion) { PhotoSpots.cameraLeaving($0) }
+    }
+
     /// `image` with `credit` in small type in its lower right corner, on a
     /// dark band so it reads on any sky or ground; as it is when there is
     /// none. Decision 434: the train showcase's photos too.
@@ -489,7 +600,8 @@ struct Map3DPreviewScreen: View {
     /// FOLLOWBUS) a bus; a bus has no platform, so its station view is from
     /// behind.
     private func followed(ambient: AmbientScreen?) -> Map3DFollow? {
-        var view = ambient?.view3D ?? followView
+        // Decision 987: a train the photo mode follows, from its own view.
+        var view = ambient?.view3D ?? photoMode.followView ?? followView
         // Decision 710: a run that has just stopped, from beside the train
         // and nearer than the view from beside stands.
         var lookScale: Float?
@@ -1985,6 +2097,9 @@ private struct Map3DView: UIViewRepresentable {
     /// Decision 517 續: a tap on the map, with the camera then and where,
     /// in points; `nil` takes none.
     let onTap: (@MainActor (Map3DCamera, CGPoint) -> Void)?
+    /// Decision 987: whether a tap is taken while a train is followed too
+    /// (the photo mode's, which hides and shows its buttons).
+    var tapsWhileFollowing = false
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -2064,6 +2179,7 @@ private struct Map3DView: UIViewRepresentable {
         view.signalClock = Map3DSignalTiming.Clock(world.clock, region: Map3DStreetRegion(world: world))
         context.coordinator.farOut = farOut
         context.coordinator.onTap = onTap
+        context.coordinator.tapsWhileFollowing = tapsWhileFollowing
         defer {
             // Decision 333: once the first scene has its camera, so the
             // flight starts from it.
@@ -2303,6 +2419,8 @@ private struct Map3DView: UIViewRepresentable {
         var flownTo: Map3DNextDeparture?
         var farOut: ((Map3DCamera) -> Void)?
         var onTap: (@MainActor (Map3DCamera, CGPoint) -> Void)?
+        /// Decision 987: the photo mode's tap, while following too.
+        var tapsWhileFollowing = false
         /// Decision 269: how far out the camera a pinch handed over opened;
         /// `nil` when the 3D button opened the map.
         var handedOverAt: Float?
@@ -2469,9 +2587,10 @@ private struct Map3DView: UIViewRepresentable {
             }
         }
 
-        /// Decision 517 續: following a train, a tap does nothing here.
+        /// Decision 517 續: following a train, a tap does nothing here
+        /// (but the photo mode's, decision 987).
         @objc func tap(_ recognizer: UITapGestureRecognizer) {
-            guard recognizer.state == .ended, let view, view.following == nil, let onTap else { return }
+            guard recognizer.state == .ended, let view, view.following == nil || tapsWhileFollowing, let onTap else { return }
             onTap(view.camera, recognizer.location(in: view))
         }
 

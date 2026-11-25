@@ -370,7 +370,7 @@ final class RealRailwaysTests: XCTestCase {
                 // Decision 818: Rovaniemi's, open for the winter event.
                 "rovaniemiVR", "rovaniemiMap", "rovaniemiBuildings", "rovaniemiTerrain", "rovaniemiPopulation",
                 // Decision 854 (FUKUOKA-OPEN): Fukuoka's.
-                "fukuokaSubway", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport",
+                "fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport",
             ])
             XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
             for credit in credits {

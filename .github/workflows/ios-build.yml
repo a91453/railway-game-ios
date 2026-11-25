@@ -599,12 +599,23 @@ jobs:
       # runner, the step hit its 5-minute limit and the job ended there
       # without running a single UI test (it took 87 s, 182 s at the 90th
       # percentile, from 2026-10-09 to 2026-10-11).
+      # CIOPT-16 (2026-11-26): not on a pull request. On Xcode 27.2 and iOS
+      # 27.2 (since 2026-11-19) the install and launch take 3 minutes or
+      # more, and on every pull request run measured (45631153071,
+      # 45632632167, 45639006574, 45657444834) the step ran out of its 5
+      # minutes; boot to the first UI test took 6.9 to 8.0 minutes there.
+      # The iPad job, which never had this step, took 4.1 and 5.2 minutes
+      # from boot to its first test (45650404544, 45532485041), and its
+      # first launch through XCTest took 11 s. The full lane keeps the step.
       - name: Warm up the app's first launch
+        if: ${{ github.event_name != 'pull_request' }}
         timeout-minutes: 5
         continue-on-error: true
         run: |
           app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
+          echo "Install from $(date -u +%T)"
           xcrun simctl install "$SIMULATOR_UDID" "$app"
+          echo "Launch from $(date -u +%T)"
           if xcrun simctl launch "$SIMULATOR_UDID" io.github.a91453.RailwayGame -ui-testing; then
             sleep 10
             xcrun simctl terminate "$SIMULATOR_UDID" io.github.a91453.RailwayGame || true

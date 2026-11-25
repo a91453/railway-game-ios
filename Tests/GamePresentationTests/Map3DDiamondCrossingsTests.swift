@@ -105,7 +105,7 @@ final class Map3DDiamondCrossingsTests: XCTestCase {
             let angle = degrees * .pi / 180
             let diamond = Map3DDiamondCrossing(point: Map3DPoint(0, 0, 0), world: WorldCoordinate(x: 0, y: 0), first: Map3DPoint(1, 0, 0),
                                                second: Map3DPoint(cos(angle), 0, sin(angle)))
-            let wings = Map3DDiamondCrossings.wings(of: diamond, gauge: gauge)
+            let wings = Map3DDiamondCrossings.wings(of: diamond)
             XCTAssertEqual(wings.count, 8)
             for wing in wings {
                 let way = try XCTUnwrap((wing[1] - wing[0]).normalized)

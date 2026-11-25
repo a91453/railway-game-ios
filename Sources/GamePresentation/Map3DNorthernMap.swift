@@ -25,6 +25,31 @@ public enum Map3DTrackGauge {
     static func metres(anchor: GeoAnchor) -> Float {
         Map3DRegionLook(anchor: anchor).gauge
     }
+
+    /// A rail gauge, metres.
+    static func metres(_ rail: RailGauge) -> Float {
+        Float(rail.millimetres) / 1_000
+    }
+
+    /// Decision 984: the gauges the rails of track of `gauge` are laid
+    /// at, metres, widest first, on a map drawn at `map`
+    /// (``Map3DRegionLook/gauge``): its own rail gauges (decision 970),
+    /// but the map's for track of the gauge nothing sets
+    /// (``TrackGauge/default``), so Finland's map still draws such track
+    /// at 1,524 mm (decision 799). More than one for the three-rail track
+    /// an old save's conversion lays: each gauge's two rails, about the
+    /// one centre line the trains of either are drawn on.
+    static func drawn(_ gauge: TrackGauge, map: Float) -> [Float] {
+        guard gauge != .default else { return [map] }
+        return gauge.sortedRails.reversed().map(metres)
+    }
+
+    /// Decision 984: the same for the track of a real line the player has
+    /// not bought, by its system as ``TrackGauge/ofRealLine(_:)`` knows it
+    /// (`tra_sched`, `mrt`, `hkmtr`); the map's for a system it does not.
+    static func drawn(realLine system: String, map: Float) -> [Float] {
+        TrackGauge.ofRealLine(system).map { drawn($0, map: map) } ?? [map]
+    }
 }
 
 /// Decision 799: the ground of a northern map under snow. The plain ground

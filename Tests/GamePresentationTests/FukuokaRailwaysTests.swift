@@ -124,7 +124,9 @@ final class FukuokaRailwaysTests: XCTestCase {
     /// Each line is on sale on the map, bought with its trains, and runs a
     /// whole day with no train in a deadlock.
     func testEachLineIsBoughtAndRunsADay() throws {
-        XCTAssertEqual(try Self.fukuoka().buyableRealLines.map(\.id).sorted(), ["fksubway:H", "fksubway:K", "fksubway:N"])
+        // The Kyushu Shinkansen (decision 975) is on sale beside the
+        // subway's three; `KyushuShinkansenTests` buys it and plays its day.
+        XCTAssertEqual(try Self.fukuoka().buyableRealLines.map(\.id).sorted(), ["fksubway:H", "fksubway:K", "fksubway:N", "kyushushinkansen:KS"])
         for line in Self.lines {
             let id = "fksubway:\(line.id)"
             let session = try Self.fukuoka()

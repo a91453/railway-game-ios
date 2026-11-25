@@ -24,7 +24,7 @@
 - `Map3DSeries700.swift`／`…Mesh.swift`：註冊表的車 `series700`，十六節，車庫的一款車；`Map3DTrainRegistryList.swift` 加一行；鎖檔 `tools/train-models/locks/series700.json`。
 - 鎖檔：`hashes.lock.json`、`pack.lock.txt` 只動 `highSpeed` 的行（拿掉 `highSpeedFar`）。
 - 四個舊的對照匯出工具不再要 `highSpeedFar`。
-- `DataSourceCredits` 加 `highSpeed700Model`；`WhatsNewNext.nextItems` 加兩行。
+- `DataSourceCredits` 加 `highSpeed700Model`；`WhatsNewNext/new/` 加三個檔（700T、700 系，與 N700S 那一個 commit 的那行）。
 
 ## 前一版交接寫錯的地方
 
