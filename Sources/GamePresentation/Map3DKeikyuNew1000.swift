@@ -6,13 +6,16 @@ import GameCore
 /// general train's of four cars or more (``Map3DRedCommuter``, decision
 /// 956: the owner's old detailed cars, a red body, a white band round the
 /// windows, three doors a side), shortened from their 20.00 m to the real
-/// car's 18.00 m from coupler to coupler: every part scaled along the car
-/// as a whole (the nose is not reshaped), but the two bogies, moved and
-/// not squashed, so a wheel stays round. Across the car nothing moved: it
+/// car's 18.00 m from coupler to coupler: a middle car scaled along the
+/// car as a whole; a cab car keeps its nose, crew door and the small
+/// window behind the cab as they were (so the nose's length to its width
+/// is unchanged) and only its body behind them is shortened, which puts
+/// its doors and windows nearest the real car's. The two bogies are
+/// moved and not squashed, so a wheel stays round. Across the car nothing moved: it
 /// is 2.80 m wide and its wheels stand on the 1,435 mm gauge. The roof is
 /// 3.904 m above the rail, as the 20 m car's.
 /// (`a91453/railway-assets-private-2`,
-/// `game-art-previews/docs/art/keikyu-new1000-2026-11/revision-4`, written
+/// `game-art-previews/docs/art/keikyu-new1000-2026-11/revision-5`, written
 /// here by `tools/train-models/glb_to_swift.py`, ``encoded``.)
 public enum Map3DKeikyuNew1000 {
     /// The key of its set (``Map3DTrainSet/keikyuNew1000(far:)``).
