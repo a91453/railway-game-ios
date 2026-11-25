@@ -11,6 +11,7 @@
 | `to_swift.py` | 把 `cut_faces.py` 切好的舊車 e752e7a2 寫成遊戲的 `Sources/GamePresentation/Map3DRedCommuterMesh.swift` |
 | `kyushu_n700.py` | 作者舊版的九州新幹線 N700 系頭車與中間車：貼圖讀成長方形色塊再切面，放回真車尺寸，輸出給 `tools/train-models/glb_to_swift.py` 的 GLB（決策 977） |
 | `n700s.py` | 作者舊版的 N700S 頭車、中間車、集電弓車：同 `kyushu_n700.py` 的切法（藍線、裙板、前窗、燈照量到的位置給，細線不畫），放回真車尺寸，頭車不另外拉長（決策 979） |
+| `thsr_700t.py` | 作者舊版的 700 系頭車與中間車：不照貼圖切，直接在車身上畫色塊（位置在實車照片上量），放回真車尺寸，頭車多兩格窗到 27 m，車端加全周幌；出台灣高鐵 700T（決策 988），`--train series700` 出原塗裝的 700 系五種車（決策 989） |
 
 ## 舊車 e752e7a2 → 遊戲
 

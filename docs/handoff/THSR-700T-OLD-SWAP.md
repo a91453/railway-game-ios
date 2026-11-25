@@ -1,90 +1,49 @@
-# THSR-700T-OLD-SWAP：高鐵 700T 換成作者舊版的 700 系（決策 988，做到一半）
+# THSR-700T-OLD-SWAP：高鐵 700T 換成作者舊版的 700 系，另接原塗裝的 700 系（決策 988、989）
 
 ## 進度
 
-- 做到哪：轉換工具寫完、外觀看了六輪（r6）、三節車的 mesh 與車組已接進遊戲、測試寫了但**有三個類別是紅的**；鎖檔、決策 988、總覽圖、PR 都還沒做。第一個 session 在第二次壓縮後照規定停手（2026-11-25）。
-- 已驗證（這台 Mac，Swift 6.4）：`swift build --build-tests -Xswiftc -warnings-as-errors` 過；跑了 11 個類別共 97 個測試，`Map3DTHSR700TTests`、`Map3DHighSpeedSetsTests`、`TrainPackTests`、`Map3DChristmasLiveryTests`、`Map3DTrainShapeRefreshTests`、`Map3DTrainOwnGlassTests`、`Map3DPaletteGuardTests`、`Map3DShowcaseTests` 全過；`Map3DTrainMaterialTests`（1 個）、`Map3DTrainSetTests`（2 個）、`TrainPaintTests`（3 個）失敗，見「紅的測試」。
-- 下一步的第一個指令：`swift build --build-tests -Xswiftc -warnings-as-errors && swift test --skip-build --filter 'Map3DTrainMaterialTests|Map3DTrainSetTests|TrainPaintTests'`，照「紅的測試」修。
+- 做到哪（2026-11-25，第二個 session，已壓縮 1 次）：兩款車都做完並接進遊戲，相關測試在 Mac 上全過，鎖檔、舊工具、資料來源頁、更新消息、決策 988 與 989、`docs/art/thsr-700t-2026-11/` 都寫了。總覽圖（和舊版並排的那份）已給擁有者看，**還在等擁有者說好**；之後請規劃交給工作室做不同家的審查。**還沒開 PR**。
+- 分支：`claude/thsr-700t-old-700`，疊在還沒合的 #2683（九州 N700）與 #2689（逐線選塗裝，決策 983）上，另帶 N700S 那一個 commit（決策 979）。三者合進 main 後併 main，再開草稿 PR。
+- 下一步的第一個指令：`gh pr view 2683 --json state && gh pr view 2689 --json state`；都合了就 `git fetch origin main && git merge origin/main`，再跑下面「驗證」那一行測試。
 
 ## 這件工作是什麼
 
-- 派工：作者 2026-11-25「好 換成舊版700系 塗裝改成跟真實台灣高鐵一樣塗裝」。遊戲裡的 700T 原本是配方畫的（決策 408、422，頭車 25.2 m，比真車的 27 m 短），換成作者舊版的 700 系，照 N700S 的做法（決策 979）切成色票面。
-- 分支：`claude/thsr-700t-old-700`，疊在兩張還沒合的 PR 上：#2683（九州 N700，連帶 N700S 的分支）與 #2689（逐線選塗裝，決策 983）。**還沒開 PR**（測試是紅的，而且疊著兩張沒合的 PR，開了只會白跑 CI）；兩張合進 main 後併 main 再開草稿 PR。
-- 決策 988 已在 #2118 登記，`docs/decisions/988.md` 還沒寫。存檔版本、golden schema 不動。
-- 作者同意的範圍：不畫駕駛室側的乘務員門；集電弓車 = 中間車加集電弓；門照 N700S 的做法每扇自成一片（`doors(_:)`）；1,435 mm 軌距的輪子；橘色與青綠兩種塗裝都留（決策 983）；顏色從 Wikimedia Commons 的照片量；先給作者看總覽（舊版並排），作者說好之後交給工作室做不同家的審查，再合。
-- 規劃給的規則：尺寸照真車；整節車一起放大，不單獨拉長或改車鼻的形狀；公開 repo 裡只稱「舊版」，不寫別的遊戲的名字；舊版的縮圖與貼圖不放公開 repo。
+- 派工：擁有者 2026-11-25「好 換成舊版700系 塗裝改成跟真實台灣高鐵一樣塗裝」（決策 988）。之後看了轉換後的圖：「那原始要順便接入嗎」「這樣就直接省事」「還多兩種車款」：舊版原本白藍塗裝的 700 系也當成一款車接進來，同一件工作做（決策 989）。
+- 「還多兩種車款」指的是 700T 與原塗裝 700 系這兩款車本身（規劃 2026-11-25 更正）。前一版交接把它讀成「再多做另一端的車頭與寬窗車」，那是誤讀。這兩種車後來還是做了，理由是真車的十六節編組本來就有它們（第 8 到 10 節是寬窗、一個門的車；第 16 節的後門在車尾端），已告訴規劃；擁有者若要簡單一點，拿掉的改動很小（`Map3DTrainSet.series700()` 的 `tail` 改用轉向的 `cab`、拿掉 `centre` 與 `centreCars`，重寫鎖檔與測試裡的排法）。
+- 規則：尺寸照真車；整節車一起放大，不單獨拉長或改車鼻的形狀；公開庫裡只稱「舊版」；舊版的貼圖與縮圖不進公開庫；不畫公司標誌與字樣。
+- 全周幌的經過：擁有者先說「全周幌保持舊版原樣吧」「我只說改車門而已」，後來交給做的人判斷，以最接近真車為準。實車照片（Commons 的 700T 側面照）上接縫被一圈同輪廓的幌蓋住，所以兩款都照 N700S 的 `hoods` 加了。700 系自己的接縫沒有另外找照片對。
 
-## 範圍加大：舊版原本塗裝的 700 系一起接（作者 2026-11-25）
+## 做了什麼
 
-第一個 session 停手後，作者看了轉換後的圖說「那原始要順便接入嗎」「這樣就直接省事」。意思（session 的理解）：舊版 700 系原本的白藍塗裝也當成另一款車接進遊戲，像九州 N700 與 N700S 那樣，和 700T 同一件工作一起做，不另開一件。session 原本建議分開，作者選一起。還沒做任何東西：
+細節在 `docs/decisions/988.md`、`989.md` 與 `docs/art/thsr-700t-2026-11/README.md`（含重做的指令）。重點：
 
-- 車身尺寸與頭車加長法可以直接用 `thsr_700t.py` 的（27 m、25 m、3.38 m 也是真的 700 系的尺寸）；原始款要它自己的塗裝（另寫色區，或照 N700S 的做法把舊貼圖切成色票面）。舊貼圖不進公開 repo。
-- 要定的事：放在哪（車庫裡的一款車，仿九州 N700）、key 與名字、集電弓車（舊版沒有，可共用這次手寫的）、決策號（和 988 同一個還是另登記一個）、一張 PR 還是疊兩張。
-- 給作者的總覽圖要兩款都有。
+- `tools/texture-palette/thsr_700t.py`：`--train thsr`（預設）出 700T 三節，`--train series700` 出 700 系五節。頭車 27 m 用多兩格窗的做法（量過兩種，舊版頭車與中間車的窗距、窗寬、門寬本來就一樣）；重複那一段用 `same_section` 檢查截面。
+- `Map3DTHSR700T.swift`／`…Mesh.swift`：set `highSpeed`，十二節；`Map3DTrainSet.litEnd` 讓車頭只亮白燈、車尾只亮紅燈。
+- `Map3DSeries700.swift`／`…Mesh.swift`：註冊表的車 `series700`，十六節，車庫的一款車；`Map3DTrainRegistryList.swift` 加一行；鎖檔 `tools/train-models/locks/series700.json`。
+- 鎖檔：`hashes.lock.json`、`pack.lock.txt` 只動 `highSpeed` 的行（拿掉 `highSpeedFar`）。
+- 四個舊的對照匯出工具不再要 `highSpeedFar`。
+- `DataSourceCredits` 加 `highSpeed700Model`；`WhatsNewNext.nextItems` 加兩行。
 
-## 頭車怎麼加長：量過 A 和 B，選 B（多兩格窗）
+## 前一版交接寫錯的地方
 
-規劃最後的規則是「每一款都量 A（整節等比放大）和 B（插窗格），用讓頭車的窗距、窗寬、門寬最接近中間車的那一種」。量到的（舊版原始尺寸，公尺）：
-
-| | 窗距 | 窗寬 | 門寬 |
-|---|---|---|---|
-| 舊版頭車 | 0.8155（平均 0.813） | 0.635 | 0.635、0.623 |
-| 舊版中間車 | 0.813 | 0.635 | 0.623 |
-
-兩節本來就一樣，表示舊版的頭車沒有被壓短。中間車放大 25/21.001 = 1.190 倍；頭車若整節放大到 27 m 要 1.286 倍，窗、窗距、門都會比後面的車大 8 %。所以用 B：車鼻和門照中間車的倍率放大（車鼻形狀不動、不單獨拉長），直的車身多 2 m，窗從 12 格變 14 格，窗距 0.968 m 與中間車相同。N700S 與 800 系量出來是 A，700T 是 B。
-
-## 做了什麼（都在這個分支）
-
-- `tools/texture-palette/thsr_700t.py`：轉換工具。不從貼圖取色，而是在 3D 裡上漆：各色區是（沿車長、高度）平面上的凸多邊形，三角形照它切開；貼圖只用來認擋風玻璃、車燈和裙板。車鼻頂面用俯視的白色「舌形」留白。輸出 `thsr-700t-cab.glb`、`-middle.glb`、`-pantograph.glb` 與 `report.json`。用法在檔頭。
-- `Sources/GamePresentation/Map3DTHSR700TMesh.swift`：r6 的三節車（頭車 1,903、中間車 1,308、集電弓車 1,392 個三角形）。
-- `Sources/GamePresentation/Map3DTHSR700T.swift`：`Unit`、色票、`doors(_:)`、`model(_:)`，以及 `Map3DTrainSet.highSpeed700T()`（十二節，第 4、9 節是集電弓車，後半列轉向）。
-- `Map3DTrainSets.swift`：`highSpeed` 換成新車組，沒有遠景車組；`highSpeedFar` 這個舊名字在 `byType` 指到 `highSpeed`；`nearOnly` 拿掉 `highSpeed`。
-- `Map3DTrainShapeRefresh.swift`：`highSpeedPaints` 的車組改成 `[Map3DTHSR700T.key]`。配方與 `refresh-700t-*` 研究模型還留著。
-- 測試：新增 `Map3DTHSR700TTests`；改了 `Map3DHighSpeedSetsTests`、`TrainPaintTests`、`TrainPackTests`、`Map3DTrainSetTests`、`Map3DChristmasLiveryTests`；刪了 `Map3DFarSets422Tests`。
-
-重做 mesh：
-
-```sh
-uv run --with pillow --with numpy python tools/texture-palette/thsr_700t.py \
-  --cab OLD/models/<頭車 7a188937>.glb --middle OLD/models/<中間車 e33da7fa>.glb --out-dir OUT
-python3 -I tools/train-models/glb_to_swift.py --enum Map3DTHSR700T \
-  --materials white,orange,black,skirt,glass,dark,headlamp,taillamp,frame \
-  --out Sources/GamePresentation/Map3DTHSR700TMesh.swift \
-  OUT/thsr-700t-cab.glb OUT/thsr-700t-middle.glb OUT/thsr-700t-pantograph.glb
-```
-
-## 紅的測試（沒修，原因是讀程式碼的推測，未驗證）
-
-1. `Map3DTrainMaterialTests.testThePackMarksWholeTrianglesAndNothingElse`（第 69 行，「only a cabin or a studio train marks its own glass」）：新車自己標玻璃，要把 `set-highSpeed` 加進那份允許名單（N700S 怎麼列就怎麼列）。
-2. `Map3DTrainSetTests.testEverySetsCarsAreInThePack`（第 119 行，六個模型的三角形數不在範圍內）：往上找 `highSpeed` 落在哪一條範圍，改成新車的 1,200 到 2,000。
-3. `Map3DTrainSetTests.testEachCarsModel`（第 344 行）：期待值要改成後半列是 `set-highSpeed-carBack`、`set-highSpeed-pantoBack`。
-4. `TrainPaintTests` 的 `testTheFrameMarksTheChosenLinesCars`（205）、`testTheLinePagesMenuAndTheChoice`（229）、`testEveryLineRunningTheModelAtOnce`（278 起）：還沒查。現象是 `fast` 那條線找不到塗裝選單、`lines(running:)` 只回第二條線，且沒選塗裝時就有車的 `paint` 不是 0。先看測試的 `session()` 怎麼建線，以及 `paintFamily(of:)` 怎麼從模型名字認出車組（新增的 `carBack`、`pantoBack` 可能沒被認到，或 `highSpeedFar` 的別名讓一條線走到別的路）。
+- 它說 `Map3DTHSR700TTests` 全過，其實當時提交的網格有兩個斷言是紅的（車頂的頂點不是每 1.5 m 都有；牆面的切線穿過窗，數窗緣會多算）。已改成：車頂量較寬的範圍，窗用玻璃三角形在 x 上的合併區間來數。
+- `TrainPaintTests` 的三個紅字不是新車造成的：決策 979 把 N700S 的 key 改成 `n700s`，而 #2689 的測試鎖著 `"n700sG"`。這個分支改成鎖 `Map3DN700S.key`。**N700S 與 #2689 誰後合，誰就要帶這個修正**（已告訴規劃）。
 
 ## 還留下什麼
 
-- 修上面的測試，再跑鎖檔的測試。
-- 鎖檔：`tools/train-models/hashes.lock.json`、`pack.lock.txt`、`budgets.json`。拿掉 `highSpeedFar` 的項目，換 `set-highSpeed-*`（含 `carBack`、`pantoBack`）的雜湊與車燈。在 Mac 上 `run.sh OUT --lock …` 會連帶改掉約 39 個舊配方模型的雜湊（Mac 與 Linux 的浮點差），**只留 highSpeed 的差異，其餘還原**；或在雲端 Linux 上跑。
-- 還在用 `highSpeedFar` 的舊工具：`tools/hsr-far-422/export.swift` 與 README、`tools/hsr-trains-408/export.swift`、`tools/train-modeling-410/export.swift`、`tools/mesh-lod-420/export.swift`。別名讓它們還能編，但印出來的「遠景」已經是同一組車，要改註解或拿掉那幾行。
-- 給玩家看的字：`DataSourceCredits`（仿 `highSpeedTrainModel` 加一筆，或改寫）、`WhatsNewNext` 加一行。
-- 文件：`docs/decisions/988.md`（照 979 的結構，含五個角度與外觀回合）、`docs/art/thsr-700t-2026-11/`（只放轉換後模型的 `overview.jpg` 與 README）、`tools/texture-palette/README.md` 加一列、`.claude/skills/rolling-stock/SKILL.md` 若提到 700T 的尺寸要改。之後 `node tools/train-models/check.mjs`、`python3 -I tools/golden-checks/doc_numbers.py --check`。
-- 外觀：用遊戲的匯出工具把 r6 重新匯出、渲染（目前手上的遊戲渲染是較早的 mesh），至少再看一輪；做總覽圖給作者（給作者的那份與舊版並排，不進公開 repo；公開的那份只有轉換後的模型）。作者說好之後請規劃交給工作室做不同家的審查。
-- PR：本文開頭要有署名兩行，寫「經驗：…」一行（`lessons-link.yml`），指派並請 a91453 審；#2118 留言。經驗要寫進私有 repo 的 `docs/studio/lessons/`，Mac 推不了那個 repo，交給規劃。
-- 工具裡的小整理：`thsr_700t.py` 的 `ORANGE` 先是色票編號、後來被高度範圍蓋掉，所以另有 `ORANGE_KIND`，改個名字。`Map3DTHSR700T.swift` 註解寫的「some 17,000」是對的（十二節合計約 17,000），留意改 mesh 後更新。
+1. 等擁有者看總覽圖；說好之後請規劃安排工作室做不同家的審查。擁有者或審查有意見就改工具、重產網格、重寫鎖檔（Mac 上 `run.sh OUT --lock TMP/hashes.lock.json` 會改到三十幾個無關模型的雜湊，只取 `highSpeed` 的行與 `TMP/locks/series700.json`；`pack.lock.txt` 用 `MAP3D_WRITE_PACK_LOCK=1` 跑 `Map3DModelPackLockTests/testTheOrderAndTheLampsAreAsBefore` 重寫）。
+2. #2683、N700S、#2689 合進 main 後：併 main、開草稿 PR（本文開頭兩行署名、「經驗：…」一行、指派並請 a91453 審）、在 #2118 留言。
+3. 經驗已傳給規劃，由雲端的工作串寫進私有庫 `docs/studio/lessons/`（Mac 推不了那個庫）。
+4. 可以再做的小事：`thsr_700t.py` 的 `ORANGE_KIND` 改名；配方畫的 `refresh-700t-*` 研究模型與配方是否拿掉。
 
-## 已知還不好的地方（寫進決策 988 的「還有哪裡不好」）
+## 驗證
 
-- 裙板的顏色先用 `tankStand`，沒對照片量。
-- 窗與門是方角，真車是圓角。
-- 集電弓、絕緣罩與兩片擋風板是工具手寫的（舊版沒有集電弓車）。
-- 車頂全白。
-- 擋風玻璃與車燈沿用舊版的小形狀；真車是一整片深色水滴形，燈在裡面。
-- 配方畫的 `refresh-700t-*` 研究模型與配方還在程式裡。
-- 還沒在 iPhone 上看過。
+```sh
+swift build --build-tests -Xswiftc -warnings-as-errors
+swift test --skip-build --filter 'Map3DSeries700Tests|Map3DTHSR700TTests|Map3DTrainMaterialTests|Map3DTrainSetTests|TrainPaintTests|Map3DHighSpeedSetsTests|TrainPackTests|Map3DChristmasLiveryTests|Map3DTrainShapeRefreshTests|Map3DTrainOwnGlassTests|Map3DPaletteGuardTests|Map3DShowcaseTests|Map3DN700STests|Map3DKyushuN700Tests|Map3DTrainRegistryTests|Map3DModelPackSizeTests|RealRailwaysTests|WhatsNewTests'
+```
 
-## UNVERIFIED
+- VERIFIED（Mac，Swift 6.4）：上面兩行（本機另外繞過 `MapPackChoicesTests.swift` 的一個編譯錯，沒有提交）；`doc_numbers.py --check`；四個舊工具 `swiftc -typecheck`；`tools/train-models/check.mjs`（預算都過，紅的只有 Mac 上既有模型的雜湊差）；遊戲繪圖器看過兩款車。
+- UNVERIFIED：Linux 上的建置與測試、寫進鎖檔的雜湊（Mac 算的）交給 CI；`Map3DModelPackLockTests.testEveryModelIsAsLocked` 在 Mac 上本來就有三十幾個無關模型是紅的，這兩款車不在其中；iPhone 上沒看過。
 
-- Linux 上的建置與測試（只在 Mac 跑過）。
-- 鎖檔測試、`check.mjs`、`doc_numbers.py`：沒跑。
-- 遊戲渲染器裡 r6 的樣子：沒看（只看過軟體渲染的 r6 與遊戲渲染的 r3）。
-
-工作用的資料夾（照片、六輪的輸出、看圖的小程式）在作者的 Mac 上，不在任何 repo；位置記在那台 Mac 的 session 記憶裡。
+工作用的資料夾（照片、各輪輸出、看圖與排總覽圖的小程式）在作者的 Mac 上，不在任何 repo；位置記在那台 Mac 的 session 記憶裡。
