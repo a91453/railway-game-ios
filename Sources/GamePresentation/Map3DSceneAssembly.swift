@@ -1,0 +1,312 @@
+import GameCore
+
+/// The order a 3D scene is built in: each layer the builder lays, one
+/// after the other, from the ground to the player's buildings. Moved as
+/// it was out of `Map3DScene.swift` (MAP3D-SCENE-SPLIT).
+extension Map3DScene {
+    /// Decision 339: the real lines' track laid in the scene `builder`
+    /// builds, clear of `snapshot`'s, and their trains on it; `nil` on a
+    /// map not of the real world or without `railways`' timetables.
+    /// Decision 517 續 (PR 3b): apart, so a scene built again only where
+    /// the track changed works them out again as the whole scene does.
+    static func realTrains(world: GameWorld, railways: RealRailways?, snapshot: RailwaySnapshot,
+                           builder: inout Builder) -> Map3DRealTrains? {
+        if let railways, let operations = railways.operations, let frame = RealWorldFrame(world: world) {
+            let region = builder.region, margin = Map3DRealTrains.margin * Builder.metre
+            // Decision 876: a line's box on the map and its trains are the
+            // same whatever the region, so the scene's builds keep them: a
+            // line whose box is clear of the region is not read point by
+            // point, and its timetable is made into runs once.
+            let shared = builder.shared, key = Map3DSharedBuild.RealKey(railways, frame: frame)
+            let traffic = RealTrainTraffic(operations: operations, bought: Set(world.acquisitions.map(\.realLine)), mayBeNear: { line, system in
+                shared.box(of: line, system: system, key: key, frame: frame)
+                    .meets(minX: region.minX - margin, minY: region.minY - margin, maxX: region.maxX + margin, maxY: region.maxY + margin)
+            }, made: { line, system in
+                shared.trafficLine(line, system: system, key: key, operations: operations)
+            }, isNear: { coordinate in
+                let at = frame.worldPosition(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                return at.x >= region.minX - margin && at.x <= region.maxX + margin && at.y >= region.minY - margin && at.y <= region.maxY + margin
+            })
+            // Decision 402: the real tracks, clear of the lines the
+            // player bought.
+            let bought = world.acquisitions.compactMap { acquisition -> (system: String, shape: [RealRailways.Coordinate])? in
+                let parts = acquisition.realLine.split(separator: ":", maxSplits: 1).map(String.init)
+                guard acquisition.kind == .railway, parts.count == 2, let line = operations.system(id: parts[0])?.lines.first(where: { $0.id == parts[1] }) else { return nil }
+                return (parts[0], line.shape)
+            }
+            return Map3DRealTrains(traffic: traffic, structures: railways.structures, railTracks: railways.tracks,
+                                   operations: operations, bought: bought,
+                                   frame: frame, snapshot: snapshot, builder: &builder, key: key)
+        }
+        return nil
+    }
+
+    /// Decision 358: the scene of `frame`'s region round its origin (world
+    /// units), built as the public initializer builds it. Decision 359:
+    /// with `trackCover`, or the network's own when `nil`. Decision 368:
+    /// with `detail`, the city in full only within ``detailRadius`` of it.
+    /// Decision 455: the city's lots' simplified boxes as instances, or
+    /// as vertices without `instancingBoxes` (as before it, for the tests).
+    /// Decision 610 續: the real buildings' street fronts only with `facades`.
+    /// Review L14-7: `studies`, where a station study can be drawn
+    /// (``Builder/studyRegion``).
+    init(world: GameWorld, snapshot: RailwaySnapshot?, skyline: CitySkyline?, frame: (region: WorldRegion, originX: Double, originY: Double),
+         baseMap: BaseMapTiles?, cityTiles: [CityTileArea], footprints footprintTiles: FootprintTiles? = nil, heights: HeightGrid?,
+         landCover: LandCoverGrid? = nil, lineBands: Map3DLineBands?, railways: RealRailways?, temples: RealTemples?, noBuild: RealNoBuildLand? = nil,
+         trackCover: Map3DTrackCover? = nil, detail: Map3DPoint? = nil, detailAhead: Map3DPoint? = nil, instancingBoxes: Bool = true, facades: Bool = true,
+         studies: WorldRegion? = nil) {
+        (region, originX, originY) = frame
+
+        var builder = Builder(originX: originX, originY: originY, region: region, world: world, heights: heights)
+        builder.detail = detail
+        builder.detailAhead = detailAhead
+        builder.studyRegion = studies
+        builder.buildsFacades = facades
+        // Decision 876: a part of a scene, built with the scene's track
+        // cover, with what the scene's builds worked out before it.
+        if let trackCover { builder.shared = trackCover.shared }
+        // Decision 811: the land cover round the region, for the ground
+        // and the forests' trees.
+        if let landCover, let frame = RealWorldFrame(world: world) { builder.readLandCover(landCover, frame: frame) }
+        builder.time("read the land cover")
+        // Decision 732: Hong Kong's streets on its map.
+        builder.streetLife.region = builder.look.streets
+        let snapshot = snapshot ?? world.railwaySnapshot()
+        // Decision 737: the ground levelled before anything is laid on it.
+        builder.levelGround(under: snapshot)
+        builder.time("level the ground under the track")
+        // Decision 234: on a real-world map, the base map's water, cover
+        // and roads; the ground's own water then gives way to its finer
+        // shores.
+        var real: Map3DBaseMap?
+        if let baseMap, let frame = RealWorldFrame(world: world) {
+            real = Map3DBaseMap(tiles: baseMap, frame: frame, region: region, originX: originX, originY: originY,
+                                names: builder.look.streets.hasStreetNameSigns)
+            // Decision 834: the motorways held to their grade, their
+            // cuttings cut out of the ground laid next.
+            builder.roadGrade = builder.gradeMotorways(of: real!)
+            // Decision 385: the city's low homes and shops along the real
+            // roads, and none on the land OpenStreetMap keeps clear.
+            builder.streetFrontage = true
+            if let noBuild { builder.prepareNoBuild(noBuild, frame: frame) }
+        }
+        builder.time("read the base map")
+        let airfields = real == nil ? nil : noBuild?.airfields
+        // Decision 359 (續): the whole network's, so a chunk built apart
+        // lays a bore beside another as the whole scene does; decision 375:
+        // first, as its trenches are cut out of the ground and what lies
+        // on it.
+        builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
+        // Decision 876 (later): once for the scene and the blocks built with its
+        // track cover, not again for each block.
+        builder.undergroundStations = builder.shared.undergroundStations(of: snapshot, originX: originX, originY: originY) {
+            Map3DUndergroundStations(snapshot, point: builder.point, cover: builder.trackCover)
+        }
+        builder.time("track cover")
+        // Decision 238: the city twice, in full and simplified for afar.
+        let city = skyline ?? CitySkyline(world: world)
+        // Decision 720: the ground under the city's lots in their colours,
+        // plain where the player's track runs.
+        builder.addGround(water: real == nil, lots: city, clearOf: builder.trackCells(snapshot))
+        builder.mark("ground")
+        drawnGround = builder.groundGrid()
+        builder.time("ground grid")
+        let taken = real.map { builder.addBaseMap($0) } ?? Builder.TakenGround()
+        builder.time("base map")
+        // Decision 438: the player's own roads, which the base map has not.
+        if real != nil { builder.addOwnRoads(baseMap: baseMap, frame: RealWorldFrame(world: world)) }
+        builder.mark("own roads")
+        // Decision 699: the airports' runways, taxiways and aprons, over
+        // the base map's ground and roads.
+        var runways = Set<ChunkKey>()
+        if let airfields, let frame = RealWorldFrame(world: world) { runways = builder.addAirfields(airfields, frame: frame) }
+        builder.mark("airfields")
+        let cleared = builder.addTrack(snapshot)
+        builder.addTrenches()
+        if let lineBands { builder.addLineBands(lineBands, snapshot: snapshot) }
+        builder.addPlatforms(snapshot)
+        builder.addPortals(snapshot)
+        self.trackCover = builder.trackCover
+        builder.mark("the player's track and platforms")
+        // Decision 339: the real lines' track, clear of the player's, and
+        // their trains on it.
+        realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
+        builder.mark("real railways")
+        builder.realTrackLines = realTrains?.shownLanes ?? []
+        // Decision 941 (later): the real map's roads crossing the track on
+        // the level, the player's and the real lines', at level crossings.
+        if real != nil { builder.addRealLevelCrossings() }
+        // Decision 407: the viaducts, each pair of tracks on its piers.
+        builder.addViaducts()
+        builder.mark("viaducts")
+        // Decision 370: Taipei 101 and Taipei Main Station, clear of the
+        // track; on ground no real building, temple, scene or city lot
+        // takes.
+        let landmarks = RealWorldFrame(world: world).map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
+        // Decision 791: Hong Kong's landmark towers, clear of the track.
+        if let frame = RealWorldFrame(world: world) { builder.addHongKongLandmarks(frame: frame) }
+        // Decision 879: the earlier Sun Moon Lake's pier, boats, temple
+        // and pavilion, where the real ones stand.
+        if let frame = RealWorldFrame(world: world) { builder.addSunMoonLandmarks(frame: frame) }
+        // Decision 869: the suspension bridges' towers and cables.
+        builder.addSuspensionBridges()
+        // Decision 625: the real stations' exterior studies, as landmarks,
+        // cut clear of the track.
+        let exteriors = RealWorldFrame(world: world).map { builder.addStationExteriors(snapshot, frame: $0) } ?? [:]
+        // Decision 725: Taipei's temples in their own shape, as landmarks.
+        let taipeiTemples = temples.flatMap { temples in RealWorldFrame(world: world).map { builder.addTaipeiTemples(temples, frame: $0) } } ?? []
+        let landmarkCells = landmarks.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) }
+            .union(exteriors.values.reduce(into: Set<ChunkKey>()) { $0.formUnion($1) })
+            .union(taipeiTemples)
+        // Decision 441: the Changhua Roundhouse's turntable; no street
+        // furniture or city lot on it, but the real buildings round it stay.
+        let turntable = RealWorldFrame(world: world).map { builder.addRoundhouseTurntable(frame: $0) } ?? []
+        // Decision 321: the stations' canopies and buildings from the
+        // station kit, a plaza where a building stands; Taipei's the
+        // landmark, where it stands (decision 370).
+        // Decision 699: nor does a building stand on a runway.
+        let stationCells = builder.addStations(snapshot, frame: RealWorldFrame(world: world), shops: false,
+                                               drawnElsewhere: landmarks[.taipeiMainStation] == nil ? [] : [.taipei])
+        let stations = cleared.union(stationCells).union(runways)
+        // MRT-SHELL-CLEAR-OUTLINE: the real buildings are cleared by the
+        // runways and what has no outline of its own; the track and the
+        // stations' buildings leave out only those they overlap
+        // (``onTrack(_:)``, ``underRailway(_:)``). Their cells still
+        // keep no city lot.
+        let realClear = stationCells.subtracting(builder.outlineOnlyCells).union(runways)
+        builder.indexTrackOutline()
+        // Decision 263: on a map not of the real world, seeded streets
+        // between the lots, clear of the track and the platforms but where
+        // they cross it, and of the stations' buildings.
+        if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
+        builder.mark("landmarks and stations")
+        seededStreets = SeededStreetPlan(edges: builder.streetEdges)
+        stationExteriors = builder.stationExteriors
+        // Decision 322: the shops, clear of the streets.
+        builder.addShopStreets()
+        // Decision 794: where the winter event's trees and lights go.
+        builder.addWinterDecor(frame: RealWorldFrame(world: world))
+        winterLights = Map3DWinterLights(placements: builder.winterDecor)
+        // Decision 840: the Santa Claus village's reindeer, clear of its tree.
+        builder.addReindeerHerd(frame: RealWorldFrame(world: world))
+        reindeerHerd = Map3DReindeerHerd(placements: builder.reindeerHerd)
+        freightYards = builder.freightYardPlaces
+        screenDoors = builder.shared.screenDoors(of: world)
+        // Decision 326: the overhead line, its masts clear of the platforms;
+        // on a real-world map, none along the real lines without one.
+        if let railways, let frame = RealWorldFrame(world: world) { builder.addRealLines(railways, frame: frame) }
+        builder.addOverheadLine()
+        builder.mark("overhead line")
+        // Decision 436: the platforms' small things, close up.
+        // Decision 882: the second names on the platforms' name boards.
+        if let railways, let frame = RealWorldFrame(world: world) {
+            builder.boardSecondNames = Builder.boardSecondNames(world, railways, frame)
+            builder.boardSigns = Builder.boardSigns(world, railways, frame)
+        }
+        // Decision 936: the footbridges and underpass stairs, before the
+        // platforms' small things, which stand clear of them.
+        builder.addStationCrossings(snapshot)
+        builder.addPlatformProps()
+        // Decision 244: no street furniture where the track runs (nor
+        // where a station's building or a landmark stands).
+        // Decision 458: the conifers of the high woods, before the props
+        // where the track, a station or a landmark is are taken away.
+        builder.addConifers(clearOf: builder.realTrackCells)
+        builder.removeProps(on: stations.union(landmarkCells).union(turntable))
+        // Decision 458: the bushes on the stations' plazas and the grass
+        // beside the line.
+        builder.addStationBushes()
+        builder.addBushesBesideTrack(cleared.union(builder.realTrackCells), clearOf: stations.union(landmarkCells).union(turntable))
+        builder.mark("trees, bushes and platform things")
+        // Decision 229 續: the street lights' pools, seen at night.
+        builder.addLampPools()
+        builder.mark("street lights' pools")
+        // Decision 239: on a real-world map, the real buildings round
+        // Kaohsiung and Taichung Stations, and no city lot where they
+        // stand.
+        let frame = real == nil ? nil : RealWorldFrame(world: world)
+        builder.target = .near
+        var standing = landmarkCells.union(frame.map { builder.addRealBuildings(cityTiles, frame: $0, clearOf: realClear.union(landmarkCells)) } ?? [])
+        // Decision 723: the cells of what is no building of the tiles' or
+        // the footprints': the landmarks', then the temples', the kits'.
+        var scenes = landmarkCells
+        builder.mark("real buildings (city tiles)")
+        // Decision 385: the airports' own buildings; decision 389: only
+        // with no footprints, which have them.
+        if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
+        // Decision 331: the real temples, on no station or real building.
+        if let temples, let frame = RealWorldFrame(world: world) {
+            let cells = builder.addTemples(temples, frame: frame, clearOf: stations.union(standing))
+            standing.formUnion(cells)
+            scenes.formUnion(cells)
+            builder.target = .near
+        }
+        // Decision 331: the commercial kit's scenes before the big
+        // stations, on no real building or temple.
+        builder.mark("temples")
+        let commerce = builder.addStationCommerce(clearOf: standing)
+        standing.formUnion(commerce)
+        scenes.formUnion(commerce)
+        builder.mark("station commerce")
+        builder.target = .near
+        // Decision 331: the park kit's scenes in the real parks, on no
+        // station, real building, temple or commercial scene; no city lot
+        // on them.
+        if let real {
+            let parks = builder.addParks(real, clearOf: stations.union(standing))
+            standing.formUnion(parks)
+            scenes.formUnion(parks)
+            builder.target = .near
+        }
+        builder.mark("parks")
+        // Decision 389: the footprints' buildings, on no station, landmark,
+        // real building, temple or kit's scene; no city lot on them.
+        var footprints: Map3DFootprints?
+        if let frame, let tiles = footprintTiles {
+            footprints = Map3DFootprints(tiles: tiles, frame: frame, region: builder.region)
+            // Decision 707: the game's own houses no taller than these.
+            builder.lowRise = Map3DLowRise(tiles: tiles, frame: frame)
+        }
+        let beforeFootprints = standing
+        builder.time("read the footprints")
+        if let footprints { standing.formUnion(builder.addFootprints(footprints, clearOf: realClear.union(landmarkCells), takenBy: beforeFootprints)) }
+        builder.mark("real buildings (footprints)")
+        // Decision 723: the cells the real buildings cover little of,
+        // which the houses along the roads are laid on, between them.
+        let thinlyBuilt = builder.thinlyBuilt(but: scenes.union(taken.whole).union(turntable))
+        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
+                        besideRoads: taken.byRoads, thinlyBuilt: thinlyBuilt)
+        builder.mark("the game's own city")
+        // Decision 811: the land cover's forests' trees, on nothing built.
+        builder.addWildTrees(clearOf: stations.union(landmarkCells).union(turntable).union(standing).union(taken.whole)
+            .union(builder.realTrackCells))
+        builder.mark("forest trees")
+        builder.target = .far
+        // Decision 455: the city's boxes as instances: the lots', the real
+        // buildings' on rectangles and their roofs'; the other real
+        // outlines stay vertices.
+        builder.instancingBoxes = instancingBoxes
+        // Decision 709: each building left out from afar by its own size.
+        builder.sizesFar = true
+        if let frame { builder.addRealBuildings(cityTiles, frame: frame, clearOf: realClear.union(landmarkCells)) }
+        builder.mark("real buildings (city tiles)")
+        if let footprints { builder.addFootprints(footprints, clearOf: realClear.union(landmarkCells), takenBy: beforeFootprints) }
+        builder.mark("real buildings (footprints)")
+        if footprintTiles == nil, let noBuild, let frame { builder.addAirportBuildings(noBuild, frame: frame, clearOf: stations.union(landmarkCells)) }
+        builder.addCity(city, clearOf: stations.union(builder.realTrackCells), takenBy: taken.whole.union(standing).union(turntable),
+                        besideRoads: taken.byRoads, thinlyBuilt: thinlyBuilt)
+        builder.mark("the game's own city")
+        builder.sizesFar = false
+        builder.instancingBoxes = false
+        builder.target = .base
+        builder.addPlacedBuildings()
+        builder.mark("the player's buildings")
+        layers = builder.layers
+
+        chunks = builder.chunks()
+        builder.time("chunks")
+        steps = builder.steps
+        streetLife = builder.streetLife
+        levelCrossings = builder.crossings
+    }
+}
