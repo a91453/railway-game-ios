@@ -42,16 +42,18 @@ final class CarGapTests: XCTestCase {
     }
 
     func testTheRealTrainsCarsStandTheirOwnGapApart() throws {
+        // Decision 988: the 700T's hoods close its joints to 4 cm, as the
+        // real train's (the old 700T's gangways were 0.4 m apart).
         let highSpeed = try realGaps("highSpeed", cars: 12)
-        for gap in highSpeed { XCTAssertEqual(gap, 0.4, accuracy: 0.15, "highSpeed") }
+        for gap in highSpeed { XCTAssertEqual(gap, Map3DTHSR700T.hoodGap * 2, accuracy: 0.02, "highSpeed") }
         // Taiwan Railway's stock on its lines (Map3DRealTrains.formation).
-        // Its multiple units' gaps are a gangway's, as the High Speed
-        // Rail's but a little wider (the EMU3000's some 0.7 m, was 1.3 m).
+        // Its multiple units' gaps are a gangway's, as the old 700T's but a
+        // little wider (the EMU3000's some 0.7 m, was 1.3 m).
         for (key, cars) in [("emu800", 8), ("emu900", 10), ("emu500", 8), ("emu700", 8), ("emu3000", 12), ("puyuma", 8), ("taroko", 8),
                             ("dieselExpress", 3)] {
             for gap in try realGaps(key, cars: cars) {
                 XCTAssertTrue((0.05...0.75).contains(gap), "\(key): \(gap) m between two cars")
-                XCTAssertLessThanOrEqual(gap, (highSpeed.max() ?? 0) + 0.4, "\(key): no wider than the High Speed Rail's but a little")
+                XCTAssertLessThanOrEqual(gap, 0.4 + 0.4, "\(key): no wider than the old 700T's but a little")
             }
         }
         // Its coaches behind a locomotive have buffers and couplers between
@@ -84,7 +86,8 @@ final class CarGapTests: XCTestCase {
         func whole(_ key: String, _ cars: Int) -> Double {
             Map3DRealTrains.cars(of: .init(key: key, cars: cars), hasModels: true, models: pack).length * 1_000
         }
-        XCTAssertEqual(whole("highSpeed", 12), 305.3, accuracy: 1)
+        // Decision 988: two 27 m cab cars and ten 25 m cars (the real 700T 305.3 m).
+        XCTAssertEqual(whole("highSpeed", 12), 304.0, accuracy: 0.5)
         XCTAssertEqual(whole("metroC381", 6), 142.2, accuracy: 1)
         // Decision 906: the studio's Taroko at the real car lengths (21.995 m and 20.5 m).
         XCTAssertEqual(whole("taroko", 8), 167.0, accuracy: 1)
