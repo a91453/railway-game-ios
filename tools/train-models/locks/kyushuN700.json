@@ -1,0 +1,31 @@
+{
+  "comment" : "Decision 782: the models of the registered train kyushuN700: FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 3,
+  "lamps" : "7ef1a0403cc3a285",
+  "models" : {
+    "light-set-kyushuN700-car" : {
+      "hash" : "33fa4506c3ed8c61",
+      "triangles" : 180
+    },
+    "light-set-kyushuN700-head" : {
+      "hash" : "82aa608e8346ad78",
+      "triangles" : 120
+    },
+    "light-set-kyushuN700-tail" : {
+      "hash" : "f07e6930e0d1af78",
+      "triangles" : 120
+    },
+    "set-kyushuN700-car" : {
+      "hash" : "2e342371038f58b2",
+      "triangles" : 932
+    },
+    "set-kyushuN700-head" : {
+      "hash" : "c6ed5d6bc8f687f",
+      "triangles" : 1168
+    },
+    "set-kyushuN700-tail" : {
+      "hash" : "bb37fa3233851e8a",
+      "triangles" : 1168
+    }
+  }
+}

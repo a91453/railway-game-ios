@@ -426,6 +426,10 @@ public struct Map3DRealTrains: Sendable {
             case "N": return Formation(key: Map3DFukuokaNanakumaLine.key, cars: Map3DFukuokaNanakumaLine.cars)
             default: return Formation(key: "", cars: 3)
             }
+        case "kyushushinkansen":
+            // Decision 977: the Kyushu Shinkansen's N700 series 7000 and
+            // 8000, eight cars (the "Mizuho" and "Sakura" through trains).
+            return Formation(key: Map3DKyushuN700.key, cars: Map3DKyushuN700.cars)
         default:
             // A system the game has no set for: boxes.
             return Formation(key: "", cars: 3)
