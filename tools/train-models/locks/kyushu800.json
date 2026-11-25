@@ -1,31 +1,31 @@
 {
   "comment" : "Decision 782: the models of the registered train kyushu800: FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
   "lampCount" : 3,
-  "lamps" : "3c1db05e83ffdffe",
+  "lamps" : "7cc2a830f34e522a",
   "models" : {
     "light-set-kyushu800-car" : {
-      "hash" : "ba6d5c137b505085",
-      "triangles" : 104
+      "hash" : "65ab320342842669",
+      "triangles" : 108
     },
     "light-set-kyushu800-head" : {
-      "hash" : "97441ed4442e6607",
-      "triangles" : 86
+      "hash" : "8c47718a8184a4",
+      "triangles" : 90
     },
     "light-set-kyushu800-tail" : {
-      "hash" : "449f36d0a2e70c07",
-      "triangles" : 86
+      "hash" : "45aa0e6c8ddd72a4",
+      "triangles" : 90
     },
     "set-kyushu800-car" : {
-      "hash" : "6eb1158fd3ab21e1",
-      "triangles" : 1573
+      "hash" : "c3f511ebe5949dfd",
+      "triangles" : 1868
     },
     "set-kyushu800-head" : {
-      "hash" : "9b6f5d37e790e96e",
-      "triangles" : 1825
+      "hash" : "1ab436a181c0dffe",
+      "triangles" : 2314
     },
     "set-kyushu800-tail" : {
-      "hash" : "792487f3ccca7121",
-      "triangles" : 1825
+      "hash" : "f13fdf84e4798166",
+      "triangles" : 2314
     }
   }
 }

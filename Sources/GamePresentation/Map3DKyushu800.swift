@@ -28,6 +28,9 @@ import Foundation
 /// all the way round, the end's outline run on to 2 cm short of the
 /// joint, as the real train's outer hood stands flush with its body; the
 /// old cars had a narrow gangway alone and 0.6 m of daylight around it.
+/// Seen from above the hood's mouth is a shallow V, so that two cars
+/// turned up to 4 degrees to each other on a curve keep their hoods
+/// apart; only the couplers' tips meet at the joint.
 /// No company mark, lettering or number is drawn, and no pantograph (the
 /// old cars have none).
 public enum Map3DKyushu800 {
@@ -69,13 +72,16 @@ public enum Map3DKyushu800 {
     /// windows the game lights at night and mirrors the sky in.
     static let glassIndex = 3
 
-    /// A door of a car: its frame, its panel and the window in it, on each
-    /// of the car's two side walls. The mesh is cut along this outline, so
-    /// every triangle is wholly a door's or wholly the wall's: the doors
-    /// can be moved apart from the wall, to open at a station, without the
-    /// mesh being cut again. (A passenger door's outline is this box; the
-    /// driver's door has a slanted top, so its box is only its place.) The
-    /// same shape as the N700S's doors (`Map3DN700S.Door`).
+    /// A door of a car: its frame, its panel and the window in it, on one
+    /// of the car's two side walls (the old car's two sides lie up to 8 mm
+    /// apart along it, so each side's door is its own). The mesh is cut along this outline, so
+    /// every triangle is wholly a door's or wholly the wall's (the tool
+    /// writes each door as a node of its own too): the doors can be moved
+    /// apart from the wall, to open at a station, without the mesh being
+    /// cut again, and the wall is whole without them. A passenger door's
+    /// outline is this box; the driver's door's top is lower towards the
+    /// nose (``top``), and the outline follows it. The same shape as the
+    /// N700S's doors (`Map3DN700S.Door`).
     public struct Door: Sendable, Equatable {
         /// Along the car, metres from its middle, the cab's end positive.
         public let x: ClosedRange<Float>
@@ -83,22 +89,56 @@ public enum Map3DKyushu800 {
         public let z: ClosedRange<Float>
         /// The driver's own door, by the cab.
         public let crew: Bool
+        /// The wall it is on: 1 the left (+y), -1 the right.
+        public let side: Float
+        /// A slanted top, from the door's back to its front: (along the car,
+        /// over the rail). Empty for a square top at `z`'s upper bound.
+        public let top: [SIMD2<Float>]
 
-        /// Whether `point` is on this door, on the side wall its `y` is on.
+        init(x: ClosedRange<Float>, z: ClosedRange<Float>, crew: Bool, side: Float, top: [SIMD2<Float>] = []) {
+            self.x = x
+            self.z = z
+            self.crew = crew
+            self.side = side
+            self.top = top
+        }
+
+        /// How high the door reaches at `along` the car.
+        public func height(at along: Float) -> Float {
+            guard let first = top.first, let last = top.last else { return z.upperBound }
+            if along <= first.x { return first.y }
+            for (a, b) in zip(top, top.dropFirst()) where along <= b.x {
+                return a.y + (b.y - a.y) * (along - a.x) / (b.x - a.x)
+            }
+            return last.y
+        }
+
+        /// Whether `point` is on this door.
         public func contains(_ point: Map3DPoint, margin: Float = 0.002) -> Bool {
-            abs(point.y) > 1.5 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
-                && point.z >= z.lowerBound - margin && point.z <= z.upperBound + margin
+            point.y * side > 1.5 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
+                && point.z >= z.lowerBound - margin && point.z <= height(at: point.x) + margin
         }
     }
 
-    /// `unit`'s doors, from its front to its back; each is on both sides.
-    /// As `tools/texture-palette/kyushu_800.py` reports them.
+    /// `unit`'s doors, from its front to its back, the left wall's before
+    /// the right's at each place. As `tools/texture-palette/kyushu_800.py`
+    /// reports them (its GLB's nodes `…-door-left-1` and so on).
     public static func doors(_ unit: Unit) -> [Door] {
+        let z: ClosedRange<Float> = 1.247...3.119
         switch unit {
         case .cab:
-            [Door(x: 5.446...6.19, z: 1.247...3.119, crew: true), Door(x: -12.784 ... -11.774, z: 1.247...3.119, crew: false)]
+            return [
+                Door(x: 5.454...6.191, z: z, crew: true, side: 1,
+                     top: [SIMD2(5.454, 3.119), SIMD2(5.484, 3.119), SIMD2(5.915, 3.011), SIMD2(6.191, 2.915)]),
+                Door(x: 5.446...6.19, z: z, crew: true, side: -1,
+                     top: [SIMD2(5.446, 3.119), SIMD2(5.477, 3.119), SIMD2(5.911, 3.011), SIMD2(6.19, 2.915)]),
+                Door(x: -12.784 ... -11.774, z: z, crew: false, side: 1), Door(x: -12.784 ... -11.774, z: z, crew: false, side: -1),
+            ]
         case .middle:
-            [Door(x: 10.531...11.647, z: 1.247...3.119, crew: false), Door(x: -8.438 ... -7.276, z: 1.247...3.119, crew: false)]
+            return [
+                Door(x: 10.531...11.647, z: z, crew: false, side: 1), Door(x: 10.531...11.647, z: z, crew: false, side: -1),
+                Door(x: -8.438 ... -7.276, z: z, crew: false, side: 1), Door(x: -8.438 ... -7.276, z: z, crew: false, side: -1),
+            ]
         }
     }
 
@@ -112,7 +152,7 @@ public enum Map3DKyushu800 {
 
 extension Map3DKyushu800 {
     /// Decision 782: its set, its showcase row (six cars) and its cars'
-    /// triangles (1,825 the cab car, 1,573 the middle car: few enough to be
+    /// triangles (2,314 the cab car, 1,868 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(
@@ -122,7 +162,7 @@ extension Map3DKyushu800 {
             Map3DShowcase.Entry(key, "Kyushu Shinkansen 800 series", "九州新幹線 800 系", .japan, cars: cars, fixed: true,
                                 gauge: 1.435),
         ],
-        triangles: 1_000...1_900, length: 24.9...27.4)
+        triangles: 1_000...2_400, length: 24.9...27.4)
 }
 
 extension Map3DTrainSet {
