@@ -1075,12 +1075,16 @@ public struct Map3DTrainSet: Sendable {
     /// `tools/kaohsiung-light-rail/assembly-*.json`), the last turned round,
     /// cut at its middle into the light metro's two cars as
     /// ``articulated(_:formation:cuts:lamps:)`` cuts the five-section LRT,
-    /// the ends' lamp lenses lit (``litLenses(_:front:)``). The real lines
-    /// draw two cars of 20 m (``Map3DRealTrains/carPitch``), as the green
-    /// tram's. `far`: the modules' light versions, a set of `key` + `Far`.
+    /// the ends' lamp lenses lit (``litLenses(_:front:)``). `far`: the
+    /// modules' light versions, a set of `key` + `Far`.
+    ///
+    /// Decision 985: laid at its halves' own lengths, the whole train its
+    /// real 33 to 34 m, a real line's and the player's alike, not each
+    /// half stretched to a car of 20 m (``Map3DRealTrains/carPitch``),
+    /// the train 40 m.
     static func fiveModuleLRT(_ key: String, far: Bool, centres: [Float],
                               modules: @escaping @Sendable () -> [Map3DModelPack.Model]) -> Map3DTrainSet {
-        Map3DTrainSet(key: far ? key + "Far" : key, far: far ? nil : key + "Far") {
+        Map3DTrainSet(key: far ? key + "Far" : key, ownLengths: true, fixedCars: 2, far: far ? nil : key + "Far") {
             var builder = StationKitBuilder()
             for (index, module) in modules().enumerated() {
                 builder.add(module, at: Map3DPoint(centres[index], 0, 0), angle: index == centres.count - 1 ? .pi : 0)
