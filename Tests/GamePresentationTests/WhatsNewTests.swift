@@ -92,31 +92,40 @@ final class WhatsNewTests: XCTestCase {
         }
     }
 
-    /// The next build's lines, kept one on a line for `merge=union`, read
-    /// like the released ones, and none is left there once a released
-    /// entry has it (a merge can bring a moved line back).
+    /// The next build's lines, a file each in `WhatsNewNext/new/` or
+    /// `WhatsNewNext/fixed/` (its README), read like the released ones,
+    /// and none is left there once a released entry has it (a merge can
+    /// bring a moved file back).
     func testTheNextBuildsLinesAreReadyToRelease() throws {
-        let released = Set(WhatsNew.entries.flatMap { ($0.items + $0.fixes).map(\.chinese) })
-        for line in WhatsNew.nextItems + WhatsNew.nextFixes {
-            XCTAssertFalse(line.english.isEmpty)
-            XCTAssertFalse(line.chinese.isEmpty)
-            XCTAssertNotEqual(line.english, line.chinese)
-            XCTAssertLessThanOrEqual(line.chinese.count, 60, line.chinese)
-            XCTAssertFalse(released.contains(line.chinese), "already released: \(line.chinese)")
-        }
-        let all = (WhatsNew.nextItems + WhatsNew.nextFixes).map(\.chinese)
-        XCTAssertEqual(Set(all).count, all.count, "a line added twice")
-
-        let source = URL(fileURLWithPath: #filePath)
+        let folder = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Sources/GamePresentation/WhatsNewNext.swift")
-        let lines = try String(contentsOf: source, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false)
-        let opened = lines.filter { $0.contains("Line(") && !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
-        XCTAssertEqual(opened.count, all.count, "one Line( for each line of news")
-        for line in opened {
-            XCTAssertTrue(line.contains("english:") && line.contains("chinese:") && line.hasSuffix("),"),
-                          "each Line(english:chinese:) on one line, ending in \"),\": \(line)")
+            .appendingPathComponent("Sources/GamePresentation/WhatsNewNext", isDirectory: true)
+        let manager = FileManager.default
+        XCTAssertEqual(Set(try manager.contentsOfDirectory(atPath: folder.path)), ["README.md", "new", "fixed"],
+                       "only README.md, new/ and fixed/ in WhatsNewNext")
+        let released = Set(WhatsNew.entries.flatMap { ($0.items + $0.fixes).map(\.chinese) })
+        let name = try Regex(#"^20[0-9]{2}-[01][0-9]-[0-3][0-9]-[a-z0-9]+(-[a-z0-9]+)*\.txt$"#)
+        var all: [String] = []
+        for kind in ["new", "fixed"] {
+            let files = try manager.contentsOfDirectory(atPath: folder.appendingPathComponent(kind).path)
+            for file in files where file != ".gitkeep" {
+                XCTAssertNotNil(file.wholeMatch(of: name), "\(kind)/\(file): name it <YYYY-MM-DD>-<words>.txt")
+                let text = try String(contentsOf: folder.appendingPathComponent(kind).appendingPathComponent(file), encoding: .utf8)
+                let lines = text.split(separator: "\n", omittingEmptySubsequences: false)
+                guard lines.count == 3, lines[2].isEmpty, lines[0].hasPrefix("en: "), lines[1].hasPrefix("zh: ") else {
+                    XCTFail("\(kind)/\(file): two lines, \"en: ...\" then \"zh: ...\", each ending in a newline")
+                    continue
+                }
+                let english = lines[0].dropFirst(4), chinese = String(lines[1].dropFirst(4))
+                XCTAssertFalse(english.trimmingCharacters(in: .whitespaces).isEmpty, file)
+                XCTAssertFalse(chinese.trimmingCharacters(in: .whitespaces).isEmpty, file)
+                XCTAssertNotEqual(String(english), chinese, file)
+                XCTAssertLessThanOrEqual(chinese.count, 60, "\(file): \(chinese)")
+                XCTAssertFalse(released.contains(chinese), "already released: \(kind)/\(file)")
+                all.append(chinese)
+            }
         }
+        XCTAssertEqual(Set(all).count, all.count, "a line added twice")
     }
 
     /// Help's search finds the row by its name in either language and by

@@ -7,9 +7,10 @@
 /// on top with a new ``Entry/id`` shows the card again to everyone who
 /// updates; an entry already released keeps its id.
 ///
-/// A pull request between releases does not edit ``entries``: it adds its
-/// line to ``nextItems`` or ``nextFixes`` in `WhatsNewNext.swift`, which
-/// git merges line by line, and the release moves them here.
+/// A pull request between releases does not edit ``entries``: it adds a
+/// file of its own with its line to `WhatsNewNext/new/` or
+/// `WhatsNewNext/fixed/` (the README there), so two pull requests never
+/// change the same line, and the release moves them here.
 public enum WhatsNew {
     /// One build's news.
     public struct Entry: Equatable, Sendable, Identifiable {
@@ -33,7 +34,7 @@ public enum WhatsNew {
     }
 
     /// The released builds' news, the newest first. The next build's lines
-    /// wait in `WhatsNewNext.swift` until its release.
+    /// wait in `WhatsNewNext/` until its release.
     public static let entries: [Entry] = [
         // 147.
         Entry(
