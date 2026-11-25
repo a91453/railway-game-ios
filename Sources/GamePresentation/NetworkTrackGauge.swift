@@ -94,3 +94,15 @@ extension Array where Element == PlayerCommand.TrackStretch {
         }
     }
 }
+
+extension GameWorld {
+    /// Decision 990: whether edges `a` and `b` of ordinary track have a
+    /// rail gauge in common, so that a crossover between them could carry
+    /// a train; `true` where either is a guideway's (decision 951's rule
+    /// decides there) or not on this world's track.
+    func sharesRailGauge(_ a: TrackEdgeID, _ b: TrackEdgeID) -> Bool {
+        guard let first = network.edge(a), let second = network.edge(b),
+              !first.system.isGuideway, !second.system.isGuideway else { return true }
+        return !first.gauge.rails.isDisjoint(with: second.gauge.rails)
+    }
+}

@@ -59,6 +59,8 @@ final class TrainTypeCatalogTests: XCTestCase {
         .init(code: "DR3100", capacity: 52, doors: 2, overloads: true, performance: .dieselExpress, first: 200_000, car: 45_000, permille: 1_500),
         .init(code: "DR1000", capacity: 120, doors: 2, overloads: true, performance: .dieselRailcar, first: 100_000, car: 40_000, permille: 1_400),
         .init(code: "C381", capacity: 310, doors: 4, overloads: true, performance: .metroC381, first: 150_000, car: 40_000, permille: 1_000),
+        // Decision 986.
+        .init(code: "KEIKYU1000", capacity: 128, doors: 3, overloads: true, performance: .keikyuNew1000, first: 180_000, car: 40_000, permille: 1_000),
     ]
 
     /// Cents of New Taiwan dollars for a pinned price in the reference's dollars.
@@ -84,11 +86,11 @@ final class TrainTypeCatalogTests: XCTestCase {
         XCTAssertEqual(TrainType.main.map(\.rawValue), ["A", "B", "C"])
         XCTAssertEqual(TrainType.reference.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL"])
         XCTAssertEqual(TrainType.offered.map(\.rawValue), ["A", "B", "C", "L", "D", "APM", "MAGLEV", "SKYRAIL", "MONORAIL", "HSR", "EMU3000", "EMU100", "E200CK", "E500CK", "R100CK", "R200CK", "HAIFENG", "BLUE", "SHANLAN", "MINGRI", "STAR", "SUMMER", "ALISHAN",
-                                                           "TAROKO", "PUYUMA", "EMU800", "PUSHPULL", "DR3100", "DR1000", "C381"])
+                                                           "TAROKO", "PUYUMA", "EMU800", "PUSHPULL", "DR3100", "DR1000", "C381", "KEIKYU1000"])
         XCTAssertEqual(TrainType.referenceDefault.rawValue, "B")
         XCTAssertEqual([TrainType.a, .b, .c, .l, .d, .apm, .maglev, .skyRail, .monorail, .steam, .highSpeed, .emu3000,
                         .emu100, .e200ChuKuang, .e500ChuKuang, .r100ChuKuang, .r200ChuKuang, .haiFeng, .blueTrain, .shanLan, .mingRi, .formosaStar, .midsummerFormosa, .alishan,
-                        .taroko, .puyuma, .emu800, .pushPull, .dr3100, .dr1000, .c381], TrainType.allCases)
+                        .taroko, .puyuma, .emu800, .pushPull, .dr3100, .dr1000, .c381, .keikyuNew1000], TrainType.allCases)
     }
 
     func testTheStandardCarKeepsItsNumbers() {

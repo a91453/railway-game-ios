@@ -33,7 +33,7 @@ kit 的測試（面數、封底、接點、決定性）只查「有沒有做錯�
 ## 5. 交付
 
 - 重檔（模型、viewer、各輪大圖、照片）放目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `game-art-previews/docs/art/<資料夾>/`，照那邊的 `AGENTS.md`：先跑 `python3 tools/asset_guard.py --base origin/main`，新一輪同 PR 刪上一輪重檔。
-- 遊戲 repo 的 PR 只留一張總覽圖與 README（`docs/art/<資料夾>/`）。
+- 遊戲 repo 的 PR 只留一張總覽圖與 README（`docs/art/<資料夾>/`）。總覽圖一定用有深度緩衝的畫法：`shoot.mjs`，或排好的網格（`PlacedKitLayout`、車站）用 `tools/layout-overview/`。整片三角形照深度排序（畫家演算法）的簡圖會把大面切出假的三角形，作者會當成破圖（2026-11-25，學校、醫院與香港站）。
 - 配方改了，kit 原有的測試照跑；替這次修掉的毛病留一個會在舊幾何失敗的測試（例如「屋脊高於簷口」「山牆在月台側」）。
 
 實例：追分車站（`docs/art/model-look-2026-11-11/README.md`），從紅磚紅瓦的通用站房改成木造灰瓦，四輪的紀錄與並排圖。

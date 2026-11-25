@@ -59,11 +59,12 @@ final class Map3DTrainSetTests: XCTestCase {
                     : name == set.headName && set.key == "SUMMER" ? 5_370...5_370
                     : name == set.headName && set.key == "SUMMERFar" ? 1_654...1_654
                     : name == set.headName && set.key == "STEAM" ? 8_000...10_500
-                    // Decision 408: #1201's 700T, eight to nine thousand a
-                    // cab and five to six a middle car, so drawn near only;
-                    // its E200, five to six thousand; the N700S-G, the
-                    // author's mesh with fewer triangles on the 700T's bogies,
-                    // seven thousand a cab and six a middle car.
+                    // Decision 408: #1201's 700T was eight to nine thousand a
+                    // cab and five to six a middle car, so drawn near only
+                    // (until decision 988, below);
+                    // its E200, five to six thousand (the N700S-G was
+                    // here until decision 979; the N700S in its place is a
+                    // registered train).
                     // EMU3000 dedicated near detail (<500m), measured geometry budget;
                     // far models keep the generic ceiling, tested separately at 500m.
                     : name == set.headName && ["E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000"].contains(set.key) ? 4_000...10_000
@@ -78,8 +79,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu700" ? ([set.headName, set.tailName].contains(name) ? 13_500...14_000 : 5_900...6_200)
                     : set.key == "emu700Far" && [set.headName, set.tailName].contains(name) ? 6_600...6_800
                     : set.key == "emu500" ? (name == set.middleName || name == set.middleBackName || [set.headName, set.tailName].contains(name) ? 4_400...4_700 : 2_800...2_950)
-                    : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
-                    : set.key == "n700sG" ? ([set.headName, set.tailName].contains(name) ? 6_700...7_300 : 5_700...6_300)
+                    // Decision 988: the 700T is the owner's old 700 series, 1,972
+                    // a cab car and 1,360 to 1,444 the others.
+                    : set.key == "highSpeed" ? 1_200...2_000
                     // Decision 461: #1323's C371 and C381 cabs, 5,358 and 6,976.
                     : ["metroC371", "metroC381"].contains(set.key) && [set.headName, set.tailName].contains(name) ? 5_300...7_000
                     // Decision 466: #1422's Sanying cabs, 4,306 each.
@@ -124,11 +126,12 @@ final class Map3DTrainSetTests: XCTestCase {
                 // Decision 399: the steam locomotives 14.8 and 15.4 m, their
                 // tenders 9 and 9.5 m, the four-car metro's cars 12.3 m and
                 // the seven-section car's 7.6 to 8.3 m, as they are.
-                // Decision 408: the 700T's cars 25.2 to 25.5 m, the N700S-G's
-                // and its far set's 25 and 25.3 m,
-                // Decision 422: the 700T's far set as long as its near one.
+                // Decision 408: the 700T's cars 25.2 to 25.5 m (decision 979:
+                // the N700S's 25 m is its registration's),
+                // Decision 988: the owner's old 700 series as the 700T, 25 m,
+                // its cab cars the real 27 m; no far set.
                 let alishan = ["ALISHAN", "ALISHANFar"].contains(set.key)
-                let length: ClosedRange<Float> = registered?.length ?? (["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6 : ["n700sG", "n700sGFar"].contains(set.key) ? 24.9...25.4
+                let length: ClosedRange<Float> = registered?.length ?? (set.key == "highSpeed" ? 24.9...27.1
                     // Decision 433: and #1323's C341 units, 23.6 and 23.7 m with their couplers.
                     // Decision 461: and its C371 and C381 units, 23.6 and 23.9 m; the
                     // 610's 16.7 and 17.6 m.
@@ -172,8 +175,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
                     // Decision 957: and its wooden coaches 3.40 m to their ventilators.
                     : ["STEAM", "STEAMFar"].contains(set.key) ? 3.38...4.7
-                    // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too).
-                    : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "highSpeedFar", "n700sG", "n700sGFar", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
+                    // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too;
+                    // decision 989: the 700 series', the 700T's own).
+                    : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "n700s", Map3DSeries700.key, "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
                     // Decision 554: and #1539's EP's, 5.0 m.
@@ -341,8 +345,11 @@ final class Map3DTrainSetTests: XCTestCase {
         // pantograph cars, the EMU3000, every metro size a C381 (decision
         // 461: #1323's, at its own lengths).
         XCTAssertEqual(names("HSR", 1), ["set-highSpeed-head"])
-        XCTAssertEqual(names("HSR", 12), ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-panto"]
-            + Array(repeating: "set-highSpeed-car", count: 4) + ["set-highSpeed-panto", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-tail"])
+        // Decision 988: the back half's cars are the same cars turned round,
+        // so the two pantographs face each other.
+        XCTAssertEqual(names("HSR", 12), ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-panto",
+                                          "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-carBack", "set-highSpeed-carBack",
+                                          "set-highSpeed-pantoBack", "set-highSpeed-carBack", "set-highSpeed-carBack", "set-highSpeed-tail"])
         XCTAssertEqual(names("EMU3000", 3), ["set-emu3000-head", "set-emu3000-car", "set-emu3000-tail"])
         for code in ["A", "B", "D"] {
             XCTAssertEqual(names(code, 2), ["set-metroC381-head", "set-metroC381-tail"], code)
