@@ -33,12 +33,15 @@ public enum Map3DKyushuN700 {
 
     /// The colours of the mesh's palette indices, in the order
     /// `glb_to_swift.py --materials` gave them: whiteBlue, navy, gold,
-    /// glass, dark, headlamp, taillamp. The first three are the real
-    /// train's (``Map3DPalette/kyushuWhiteBlue``); then the trains' glass,
-    /// the dark bogies, gangways and floor, and the lamps.
+    /// glass, dark, headlamp, taillamp, doorLine. The first three are the
+    /// real train's (``Map3DPalette/kyushuWhiteBlue``); then the trains'
+    /// glass, the dark bogies, gangways and floor, the lamps, and the
+    /// doors' seams in steel grey (the doors themselves are the body's
+    /// colour: without their seams the doors' small windows float on the
+    /// wall, the owner 2026-11-25).
     static let meshPalette: [UInt32] = [
         Map3DPalette.kyushuWhiteBlue, Map3DPalette.kyushuNavy, Map3DPalette.kyushuGold, Map3DTrainStyle.glass,
-        Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern,
+        Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern, Map3DPalette.steel,
     ]
 
     /// The palette index of the glass: its faces, and only they, are the
@@ -67,7 +70,7 @@ extension Map3DPalette {
 
 extension Map3DKyushuN700 {
     /// Decision 782: its set, its showcase row (eight cars) and its cars'
-    /// triangles (1,162 the cab car, 964 the middle car: few enough to be
+    /// triangles (1,726 the cab car, 1,420 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(
@@ -77,7 +80,7 @@ extension Map3DKyushuN700 {
             Map3DShowcase.Entry(key, "Kyushu Shinkansen N700 series", "九州新幹線 N700 系", .japan, cars: cars, fixed: true,
                                 gauge: 1.435),
         ],
-        triangles: 900...1_200, length: 24.8...25.1)
+        triangles: 1_300...1_800, length: 24.8...25.1)
 }
 
 extension Map3DTrainSet {

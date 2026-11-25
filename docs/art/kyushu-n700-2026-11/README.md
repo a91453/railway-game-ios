@@ -15,7 +15,7 @@
 車頭的形狀是舊版的：整節車一起放大到真車尺寸（長 × 1.19、寬 × 1.2、高 × 0.94），車鼻沒有另外拉長或改形。因為舊版比真車窄而高（2.80 × 3.82 m，真車 3.36 × 3.60 m），正面看起來比舊版寬一點、矮一點。
 
 - 來源：作者舊版 SwiftRailMac 的模型（作者自己的內容），舊版型錄的「N700系『みずほ』『さくら』等」：車頭 `bc97d3e5`、中間車 `fd0310c2`。不用加資料來源頁。原始 GLB 與貼圖不進這個公開庫。
-- 轉換：`tools/texture-palette/kyushu_n700.py` 把貼圖切成色票面（車頭 1,162 面、中間車 964 面），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DKyushuN700Mesh.swift`。材質順序寫在 `Map3DKyushuN700.swift`。
+- 轉換：`tools/texture-palette/kyushu_n700.py` 把貼圖切成色票面（車頭 1,726 面、中間車 1,420 面；車門照舊貼圖的外框切出鐵灰色的門縫線），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DKyushuN700Mesh.swift`。材質順序寫在 `Map3DKyushuN700.swift`。
 - 用在：九州新幹線（`kyushushinkansen`）的列車，八節；車庫在「日本」類。
 - 決策：`docs/decisions/977.md`。
 
@@ -31,6 +31,6 @@
 1. 沒有集電弓（舊版這兩節本來就沒有）。
 2. 車頂是平的一片，沒有空調與高壓線的蓋板。
 3. 車頭 24.88 m，真車的頭車是 27.35 m：鼻子比真車短。
-4. 側窗數比真車少，門框沒畫；轉向架是一塊深色，沒有分色。
-5. 沒有遠景版（一節一千面上下，遠低於遠景一節的預算，所以不另做）。
+4. 側窗數比真車少；轉向架是一塊深色，沒有分色。
+5. 沒有遠景版（一節一千五百面上下，遠低於遠景一節的預算，所以不另做）。
 6. 還沒在 iPhone 上看過。

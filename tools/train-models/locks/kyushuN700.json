@@ -16,16 +16,16 @@
       "triangles" : 120
     },
     "set-kyushuN700-car" : {
-      "hash" : "da1d700de91f23fe",
-      "triangles" : 964
+      "hash" : "15550a5e6ddb5ffa",
+      "triangles" : 1420
     },
     "set-kyushuN700-head" : {
-      "hash" : "dfef5fce80fda485",
-      "triangles" : 1162
+      "hash" : "4c2975db7236b557",
+      "triangles" : 1726
     },
     "set-kyushuN700-tail" : {
-      "hash" : "6df884155aaf58a5",
-      "triangles" : 1162
+      "hash" : "69c91708a709d7d8",
+      "triangles" : 1726
     }
   }
 }

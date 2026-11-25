@@ -40,7 +40,7 @@ final class Map3DKyushuN700Tests: XCTestCase {
         XCTAssertEqual(Map3DPalette.kyushuGold, Map3DColor.rgb(0x897455))
         let colours: Set<UInt32> = [
             Map3DPalette.kyushuWhiteBlue, Map3DPalette.kyushuNavy, Map3DPalette.kyushuGold, Map3DTrainStyle.glass,
-            Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern,
+            Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern, Map3DPalette.steel,
         ]
         XCTAssertEqual(Set(Map3DKyushuN700.meshPalette), colours)
         for unit in Map3DKyushuN700.Unit.allCases {
@@ -62,6 +62,33 @@ final class Map3DKyushuN700Tests: XCTestCase {
             XCTAssertEqual(top - (try XCTUnwrap(navy.max())), 0.03, accuracy: 0.006, unit.rawValue)
             XCTAssertEqual(top - foot, 0.153, accuracy: 0.01, unit.rawValue)
             XCTAssertLessThan(top, glass.min() ?? 0, "\(unit.rawValue): the line under the windows")
+        }
+    }
+
+    /// Every door has its seams round it (the owner, 2026-11-25: a door's
+    /// small window must not float on the wall): thin steel-grey lines on
+    /// the side walls, some 1.9 m high, the door between them the body's
+    /// colour; the cab car has its crew door and two doors a side, the
+    /// middle car a door at each end a side.
+    func testEveryDoorHasItsSeams() throws {
+        for unit in Map3DKyushuN700.Unit.allCases {
+            let model = try XCTUnwrap(Map3DKyushuN700.model(unit))
+            let seams = model.vertices.filter { $0.color == Map3DPalette.steel }
+            XCTAssertFalse(seams.isEmpty, unit.rawValue)
+            XCTAssertTrue(seams.allSatisfy { abs($0.y) > 1.3 }, "\(unit.rawValue): the seams on the side walls")
+            let height = (seams.map(\.z).max() ?? 0) - (seams.map(\.z).min() ?? 0)
+            XCTAssertEqual(height, 1.9, accuracy: 0.25, unit.rawValue)
+            for side: Float in [-1, 1] {
+                // The seams' upright lines, by where they stand along the car: two a door.
+                let uprights = Set(seams.filter { $0.y * side > 0 }.map { ($0.x * 4).rounded() / 4 })
+                XCTAssertGreaterThanOrEqual(uprights.count, unit.isCab ? 6 : 4, "\(unit.rawValue) side \(side)")
+            }
+            // Each door's window stands between a door's seams.
+            let glass = model.vertices.filter { $0.color == Map3DTrainStyle.glass && abs($0.y) > 1.3 }
+            let doorWindows = glass.filter { $0.z > 3.0 }
+            for window in doorWindows {
+                XCTAssertTrue(seams.contains { abs($0.x - window.x) < 0.6 && $0.y * window.y > 0 }, "\(unit.rawValue): a door's window with no seam beside it")
+            }
         }
     }
 

@@ -18,6 +18,7 @@
 - 貼圖分類成 車身／玻璃／藍帶／深色，標誌與文字塗回車身色（遊戲不畫字）；
   藍帶的兩條細線併成一條，上下各切出兩成當金線（真車是深藍帶鑲兩條金色細
   線）；貼圖畫成灰色的裙板歸回車身色（真車的裙板是車身色）。
+- 車門（乘務員門與客室門）照貼圖上量出來的外框畫門縫線，門板是車身色。
 - 車頭兩頰的燈各切成兩格：外側頭燈、內側尾燈。
 - 拿掉：凸出側牆 2 cm 的行先表示器薄片（和牆面相距不到 5 cm 的平行面）、
   車鼻外露的連結器（實車有蓋）、通道幌的兩個端面（編組時兩節的端面會疊在
@@ -42,10 +43,10 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 # 類別，也是輸出材質的順序（`glb_to_swift.py --materials` 用同一順序）。
-MATERIALS = ["whiteBlue", "navy", "gold", "glass", "dark", "headlamp", "taillamp"]
-BODY, NAVY, GOLD, GLASS, DARK, HEAD, TAIL = range(7)
+MATERIALS = ["whiteBlue", "navy", "gold", "glass", "dark", "headlamp", "taillamp", "doorLine"]
+BODY, NAVY, GOLD, GLASS, DARK, HEAD, TAIL, LINE = range(8)
 PREVIEW = [(0xD8, 0xE5, 0xEB), (0x21, 0x41, 0x68), (0x89, 0x74, 0x55), (0x40, 0x55, 0x60),
-           (0x2B, 0x2F, 0x36), (0xFF, 0xF1, 0xCF), (0xE0, 0x39, 0x2C)]
+           (0x2B, 0x2F, 0x36), (0xFF, 0xF1, 0xCF), (0xE0, 0x39, 0x2C), (0x8A, 0x90, 0x99)]
 
 # 作者原檔的 SHA-256（頭車 bc97d3e5…、中間車 fd0310c2…）：不是這兩個檔就停。
 SHA256 = {
@@ -58,6 +59,13 @@ TEXT_MASKS = [(150, 60, 222, 112), (132, 168, 196, 190)]
 # 真車的線是深藍帶、上下各鑲一條金色細線（實車照片：金 2.5 cm、深藍 10 cm）。
 # 貼圖上的藍帶 15 cm 高，上下各切出這個比例當金線。
 GOLD_SHARE = 0.2
+# 車門在貼圖上的外框（門縫線的中心，x0, y0, x1, y1）：下排是頭車側面的乘務員
+# 門與前後兩扇客室門，上排是中間車的客室門。貼圖上的門縫只有一個像素寬、顏色
+# 又接近車身，讀不成色塊，所以位置直接量出來：沒有門框的話門上的小窗會孤零零
+# 浮在牆上。門板是車身色，只畫門縫。
+DOORS = [(200, 151, 217, 218), (222, 147, 240, 220), (443, 147, 460, 220), (455, 19, 472, 92)]
+# 門縫線的寬：左右一個像素、上下兩個像素，在車上都是 5 cm 上下。
+DOOR_SIDE, DOOR_END = 1, 2
 # 沒有厚度的雙面薄片（頭車車頂的天線鰭）做成這麼厚的實心片。
 PLATE = 0.025
 # 車頭兩頰的燈在貼圖上的位置，切成外側頭燈、內側尾燈。
@@ -513,6 +521,14 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
     body = max(pieces, key=lambda p: np.ptp(p["world"][:, 2]))
     labels = classify(body["image"])
     rectangles, rest = read_rectangles(labels)
+    # 門縫線排在最前面：和藍帶交叉的地方是門縫（門板上的藍帶照舊）。
+    lines = []
+    for x0, y0, x1, y1 in DOORS:
+        lines.append((x0, y0, x0 + DOOR_SIDE, y1, LINE))
+        lines.append((x1 - DOOR_SIDE, y0, x1, y1, LINE))
+        lines.append((x0 + DOOR_SIDE, y0, x1 - DOOR_SIDE, y0 + DOOR_END, LINE))
+        lines.append((x0 + DOOR_SIDE, y1 - DOOR_END, x1 - DOOR_SIDE, y1, LINE))
+    rectangles = lines + rectangles
     canvas = draw = None
     if debug_dir:
         canvas = body["image"].resize((body["image"].width * 4, body["image"].height * 4), Image.NEAREST)
