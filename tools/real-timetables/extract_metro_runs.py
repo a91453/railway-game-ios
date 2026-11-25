@@ -431,6 +431,12 @@ def depot_tracks(tool, found, start, stops, depots):
     return {s: max(1, most[s]) for s in stops}
 
 
+# Decision 975: the least tracks a line's station is laid with, by the
+# line's game id and the station's name, where the timetable stands fewer
+# trains there at once than its trains need (set by
+# `tools/fukuoka-map/extract_fukuoka_runs.py` for the Kyushu Shinkansen).
+TRACKS_AT_LEAST = {}
+
 # Decision 712: `extract_branch_runs.OUT_BEFORE_FIRST`, set by
 # `tools/hk-map/extract_hk_runs.py` for the MTR's lines.
 OUT_BEFORE_FIRST = False
@@ -516,6 +522,10 @@ def main(folder, out):
         if problem:
             print(f"{label}: left out: {problem}")
             continue
+        # Decision 975: a station laid with more tracks than the timetable
+        # stands trains at once (`TRACKS_AT_LEAST`).
+        for station, count in TRACKS_AT_LEAST.get(game_id, {}).items():
+            line["tracks"][station] = max(line["tracks"][station], count)
         # A shuttle of two or more trains between two ends of one track
         # each (Hong Kong's Disneyland Resort and LOHAS Park lines): a
         # train leaving one end takes its way up to the other end's

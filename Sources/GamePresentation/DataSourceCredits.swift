@@ -464,6 +464,25 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
+                    // SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen,
+                    // Hakata to Kumamoto (`MapPacks/fukuoka/kyushushinkansen.json`).
+                    DataSourceCredit(
+                        id: "kyushuShinkansen",
+                        title: language.text("Kyushu Shinkansen", "九州新幹線"),
+                        detail: language.text(
+                            "The Kyushu Shinkansen from Hakata to Kumamoto, with its seven stations’ names in Chinese, English and Japanese. Its trains call at every station, at estimated times.",
+                            "九州新幹線博多到熊本這一段，七個車站有中文、英文與日文站名。列車每站都停，照估計的時刻行駛。"
+                        ),
+                        notice: language.text(
+                            "Stations and their Japanese names: made by processing “National Land Numerical Information (Railway Data)” (Ministry of Land, Infrastructure, Transport and Tourism), CC BY 4.0 (「国土数値情報（鉄道データ）」（国土交通省）を加工して作成). Track, tunnels and viaducts: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with Kyushu Railway Company or the Government of Japan.",
+                            "車站與日文站名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成，CC BY 4.0。軌道、隧道與高架：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與九州旅客鐵道、日本政府沒有任何關係。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("National Land Numerical Information: Railway Data", "国土数値情報 鉄道データ"), url: "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html"),
+                            DataSourceCredit.Link(title: language.text("CC BY 4.0", "CC BY 4.0"), url: "https://creativecommons.org/licenses/by/4.0/"),
+                            DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                        ]
+                    ),
                     // FUKUOKA-GROUND: the pack's base map, buildings, heights and people.
                     DataSourceCredit(
                         id: "fukuokaMap",
