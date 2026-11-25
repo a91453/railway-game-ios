@@ -205,6 +205,20 @@ final class Map3DTests: XCTestCase {
         XCTAssertTrue(mesh.vertices.contains { $0.color == Map3DPalette.railTop && $0.y == 12 })
     }
 
+    /// Decision 996: each kind's span, checked against real ones (the High
+    /// Speed Rail's 30 and 35 m, the Circular Line's 25 m), and the
+    /// Kyushu Shinkansen's viaduct the High Speed Rail's, as its line
+    /// once bought.
+    func testEachKindOfViaductKeepsItsSpanAndTheShinkansenIsHighSpeed() {
+        XCTAssertEqual(Map3DViaduct.railwayLook.span, 32)
+        XCTAssertEqual(Map3DViaduct.highSpeedLook.span, 35)
+        XCTAssertEqual(Map3DViaduct.metroLook.span, 30)
+        XCTAssertEqual(Map3DViaduct(system: "thsr_sched"), .highSpeed)
+        XCTAssertEqual(Map3DViaduct(system: "kyushushinkansen"), .highSpeed)
+        XCTAssertEqual(Map3DViaduct(system: "tra_sched"), .railway)
+        XCTAssertEqual(Map3DViaduct(system: "mrt"), .metro)
+    }
+
     /// Decision 359 (續): a tunnel shows its bore round its bed and rails,
     /// as track on the ground shows its bed.
     func testATunnelShowsItsBoreAndARailOnTheGroundItsBed() {
