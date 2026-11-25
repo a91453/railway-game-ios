@@ -13,6 +13,16 @@ import GameCore
 // frame (``Map3DAircraft``).
 
 extension Map3DScene.Builder {
+    /// Decision 976: the airfields' boarding places, kept while the scene
+    /// is built (``LayerStates/airfields``).
+    struct AirfieldState {
+        /// Decision 699: where the airfields' passengers board (a jet
+        /// bridge's foot, or a stand with none), and how near a building
+        /// stands to be their terminal (``isTerminal(_:)``).
+        var terminalSpots: [(at: Map3DPoint, reach: Float)] = []
+        var terminalsJoined = false
+    }
+
     /// What the airfields are painted in: the studies' pavement greys
     /// (decision 698), which stand off the map's pale ground, and the
     /// roads' paint.
@@ -70,7 +80,7 @@ extension Map3DScene.Builder {
         // 695): the building there is a terminal.
         for airport in world.airports {
             let at = point(x: Double(airport.point.x), y: Double(airport.point.y), height: 0)
-            terminalSpots.append((Map3DPoint(at.x, 0, at.z), 60))
+            state.airfields.terminalSpots.append((Map3DPoint(at.x, 0, at.z), 60))
         }
         for field in fields.fields {
             let runways = field.runways.map { (runway: $0, line: $0.line.map(place)) }
@@ -85,7 +95,7 @@ extension Map3DScene.Builder {
             }
             for taxiway in field.taxiways { clear.add(taxiway.line.map(place), half: taxiway.width / 2 + AirfieldClear.taxiwayMargin) }
             for apron in field.aprons { clear.add(apron: apron.map(place)) }
-            airfieldClear.fields.append(clear)
+            state.lowRise.airfieldClear.fields.append(clear)
             for apron in field.aprons {
                 addPavement(apron.map(place), bounds: bounds, color: Airfield.apron, lift: Airfield.apronLift)
             }
@@ -114,7 +124,7 @@ extension Map3DScene.Builder {
             // of the scene built alone finds the same terminals.
             for bridge in field.bridges {
                 let from = place(bridge.from), to = place(bridge.to)
-                terminalSpots.append((Map3DPoint(Float(from.x), 0, Float(from.z)), 30))
+                state.airfields.terminalSpots.append((Map3DPoint(Float(from.x), 0, Float(from.z)), 30))
                 guard inside(from), inside(to) else { continue }
                 addJetBridge(from: from, to: to)
             }
@@ -123,7 +133,7 @@ extension Map3DScene.Builder {
             if field.bridges.isEmpty {
                 for stand in field.stands {
                     let nose = place(stand.nose)
-                    terminalSpots.append((Map3DPoint(Float(nose.x), 0, Float(nose.z)), 70))
+                    state.airfields.terminalSpots.append((Map3DPoint(Float(nose.x), 0, Float(nose.z)), 70))
                 }
             }
             for tower in field.towers {
@@ -141,9 +151,9 @@ extension Map3DScene.Builder {
     /// airport's terminal: 1,500 m² or more, a wall within reach of where
     /// passengers board (``terminalSpots``).
     func isTerminal(_ outline: [Map3DPoint]) -> Bool {
-        guard !terminalSpots.isEmpty, outline.count >= 3, abs(Self.signedArea(outline)) >= 1_500 else { return false }
+        guard !state.airfields.terminalSpots.isEmpty, outline.count >= 3, abs(Self.signedArea(outline)) >= 1_500 else { return false }
         let low = (x: outline.map(\.x).min() ?? 0, z: outline.map(\.z).min() ?? 0), high = (x: outline.map(\.x).max() ?? 0, z: outline.map(\.z).max() ?? 0)
-        for spot in terminalSpots {
+        for spot in state.airfields.terminalSpots {
             let p = spot.at, reach = spot.reach
             guard p.x > low.x - reach, p.x < high.x + reach, p.z > low.z - reach, p.z < high.z + reach else { continue }
             // Standing over the spot (a hall wider than the reach).
@@ -165,10 +175,10 @@ extension Map3DScene.Builder {
     /// ``terminalSpots``, so ``isTerminal(_:)`` says so; twice over, for a
     /// hall behind a hall.
     mutating func joinTerminals(_ outlines: [[Map3DPoint]]) {
-        guard !terminalSpots.isEmpty else { return }
+        guard !state.airfields.terminalSpots.isEmpty else { return }
         // Only those within 600 m of where passengers board.
         let near = outlines.filter { outline in
-            outline.count >= 3 && abs(Self.signedArea(outline)) >= 1_500 && terminalSpots.contains { spot in
+            outline.count >= 3 && abs(Self.signedArea(outline)) >= 1_500 && state.airfields.terminalSpots.contains { spot in
                 abs(spot.at.x - outline[0].x) < 600 && abs(spot.at.z - outline[0].z) < 600
             }
         }
@@ -183,7 +193,7 @@ extension Map3DScene.Builder {
                     for step in 0..<steps { added.append((a + (b - a) * (Float(step) / Float(steps)), 30)) }
                 }
             }
-            terminalSpots += added
+            state.airfields.terminalSpots += added
             var grew = false
             for (index, outline) in near.enumerated() where !found[index] && isTerminal(outline) {
                 found[index] = true

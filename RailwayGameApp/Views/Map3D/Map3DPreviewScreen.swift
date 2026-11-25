@@ -80,7 +80,7 @@ struct Map3DPreviewScreen: View {
     @State private var airportMarks = Map3DAirportMarkState()
     /// Decision 403 (續二): the photo of the 3D map just taken, to share.
     @State private var photo = Map3DPhotoState()
-    /// Decision 981 (PHOTO-MODE): the photo mode while it is open.
+    /// Decision 987 (PHOTO-MODE): the photo mode while it is open.
     @State private var photoMode = Map3DPhotoModeState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Decision 437: plays the evening garbage truck's tune.
@@ -120,7 +120,7 @@ struct Map3DPreviewScreen: View {
                       onStats: { stats = $0 })
                 .ignoresSafeArea()
                 .accessibilityIdentifier("map3D.view")
-            // Decision 981: the photo mode's picture is of the map alone.
+            // Decision 987: the photo mode's picture is of the map alone.
             if !photoMode.isOpen {
                 Map3DTrainLabelsView(state: trainLabels, world: session.world)
                     .ignoresSafeArea()
@@ -203,7 +203,7 @@ struct Map3DPreviewScreen: View {
                                                                             "回到這裡的平面地圖，打開軌道、列車與建物的工具。")))
                             .accessibilityIdentifier("map3D.build")
                         }
-                        // Decision 981: the photo mode, not while the
+                        // Decision 987: the photo mode, not while the
                         // player drives or a lesson points at the map.
                         if driving == nil, session.tutorial == nil {
                             Map3DPhotoModeButton(language: language, open: openPhotoMode)
@@ -326,9 +326,9 @@ struct Map3DPreviewScreen: View {
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: session.aircraftFollowBar != nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driver?.prompt == nil)
             .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: driving)
-            // Decision 981: put away for the photo mode too.
-            .ambientHidden(ambient != nil || photoMode.isOpen)
-            .accessibilityHidden(photoMode.isOpen)
+            .ambientHidden(ambient != nil)
+            // Decision 987: not there at all while the photo mode is open.
+            .putAway(photoMode.isOpen)
             if photoMode.isOpen, ambient == nil {
                 Map3DPhotoBar(state: photoMode, session: session, isReady: scene != nil,
                               go: goToPhotoSpot, shoot: shootPhoto, close: closePhotoMode)
@@ -354,6 +354,8 @@ struct Map3DPreviewScreen: View {
         }
         .animation((session.airFlightWindow == nil ? MotionRule.loadingOut : .loadingIn).running(reduceMotion: reduceMotion)?.animation,
                    value: session.airFlightWindow != nil)
+        // Decision 987: the map's own controls go as the photo mode's come.
+        .animation(MotionRule.change.layout(reduceMotion: reduceMotion), value: photoMode.isOpen)
         .task(id: Map3DSceneKey(world: session.world, hasHeights: session.heights != nil, hasRailways: session.railways != nil, focus: focus, palette: linePalette)) {
             let built = await Map3DSceneCache.shared.scene(for: session, focus: focus, palette: linePalette)
             // A newer world or the heights file started another build: a
@@ -438,7 +440,7 @@ struct Map3DPreviewScreen: View {
             feed.aircraftChanged = { [weak session] state, flight in session?.noteFollowedAircraft(state, of: flight) }
         }
         .onDisappear {
-            // Decision 981: a train the photo mode followed is let go.
+            // Decision 987: a train the photo mode followed is let go.
             if photoMode.close() { session.stopFollowingTrain() }
             session.endManualDrive()
             session.setMap3DOpen(false)
@@ -473,7 +475,7 @@ struct Map3DPreviewScreen: View {
         }
     }
 
-    // MARK: - The photo mode (decision 981)
+    // MARK: - The photo mode (decision 987)
 
     /// What a tap on the map does: in the photo mode it puts the mode's
     /// buttons away or brings them back; else decision 517 續's tap, where
@@ -594,7 +596,7 @@ struct Map3DPreviewScreen: View {
     /// FOLLOWBUS) a bus; a bus has no platform, so its station view is from
     /// behind.
     private func followed(ambient: AmbientScreen?) -> Map3DFollow? {
-        // Decision 981: a train the photo mode follows, from its own view.
+        // Decision 987: a train the photo mode follows, from its own view.
         var view = ambient?.view3D ?? photoMode.followView ?? followView
         // Decision 710: a run that has just stopped, from beside the train
         // and nearer than the view from beside stands.
@@ -2071,7 +2073,7 @@ private struct Map3DView: UIViewRepresentable {
     /// Decision 517 續: a tap on the map, with the camera then and where,
     /// in points; `nil` takes none.
     let onTap: (@MainActor (Map3DCamera, CGPoint) -> Void)?
-    /// Decision 981: whether a tap is taken while a train is followed too
+    /// Decision 987: whether a tap is taken while a train is followed too
     /// (the photo mode's, which hides and shows its buttons).
     var tapsWhileFollowing = false
     let onStats: @MainActor (Map3DMetalView.Stats) -> Void
@@ -2393,7 +2395,7 @@ private struct Map3DView: UIViewRepresentable {
         var flownTo: Map3DNextDeparture?
         var farOut: ((Map3DCamera) -> Void)?
         var onTap: (@MainActor (Map3DCamera, CGPoint) -> Void)?
-        /// Decision 981: the photo mode's tap, while following too.
+        /// Decision 987: the photo mode's tap, while following too.
         var tapsWhileFollowing = false
         /// Decision 269: how far out the camera a pinch handed over opened;
         /// `nil` when the 3D button opened the map.
@@ -2562,7 +2564,7 @@ private struct Map3DView: UIViewRepresentable {
         }
 
         /// Decision 517 續: following a train, a tap does nothing here
-        /// (but the photo mode's, decision 981).
+        /// (but the photo mode's, decision 987).
         @objc func tap(_ recognizer: UITapGestureRecognizer) {
             guard recognizer.state == .ended, let view, view.following == nil || tapsWhileFollowing, let onTap else { return }
             onTap(view.camera, recognizer.location(in: view))

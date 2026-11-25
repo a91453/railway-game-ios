@@ -1,7 +1,7 @@
 import Foundation
 import GameCore
 
-/// Decision 981 (PHOTO-MODE): the 3D map's photo mode. Its controls are
+/// Decision 987 (PHOTO-MODE): the 3D map's photo mode. Its controls are
 /// put away, three buttons take the camera to a place worth a picture
 /// (one of the player's trains, one of their stations, the skyline), and
 /// the shutter saves the frame to the Photos app. View state only: it
@@ -46,7 +46,7 @@ public enum PhotoSpot: String, CaseIterable, Hashable, Sendable {
     }
 }
 
-/// Decision 981: which train and which station the photo mode shows next,
+/// Decision 987: which train and which station the photo mode shows next,
 /// kept while the mode is open. Each tap of a spot's button goes to the
 /// nearest one not shown yet, so tapping walks along the network from
 /// where the camera is, and starts over once every one has been shown.
@@ -132,7 +132,7 @@ public struct PhotoTour: Equatable, Sendable {
     }
 }
 
-/// Decision 981: where the photo mode's camera stands at a spot, and what
+/// Decision 987: where the photo mode's camera stands at a spot, and what
 /// there is to go to.
 public enum PhotoSpots {
     // MARK: - What there is

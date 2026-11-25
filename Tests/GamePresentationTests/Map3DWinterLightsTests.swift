@@ -242,7 +242,7 @@ final class Map3DWinterLightsTests: XCTestCase {
             var builder = Map3DScene.Builder(originX: place.x, originY: place.y, region: region, world: world, heights: nil)
             if landmarks { _ = builder.addHongKongLandmarks(frame: frame) }
             builder.addWinterDecor(frame: frame)
-            let trees = builder.winterDecor.filter { $0.decor == .treeLarge }
+            let trees = builder.state.winter.winterDecor.filter { $0.decor == .treeLarge }
             XCTAssertEqual(trees.count, 1, plaza)
             let tree = try XCTUnwrap(trees.first)
             XCTAssertLessThanOrEqual(Map3DPoint(tree.point.x, 0, tree.point.z).length, Map3DWinterLights.plazaSearch + 0.01, plaza)
@@ -273,13 +273,13 @@ final class Map3DWinterLightsTests: XCTestCase {
         func scale(shopFrom near: Float?) -> Float? {
             let region = WorldRegion(minX: x - reach, minY: y - reach, maxX: x + reach, maxY: y + reach)
             var builder = Map3DScene.Builder(originX: x, originY: y, region: region, world: world, heights: nil)
-            builder.stationFronts = [(centre: .zero, forward: Map3DPoint(1, 0, 0), depth: 20, wide: 40, top: 10, big: true, strings: [])]
-            builder.houseFootprints = [[Map3DPoint(-10, 0, -20), Map3DPoint(10, 0, -20), Map3DPoint(10, 0, 20), Map3DPoint(-10, 0, 20)]]
+            builder.state.stations.stationFronts = [(centre: .zero, forward: Map3DPoint(1, 0, 0), depth: 20, wide: 40, top: 10, big: true, strings: [])]
+            builder.state.stations.houseFootprints = [[Map3DPoint(-10, 0, -20), Map3DPoint(10, 0, -20), Map3DPoint(10, 0, 20), Map3DPoint(-10, 0, 20)]]
             if let near {
-                builder.shopFootprints = [[Map3DPoint(10 + near, 0, -3), Map3DPoint(30, 0, -3), Map3DPoint(30, 0, 3), Map3DPoint(10 + near, 0, 3)]]
+                builder.state.shops.shopFootprints = [[Map3DPoint(10 + near, 0, -3), Map3DPoint(30, 0, -3), Map3DPoint(30, 0, 3), Map3DPoint(10 + near, 0, 3)]]
             }
             builder.addWinterDecor(frame: nil)
-            return builder.winterDecor.first { $0.decor == .treeMedium }?.scale
+            return builder.state.winter.winterDecor.first { $0.decor == .treeMedium }?.scale
         }
         XCTAssertEqual(scale(shopFrom: nil), 2.5)
         XCTAssertEqual(scale(shopFrom: 12.1), 2)

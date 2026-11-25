@@ -91,11 +91,11 @@ final class Map3DDepotFacilitiesTests: XCTestCase {
             return builder
         }
         let shed = built(withDepot), house = built(plain)
-        XCTAssertEqual(shed.houseFootprints.count, 2)
-        XCTAssertEqual(house.houseFootprints.count, 2)
+        XCTAssertEqual(shed.state.stations.houseFootprints.count, 2)
+        XCTAssertEqual(house.state.stations.houseFootprints.count, 2)
         // Decision 785: the depot yard kit's shed, as many 12 m bays along
         // the sidings (east–west) as fit them, two tracks wide.
-        let corners = try XCTUnwrap(shed.houseFootprints.last)
+        let corners = try XCTUnwrap(shed.state.stations.houseFootprints.last)
         let along = corners[0] - corners[3], across = corners[1] - corners[0]
         let sidings = try XCTUnwrap(withDepot.railwaySnapshot().platforms.filter { $0.platform.station == depot.id }
             .compactMap { Map3DStreetLife.Path($0.points.map { shed.point($0) })?.length }.max())
@@ -108,12 +108,12 @@ final class Map3DDepotFacilitiesTests: XCTestCase {
         XCTAssertLessThan(try XCTUnwrap(along.normalized).x, -0.99)
         // No track within it.
         let middle = corners.reduce(Map3DPoint.zero) { $0 + $1 } * 0.25
-        let inside = shed.trackLines.flatMap(\.points).filter { p in
+        let inside = shed.state.track.trackLines.flatMap(\.points).filter { p in
             let d = p - middle
             return abs(d.dot(along.normalized!)) < along.length / 2 - 1 && abs(d.dot(across.normalized!)) < across.length / 2 - 1
         }
         XCTAssertTrue(inside.isEmpty, "\(inside.prefix(3))")
-        XCTAssertNotEqual(house.houseFootprints.last, corners)
+        XCTAssertNotEqual(house.state.stations.houseFootprints.last, corners)
         // Close up, only West's platform things at the depot's world.
         XCTAssertLessThan(triangles(shed.closeMeshes), triangles(house.closeMeshes))
     }
@@ -245,7 +245,7 @@ final class Map3DDepotFacilitiesTests: XCTestCase {
         }
 
         var blocked = self.builder(world)
-        blocked.trackLines = [(stride(from: Float(-200), through: 200, by: 2).map { centre + Map3DPoint($0, 0, 3) }, .surface)]
+        blocked.state.track.trackLines = [(stride(from: Float(-200), through: 200, by: 2).map { centre + Map3DPoint($0, 0, 3) }, .surface)]
         XCTAssertTrue(blocked.addRoundhouseTurntable(frame: frame).isEmpty)
         XCTAssertTrue(blocked.nearMeshes.isEmpty)
 

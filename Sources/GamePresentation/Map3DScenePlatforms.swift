@@ -4,6 +4,15 @@ import GameCore
 /// 229, 392). Moved as they were out of `Map3DScene.swift` (TRACK-SPLIT),
 /// whose builder these belong to.
 extension Map3DScene.Builder {
+    /// Decision 976: the platforms as laid, kept while the scene is built
+    /// (``LayerStates/platforms``).
+    struct PlatformState {
+        /// Decision 263: the platforms' lines.
+        var platformLines: [[Map3DPoint]] = []
+        /// Decision 321: the platforms as laid, for the station kit.
+        var laidPlatforms: [LaidPlatform] = []
+    }
+
     // MARK: Platforms
 
     /// Each platform beside its track: towards the other platform of
@@ -69,7 +78,7 @@ extension Map3DScene.Builder {
             // line is raised (or lowered) by the difference.
             let rise = guideway.map { $0.platformTop - Self.platformHeight } ?? 0
             let laid = rise == 0 ? line : line.map { $0 + Map3DPoint(0, rise, 0) }
-            platformLines.append(laid) // Decision 263: no street over it.
+            state.platforms.platformLines.append(laid) // Decision 263: no street over it.
             // An island's `width` is its half on this track's side: the
             // whole of it is held to the narrowest, as its partner was
             // picked (decision 856; before, an island 2 to 4 m wide
@@ -94,7 +103,7 @@ extension Map3DScene.Builder {
             addPlatformLight(laid, offset: offset)
             // Decision 321: its canopy and its station's building come
             // with the station kit (`addStations`).
-            laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: laid, offset: offset, width: width,
+            state.platforms.laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: laid, offset: offset, width: width,
                                               structure: platform.structure, island: island,
                                               edge: platform.platform.edge))
         }

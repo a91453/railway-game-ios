@@ -676,6 +676,13 @@ extension Map3DRealTrains {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the stations' exterior studies, kept while the scene
+    /// is built (``LayerStates/exteriors``).
+    struct ExteriorState {
+        /// Decision 625: the exterior studies stood.
+        var stationExteriors: [Map3DStationExterior] = []
+    }
+
     /// Decision 625: less than this share of a study left clear of the
     /// track, and it does not stand (the kit's building stands instead).
     static let exteriorLeast: Float = 0.5
@@ -694,7 +701,7 @@ extension Map3DScene.Builder {
             let origin = station.origin
             let place = frame.worldPosition(latitude: origin.latitude, longitude: origin.longitude)
             guard contains(x: place.x, y: place.y), let placed = addStationExterior(station, snapshot: snapshot, frame: frame) else { continue }
-            stationExteriors.append(placed)
+            state.exteriors.stationExteriors.append(placed)
             built[station] = placed.outlines.reduce(into: Set<Map3DScene.ChunkKey>()) { $0.formUnion(cells(under: $1)) }
         }
         return built
@@ -738,7 +745,7 @@ extension Map3DScene.Builder {
                 }
             }
         }
-        for line in realTrackLines {
+        for line in state.realTrains.realTrackLines {
             for run in runs(line) {
                 room.add(line: run, half: Map3DTrainRoom.trackHalf, above: Map3DTrainRoom.trackAbove, ground: ground)
             }
@@ -830,7 +837,7 @@ extension Map3DScene.Builder {
         ownColourFar[key, default: Map3DMesh()].append(farMesh)
         // No shadow under it: its parts left out over the track would
         // leave one there. The streets and the commercial kit keep off it.
-        for outline in outlines { houseFootprints.append(Map3DStationExterior.rectangle(round: outline)) }
+        for outline in outlines { state.stations.houseFootprints.append(Map3DStationExterior.rectangle(round: outline)) }
         return Map3DStationExterior(station: station, origin: origin, outlines: outlines, kept: (near.kept, far.kept),
                                     near: nearMesh, far: farMesh)
     }

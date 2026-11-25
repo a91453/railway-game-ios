@@ -124,6 +124,23 @@ enum Map3DHongKongLandmark: String, CaseIterable, Sendable {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the ground the landmarks take, kept while the scene is
+    /// built (``LayerStates/landmarks``).
+    struct LandmarkState {
+        /// Decision 791: the ground Hong Kong's landmarks stand on, where
+        /// no footprint is drawn.
+        var landmarkPlots: [PlacedSquare] = []
+        /// OLD-PORT-AUDIT: the ground each of the cities' landmarks
+        /// covers (``LandmarkPlan``), where no footprint is drawn.
+        var landmarkPlans: [LandmarkPlan] = []
+        /// Decision 879: the squares a model stands on in the place of one
+        /// real building (the Wenwu temple's middle hall): the footprint
+        /// whose middle is within one is not drawn again, but counts as
+        /// built, so the houses along the roads round it stay
+        /// (``landmarkPlots`` keeps them off its cells).
+        var replacedPlots: [PlacedSquare] = []
+    }
+
     /// Decision 791: Hong Kong's landmarks where they stand, and after
     /// them the registered ones (decision 895, ``Map3DLandmarkRegistry``),
     /// when the scene holds their middle and no track or platform but a
@@ -166,7 +183,7 @@ extension Map3DScene.Builder {
             // OLD-PORT-AUDIT: the ground the model itself covers, not the
             // rectangle round it (Hakata station's, 197 m by 400 m, left
             // 13 real buildings beside it undrawn).
-            landmarkPlans.append(LandmarkPlan(models[false]!.placed(origin: centre, ground: ground, rotation: 0)))
+            state.landmarks.landmarkPlans.append(LandmarkPlan(models[false]!.placed(origin: centre, ground: ground, rotation: 0)))
             built.insert(landmark.id)
         }
         return built
@@ -176,16 +193,16 @@ extension Map3DScene.Builder {
     /// within a cell of it), so the footprint round it (the surveyed
     /// building the landmark draws) is not drawn again.
     func underLandmark(_ middle: Map3DPoint) -> Bool {
-        landmarkPlots.contains { $0.minX <= middle.x && middle.x <= $0.maxX && $0.minZ <= middle.z && middle.z <= $0.maxZ }
-            || landmarkPlans.contains { $0.covers(middle) }
+        state.landmarks.landmarkPlots.contains { $0.minX <= middle.x && middle.x <= $0.maxX && $0.minZ <= middle.z && middle.z <= $0.maxZ }
+            || state.landmarks.landmarkPlans.contains { $0.covers(middle) }
     }
 
     /// OLD-PORT-AUDIT: whether a landmark stands on a third or more of
     /// the `outline`'s corners: a surveyed building whose middle is clear
     /// of the model but which the model stands in is not drawn either.
     func underLandmark(outline: [Map3DPoint]) -> Bool {
-        guard !landmarkPlans.isEmpty, !outline.isEmpty else { return false }
-        return landmarkPlans.contains { plan in outline.filter(plan.covers).count * 3 >= outline.count }
+        guard !state.landmarks.landmarkPlans.isEmpty, !outline.isEmpty else { return false }
+        return state.landmarks.landmarkPlans.contains { plan in outline.filter(plan.covers).count * 3 >= outline.count }
     }
 }
 

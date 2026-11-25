@@ -595,7 +595,7 @@ final class RealLineAcquisitionTests: XCTestCase {
         let snapshot = world.railwaySnapshot()
         _ = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
-        let laid = builder.laidPlatforms.filter { $0.station == shalun.id }
+        let laid = builder.state.platforms.laidPlatforms.filter { $0.station == shalun.id }
         XCTAssertEqual(laid.filter(\.island).count, 2, "the island between the first two tracks")
         XCTAssertEqual(laid.filter { !$0.island }.count, 1, "a side platform at the third")
         // Decision 792's sequel: Zhongzhou's two tracks run apart along
@@ -606,7 +606,7 @@ final class RealLineAcquisitionTests: XCTestCase {
         var nearBuilder = Map3DScene.Builder(originX: near.originX, originY: near.originY, region: near.region, world: world)
         _ = nearBuilder.addTrack(snapshot)
         nearBuilder.addPlatforms(snapshot)
-        let zhongzhouLaid = nearBuilder.laidPlatforms.filter { $0.station == zhongzhou.id }
+        let zhongzhouLaid = nearBuilder.state.platforms.laidPlatforms.filter { $0.station == zhongzhou.id }
         XCTAssertEqual(zhongzhouLaid.filter(\.island).count, 2, "Zhongzhou's island between the first two tracks")
         XCTAssertEqual(zhongzhouLaid.filter { !$0.island }.count, 1, "a side platform at Zhongzhou's third")
         var running = world

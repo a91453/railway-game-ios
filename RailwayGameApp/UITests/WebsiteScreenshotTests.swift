@@ -2240,7 +2240,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("map3d-station-tag-details", app)
     }
 
-    /// Decision 981 (PHOTO-MODE): the 3D map's photo mode: its bar with
+    /// Decision 987 (PHOTO-MODE): the 3D map's photo mode: its bar with
     /// the map's own controls put away, each of the three spots, and the
     /// map alone after a tap on it. The shutter is not pressed (the
     /// Simulator would ask about Photos).

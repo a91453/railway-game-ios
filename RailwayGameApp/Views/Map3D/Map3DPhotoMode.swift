@@ -3,7 +3,7 @@ import GamePresentation
 import SwiftUI
 import UIKit
 
-/// Decision 981 (PHOTO-MODE): the 3D map's photo mode while it is open:
+/// Decision 987 (PHOTO-MODE): the 3D map's photo mode while it is open:
 /// view state only (``PhotoTour``, GamePresentation), never the world's.
 @MainActor
 @Observable
@@ -81,7 +81,7 @@ final class Map3DPhotoModeState {
     }
 }
 
-/// Decision 981: saves a picture to the Photos app, which asks the player
+/// Decision 987: saves a picture to the Photos app, which asks the player
 /// the first time (adding only, never reading their pictures:
 /// `NSPhotoLibraryAddUsageDescription`). The system's answer comes back on
 /// a thread of its own choosing, so it is taken off the main actor and
@@ -112,7 +112,18 @@ final class Map3DPhotoSaver: NSObject {
     }
 }
 
-/// Decision 981: the button that opens the photo mode, among the 3D map's
+extension View {
+    /// Decision 987: the view, or with `away` nothing at all: the map's
+    /// own controls while the photo mode is open, which a finger, VoiceOver
+    /// and a UI test then cannot find (hidden and see-through, as the idle
+    /// mode leaves them, a UI test still found them).
+    @ViewBuilder
+    func putAway(_ away: Bool) -> some View {
+        if !away { self }
+    }
+}
+
+/// Decision 987: the button that opens the photo mode, among the 3D map's
 /// own controls; round, as the compass under it.
 struct Map3DPhotoModeButton: View {
     let language: DisplayLanguage
@@ -132,7 +143,7 @@ struct Map3DPhotoModeButton: View {
     }
 }
 
-/// Decision 981: the photo mode's own controls, over the 3D map at its
+/// Decision 987: the photo mode's own controls, over the 3D map at its
 /// lower edge: what it last said, the three spots, and under them the
 /// close button, the shutter and the pause. A tap on the map puts all of
 /// it away (``Map3DPhotoModeState/showsControls``).
@@ -266,7 +277,7 @@ private struct Map3DPhotoSpotLabelStyle: LabelStyle {
     }
 }
 
-/// Decision 981: the photo mode's pause, so a train can be held where it
+/// Decision 987: the photo mode's pause, so a train can be held where it
 /// looks best; the map's own speeds are put away with the other controls.
 private struct Map3DPhotoPauseButton: View {
     let session: GameSession
@@ -289,7 +300,7 @@ private struct Map3DPhotoPauseButton: View {
     }
 }
 
-/// Decision 981: what the photo mode last said, in a capsule over its
+/// Decision 987: what the photo mode last said, in a capsule over its
 /// buttons.
 private struct Map3DPhotoNotice: View {
     let notice: Map3DPhotoModeState.Notice

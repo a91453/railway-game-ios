@@ -13,6 +13,7 @@
 extension WhatsNew {
     public static let nextItems: [Line] = [
         Line(english: "Photo Mode on the 3D map: the buttons step aside, one tap takes the camera to a train, a station or the skyline, and the shutter saves the picture to Photos.", chinese: "3D 地圖有拍照模式：按鈕收起來，一鍵把鏡頭帶到列車、車站或天際線，按快門就存到「照片」。"),
+        Line(english: "Hong Kong: the transit tool's ferry mode lays the two harbour crossings, Central and Wan Chai to Tsim Sha Tsui.", chinese: "香港：接駁工具的渡輪模式可以照真實航線開中環、灣仔到尖沙咀的兩條港內渡輪。"),
     ]
 
     public static let nextFixes: [Line] = [

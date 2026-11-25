@@ -145,7 +145,7 @@ targets:
         # Resources/*.lproj/InfoPlist.strings.
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Your location is used once to move a real-world map's start square near you. It is not sent anywhere.
         # A postcard's share sheet offers Save Image, and the 3D map's photo
-        # mode (decision 981) saves its pictures: both add a picture to
+        # mode (decision 987) saves its pictures: both add a picture to
         # Photos; iOS needs this reason for it. The app never reads Photos.
         # Localized in Resources/*.lproj/InfoPlist.strings.
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Saves a postcard or a photo of your railway to Photos when you choose to save it.

@@ -292,11 +292,11 @@ extension Map3DScene.Builder {
     /// the conifers' share a broadleaf tree, so the woods of the foothills
     /// are no longer bare (``woodTree(seed:x:z:height:conifers:broadleaf:)``).
     mutating func addConifers(clearOf cleared: Set<Map3DScene.ChunkKey>) {
-        guard !woodCells.isEmpty else { return }
+        guard !state.baseMap.woodCells.isEmpty else { return }
         let models = Map3DSceneryProp.conifers.compactMap { Self.sceneryModels[$0] }
         guard models.count == Map3DSceneryProp.conifers.count else { return }
         let broadleaf = Self.propModels[.tree]
-        let cells = Set(woodCells.keys).subtracting(cleared)
+        let cells = Set(state.baseMap.woodCells.keys).subtracting(cleared)
         let pieces = roadPieces(near: cells)
         let side = Float(Double(Land.cellLength) / Self.metre), quarter = side / 2
         for key in cells.sorted() {
@@ -307,7 +307,7 @@ extension Map3DScene.Builder {
                     func r(_ salt: Int32) -> Float { map3DRandom(seed.0, seed.1, salt: salt) }
                     let x = west + quarter * (Float(i) + 0.1 + 0.8 * r(80)), z = north + quarter * (Float(j) + 0.1 + 0.8 * r(81))
                     let spot = Map3DPoint(x, 0, z)
-                    guard isInside(spot, woodCells), !isOverWater(spot) else { continue }
+                    guard isInside(spot, state.baseMap.woodCells), !isOverWater(spot) else { continue }
                     let height = drawnGround(x: x, z: z)
                     guard !Self.isNearRoad(x: x, z: z, pieces[key] ?? [], margin: 2),
                           let tree = woodTree(seed: seed, x: x, z: z, height: height, conifers: models, broadleaf: broadleaf)
@@ -331,7 +331,7 @@ extension Map3DScene.Builder {
     /// metres out from its front, two by its corners and two farther out,
     /// where no track, platform or road is near (``isClear(_:facing:)``).
     mutating func addStationBushes() {
-        for (index, front) in stationFronts.enumerated() {
+        for (index, front) in state.stations.stationFronts.enumerated() {
             let right = front.forward.cross(.up), entrance = front.centre + front.forward * (front.depth / 2 + 4)
             for (number, out) in [front.wide / 2 - 1.5, -(front.wide / 2 - 1.5), front.wide / 2 + 4, -(front.wide / 2 + 4)].enumerated() {
                 let spot = entrance + right * out
@@ -348,13 +348,13 @@ extension Map3DScene.Builder {
     /// to the track's (`track`), up to two a cell, none on the track's
     /// cells or those in `cleared`, on water or within 3 m of a road.
     mutating func addBushesBesideTrack(_ track: Set<Map3DScene.ChunkKey>, clearOf cleared: Set<Map3DScene.ChunkKey>) {
-        guard !grassCells.isEmpty, !track.isEmpty else { return }
+        guard !state.baseMap.grassCells.isEmpty, !track.isEmpty else { return }
         var beside = Set<Map3DScene.ChunkKey>()
         for cell in track {
             for dr in -1...1 {
                 for dc in -1...1 {
                     let key = Map3DScene.ChunkKey(column: cell.column + dc, row: cell.row + dr)
-                    if grassCells[key] != nil { beside.insert(key) }
+                    if state.baseMap.grassCells[key] != nil { beside.insert(key) }
                 }
             }
         }
@@ -369,7 +369,7 @@ extension Map3DScene.Builder {
                 func r(_ salt: Int32) -> Float { map3DRandom(seed.0, seed.1, salt: salt + index * 10) }
                 let x = west + side * (0.1 + 0.8 * r(100)), z = north + side * (0.1 + 0.8 * r(101))
                 let spot = Map3DPoint(x, 0, z)
-                guard r(102) < 0.7, isInside(spot, grassCells), !isOverWater(spot),
+                guard r(102) < 0.7, isInside(spot, state.baseMap.grassCells), !isOverWater(spot),
                       !Self.isNearRoad(x: x, z: z, pieces[key] ?? [], margin: 3) else { continue }
                 addBushClump(at: Map3DPoint(x, drawnGround(x: x, z: z), z), turn: r(103), size: r(104), large: r(105) < 0.4)
             }
@@ -432,7 +432,7 @@ extension Map3DScene.Builder {
         var near = Set<Int>()
         for row in cellKey.row - 1...cellKey.row + 1 {
             for column in cellKey.column - 1...cellKey.column + 1 {
-                near.formUnion(frontage.byCell[Map3DScene.ChunkKey(column: column, row: row)] ?? [])
+                near.formUnion(state.roadside.frontage.byCell[Map3DScene.ChunkKey(column: column, row: row)] ?? [])
             }
         }
         let pieces = near.sorted()
@@ -444,7 +444,7 @@ extension Map3DScene.Builder {
                     let middle = centre + forward * along + across * aside
                     let bunker = StreetHouse(middle: middle, front: across, along: forward, width: size.length, depth: size.width)
                     guard fits(bunker, near: pieces, blocked: blocked) else { continue }
-                    frontage.houses[chunk(of: middle), default: []].append(bunker)
+                    state.roadside.frontage.houses[chunk(of: middle), default: []].append(bunker)
                     let foot = Map3DPoint(middle.x, bunker.corners.map { ground(at: $0) }.min() ?? 0, middle.z)
                     props[key(of: foot), default: []].append(.prop(model, at: foot + Map3DPoint(0, 0.03, 0), forward: forward, scale: 1,
                                                                    tint: Map3DColor.rgb(0xFFFFFF)))

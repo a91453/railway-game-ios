@@ -199,12 +199,20 @@ struct Map3DLevelCrossing: Sendable {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the seeded streets and their level crossings, kept
+    /// while the scene is built (``LayerStates/streets``).
+    struct StreetState {
+        /// Decision 263: the seeded streets kept and the level crossings.
+        var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
+        var crossings: [Map3DLevelCrossing] = []
+    }
+
     /// Decision 263: how high a level crossing lifts a street's traffic at
     /// scene point (`x`, `z`), over the street's own height there.
     mutating func crossingLift(x: Float, z: Float) -> Float {
-        guard !crossings.isEmpty else { return 0 }
+        guard !state.streets.crossings.isEmpty else { return 0 }
         var lift: Float = 0
-        for crossing in crossings where abs(crossing.point.x - x) < 20 && abs(crossing.point.z - z) < 20 {
+        for crossing in state.streets.crossings where abs(crossing.point.x - x) < 20 && abs(crossing.point.z - z) < 20 {
             lift = max(lift, crossing.rise(x: x, z: z, road: drawnGround(x: x, z: z) + Self.lift(of: crossing.kind)))
         }
         return lift
@@ -258,7 +266,7 @@ extension Map3DScene.Builder {
                     case .tunnel: continue
                     // Under a viaduct or a bridge, where no pier stands in it.
                     case .viaduct where !isPlatform && slant > 0.5, .bridge where !isPlatform && slant > 0.5:
-                        if piers.contains(where: { abs($0.x - hit.x) < half + 2 && abs($0.z - hit.z) < half + 2 }) { return .blocked }
+                        if state.elevated.piers.contains(where: { abs($0.x - hit.x) < half + 2 && abs($0.z - hit.z) < half + 2 }) { return .blocked }
                         continue
                     case .surface where !isPlatform && slant > 0.5:
                         let t = Map3DStreetLife.Path([p, q]).map { path in
@@ -297,10 +305,10 @@ extension Map3DScene.Builder {
     /// 32 m squares they touch, for ``trackMeeting(from:to:half:segments:index:)``.
     func trackSegments() -> (segments: [TrackSegment], index: [Int64: [Int]]) {
         var segments: [TrackSegment] = []
-        for line in trackLines where line.points.count > 1 {
+        for line in state.track.trackLines where line.points.count > 1 {
             for i in 1..<line.points.count { segments.append(TrackSegment(p: line.points[i - 1], q: line.points[i], kind: line.kind, isPlatform: false)) }
         }
-        for line in platformLines where line.count > 1 {
+        for line in state.platforms.platformLines where line.count > 1 {
             for i in 1..<line.count { segments.append(TrackSegment(p: line[i - 1], q: line[i], kind: .surface, isPlatform: true)) }
         }
         var index: [Int64: [Int]] = [:]
@@ -392,10 +400,10 @@ extension Map3DScene.Builder {
                 crossingsOn[edge] = nil
             }
         }
-        streetEdges = kept
+        state.streets.streetEdges = kept
         guard laying else { return }
         // The level crossings first: their decks lift the traffic.
-        crossings = crossingsOn.sorted(by: { $0.key < $1.key }).map(\.value)
+        state.streets.crossings = crossingsOn.sorted(by: { $0.key < $1.key }).map(\.value)
         // Each line's edges next to one another of one kind, one road.
         var roads: [Map3DBaseMap.Road] = []
         let regionBounds = Map3DBaseMap.Bounds(minX: (region.minX - originX) / Self.metre, minZ: (region.minY - originY) / Self.metre,
@@ -434,7 +442,7 @@ extension Map3DScene.Builder {
         flush()
         var taken = Set<Map3DScene.ChunkKey>()
         addRoads(roads, taking: &taken)
-        for index in crossings.indices { crossings[index].gateFeet = addLevelCrossing(crossings[index]) }
+        for index in state.streets.crossings.indices { state.streets.crossings[index].gateFeet = addLevelCrossing(state.streets.crossings[index]) }
     }
 
     /// Decision 438: on a real-world map, the player's own roads, which the
@@ -474,7 +482,7 @@ extension Map3DScene.Builder {
     /// of its middle, comes within a metre of a station's building.
     func nearHouse(_ a: Map3DPoint, _ b: Map3DPoint, reach: Float) -> Bool {
         let span = Map3DPoint(b.x - a.x, 0, b.z - a.z), steps = max(1, Int((span.length / 2).rounded(.up)))
-        return houseFootprints.contains { corners in
+        return state.stations.houseFootprints.contains { corners in
             let middle = corners.reduce(Map3DPoint(0, 0, 0)) { $0 + $1 } * 0.25
             guard let forward = (corners[1] - corners[0]).normalized, let side = (corners[3] - corners[0]).normalized else { return false }
             let depth = (corners[1] - corners[0]).length / 2 + reach + 1, wide = (corners[3] - corners[0]).length / 2 + reach + 1

@@ -185,7 +185,7 @@ extension Map3DScene.Builder {
     /// `look` from `bottom` (its ground floor's top) to `top`.
     mutating func addTowerRelief(_ outline: [Map3DPoint], centre: Map3DPoint, bottom: Float, top: Float, look: Map3DFacadeLook, wall: UInt32,
                                  r: (Int32) -> Float) {
-        guard buildsFacades, facadeStreets != nil, outline.count >= 3, top - bottom >= 6, !isCoarse(key(of: centre)) else { return }
+        guard state.facades.buildsFacades, state.facades.facadeStreets != nil, outline.count >= 3, top - bottom >= 6, !isCoarse(key(of: centre)) else { return }
         guard [.balconies, .fins, .hongKong, .ribbon].contains(look.style) else { return }
         var walls: [(start: Map3DPoint, end: Map3DPoint, out: Map3DPoint, length: Float)] = []
         for (at, a) in outline.enumerated() {
@@ -266,7 +266,7 @@ extension Map3DScene.Builder {
         guard !relief.isEmpty else { return }
         // The cheapest first (model-look round 2: a few towers' balconies
         // left many towers' bay windows out), then by its seeded number.
-        reliefParts[key(of: centre), default: []].append((Float(relief.triangleCount) + r(998), relief))
+        state.facades.reliefParts[key(of: centre), default: []].append((Float(relief.triangleCount) + r(998), relief))
     }
 
     /// A ledge `width` wide out of a wall facing `out`, `depth` deep and

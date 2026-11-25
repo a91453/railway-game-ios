@@ -263,13 +263,13 @@ extension Map3DScene.Builder {
         }
         // Decision 610: built in full, the street fronts by the streets;
         // decision 610 續: none where they are never drawn.
-        facadeStreets = isFar || !buildsFacades ? nil : facadeStreetCells()
-        defer { facadeStreets = nil }
+        state.facades.facadeStreets = isFar || !state.facades.buildsFacades ? nil : facadeStreetCells()
+        defer { state.facades.facadeStreets = nil }
         // Decision 699: the halls behind the airports' piers, found once.
-        if !terminalSpots.isEmpty, !terminalsJoined {
-            terminalsJoined = true
+        if !state.airfields.terminalSpots.isEmpty, !state.airfields.terminalsJoined {
+            state.airfields.terminalsJoined = true
             let reach = Double(700 * Self.metre)
-            let spots = terminalSpots.map { (x: originX + Double($0.at.x) * Self.metre, y: originY + Double($0.at.z) * Self.metre) }
+            let spots = state.airfields.terminalSpots.map { (x: originX + Double($0.at.x) * Self.metre, y: originY + Double($0.at.z) * Self.metre) }
             let low = (x: (spots.map(\.x).min() ?? 0) - reach, y: (spots.map(\.y).min() ?? 0) - reach)
             let high = (x: (spots.map(\.x).max() ?? 0) + reach, y: (spots.map(\.y).max() ?? 0) + reach)
             joinTerminals(footprints.buildings.compactMap { building in
@@ -293,7 +293,7 @@ extension Map3DScene.Builder {
             // Decision 879: nor where a model stands in its place, though
             // it counts as built.
             let spot = point(x: middle.x, y: middle.y, height: 0)
-            let replaced = replacedPlots.contains { $0.minX <= spot.x && spot.x <= $0.maxX && $0.minZ <= spot.z && spot.z <= $0.maxZ }
+            let replaced = state.landmarks.replacedPlots.contains { $0.minX <= spot.x && spot.x <= $0.maxX && $0.minZ <= spot.z && spot.z <= $0.maxZ }
             standing.formUnion(count(building.rings, drawn: drawn, into: &cover))
             guard drawn, !replaced else { continue }
             var storeys = building.drawnStoreys, kind = building.kind
@@ -302,7 +302,7 @@ extension Map3DScene.Builder {
             addRealBuilding([rings], ground: ground(x: middle.x, y: middle.y), height: Float(storeys) * Self.storeyHeight,
                             storeys: storeys, kind: kind)
         }
-        footprintCover = cover
+        state.realCover.footprintCover = cover
         return standing
     }
 

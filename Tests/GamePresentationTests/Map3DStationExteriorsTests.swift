@@ -82,7 +82,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
         let cleared = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
         let realTrains = Map3DScene.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
-        builder.realTrackLines = realTrains?.shownLanes ?? []
+        builder.state.realTrains.realTrackLines = realTrains?.shownLanes ?? []
         builder.addViaducts()
         let exteriors = builder.addStationExteriors(snapshot, frame: frame)
         let stations = cleared.union(builder.addStations(snapshot, frame: frame, shops: false))
@@ -247,7 +247,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
     func testEachStandsWhereOpenStreetMapHasIt() async throws {
         for study in Study.allCases {
             let (_, built) = try await Self.built(round: study)
-            let stood = built.builder.stationExteriors.filter { $0.station == .batch1(study) }
+            let stood = built.builder.state.exteriors.stationExteriors.filter { $0.station == .batch1(study) }
             XCTAssertEqual(stood.count, 1, "\(study) stands once")
             guard let exterior = stood.first else { continue }
             XCTAssertNotNil(built.exteriors[.batch1(study)])
@@ -275,7 +275,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
     func testClearOfTheTrackAndThePlatforms() async throws {
         for study in Study.allCases {
             let (_, built) = try await Self.built(round: study)
-            guard let exterior = built.builder.stationExteriors.first(where: { $0.station == .batch1(study) }) else { continue }
+            guard let exterior = built.builder.state.exteriors.stationExteriors.first(where: { $0.station == .batch1(study) }) else { continue }
             XCTAssertEqual(Self.inTheGauge(exterior.near, built.builder, ground: exterior.origin.y), 0, "\(study) near")
             XCTAssertEqual(Self.inTheGauge(exterior.far, built.builder, ground: exterior.origin.y), 0, "\(study) far")
         }
@@ -288,7 +288,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
     func testLitAtNightInItsOwnColoursWithoutSlivers() async throws {
         for study in Study.allCases {
             let (_, built) = try await Self.built(round: study)
-            guard let exterior = built.builder.stationExteriors.first(where: { $0.station == .batch1(study) }) else { continue }
+            guard let exterior = built.builder.state.exteriors.stationExteriors.first(where: { $0.station == .batch1(study) }) else { continue }
             let chunks = built.builder.chunks(), key = built.builder.key(of: exterior.origin)
             for (detail, mesh) in [("near", exterior.near), ("far", exterior.far)] {
                 XCTAssertGreaterThan(mesh.vertices.filter { $0.layer == Map3DVertex.curtainGlass }.count, 12, "\(study) \(detail): lit at night")
@@ -314,8 +314,8 @@ final class Map3DStationExteriorsTests: XCTestCase {
         let (session, view) = try DemoRealLinesTrackReportTests.game(at: "桃園", in: "thsr_sched", half: 3_000)
         _ = await session.layDemoRealLines(in: view)
         let built = try Self.built(round: .taoyuanHSR, in: session.world, heights: session.heights, railways: session.railways)
-        let exterior = try XCTUnwrap(built.builder.stationExteriors.first { $0.station == .batch1(.taoyuanHSR) })
-        let platforms = built.builder.laidPlatforms.filter { platform in platform.line.contains { exterior.covers($0, margin: 30) } }
+        let exterior = try XCTUnwrap(built.builder.state.exteriors.stationExteriors.first { $0.station == .batch1(.taoyuanHSR) })
+        let platforms = built.builder.state.platforms.laidPlatforms.filter { platform in platform.line.contains { exterior.covers($0, margin: 30) } }
         XCTAssertFalse(platforms.isEmpty, "A18's platforms beside the study")
         XCTAssertEqual(Self.inTheGauge(exterior.near, built.builder, ground: exterior.origin.y), 0)
         var over = 0
@@ -349,7 +349,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
     /// high-rises.
     func testTheHSRTaichungScreenshotLooksAtItsPlatforms() async throws {
         let (world, built) = try await Self.built(round: .taichungHSR)
-        let exterior = try XCTUnwrap(built.builder.stationExteriors.first { $0.station == .batch1(.taichungHSR) })
+        let exterior = try XCTUnwrap(built.builder.state.exteriors.stationExteriors.first { $0.station == .batch1(.taichungHSR) })
         let points = world.railwaySnapshot().platforms
             .filter { platform in platform.points.contains { exterior.covers(built.builder.point($0), margin: Map3DScene.Builder.exteriorCovers) } }
             .flatMap(\.points)
@@ -377,7 +377,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
             max(a.x, b.x) > minX && min(a.x, b.x) < maxX && max(a.z, b.z) > minZ && min(a.z, b.z) < maxZ
         }
         var hits = 0
-        let lines = builder.trackLines.filter { $0.kind != .tunnel }.map(\.points) + builder.realTrackLines
+        let lines = builder.state.track.trackLines.filter { $0.kind != .tunnel }.map(\.points) + builder.state.realTrains.realTrackLines
         for line in lines {
             for (a, b) in zip(line, line.dropFirst()) where near(a, b) {
                 let ab = Map3DPoint(b.x - a.x, 0, b.z - a.z)
@@ -391,7 +391,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
                 }
             }
         }
-        for platform in builder.laidPlatforms where platform.structure != .tunnel {
+        for platform in builder.state.platforms.laidPlatforms where platform.structure != .tunnel {
             for (a, b) in zip(platform.line, platform.line.dropFirst()) where near(a, b) {
                 guard let along = Map3DPoint(b.x - a.x, 0, b.z - a.z).normalized else { continue }
                 // Its middle `offset` to the line's right, as the scene lays it.
@@ -418,7 +418,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
     func testDrawnFromTheFarthestAmongThinnedBuildings() async throws {
         let (_, built) = try await Self.built(round: .taichungHSR)
         var builder = built.builder
-        let exterior = try XCTUnwrap(builder.stationExteriors.first { $0.station == .batch1(.taichungHSR) })
+        let exterior = try XCTUnwrap(builder.state.exteriors.stationExteriors.first { $0.station == .batch1(.taichungHSR) })
         let key = builder.key(of: exterior.origin)
         // A small building beside it, as the base map's footprints are
         // kept: a part of the far mesh, of a class the far view leaves out.
@@ -447,9 +447,9 @@ final class Map3DStationExteriorsTests: XCTestCase {
     func testTheOneBuildingThere() async throws {
         for study in Study.allCases {
             var (_, built) = try await Self.built(round: study)
-            guard let exterior = built.builder.stationExteriors.first(where: { $0.station == .batch1(study) }) else { continue }
+            guard let exterior = built.builder.state.exteriors.stationExteriors.first(where: { $0.station == .batch1(study) }) else { continue }
             let studied = exterior.outlines.map(Map3DStationExterior.rectangle(round:))
-            for footprint in built.builder.houseFootprints where !studied.contains(footprint) {
+            for footprint in built.builder.state.stations.houseFootprints where !studied.contains(footprint) {
                 let middle = footprint.reduce(Map3DPoint(0, 0, 0)) { $0 + $1 } * (1 / Float(footprint.count))
                 for corner in footprint + [middle] {
                     XCTAssertFalse(exterior.covers(corner, margin: 0), "\(study): the kit's building on it")
@@ -479,13 +479,13 @@ final class Map3DStationExteriorsTests: XCTestCase {
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         let (region, _, _) = Self.region(round: .banqiaoTRA, frame: frame)
         let plain = try Self.built(round: .banqiaoTRA, in: world, heights: heights, railways: railways, studies: region)
-        XCTAssertTrue(plain.builder.stationExteriors.contains { $0.station == .batch1(.banqiaoTRA) })
+        XCTAssertTrue(plain.builder.state.exteriors.stationExteriors.contains { $0.station == .batch1(.banqiaoTRA) })
         // The same, the study's origin outside where studies are drawn.
         let east = WorldRegion(minX: region.maxX, minY: region.minY, maxX: region.maxX + 1, maxY: region.maxY)
         let without = try Self.built(round: .banqiaoTRA, in: world, heights: heights, railways: railways, studies: east)
         // Decision 722: the kit's building is in the look already, apart
         // from the chunk's near mesh.
-        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } + builder.houseTriangleCount }
+        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } + builder.state.stations.houseTriangleCount }
         XCTAssertGreaterThan(triangles(without.builder), triangles(plain.builder), "the station's own building or entrances")
         XCTAssertTrue(without.stations.isSuperset(of: plain.stations))
     }
@@ -495,7 +495,7 @@ final class Map3DStationExteriorsTests: XCTestCase {
     func testAnExpandedStationKeepsItsWings() async throws {
         let (world, heights, railways) = try await Self.world(round: .banqiaoTRA)
         let plain = try Self.built(round: .banqiaoTRA, in: world, heights: heights, railways: railways)
-        let study = try XCTUnwrap(plain.builder.stationExteriors.first { $0.station == .batch1(.banqiaoTRA) })
+        let study = try XCTUnwrap(plain.builder.state.exteriors.stationExteriors.first { $0.station == .batch1(.banqiaoTRA) })
         let snapshot = world.railwaySnapshot()
         let within = snapshot.platforms.filter { platform in
             platform.points.contains { study.covers(plain.builder.point($0), margin: Map3DScene.Builder.exteriorCovers) }

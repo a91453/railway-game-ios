@@ -87,6 +87,13 @@ public struct Map3DReindeerHerd: Equatable, Sendable {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the reindeer, kept while the scene is built
+    /// (``LayerStates/reindeer``).
+    struct ReindeerState {
+        /// Decision 840: the Santa Claus village's reindeer laid.
+        var reindeerHerd: [Map3DReindeerHerd.Placement] = []
+    }
+
     /// Decision 840: where the Santa Claus village's reindeer stand
     /// (``reindeerHerd``): on a real-world map that holds its plaza, the
     /// nearest spot to the plaza's middle, ``Map3DReindeerHerd/nearest`` to
@@ -108,7 +115,7 @@ extension Map3DScene.Builder {
         for member in Herd.members {
             let at = spot + Map3DPoint(member.x, 0, member.z)
             let angle = member.heading * Float.pi / 180
-            reindeerHerd.append(.init(unit: member.unit, point: Map3DPoint(at.x, drawnGround(x: at.x, z: at.z), at.z),
+            state.reindeer.reindeerHerd.append(.init(unit: member.unit, point: Map3DPoint(at.x, drawnGround(x: at.x, z: at.z), at.z),
                                       forward: Map3DPoint(cosf(angle), 0, sinf(angle))))
         }
     }

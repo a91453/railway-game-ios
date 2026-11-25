@@ -95,9 +95,9 @@ final class Map3DPlatformPropsTests: XCTestCase {
         var builder = Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                               world: world)
         let line = stride(from: Float(-100), through: 100, by: 20).map { Map3DPoint($0, Map3DScene.railLift, 0) }
-        builder.laidPlatforms = [Builder.LaidPlatform(station: StationID(rawValue: 1), line: line, offset: 1.6 + width / 2, width: width,
+        builder.state.platforms.laidPlatforms = [Builder.LaidPlatform(station: StationID(rawValue: 1), line: line, offset: 1.6 + width / 2, width: width,
                                                       structure: .surface)]
-        builder.stationSystems[StationID(rawValue: 1)] = system
+        builder.state.stations.stationSystems[StationID(rawValue: 1)] = system
         return builder
     }
 
@@ -251,7 +251,7 @@ final class Map3DPlatformPropsTests: XCTestCase {
         for meshes in [b.meshes, b.nearMeshes, b.farMeshes, b.standInMeshes] { XCTAssertTrue(timber(meshes).isEmpty) }
         // Under a shell of its own (no kit canopy): no sign.
         var shell = builder(system: "mrt")
-        shell.shellRoofed = [StationID(rawValue: 1)]
+        shell.state.stations.shellRoofed = [StationID(rawValue: 1)]
         shell.addPlatformProps()
         XCTAssertFalse(timber(shell.closeMeshes).isEmpty)
         XCTAssertFalse(shell.closeMeshes.values.flatMap(\.vertices).contains { $0.color == Map3DPalette.dark && $0.y > top + 2.4 })
@@ -267,7 +267,7 @@ final class Map3DPlatformPropsTests: XCTestCase {
         var b = builder(system: "tra_sched")
         let there = stride(from: Float(-100), through: 100, by: 20).map { Map3DPoint($0, Map3DScene.railLift, 0) }
         let back = stride(from: Float(100), through: -100, by: -20).map { Map3DPoint($0, Map3DScene.railLift, 9.2) }
-        b.laidPlatforms = [there, back].map {
+        b.state.platforms.laidPlatforms = [there, back].map {
             Builder.LaidPlatform(station: StationID(rawValue: 1), line: $0, offset: 1.6 + 1.5, width: 3, structure: .elevated, island: true)
         }
         b.addPlatformProps()
@@ -394,10 +394,10 @@ final class Map3DPlatformPropsTests: XCTestCase {
         var world = GameWorld.newGame()
         let station = try world.buildStation(named: "高雄", at: PlanPoint(x: 0, y: 0))
         var b = builder(system: "tra_sched", world: world)
-        b.laidPlatforms = b.laidPlatforms.map {
+        b.state.platforms.laidPlatforms = b.state.platforms.laidPlatforms.map {
             Builder.LaidPlatform(station: station.id, line: $0.line, offset: $0.offset, width: $0.width, structure: $0.structure)
         }
-        b.stationSystems[station.id] = "tra_sched"
+        b.state.stations.stationSystems[station.id] = "tra_sched"
         b.addPlatformProps()
         let top = Map3DScene.railLift + Builder.platformHeight
         let all = b.closeMeshes.values.flatMap(\.vertices)

@@ -55,7 +55,7 @@ extension Map3DScene.Builder {
         -> Set<Map3DScene.ChunkKey> {
         var standing = Set<Map3DScene.ChunkKey>()
         var cover = RealCover()
-        defer { tileCover = cover }
+        defer { state.realCover.tileCover = cover }
         let cell = Double(Land.cellLength)
         for area in areas {
             // The tiles' own projection (`geo.js`, `makeProjection`): metres
@@ -83,8 +83,8 @@ extension Map3DScene.Builder {
                                                 Map3DPoint(max(box[0].x, box[1].x), 0, max(box[0].z, box[1].z)))])
             }
             // Decision 610: and the street fronts by the same streets.
-            facadeStreets = near && buildsFacades ? streets : nil
-            defer { facadeStreets = nil }
+            state.facades.facadeStreets = near && state.facades.buildsFacades ? streets : nil
+            defer { state.facades.facadeStreets = nil }
             for building in area.buildings {
                 let polygons = building.polygons.map { $0.map { $0.map(world) } }
                 let points = polygons.flatMap { $0.first ?? [] }
@@ -468,7 +468,7 @@ extension Map3DScene.Builder {
         // Decision 610: near, what stands out of its street fronts (none
         // on a temple's hall or a station's roof, whose kinds have none),
         // a rooftop room only where decision 235's clutter left the roof.
-        if !far, buildsFacades, look.buildings.hasStreetFronts, facadeStreets != nil, !canopy, !hipped {
+        if !far, state.facades.buildsFacades, look.buildings.hasStreetFronts, state.facades.facadeStreets != nil, !canopy, !hipped {
             var street = FrontStreetLevel(height: groundFloor)
             switch kind {
             // Decision 812: no arcade where shops open on the pavement.

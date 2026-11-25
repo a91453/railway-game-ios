@@ -2,7 +2,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 981 (PHOTO-MODE): which train and station the photo mode goes
+/// Decision 987 (PHOTO-MODE): which train and station the photo mode goes
 /// to next, and where its camera stands at each spot.
 final class PhotoSpotsTests: XCTestCase {
     private typealias Place = PhotoTour.Place
