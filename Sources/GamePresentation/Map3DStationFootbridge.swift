@@ -218,6 +218,15 @@ enum Map3DStationFootbridge {
 // MARK: - Building
 
 extension Map3DScene.Builder {
+    /// Decision 976: the stations' footbridges and underpasses, kept while
+    /// the scene is built (``LayerStates/stationCrossings``).
+    struct StationCrossingState {
+        /// Decision 936: where along each platform laid (by its place in
+        /// ``PlatformState/laidPlatforms``) a footbridge's tower or an
+        /// underpass's stairs stand (``addStationCrossings``).
+        var crossingKeepOut: [Int: ClosedRange<Float>] = [:]
+    }
+
     /// Where the line across the ground through `point` along level
     /// `across` meets `path`: how far along `across` from `point`, how
     /// far along the path, the path's level way there and its height.
@@ -262,14 +271,14 @@ extension Map3DScene.Builder {
             partial.insert(platform.platform.station)
         }
         var byStation: [StationID: [Int]] = [:]
-        for (index, platform) in laidPlatforms.enumerated() where platform.structure == .surface {
+        for (index, platform) in state.platforms.laidPlatforms.enumerated() where platform.structure == .surface {
             byStation[platform.station, default: []].append(index)
         }
-        let tracks = trackLines.filter { $0.kind != .tunnel }.compactMap { Map3DStreetLife.Path($0.points) }
+        let tracks = state.track.trackLines.filter { $0.kind != .tunnel }.compactMap { Map3DStreetLife.Path($0.points) }
         for (id, indices) in byStation.sorted(by: { $0.key < $1.key }) where indices.count >= 2 {
-            guard !partial.contains(id), !shellRoofed.contains(id), !studiedStations.contains(id),
+            guard !partial.contains(id), !state.stations.shellRoofed.contains(id), !state.stations.studiedStations.contains(id),
                   world.station(id: id)?.isDepot != true else { continue }
-            let paths = indices.compactMap { index in Map3DStreetLife.Path(laidPlatforms[index].line).map { (index: index, path: $0) } }
+            let paths = indices.compactMap { index in Map3DStreetLife.Path(state.platforms.laidPlatforms[index].line).map { (index: index, path: $0) } }
             guard paths.count == indices.count, let reference = paths.max(by: { $0.path.length < $1.path.length }) else { continue }
             let share = Map3DStationKit.canopyShare(world.station(id: id)?.expansion)
             search: for kind in Bridge.Kind.allCases {
@@ -284,7 +293,7 @@ extension Map3DScene.Builder {
                     let forward = atStart ? here.along * -1 : here.along
                     var bodies: [Bridge.Body] = [], measured: [(index: Int, body: Bridge.Body, own: ClosedRange<Float>, top: Float)] = []
                     for (index, path) in paths {
-                        let platform = laidPlatforms[index]
+                        let platform = state.platforms.laidPlatforms[index]
                         guard let meeting = Self.meeting(of: path, across: here.right, through: here.point),
                               abs(meeting.direction.dot(here.along)) >= 0.998 else { continue }
                         let same: Float = meeting.direction.dot(here.along) >= 0 ? 1 : -1
@@ -322,7 +331,7 @@ extension Map3DScene.Builder {
                     }
                     let tops = standing.map(\.top)
                     guard let top = tops.max(), let lowest = tops.min(), top - lowest <= 0.3 else { continue }
-                    for piece in standing { crossingKeepOut[piece.index] = piece.own }
+                    for piece in standing { state.stationCrossings.crossingKeepOut[piece.index] = piece.own }
                     func at(_ lateral: Float, _ height: Float) -> Map3DPoint {
                         Map3DPoint(here.point.x, height, here.point.z) + here.right * lateral
                     }

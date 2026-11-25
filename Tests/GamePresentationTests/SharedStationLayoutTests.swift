@@ -230,7 +230,7 @@ final class SharedStationLayoutTests: XCTestCase {
                 var builder = Map3DScene.Builder(originX: frame.originX, originY: frame.originY, region: frame.region, world: world)
                 _ = builder.addTrack(snapshot)
                 builder.addPlatforms(snapshot)
-                let islands = builder.laidPlatforms.filter { $0.station == station.id && $0.island }.compactMap { $0.edge.flatMap { lineOf[$0] } }
+                let islands = builder.state.platforms.laidPlatforms.filter { $0.station == station.id && $0.island }.compactMap { $0.edge.flatMap { lineOf[$0] } }
                 XCTAssertEqual(Set(islands), Set(ids), "\(order): \(name): an island platform of each line, facing each other")
             }
         }
@@ -423,7 +423,7 @@ final class SharedStationLayoutTests: XCTestCase {
         let snapshot = world.railwaySnapshot()
         _ = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
-        let drawn = builder.laidPlatforms.filter { $0.station == zhuzhong }
+        let drawn = builder.state.platforms.laidPlatforms.filter { $0.station == zhuzhong }
         let lineOf = Dictionary(laidBy.map { ($0.key.edge, $0.value) }, uniquingKeysWith: { a, _ in a })
         let islands = drawn.filter(\.island)
         XCTAssertEqual(drawn.count, 4)

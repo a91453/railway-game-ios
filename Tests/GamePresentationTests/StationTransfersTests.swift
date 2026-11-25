@@ -94,7 +94,7 @@ final class StationTransfersTests: XCTestCase {
             let snapshot = world.railwaySnapshot()
             _ = builder.addTrack(snapshot)
             builder.addPlatforms(snapshot)
-            let drawn = Set(builder.laidPlatforms.filter(\.island).map(\.edge))
+            let drawn = Set(builder.state.platforms.laidPlatforms.filter(\.island).map(\.edge))
             for platform in scene.platforms {
                 let across = scene.platforms.contains { $0 != platform && world.platformChange(from: platform, to: $0)?.kind == .acrossPlatform }
                 XCTAssertEqual(drawn.contains(platform.edge), across, "tracks \(offsets), \(extra) between: platform on \(platform.edge)")

@@ -1223,7 +1223,7 @@ extension Map3DScene.Builder {
             // Decision 865: on its road's bed, level across, from its back
             // end's height to its front's.
             var bed: ((Map3DBaseMap.Point) -> Float)?
-            if let bedA = roadBed.level(at: at(t0), along: way, onDeck: mark.onDeck), let bedB = roadBed.level(at: at(t1), along: way, onDeck: mark.onDeck) {
+            if let bedA = state.roadBed.level(at: at(t0), along: way, onDeck: mark.onDeck), let bedB = state.roadBed.level(at: at(t1), along: way, onDeck: mark.onDeck) {
                 bed = { p in
                     let share = to - from > 1e-9 ? (((p.x - mark.centre.x) * along.x + (p.z - mark.centre.z) * along.z) - from) / (to - from) : 0
                     return bedA + (bedB - bedA) * Float(min(1, max(0, share)))

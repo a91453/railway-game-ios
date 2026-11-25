@@ -105,11 +105,11 @@ final class RoadJoinDrawRealMapTests: XCTestCase {
         builder.addOwnRoads(baseMap: tiles, frame: try XCTUnwrap(RealWorldFrame(world: session.world)))
         let metre = Double(WorldCoordinate.unitsPerMetre)
         let scene = join.map { Map3DPoint(Float((Double($0.x) - originX) / metre), 0, Float((Double($0.y) - originY) / metre)) }
-        XCTAssertTrue(builder.roadLines.contains { line in
+        XCTAssertTrue(builder.state.baseMap.roadLines.contains { line in
             line.points.count == 2 && zip(line.points, scene).allSatisfy { ($0.0 - $0.1).length < 0.01 }
         }, "the 3D map lays the join")
         var without = Map3DScene.Builder(originX: originX, originY: originY, region: region, world: session.world)
         without.addOwnRoads()
-        XCTAssertGreaterThan(builder.roadLines.count, without.roadLines.count, "and none without the base map")
+        XCTAssertGreaterThan(builder.state.baseMap.roadLines.count, without.state.baseMap.roadLines.count, "and none without the base map")
     }
 }

@@ -10,6 +10,17 @@ import GameCore
 // conifers higher up, as they do in the base map's woods.
 
 extension Map3DScene.Builder {
+    /// Decision 976: the land cover, kept while the scene is built
+    /// (``LayerStates/land``).
+    struct LandCoverState {
+        /// Decision 811: the land cover of each 64 m cell round the region
+        /// (``readLandCover(_:frame:)``), and the cells the city's lots
+        /// stand on (``addGround(water:lots:clearOf:)``), which no forest
+        /// tree of it takes.
+        var landCover: [ChunkKey: LandCoverGrid.Cover] = [:]
+        var lotCells = Set<ChunkKey>()
+    }
+
     /// Decision 811: the land cover of each 64 m cell round the region (one
     /// cell more each way, for the corners the region's edge shares), read
     /// from `grid` at each cell's middle.
@@ -23,7 +34,7 @@ extension Map3DScene.Builder {
             for column in firstColumn...lastColumn {
                 let place = frame.coordinate(worldX: (Double(column) + 0.5) * cell, worldY: (Double(row) + 0.5) * cell)
                 if let found = reader.cover(latitude: place.latitude, longitude: place.longitude) {
-                    landCover[Map3DScene.ChunkKey(column: column, row: row)] = found
+                    state.land.landCover[Map3DScene.ChunkKey(column: column, row: row)] = found
                 }
             }
         }
@@ -65,11 +76,11 @@ extension Map3DScene.Builder {
     /// without its city in full, on water, or within 4 m of a road. Laid
     /// after the buildings, so none stands in one.
     mutating func addWildTrees(clearOf cleared: Set<Map3DScene.ChunkKey>) {
-        guard !landCover.isEmpty else { return }
+        guard !state.land.landCover.isEmpty else { return }
         let conifers = Map3DSceneryProp.conifers.compactMap { Self.sceneryModels[$0] }
         guard conifers.count == Map3DSceneryProp.conifers.count, let broadleaf = Self.propModels[.tree] else { return }
         let side = Float(Double(Land.cellLength) / Self.metre), quarter = side / 2
-        let cells = Set(landCover.compactMap { key, cover in cover == .forest ? key : nil }).subtracting(cleared).subtracting(woodCells.keys).subtracting(lotCells).filter { key in
+        let cells = Set(state.land.landCover.compactMap { key, cover in cover == .forest ? key : nil }).subtracting(cleared).subtracting(state.baseMap.woodCells.keys).subtracting(state.land.lotCells).filter { key in
             let west = Float(gridLine(key.column, origin: originX)), north = Float(gridLine(key.row, origin: originY))
             let middle = Map3DPoint(west + quarter, 0, north + quarter)
             return regionHolds(middle) && !isCoarse(self.key(of: middle))

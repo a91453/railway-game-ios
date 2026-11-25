@@ -145,8 +145,8 @@ final class Map3DRealTrainsTests: XCTestCase {
                                                              maxX: origin.x + 3_000 * metre, maxY: origin.y + 3_000 * metre),
                                          world: world)
         // The player's track across the real line at x 0.
-        builder.trackLines = [(stride(from: Float(-200), through: 200, by: 4).map { Map3DPoint(0, Map3DScene.railLift, $0) }, .surface)]
-        let player = Map3DRealTrains.PlayerTrack(builder.trackLines.map(\.points))
+        builder.state.track.trackLines = [(stride(from: Float(-200), through: 200, by: 4).map { Map3DPoint(0, Map3DScene.railLift, $0) }, .surface)]
+        let player = Map3DRealTrains.PlayerTrack(builder.state.track.trackLines.map(\.points))
         // The real line along x, 2 km, its km from 0.
         let stretch = stride(from: -1_000.0, through: 1_000, by: 50).map { x in
             (point: WorldVector(x: origin.x + x * metre, y: origin.y), km: (x + 1_000) / 1_000)
@@ -162,7 +162,7 @@ final class Map3DRealTrainsTests: XCTestCase {
         XCTAssertNotNil(track.point(atKm: 0.5))
         XCTAssertNil(track.point(atKm: 1))
         XCTAssertFalse(builder.meshes.isEmpty, "laid")
-        XCTAssertFalse(builder.realTrackCells.isEmpty)
+        XCTAssertFalse(builder.state.realTrains.realTrackCells.isEmpty)
         let laid = builder.meshes.values.flatMap(\.vertices)
         XCTAssertFalse(laid.contains { abs($0.x) < Map3DRealTrains.playerClearance - 4 && abs($0.z) < 3 }, "none over the player's")
     }

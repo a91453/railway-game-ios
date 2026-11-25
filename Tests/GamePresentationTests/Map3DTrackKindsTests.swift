@@ -101,7 +101,7 @@ final class Map3DTrackKindsTests: XCTestCase {
         let rail = built(try laid(.emu3000).world)
         XCTAssertTrue(colours(rail.meshes).contains(Map3DPalette.ballast))
         XCTAssertTrue(colours(rail.meshes).contains(Map3DPalette.railTop))
-        XCTAssertTrue(rail.guidedTrackLines.isEmpty)
+        XCTAssertTrue(rail.state.track.guidedTrackLines.isEmpty)
         XCTAssertEqual(colours(rail.nearMeshes).intersection([Map3DTrackKind.slabColour, Map3DTrackKind.cover, Map3DTrackKind.lawn]), [])
 
         for kind in [Map3DTrackKind.slab, .thirdRail, .rubber, .embedded] {
@@ -121,11 +121,11 @@ final class Map3DTrackKindsTests: XCTestCase {
             XCTAssertEqual(near.contains(Map3DTrackKind.cover), kind == .thirdRail, "\(kind)")
             XCTAssertEqual(near.contains(Map3DTrackKind.insulator), kind == .thirdRail || kind == .rubber, "\(kind)")
             // No overhead line over a third rail or the pads.
-            XCTAssertEqual(builder.guidedTrackLines.isEmpty, kind.hasOverheadLine, "\(kind)")
+            XCTAssertEqual(builder.state.track.guidedTrackLines.isEmpty, kind.hasOverheadLine, "\(kind)")
             // Nothing of the track stands over the rails' top but the
             // third rail's cover and the guide bars, both under a car's
             // floor and inside a platform's edge.
-            let top = try XCTUnwrap(builder.trackLines.first?.points.first).y
+            let top = try XCTUnwrap(builder.state.track.trackLines.first?.points.first).y
             let track = built(try laid(type).world, platforms: false)
             let highest = (Array(track.meshes.values) + Array(track.nearMeshes.values)).flatMap(\.vertices).map(\.y).max() ?? 0
             let over: Float = kind == .thirdRail ? Map3DTrackKind.coverTop : kind == .rubber ? Map3DTrackKind.guideTop : 0

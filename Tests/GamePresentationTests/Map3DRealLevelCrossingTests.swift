@@ -41,7 +41,7 @@ final class Map3DRealLevelCrossingTests: XCTestCase {
         builder.addGround()
         _ = builder.addBaseMap(Map3DBaseMap(roads: roads))
         _ = builder.addTrack(snapshot)
-        builder.realSurfaceLines = real
+        builder.state.realTrains.realSurfaceLines = real
         builder.addRealLevelCrossings()
         return builder
     }
@@ -63,9 +63,9 @@ final class Map3DRealLevelCrossingTests: XCTestCase {
     func testARoadCrossingTheTrackOnTheLevelGetsALevelCrossing() throws {
         let world = try flatWorld(lines: [510, 514])
         let builder = built(world, roads: [road([(500, 300), (500, 724)])])
-        XCTAssertEqual(builder.roadBridges.crossings[.level], 2, "both tracks on the level")
-        XCTAssertEqual(builder.crossings.count, 1, "one crossing over the double track")
-        let crossing = try XCTUnwrap(builder.crossings.first)
+        XCTAssertEqual(builder.state.roadBridges.crossings[.level], 2, "both tracks on the level")
+        XCTAssertEqual(builder.state.streets.crossings.count, 1, "one crossing over the double track")
+        let crossing = try XCTUnwrap(builder.state.streets.crossings.first)
         XCTAssertEqual(crossing.point.x, 500, accuracy: 0.1)
         XCTAssertEqual(crossing.point.z, 512, accuracy: 0.1)
         XCTAssertEqual(crossing.spread, 4, accuracy: 0.1)
@@ -96,15 +96,15 @@ final class Map3DRealLevelCrossingTests: XCTestCase {
     func testOnlyARoadCrossingTheTrackOnTheLevelGetsOne() throws {
         for height in [Int64(18), 22] {
             let builder = built(try flatWorld(lines: [512], trackHeight: height), roads: [road([(500, 300), (500, 724)])])
-            XCTAssertTrue(builder.crossings.isEmpty, "track at \(height) m")
+            XCTAssertTrue(builder.state.streets.crossings.isEmpty, "track at \(height) m")
         }
         let viaduct = built(try flatWorld(lines: [512], trackHeight: 32), roads: [road([(500, 300), (500, 724)])])
-        XCTAssertTrue(viaduct.crossings.isEmpty, "under a viaduct")
+        XCTAssertTrue(viaduct.state.streets.crossings.isEmpty, "under a viaduct")
         let level = try flatWorld(lines: [512])
-        XCTAssertTrue(built(level, roads: [road([(100, 520), (900, 524)])]).crossings.isEmpty, "along the track")
-        XCTAssertTrue(built(level, roads: [road([(500, 300), (500, 511)])]).crossings.isEmpty, "ending at the track")
-        XCTAssertTrue(built(level, roads: [road([(500, 300), (500, 724)], kind: .motorway)]).crossings.isEmpty, "a motorway")
-        XCTAssertTrue(built(level, roads: [road([(500, 300), (500, 724)], level: 1)]).crossings.isEmpty, "a road bridge")
+        XCTAssertTrue(built(level, roads: [road([(100, 520), (900, 524)])]).state.streets.crossings.isEmpty, "along the track")
+        XCTAssertTrue(built(level, roads: [road([(500, 300), (500, 511)])]).state.streets.crossings.isEmpty, "ending at the track")
+        XCTAssertTrue(built(level, roads: [road([(500, 300), (500, 724)], kind: .motorway)]).state.streets.crossings.isEmpty, "a motorway")
+        XCTAssertTrue(built(level, roads: [road([(500, 300), (500, 724)], level: 1)]).state.streets.crossings.isEmpty, "a road bridge")
     }
 
     /// A real line's track on the ground (decision 402), which the player
@@ -114,8 +114,8 @@ final class Map3DRealLevelCrossingTests: XCTestCase {
         let rails = Float(20) + Map3DScene.railLift
         let real = [[Map3DPoint(64, rails, 600), Map3DPoint(960, rails, 600)], [Map3DPoint(64, rails, 604), Map3DPoint(960, rails, 604)]]
         let builder = built(world, roads: [road([(300, 300), (310, 900)], kind: .tertiary)], real: real)
-        XCTAssertEqual(builder.crossings.count, 1)
-        let crossing = try XCTUnwrap(builder.crossings.first)
+        XCTAssertEqual(builder.state.streets.crossings.count, 1)
+        let crossing = try XCTUnwrap(builder.state.streets.crossings.first)
         XCTAssertEqual(crossing.point.z, 602, accuracy: 0.2)
         XCTAssertEqual(crossing.spread, 4, accuracy: 0.1)
         XCTAssertEqual(crossing.kind, .tertiary)

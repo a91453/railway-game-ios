@@ -27,8 +27,8 @@ final class Map3DRealFacadeTests: XCTestCase {
         var builder = Map3DScene.Builder(originX: Double(shift) * metre, originY: Double(shift / 2) * metre, region: WorldRegion(bounds: world.bounds),
                                          world: world)
         builder.target = target
-        builder.buildsFacades = facades
-        builder.facadeStreets = streets.map { cells in
+        builder.state.facades.buildsFacades = facades
+        builder.state.facades.facadeStreets = streets.map { cells in
             // The cells, as the scene of that origin keeps them.
             Set(cells.map { Map3DScene.ChunkKey(column: $0.column - Int(shift / 4), row: $0.row - Int(shift / 8)) })
         }
@@ -121,7 +121,7 @@ final class Map3DRealFacadeTests: XCTestCase {
             for row in 0..<30 {
                 for column in 0..<126 { cells.insert(Map3DScene.ChunkKey(column: column, row: row * 4 + 3)) }
             }
-            builder.facadeStreets = cells
+            builder.state.facades.facadeStreets = cells
             for index in order {
                 let x = Float(index % 60) * 8, z = Float(index / 60) * 16
                 let ring = [Map3DPoint(x, 0, z), Map3DPoint(x + 8, 0, z), Map3DPoint(x + 8, 0, z + 12), Map3DPoint(x, 0, z + 12)]
@@ -164,8 +164,8 @@ final class Map3DRealFacadeTests: XCTestCase {
         func building(_ facades: Bool) -> Map3DMesh {
             var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
             builder.target = .near
-            builder.buildsFacades = facades
-            builder.facadeStreets = streets
+            builder.state.facades.buildsFacades = facades
+            builder.state.facades.facadeStreets = streets
             let ring = [Map3DPoint(0, 0, 0), Map3DPoint(8, 0, 0), Map3DPoint(8, 0, 14), Map3DPoint(0, 0, 14)]
             builder.addRealBuilding([[ring]], ground: 0, height: 14.2, storeys: 4, kind: .shophouse)
             var near = Map3DMesh()

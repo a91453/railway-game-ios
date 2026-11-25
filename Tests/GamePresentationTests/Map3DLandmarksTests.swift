@@ -117,13 +117,13 @@ final class Map3DLandmarksTests: XCTestCase {
         var builder = builder(world)
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         // Laid as the scene lays it, a point every few metres.
-        builder.trackLines = [(stride(from: Float(-200), through: 200, by: 2).map { middle + Map3DPoint($0, 0, 0) }, .surface)]
+        builder.state.track.trackLines = [(stride(from: Float(-200), through: 200, by: 2).map { middle + Map3DPoint($0, 0, 0) }, .surface)]
         _ = builder.addTemples(RealTemples(temples: [temple(north: 0, east: 0, .temple)]), frame: frame, clearOf: [])
         XCTAssertTrue(builder.closeMeshes.isEmpty)
         // 13 m off it, it stands, turned along the track: facing south,
         // its 22 m would come within 4 m of it.
         var off = self.builder(world)
-        off.trackLines = builder.trackLines
+        off.state.track.trackLines = builder.state.track.trackLines
         _ = off.addTemples(RealTemples(temples: [temple(north: 13, east: 0, .temple)]), frame: frame, clearOf: [])
         let bounds = try XCTUnwrap(off.closeMeshes.values.first?.bounds)
         XCTAssertGreaterThan(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z, "its 22 m along the track")
@@ -139,11 +139,11 @@ final class Map3DLandmarksTests: XCTestCase {
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         var hall = Map3DMesh()
         hall.addBox(base: middle, length: 48, width: 38, height: 12, top: 0xFF80_8080, side: 0xFF80_8080)
-        builder.landmarkPlans = [LandmarkPlan(hall)]
+        builder.state.landmarks.landmarkPlans = [LandmarkPlan(hall)]
         _ = builder.addTemples(RealTemples(temples: [temple(north: 4, east: 0, .temple)]), frame: frame, clearOf: [])
         XCTAssertTrue(builder.closeMeshes.isEmpty)
         var away = self.builder(world)
-        away.landmarkPlans = builder.landmarkPlans
+        away.state.landmarks.landmarkPlans = builder.state.landmarks.landmarkPlans
         _ = away.addTemples(RealTemples(temples: [temple(north: 80, east: 0, .temple)]), frame: frame, clearOf: [])
         XCTAssertFalse(away.closeMeshes.isEmpty, "a temple clear of it stands")
     }

@@ -304,7 +304,7 @@ extension Map3DScene.Builder {
                 // the real hall or shelter it stands for has its middle
                 // there, its neighbours (the temple's other halls) not.
                 let size = Map3DHongKongLandmark.body(of: models[true]!), half = min(size.x, size.y) * 0.75
-                replacedPlots.append(PlacedSquare(minX: centre.x - half, minZ: centre.z - half, maxX: centre.x + half, maxZ: centre.z + half))
+                state.landmarks.replacedPlots.append(PlacedSquare(minX: centre.x - half, minZ: centre.z - half, maxX: centre.x + half, maxZ: centre.z + half))
             }
             built.append(landmark.name)
         }
