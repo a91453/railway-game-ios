@@ -4,6 +4,17 @@
 - session：作者 Mac 上的工作串（原始 GLB 只在那台 Mac 上，不進這個公開庫），2026-11-25。KYUSHU-800-TSUBAME 壓縮第 2 次後交給 KYUSHU-800-TSUBAME-2；KYUSHU-800-TSUBAME-2 定了做法 E、開了 PR #2706，2026-11-26 也壓縮第 2 次，停手。
 - 分支 `claude/kyushu-shinkansen-800`，**草稿 PR #2706**（head `171a00782`，2026-11-26 推的，base 是 main `2e02fd11d`）。協調者交代：推上去開 PR、送工作室換家審查、CI 平行跑，**先別合**。推完之後這串對話壓縮第 2 次，照規矩停手；**工作室換家審查還沒送**（Claude 做的，審的要是 codex 或 agy，不能是 Argon），CI 結果也還沒看。接手的工作串：送審（材料在作者 Mac 的 `~/Developer/kyushu-800-glb/w/` 兩個 GLB 與 `scratch/exp16` 的總覽圖，照 `recheck-kyushu-n700-r3` 的樣子寫 REQUEST.md）、照 CI 修（Linux 上的鎖雜湊若不同就照 CI 的值改 `locks/kyushu800.json`）、工作室通過且 CI 綠才合。
 
+## 2026-11-26：工作室 r1（Codex）退回的三項，KYUSHU-800-TSUBAME-3 修了
+
+r1 判 needs-fix（比例、門位、燈、塗裝、軌距都過），三項都修在 `kyushu_800.py`，重產網格與鎖檔，推上 #2706。協調者請工作室派 r2 複審；CI 綠、r2 過也**不要自己合**，等協調者。
+
+- **a. 每扇門一個 node**：`DOOR_OUTLINES`（貼圖上每扇門的外框）、`door_at`、`name_doors`、`write_glb`（照 `kyushu_n700.py` 的：車身一個 node，每扇門 `…-door-left-1` 等各一個）。乘務員門的門板上緣改成貼著斜框的下緣（`CREW_PANEL`），門框裡不留白牆。`Map3DKyushu800.doors(_:)` 改成每側各一扇（舊車左右差到 8 mm），乘務員門帶斜的上緣（`Door.top`、`height(at:)`）；`testEachDoorIsAPieceOfItsOwn` 數門裡的面要等於工具的門 node（頭車 220、中間車 208）。
+- **b. 全周幌轉角**：幌口從上面看改成淺淺的 V（正中離連結面 2 cm，每離中線 1 m 再退 2.5 cm，`HOOD_TAPER`），兩節相對轉 4.2° 以內不相碰；3° 時最小相隔 35 mm（1.0–3.4 m 各高度）。舊版通道幌拿掉（整條在幌裡面），連結面上只留車鉤的楔子（`COUPLER`），車長靠它量到連結面。`testTheHoodsKeepApartOnACurve` 守著。
+- **c. 共面重疊與碎面**：頭車沿車身的伸縮在乘務員門門框前緣轉折，先 `cut_at(NOSE_TO)` 再伸縮；存成毫米前 `mend` 補同一平面上的 T 形接點、頂點放到毫米格點上，沒有面積或翻了面的拿掉。
+- 自己量的（作者 Mac 上 `~/Developer/kyushu-800-glb/scratch/scripts/verify800.py DIR` 與 `verify800.py DIR more`，量法照 r1 報告）：異色共面重疊（>1 mm²）0／0 對，放寬到 2°、50 mm 也是 0／0（修前 40／0）；朝內面 0、毫米格點上退化的面 0；每扇門拿掉後門的範圍外擴 0.1 m 的牆，牆加門剛好蓋滿（缺 0 mm²、疊 0 mm²）；相鄰兩節（頭＋中、中＋中）各轉 ±θ/2，1.5／2.5 m 切面 3° 最小相隔 35.5 mm、4° 6 mm，平的口修前 3° 交疊 48.4 mm。
+- 面數：頭車 1,825 → 2,314、中間車 1,573 → 1,868（多的是補 T 形接點與在轉折處切開的面）；註冊表上限 1,900 → 2,400。
+- 中間車沿車身的伸縮（`more_windows` 的 `settled`）也有轉折，但量到 0 對重疊，沒有在那裡切開（切開會多 490 面）。
+
 ## 做完、已提交的（`171a00782`）
 
 - `tools/texture-palette/kyushu_800.py`：貼圖上每塊顏色的位置寫成一張表，轉檔前先對一次貼圖（`check_regions`），再照表切三角形。車頭 1,825 面、中間車 1,573 面（中間車的窗帶多排了兩格、車端補了全周幌，見下面）。讀檔、切面用 `kyushu_n700.py` 的函式；寫 GLB 是 `kyushu_800.py` 自己的一份（`kyushu_n700.py` 不改）。
