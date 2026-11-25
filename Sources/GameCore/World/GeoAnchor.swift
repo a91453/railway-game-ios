@@ -68,8 +68,11 @@ extension GameWorld {
     /// Lays the map over the Earth with its middle at `anchor`, or makes it
     /// a blank map again with `nil` (Stage E2). Changes nothing else: the
     /// railway, the stations and the trains stay where they are in the
-    /// world. Free.
+    /// world. Free. The anchor is the middle of the whole world from now
+    /// on: a map that grew (``growMap(to:)``, decision 969) forgets where
+    /// its anchor was.
     public mutating func setGeoAnchor(_ anchor: GeoAnchor?) {
         geoAnchor = anchor
+        geoAnchorBounds = nil
     }
 }

@@ -10,8 +10,9 @@
 public struct GameWorld: Equatable, Sendable {
     /// How far the world reaches (Stage F3d): every track node and station
     /// stands in it. The railway is the ``network``, and stations stand at
-    /// points (Stage F1); the world has no cells.
-    public private(set) var bounds: WorldBounds
+    /// points (Stage F1); the world has no cells. It changes only as the
+    /// map grows (``growMap(to:)``, decision 969).
+    public internal(set) var bounds: WorldBounds
     /// All stations, ordered by ascending ``StationID``.
     public private(set) var stations: [Station]
     /// All trains, ordered by ascending ``TrainID``.
@@ -100,6 +101,14 @@ public struct GameWorld: Equatable, Sendable {
     /// ARCHITECTURE decision 50); `nil`, a blank map, in a new world. No
     /// rule reads it. Set by ``setGeoAnchor(_:)`` only.
     public internal(set) var geoAnchor: GeoAnchor?
+    /// Decision 969: the part of the world, from its north-west corner,
+    /// whose middle ``geoAnchor`` is: the world as it was before its map
+    /// grew to the south and the east (``growMap(to:)``), so that what
+    /// stood in it lies over the same places of the Earth. `nil` while the
+    /// anchor is the middle of the whole world: a blank map, and every map
+    /// that never grew. No rule reads it. Set by ``growMap(to:)`` and
+    /// forgotten by ``setGeoAnchor(_:)``.
+    public internal(set) var geoAnchorBounds: WorldBounds?
     /// The land round the railway (Phase 6a, ARCHITECTURE decision 72): who
     /// lives and works in each 64 m cell. Empty in a new world and in saves
     /// from before it; the app's new games start with towns or a real-world
@@ -3457,7 +3466,7 @@ extension GameWorld {
 extension GameWorld: Codable {
     private enum CodingKeys: String, CodingKey {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
-        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, annualTaxes, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor
+        case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, annualTaxes, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor, geoAnchorBounds
         case land, landBlocks, landDemand, distanceDemand, farDemand, doorCrowding, keepLeft, switchInterlocking, switchLies, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
         case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, airRoutes, nextAirRouteID, driving
         case playerMelodies, nextPlayerMelodyID
@@ -3559,6 +3568,7 @@ extension GameWorld: Codable {
         let lineIDs = Set(lines.map(\.id.rawValue))
         accounts.assets.removeAll { $0.kind == .acquiredLine && !lineIDs.contains($0.owner) }
         geoAnchor = container.contains(.geoAnchor) ? try container.decode(GeoAnchor.self, forKey: .geoAnchor) : nil
+        geoAnchorBounds = try container.decodeIfPresent(WorldBounds.self, forKey: .geoAnchorBounds)
         land = container.contains(.land) ? try container.decode(Land.self, forKey: .land) : Land()
         if container.contains(.landBlocks) {
             // Decision 400's later point 2: no more blocks than the world
@@ -3694,7 +3704,8 @@ extension GameWorld: Codable {
     /// S3), and a save without one reads as an empty network; a world
     /// with traffic control off has no `"trafficControl"` key (Stage T),
     /// which is also how saves made before it read; a blank map has no
-    /// `"geoAnchor"` (Stage E2); a world without land has no `"land"`
+    /// `"geoAnchor"` (Stage E2), and one that never grew no
+    /// `"geoAnchorBounds"` (decision 969); a world without land has no `"land"`
     /// (Phase 6a), and one whose land is whole no `"landBlocks"` (decision
     /// 88); a world with the city's buildings off has no
     /// `"cityBuildings"` and no `"buildings"` (Phase 6c-1); and one without
@@ -3764,6 +3775,7 @@ extension GameWorld: Codable {
         if let geoAnchor {
             try container.encode(geoAnchor, forKey: .geoAnchor)
         }
+        try container.encodeIfPresent(geoAnchorBounds, forKey: .geoAnchorBounds)
         if !land.isEmpty {
             try container.encode(land, forKey: .land)
         }
@@ -4155,7 +4167,7 @@ extension GameWorld: Codable {
             ?? townGrowthProblem() {
             return problem
         }
-        if let problem = land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
+        if let problem = mapGrowthProblem() ?? land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
             ?? ground.problem(in: bounds) ?? mapExpansionProblem() ?? roads?.problem(in: bounds) {
             return problem
         }

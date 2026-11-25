@@ -1,0 +1,251 @@
+{
+  "saveVersion" : 113,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 39100,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 2
+        },
+        {
+          "acquired" : 180,
+          "cost" : 300000000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "mapTile",
+          "owner" : 8
+        },
+        {
+          "acquired" : 180,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 3
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 300042100,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 7300000,
+      "width" : 3600000
+    },
+    "clock" : {
+      "now" : 360,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 99699957900,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "geoAnchor" : {
+      "latitude" : 336200000,
+      "longitude" : 1303850000
+    },
+    "geoAnchorBounds" : {
+      "height" : 1400000,
+      "width" : 1100000
+    },
+    "land" : [
+      {
+        "column" : 127,
+        "residents" : [
+          300
+        ],
+        "row" : 165,
+        "use" : "residential"
+      },
+      {
+        "column" : 257,
+        "residents" : [
+          40
+        ],
+        "row" : 337,
+        "use" : "residential"
+      }
+    ],
+    "landBlocks" : [
+      {
+        "column" : 7,
+        "count" : 1,
+        "row" : 10
+      }
+    ],
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Main",
+        "stops" : [
+          1,
+          2
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : {
+          "close" : 1440,
+          "open" : 360
+        }
+      }
+    ],
+    "mapExpansion" : {
+      "granted" : 4,
+      "owned" : [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          0
+        ]
+      ],
+      "ridersStep" : 20000
+    },
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        }
+      ],
+      "nextEdgeID" : 2,
+      "nextNodeID" : 3,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 500000,
+          "y" : 700000,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 900000,
+          "y" : 700000,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 30000,
+          "start" : 10000,
+          "station" : 1
+        },
+        {
+          "edge" : 1,
+          "end" : 390000,
+          "start" : 370000,
+          "station" : 2
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 4,
+    "nextTrainID" : 1,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "West",
+        "point" : {
+          "x" : 520000,
+          "y" : 705000
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "East",
+        "point" : {
+          "x" : 880000,
+          "y" : 705000
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "South",
+        "point" : {
+          "x" : 300000,
+          "y" : 2197152
+        }
+      }
+    ],
+    "terrain" : {
+      "water" : [
+        {
+          "column" : 112,
+          "count" : 1,
+          "row" : 161
+        }
+      ]
+    },
+    "trains" : [
+
+    ]
+  }
+}

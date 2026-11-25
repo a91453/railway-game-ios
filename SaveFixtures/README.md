@@ -473,3 +473,10 @@ its map's airports when it opens the save).
   (`TrackSystemTests.testTheVersion112SaveKeepsItsGuideway`, written with
   `TRACK_SYSTEM_SAVE_NEW=1` by the build that first made it; decision
   951).
+- `v113-grown-map.json`: a world over a real place (two stations, a
+  line, land read in two blocks) that grew to the south and the east,
+  whose company was then given the four tiles the map had been, bought a
+  fifth and built a station on it
+  (`MapGrowthTests.testTheVersion113FixtureLoadsToTheWorldThisBuildMakes`,
+  written with `MAP_GROWTH_SAVE_NEW=1` by the build that first made it;
+  decision 969).
