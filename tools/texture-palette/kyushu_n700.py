@@ -19,6 +19,10 @@
   藍帶的兩條細線併成一條，上下各切出兩成當金線（真車是深藍帶鑲兩條金色細
   線）；貼圖畫成灰色的裙板歸回車身色（真車的裙板是車身色）。
 - 車門（乘務員門與客室門）照貼圖上量出來的外框畫門縫線，門板是車身色。
+  每扇門（門板連門縫線、門窗、門上那一段藍帶與金線）是自己的一塊：沒有一
+  個面跨過門的外框，GLB 裡每扇門自己一個 mesh、一個 node（`…-door-left-1`
+  由車頭端往後編號），之後做到站開門時不用再切網格。和 N700S（`n700s.py`，
+  決策 979）同一種表示。
 - 車頭兩頰的燈各切成兩格：外側頭燈、內側尾燈。
 - 拿掉：凸出側牆 2 cm 的行先表示器薄片（和牆面相距不到 5 cm 的平行面）、
   車鼻外露的連結器（實車有蓋）、通道幌的兩個端面（編組時兩節的端面會疊在
@@ -155,39 +159,45 @@ def parts(gltf, blob):
     return out
 
 
-def write_glb(path: Path, triangles: list[tuple[np.ndarray, int]]):
-    """`triangles`：（3 × 3 的頂點, 材質）；一個材質一個 primitive，頂點併起來。"""
+def write_glb(path: Path, triangles):
+    """`triangles`：（3 × 3 的頂點, 材質, 門名或 None）。車身一個 mesh、一個
+    node，每扇門（門板連門縫線、門窗、門上那一段藍帶）各自一個 mesh、一個
+    node；一個材質一個 primitive，頂點併起來。"""
     binary = bytearray()
-    views, accessors, primitives = [], [], []
-    for material in range(len(MATERIALS)):
-        mine = [corners for corners, paint in triangles if paint == material]
-        if not mine:
-            continue
-        points, lookup, indices = [], {}, []
-        for corners in mine:
-            for corner in corners:
-                key = tuple(int(round(v * 1000)) for v in corner)
-                if key not in lookup:
-                    lookup[key] = len(points)
-                    points.append([k / 1000 for k in key])
-                indices.append(lookup[key])
-        position = np.array(points, "<f4")
-        index = np.array(indices, "<u4")
-        for array, target in ((position, 34962), (index, 34963)):
-            while len(binary) % 4:
-                binary.append(0)
-            views.append({"buffer": 0, "byteOffset": len(binary), "byteLength": array.nbytes, "target": target})
-            binary += array.tobytes()
-        accessors.append({"bufferView": len(views) - 2, "componentType": 5126, "count": len(position), "type": "VEC3",
-                          "min": position.min(0).tolist(), "max": position.max(0).tolist()})
-        accessors.append({"bufferView": len(views) - 1, "componentType": 5125, "count": len(index), "type": "SCALAR"})
-        primitives.append({"attributes": {"POSITION": len(accessors) - 2}, "indices": len(accessors) - 1, "material": material})
+    views, accessors, meshes = [], [], []
+    for part in [None] + sorted({part for _, _, part in triangles if part}):
+        primitives = []
+        meshes.append({"name": path.stem + (f"-{part}" if part else ""), "primitives": primitives})
+        for material in range(len(MATERIALS)):
+            mine = [corners for corners, paint, where in triangles if paint == material and where == part]
+            if not mine:
+                continue
+            points, lookup, indices = [], {}, []
+            for corners in mine:
+                for corner in corners:
+                    key = tuple(int(round(v * 1000)) for v in corner)
+                    if key not in lookup:
+                        lookup[key] = len(points)
+                        points.append([k / 1000 for k in key])
+                    indices.append(lookup[key])
+            position = np.array(points, "<f4")
+            index = np.array(indices, "<u4")
+            for array, target in ((position, 34962), (index, 34963)):
+                while len(binary) % 4:
+                    binary.append(0)
+                views.append({"buffer": 0, "byteOffset": len(binary), "byteLength": array.nbytes, "target": target})
+                binary += array.tobytes()
+            accessors.append({"bufferView": len(views) - 2, "componentType": 5126, "count": len(position), "type": "VEC3",
+                              "min": position.min(0).tolist(), "max": position.max(0).tolist()})
+            accessors.append({"bufferView": len(views) - 1, "componentType": 5125, "count": len(index), "type": "SCALAR"})
+            primitives.append({"attributes": {"POSITION": len(accessors) - 2}, "indices": len(accessors) - 1, "material": material})
     while len(binary) % 4:
         binary.append(0)
     gltf = {
         "asset": {"version": "2.0", "generator": "tools/texture-palette/kyushu_n700.py"},
-        "scene": 0, "scenes": [{"nodes": [0]}], "nodes": [{"mesh": 0, "name": path.stem}],
-        "meshes": [{"name": path.stem, "primitives": primitives}],
+        "scene": 0, "scenes": [{"nodes": list(range(len(meshes)))}],
+        "nodes": [{"mesh": number, "name": mesh["name"]} for number, mesh in enumerate(meshes)],
+        "meshes": meshes,
         "materials": [{"name": name, "pbrMetallicRoughness": {
             "baseColorFactor": [((c / 255) ** 2.2) for c in PREVIEW[i]] + [1.0], "metallicFactor": 0.0, "roughnessFactor": 1.0}}
             for i, name in enumerate(MATERIALS)],
@@ -454,8 +464,25 @@ def settle(polygon, rest: np.ndarray, depth=0):
     return settle(low, rest, depth + 1) + settle(high, rest, depth + 1)
 
 
+def door_at(polygon):
+    """貼圖上的這一格在第幾扇門的外框裡（-1：不在門上）。門縫線的長方形已經
+    沿每扇門的外框把格子切開，所以一格不是整個在門裡就是整個在門外；跨過外
+    框的就停（那樣門就不是自己的一塊）。"""
+    slack = 1e-6
+    cx, cy = centre(polygon)
+    for number, (x0, y0, x1, y1) in enumerate(DOORS):
+        if x0 <= cx <= x1 and y0 <= cy <= y1:
+            if not all(x0 - slack <= x <= x1 + slack and y0 - slack <= y <= y1 + slack for x, y in polygon):
+                raise SystemExit(f"a face crosses the outline of door {number} at {polygon}")
+            return number
+        if any(x0 + slack < x < x1 - slack and y0 + slack < y < y1 - slack for x, y in polygon):
+            raise SystemExit(f"a face crosses the outline of door {number} at {polygon}")
+    return -1
+
+
 def cut_body(part, rectangles, rest, debug=None):
-    """車體：每個三角形照貼圖切開，回傳（3 × 3 的原座標頂點, 類別）。"""
+    """車體：每個三角形照貼圖切開，回傳（3 × 3 的原座標頂點, 類別, 貼圖上第幾
+    扇門或 -1）。"""
     width, height = part["image"].size
     pixel = np.stack([part["uv"][:, 0] * width, (part["uv"][:, 1] % 1.0) * height], 1)
     out = []
@@ -472,7 +499,7 @@ def cut_body(part, rectangles, rest, debug=None):
             # 貼圖上是一個點或一條線（車頂的天線）：照那一點的顏色。
             cx, cy = centre(uv)
             kind = int(classify_point(rectangles, rest, cx, cy))
-            out.append((corners, kind))
+            out.append((corners, kind, -1))
             continue
 
         def lift(point):
@@ -499,8 +526,9 @@ def cut_body(part, rectangles, rest, debug=None):
                 cells += settle(piece, rest)
         for polygon, kind in cells:
             points = [lift(p) for p in polygon]
+            door = door_at(polygon)
             for i in range(1, len(points) - 1):
-                out.append((np.array([points[0], points[i], points[i + 1]]), kind))
+                out.append((np.array([points[0], points[i], points[i + 1]]), kind, door))
             if debug is not None:
                 debug.polygon([(p[0] * 4, p[1] * 4) for p in polygon], fill=PREVIEW[kind], outline=(255, 0, 255))
     return out
@@ -541,7 +569,7 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         Image.fromarray(shown).resize((labels.shape[1] * 3, labels.shape[0] * 3), Image.NEAREST).save(debug_dir / f"{path.stem[:13]}-classes.png")
 
     # 原座標：x 右、y 上、z 沿車身（頭車的車鼻在 -z）。車體照真車尺寸放大。
-    scaled = [(corners * np.array([WIDTH, HEIGHT, LENGTH]), kind) for corners, kind in triangles]
+    scaled = [(corners * np.array([WIDTH, HEIGHT, LENGTH]), kind, door) for corners, kind, door in triangles]
     for piece in pieces:
         if piece is body:
             continue
@@ -552,7 +580,7 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
             # 轉向架：位置跟著車體放大，本身不縮放。
             middle = (low[2] + high[2]) / 2
             moved = world + np.array([0, 0, middle * LENGTH - middle])
-            scaled += [(moved[face], DARK) for face in piece["faces"]]
+            scaled += [(moved[face], DARK, -1) for face in piece["faces"]]
         elif size[1] > 1.5:
             # 通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在連結面上）。
             grown = world * np.array([WIDTH, HEIGHT, LENGTH])
@@ -560,12 +588,12 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
                 corners = grown[face]
                 if np.ptp(corners[:, 2]) < 1e-6:
                     continue
-                scaled.append((corners, DARK))
+                scaled.append((corners, DARK, -1))
         # 其餘（車鼻外露的連結器）不要。
 
     # 轉成輸出的軸（+y 上、車沿 x、駕駛室在 +x）：旋轉，行列式 +1。
-    turned = [(np.stack([-c[:, 2], c[:, 1], c[:, 0]], 1), kind) for c, kind in scaled]
-    xs = np.concatenate([c[:, 0] for c, _ in turned])
+    turned = [(np.stack([-c[:, 2], c[:, 1], c[:, 0]], 1), kind, door) for c, kind, door in scaled]
+    xs = np.concatenate([c[:, 0] for c, _, _ in turned])
     shift = -(xs.max() + xs.min()) / 2
     def normal(corners):
         return np.cross(corners[1] - corners[0], corners[2] - corners[0])
@@ -576,18 +604,52 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
     # 同三個頂點的面只留一個。同向的是重複的面；反向的一對是沒有厚度的雙面
     # 薄片（頭車車頂的天線鰭）：只留一面會從另一側看不到，改成有厚度的實心片。
     faces, plates = {}, {}
-    for corners, kind in turned:
+    for corners, kind, door in turned:
         corners = corners + np.array([shift, 0, 0])
         key = frozenset(point(corner) for corner in corners)
         if len(key) < 3 or np.linalg.norm(normal(corners)) < 1e-7:
             continue  # 沒有面積
         if key not in faces:
-            faces[key] = (corners, kind)
+            faces[key] = (corners, kind, door)
         elif np.dot(normal(faces[key][0]), normal(corners)) < 0:
             plates[key] = faces[key]
     out = [face for key, face in faces.items() if key not in plates]
-    out += solid_plates(list(plates.values()), point, normal)
-    return out, digest
+    out += [(corners, kind, -1) for corners, kind in solid_plates([face[:2] for face in plates.values()], point, normal)]
+    return name_doors(out), digest
+
+
+def name_doors(triangles):
+    """貼圖上的一扇門在車上是好幾扇（兩側，中間車還有前後）：照側面與沿車的
+    位置分開，由車頭端（+x）往後編號。回傳（頂點, 類別, 門名或 None）與每扇門
+    的範圍（公尺：沿車、離軌面、離中線）。"""
+    groups = {}
+    for number, (corners, kind, door) in enumerate(triangles):
+        if door < 0:
+            continue
+        side = "left" if corners[:, 2].mean() < 0 else "right"  # 遊戲的 +y（左）是這裡的 -z
+        groups.setdefault((side, door), []).append((float(corners[:, 0].mean()), number))
+    names = {}
+    doors = []
+    for side in ("left", "right"):
+        clusters = []
+        for (where, _), found in sorted(groups.items()):
+            if where != side:
+                continue
+            first = len(clusters)
+            for x, number in sorted(found, reverse=True):
+                if len(clusters) > first and clusters[-1][-1][0] - x < 0.6:
+                    clusters[-1].append((x, number))
+                else:
+                    clusters.append([(x, number)])
+        clusters.sort(key=lambda cluster: -cluster[0][0])
+        for order, cluster in enumerate(clusters, 1):
+            name = f"door-{side}-{order}"
+            points = np.concatenate([triangles[number][0] for _, number in cluster])
+            for _, number in cluster:
+                names[number] = name
+            doors.append({"name": name, "triangles": len(cluster),
+                          "min": [round(float(v), 3) for v in points.min(0)], "max": [round(float(v), 3) for v in points.max(0)]})
+    return [(corners, kind, names.get(number)) for number, (corners, kind, _) in enumerate(triangles)], doors
 
 
 def solid_plates(plate, point, normal):
@@ -637,15 +699,16 @@ def main():
     args.out_dir.mkdir(parents=True, exist_ok=True)
     report = {}
     for name, path, cab in (("kyushu-n700-cab", args.cab, True), ("kyushu-n700-middle", args.middle, False)):
-        triangles, digest = build(path.expanduser(), cab, args.out_dir if args.debug else None)
+        (triangles, doors), digest = build(path.expanduser(), cab, args.out_dir if args.debug else None)
         expected = SHA256["cab" if cab else "middle"]
         if digest != expected:
             raise SystemExit(f"{path.name}: 不是這個工具認得的原檔（SHA-256 {digest}）")
         write_glb(args.out_dir / f"{name}.glb", triangles)
-        points = np.concatenate([c for c, _ in triangles])
-        counts = {MATERIALS[k]: sum(1 for _, kind in triangles if kind == k) for k in range(len(MATERIALS))}
+        points = np.concatenate([c for c, _, _ in triangles])
+        counts = {MATERIALS[k]: sum(1 for _, kind, _ in triangles if kind == k) for k in range(len(MATERIALS))}
         report[name] = {"sha256": digest, "triangles": len(triangles), "materials": counts,
-                        "min": [round(float(v), 3) for v in points.min(0)], "max": [round(float(v), 3) for v in points.max(0)]}
+                        "min": [round(float(v), 3) for v in points.min(0)], "max": [round(float(v), 3) for v in points.max(0)],
+                        "doors": doors}
     (args.out_dir / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(report, ensure_ascii=False, indent=2))
 

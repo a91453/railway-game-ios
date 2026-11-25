@@ -4,27 +4,27 @@
   "lamps" : "fe5315de0f1fe594",
   "models" : {
     "light-set-kyushuN700-car" : {
-      "hash" : "33fa4506c3ed8c61",
+      "hash" : "af8d1e07c4d3394d",
       "triangles" : 180
     },
     "light-set-kyushuN700-head" : {
-      "hash" : "82aa608e8346ad78",
+      "hash" : "425f43f40f0128a0",
       "triangles" : 120
     },
     "light-set-kyushuN700-tail" : {
-      "hash" : "f07e6930e0d1af78",
+      "hash" : "f4069042311d40a0",
       "triangles" : 120
     },
     "set-kyushuN700-car" : {
-      "hash" : "15550a5e6ddb5ffa",
+      "hash" : "7e9d141e281e2afa",
       "triangles" : 1420
     },
     "set-kyushuN700-head" : {
-      "hash" : "4c2975db7236b557",
+      "hash" : "b92a6419f88e2aaf",
       "triangles" : 1726
     },
     "set-kyushuN700-tail" : {
-      "hash" : "69c91708a709d7d8",
+      "hash" : "4762a1e084e55d3c",
       "triangles" : 1726
     }
   }

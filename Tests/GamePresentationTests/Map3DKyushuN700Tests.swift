@@ -92,6 +92,63 @@ final class Map3DKyushuN700Tests: XCTestCase {
         }
     }
 
+    /// Each door is a piece of its own: no triangle is partly a door's and
+    /// partly the wall's, on either side, so a door can be moved apart
+    /// from the wall (to open at a station) without the mesh cut again.
+    /// Each has its seams and its window with it, and its box holds its
+    /// faces and no whole face of the wall's (436 faces of the cab car's
+    /// six doors, 380 of the middle car's four, as the tool reports them).
+    func testEachDoorIsAPieceOfItsOwn() throws {
+        XCTAssertEqual(Map3DKyushuN700.Unit.allCases.map { Map3DKyushuN700.doors($0).count }, [3, 2])
+        XCTAssertEqual(Map3DKyushuN700.doors(.cab).map(\.crew), [true, false, false])
+        XCTAssertEqual(Map3DKyushuN700.doors(.middle).map(\.crew), [false, false])
+        for unit in Map3DKyushuN700.Unit.allCases {
+            let model = try XCTUnwrap(Map3DKyushuN700.model(unit))
+            // The side walls' triangles.
+            var walls: [(points: [Map3DPoint], color: UInt32)] = []
+            for first in stride(from: 0, to: model.vertices.count, by: 3) {
+                let points = model.vertices[first..<first + 3].map { Map3DPoint($0.x, $0.y, $0.z) }
+                if points.allSatisfy({ abs($0.y) > 1.5 }) { walls.append((points, model.vertices[first].color)) }
+            }
+            // Every seam is some door's: the seams are the doors' outlines.
+            let seams = walls.filter { $0.color == Map3DPalette.steel }
+            XCTAssertFalse(seams.isEmpty, unit.rawValue)
+            for seam in seams {
+                XCTAssertTrue(Map3DKyushuN700.doors(unit).contains { door in seam.points.allSatisfy { door.contains($0) } },
+                              "\(unit.rawValue): a seam that is no door's")
+            }
+            var faces = 0
+            for door in Map3DKyushuN700.doors(unit) {
+                XCTAssertGreaterThan(door.x.upperBound - door.x.lowerBound, 0.6, unit.rawValue)
+                XCTAssertGreaterThan(door.z.upperBound - door.z.lowerBound, 1.6, unit.rawValue)
+                for side in [Float(1), -1] {
+                    var own = 0, glass = 0, seam = 0
+                    for (triangle, color) in walls where triangle[0].y * side > 0 {
+                        if triangle.allSatisfy({ door.contains($0) }) {
+                            own += 1
+                            if color == Map3DTrainStyle.glass { glass += 1 }
+                            if color == Map3DPalette.steel { seam += 1 }
+                        } else if !door.crew {
+                            // (The driver's door is on the nose's taper,
+                            // where its outline is not square to the car:
+                            // the tool's node is its piece, this box only
+                            // its place. A passenger door's outline leans
+                            // up to 2.2 cm in its height, as the old
+                            // texture lies on the wall.)
+                            XCTAssertFalse(triangle.contains { door.contains($0, margin: -0.03) },
+                                           "\(unit.rawValue): a triangle crosses the door at x \(door.x)")
+                        }
+                    }
+                    faces += own
+                    XCTAssertGreaterThan(own, 40, "\(unit.rawValue): the door at x \(door.x), side \(side)")
+                    XCTAssertGreaterThan(glass, 0, unit.rawValue)
+                    XCTAssertGreaterThan(seam, 5, unit.rawValue)
+                }
+            }
+            XCTAssertEqual(faces, unit.isCab ? 436 : 380, "\(unit.rawValue): the doors' faces")
+        }
+    }
+
     /// The glass is marked face by face, so the pack guesses none; the
     /// cab's lamps are at its nose and the middle car has none.
     func testTheGlassAndTheLampsAreMarked() throws {

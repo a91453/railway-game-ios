@@ -48,6 +48,45 @@ public enum Map3DKyushuN700 {
     /// windows the game lights at night and mirrors the sky in.
     static let glassIndex = 3
 
+    /// A door of a car: where its leaf, with its seams, its window and the
+    /// piece of the navy and gold line across it, is on each of the car's
+    /// two side walls. The mesh is cut along this outline, so every
+    /// triangle is wholly a door's or wholly the wall's (the tool writes
+    /// each door as a node of its own too): the doors can be moved apart
+    /// from the wall, to open at a station, without the mesh being cut
+    /// again. (A passenger door's outline is this box, leaning up to 2.2 cm
+    /// in its height as the old texture lies on the wall; the driver's
+    /// door is on the nose's taper, its outline not square to the car, so
+    /// its box is only its place and the tool's node its piece. Either
+    /// way the box holds every face of its door and no whole face of the
+    /// wall's.) As the N700S has them (decision 979).
+    public struct Door: Sendable, Equatable {
+        /// Along the car, metres from its middle, the cab's end positive.
+        public let x: ClosedRange<Float>
+        /// Over the rail, metres.
+        public let z: ClosedRange<Float>
+        /// The driver's own door, by the cab.
+        public let crew: Bool
+
+        /// Whether `point` is on this door, on the side wall its `y` is on.
+        public func contains(_ point: Map3DPoint, margin: Float = 0.002) -> Bool {
+            abs(point.y) > 1.5 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
+                && point.z >= z.lowerBound - margin && point.z <= z.upperBound + margin
+        }
+    }
+
+    /// `unit`'s doors, from its front to its back; each is on both sides.
+    /// As `tools/texture-palette/kyushu_n700.py` reports them.
+    public static func doors(_ unit: Unit) -> [Door] {
+        switch unit {
+        case .cab:
+            [Door(x: 3.756...4.393, z: 1.424...3.120, crew: true), Door(x: 2.610...3.553, z: 1.373...3.231, crew: false),
+             Door(x: -11.923 ... -10.970, z: 1.376...3.231, crew: false)]
+        case .middle:
+            [Door(x: 10.783...11.737, z: 1.375...3.232, crew: false), Door(x: -11.737 ... -10.783, z: 1.375...3.232, crew: false)]
+        }
+    }
+
     /// `unit`'s car, its cab (if it has one) at +x. `nil` if its mesh does
     /// not decode.
     public static func model(_ unit: Unit) -> Map3DModelPack.Model? {
