@@ -757,9 +757,30 @@ extension GameSession {
         )
         let last = plan.nodes.count - 1
         var stretches: [PlayerCommand.TrackStretch] = []
+        // Decision 973: on a mountain line the heights are laid at
+        // ``mountainTraceGrade`` along the way, but an edge's curve is a
+        // little shorter than its piece of the way (it cuts the drawing's
+        // wiggles), and one that came out over GameCore's 70‰ stopped the
+        // trace as too steep. Such an edge's far node is lowered (or
+        // raised) to what its own length climbs, and the next edges make
+        // it up.
+        var lifted: Int64?
         for (index, curve) in plan.curves.enumerated() {
-            let a = index == 0 ? from : WorldCoordinate(x: plan.nodes[index].point.x, y: plan.nodes[index].point.y, z: plan.heights[index])
-            let b = index + 1 == last ? to : WorldCoordinate(x: plan.nodes[index + 1].point.x, y: plan.nodes[index + 1].point.y, z: plan.heights[index + 1])
+            let a = index == 0 ? from : WorldCoordinate(x: plan.nodes[index].point.x, y: plan.nodes[index].point.y, z: lifted ?? plan.heights[index])
+            var b = index + 1 == last ? to : WorldCoordinate(x: plan.nodes[index + 1].point.x, y: plan.nodes[index + 1].point.y, z: plan.heights[index + 1])
+            lifted = nil
+            if climbs, index + 1 != last, index > 0, plan.heights[index] == plan.heights[index + 1] {
+                // A level stretch (a station's) stays level.
+                b = WorldCoordinate(x: b.x, y: b.y, z: a.z)
+                if b.z != plan.heights[index + 1] { lifted = b.z }
+            } else if climbs, index + 1 != last, let steepest = TrackGeometry(from: a, to: b, curve: curve)?.steepestGrade, steepest.run > 0 {
+                let ratio = abs(Double(steepest.rise)) / Double(steepest.run)
+                if ratio > Self.mountainEdgeGrade {
+                    let rise = Double(b.z - a.z) * Self.mountainEdgeGrade / ratio
+                    b = WorldCoordinate(x: b.x, y: b.y, z: a.z + Int64(rise.rounded(.towardZero)))
+                    lifted = b.z
+                }
+            }
             let geometry = TrackGeometry(from: a, to: b, curve: curve)
             let surveyed = geometry.map(NetworkBuilding.surveyedPoints(of:)) ?? []
             // Decision 515: on a mountain line, only what is steeper than
@@ -797,13 +818,14 @@ extension GameSession {
                 // real lines that meet facing the same way, as the
                 // North-Link Line and the Su'ao branch do at Su'aoxin),
                 // said as that.
-                let reach = 60 * RealRailwayTraces.metre
-                let before = path.tangent(at: max(0, plan.distances[index] - reach))
-                let after = path.tangent(at: min(path.length, plan.distances[index + 1] + reach))
-                if before.angle(to: after) > 2 * Double.pi / 3 {
+                let reach = 30 * RealRailwayTraces.metre
+                let turnsBack = stride(from: plan.distances[index], through: plan.distances[index + 1], by: 10 * RealRailwayTraces.metre).contains { along in
+                    path.tangent(at: max(0, along - reach)).angle(to: path.tangent(at: min(path.length, along + reach))) > 2 * Double.pi / 3
+                }
+                if radius < Self.reversalRadius, turnsBack {
                     problem = language.text(
-                        "The real line turns back here: trains reverse at this place, and one stretch of track cannot. Trace it as two stretches, each ending here.",
-                        "真實鐵路在這裡要折返，列車是在這裡調頭的，一段軌道描不過去。請分兩段描，各描到這裡為止。"
+                        "The real line turns back here: trains reverse at this place, and one stretch of track cannot. Trace it as two stretches: first to the station where it turns back, then on from that station.",
+                        "真實鐵路在這裡要折返，列車是在這裡調頭的，一段軌道描不過去。請分兩段描：先描到折返處的車站，再從那個車站往下描。"
                     )
                     brief = language.text("The real line turns back here", "真實鐵路在這裡要折返")
                     break
@@ -867,6 +889,21 @@ extension GameSession {
     /// round its real 40 m curves, and 40 m stopped every trace of it
     /// within a station or two.
     static let urbanTraceMinimumRadius = 20 * RealRailwayTraces.metre
+    /// The tightest on a mountain line (decision 973): 12 m. The Alishan
+    /// Forest Railway's drawn line measures 16 to 19 m at a few places
+    /// round its real 40 m curves (the Dulishan spiral, above Erwanping,
+    /// the Zhushan Line), and 20 m stopped a trace at each; where its
+    /// trains reverse (the switchbacks) the way measures 3 to 6 m, and
+    /// still stops.
+    static let mountainTraceMinimumRadius = 12 * RealRailwayTraces.metre
+    /// Under this, a way that also faces back within 60 m is
+    /// a place where trains reverse, not a curve (decision 973): the
+    /// switchbacks measure 3 to 6 m, the spiral's and the hairpins' real
+    /// curves 16 m and more.
+    static let reversalRadius = 10 * RealRailwayTraces.metre
+    /// The steepest a traced mountain edge is laid (decision 973): just
+    /// under GameCore's 70‰.
+    static let mountainEdgeGrade = 0.069
 
     /// Decision 752: the level a traced station's stretch is laid at
     /// where it stands on a long real viaduct or in a long real tunnel,
@@ -894,6 +931,7 @@ extension GameSession {
     static func traceMinimumRadius(ofSystem system: String?) -> Double {
         switch system {
         case nil, "tra_sched", "thsr_sched": traceMinimumRadius
+        case let system? where mountainSystems.contains(system): mountainTraceMinimumRadius
         default: urbanTraceMinimumRadius
         }
     }
