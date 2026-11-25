@@ -12,6 +12,16 @@ import GameCore
 // hangars stand instead.
 
 extension Map3DScene.Builder {
+    /// Decision 976: the houses along the roads and the land with none,
+    /// kept while the scene is built (``LayerStates/roadside``).
+    struct RoadsideState {
+        /// Decision 385: on a real-world map, the houses along the roads
+        /// (``addFrontage``) and the land with none (``prepareNoBuild``).
+        var streetFrontage = false
+        var frontage = Frontage()
+        var noBuild = NoBuild()
+    }
+
     /// Decision 385: the no-build land round the scene, in scene metres, by
     /// the 64 m cells its outlines' boxes cover.
     struct NoBuild {
@@ -165,19 +175,19 @@ extension Map3DScene.Builder {
                 }
             }
         }
-        self.noBuild = noBuild
+        self.state.roadside.noBuild = noBuild
     }
 
     /// Decision 385: whether scene point `point` is on no-build land.
     func onNoBuildLand(_ point: Map3DPoint) -> Bool {
         // Decision 707: nor by a runway, on a taxiway or an apron.
-        (!noBuild.isEmpty && noBuild.contains(point, cell: chunk(of: point))) || airfieldClear.contains(point)
+        (!state.roadside.noBuild.isEmpty && state.roadside.noBuild.contains(point, cell: chunk(of: point))) || state.lowRise.airfieldClear.contains(point)
     }
 
     /// Decision 385: the terminals, hangars and other buildings of `land`'s
     /// airports in the scene, laid on the world by `frame`.
     mutating func addAirportBuildings(_ land: RealNoBuildLand, frame: RealWorldFrame, clearOf cleared: Set<Map3DScene.ChunkKey>) {
-        guard !noBuild.isEmpty else { return }
+        guard !state.roadside.noBuild.isEmpty else { return }
         for building in land.buildings {
             let places = building.ring.map { frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude) }
             let middle = (x: places.reduce(0) { $0 + $1.x } / Double(places.count), y: places.reduce(0) { $0 + $1.y } / Double(places.count))
@@ -217,8 +227,8 @@ extension Map3DScene.Builder {
     /// those ``isFronted(_:)`` rules out and link roads.
     mutating func prepareFrontage() {
         var frontage = Frontage()
-        for (number, line) in roadLines.enumerated() {
-            let kind = number < roadKinds.count ? roadKinds[number] : nil
+        for (number, line) in state.baseMap.roadLines.enumerated() {
+            let kind = number < state.baseMap.roadKinds.count ? state.baseMap.roadKinds[number] : nil
             for (a, b) in zip(line.points, line.points.dropFirst()) {
                 let index = frontage.pieces.count
                 frontage.pieces.append((a, b, line.half, kind?.kind, kind.map { Self.isFronted($0.kind) && !$0.ramp } ?? false))
@@ -232,7 +242,7 @@ extension Map3DScene.Builder {
                 }
             }
         }
-        self.frontage = frontage
+        self.state.roadside.frontage = frontage
     }
 
     /// Decision 385: the houses of the low homes or shops (`density` 0–2,
@@ -243,11 +253,11 @@ extension Map3DScene.Builder {
     mutating func addFrontage(column: Int, row: Int, density: Int, shops lotShops: Bool, blocked: Set<Map3DScene.ChunkKey>) {
         let key = Map3DScene.ChunkKey(column: column, row: row)
         let laid: LaidFrontage
-        if let done = frontage.laid[key] {
+        if let done = state.roadside.frontage.laid[key] {
             laid = done
         } else {
             laid = layFrontage(key, density: density, shops: lotShops, blocked: blocked)
-            frontage.laid[key] = laid
+            state.roadside.frontage.laid[key] = laid
         }
         drawFrontage(laid, column: column, row: row, density: density)
     }
@@ -255,11 +265,11 @@ extension Map3DScene.Builder {
     /// Decision 385: lays the houses of cell `key` (``addFrontage``).
     mutating func layFrontage(_ key: Map3DScene.ChunkKey, density: Int, shops lotShops: Bool, blocked: Set<Map3DScene.ChunkKey>) -> LaidFrontage {
         var laid = LaidFrontage()
-        guard let near = frontage.byCell[key] else { return laid }
+        guard let near = state.roadside.frontage.byCell[key] else { return laid }
         let cell = Double(Land.cellLength)
-        laid.tallest = lowRise?.cap(worldX: (Double(key.column) + 0.5) * cell, worldY: (Double(key.row) + 0.5) * cell)
+        laid.tallest = state.lowRise.lowRise?.cap(worldX: (Double(key.column) + 0.5) * cell, worldY: (Double(key.row) + 0.5) * cell)
         for index in near {
-            let piece = frontage.pieces[index]
+            let piece = state.roadside.frontage.pieces[index]
             guard piece.fronted, let along = (piece.b - piece.a).normalized else { continue }
             let length = (piece.b - piece.a).length
             guard length >= 4 else { continue }
@@ -315,7 +325,7 @@ extension Map3DScene.Builder {
                         endRun()
                         continue
                     }
-                    frontage.houses[key, default: []].append(house)
+                    state.roadside.frontage.houses[key, default: []].append(house)
                     let shops = lotShops || r(13) < shopShare
                     let wall = Self.pickWall((seed.0 &+ salt, seed.1))
                     laid.houses.append((house, flats, shops, seed, salt, wall))
@@ -396,7 +406,7 @@ extension Map3DScene.Builder {
             guard contains(x: originX + Double(spot.x) * Self.metre, y: originY + Double(spot.z) * Self.metre),
                   !blocked.contains(chunk(of: spot)), !onNoBuildLand(spot) else { return false }
         }
-        if !footprintCover.outlines.isEmpty || !tileCover.outlines.isEmpty {
+        if !state.realCover.footprintCover.outlines.isEmpty || !state.realCover.tileCover.outlines.isEmpty {
             // Every cell its box touches: at most four.
             let low = chunk(of: Map3DPoint(corners.map(\.x).min() ?? 0, 0, corners.map(\.z).min() ?? 0))
             let high = chunk(of: Map3DPoint(corners.map(\.x).max() ?? 0, 0, corners.map(\.z).max() ?? 0))
@@ -404,12 +414,12 @@ extension Map3DScene.Builder {
             for row in low.row...high.row {
                 for column in low.column...high.column { cells.insert(Map3DScene.ChunkKey(column: column, row: row)) }
             }
-            guard !footprintCover.reaches(house, cells: cells), !tileCover.reaches(house, cells: cells) else { return false }
+            guard !state.realCover.footprintCover.reaches(house, cells: cells), !state.realCover.tileCover.reaches(house, cells: cells) else { return false }
         }
         guard !onPlacedGround(corners) else { return false }
         let radius = (house.width * house.width + house.depth * house.depth).squareRoot() / 2
         for index in near {
-            let piece = frontage.pieces[index]
+            let piece = state.roadside.frontage.pieces[index]
             // Far enough from the piece's line that no corner can reach it.
             let d = piece.b - piece.a, p = house.middle - piece.a
             let length2 = d.x * d.x + d.z * d.z
@@ -421,7 +431,7 @@ extension Map3DScene.Builder {
         let cell = chunk(of: house.middle)
         for row in cell.row - 1...cell.row + 1 {
             for column in cell.column - 1...cell.column + 1 {
-                if frontage.houses[Map3DScene.ChunkKey(column: column, row: row)]?.contains(where: { $0.overlaps(house) }) == true { return false }
+                if state.roadside.frontage.houses[Map3DScene.ChunkKey(column: column, row: row)]?.contains(where: { $0.overlaps(house) }) == true { return false }
             }
         }
         return true

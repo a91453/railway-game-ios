@@ -35,7 +35,7 @@ final class Map3DRoadGradeTests: XCTestCase {
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
         builder.trackCover = Map3DTrackCover(snapshot, builder: &builder)
         let map = Map3DBaseMap(roads: roads)
-        builder.roadGrade = builder.gradeMotorways(of: map)
+        builder.state.roadGrade = builder.gradeMotorways(of: map)
         builder.addGround()
         _ = builder.addBaseMap(map)
         builder.addTrenches()
@@ -102,8 +102,8 @@ final class Map3DRoadGradeTests: XCTestCase {
         for z: Float in [100, 512, 900] {
             XCTAssertEqual(try XCTUnwrap(roadTop(150, z, in: meshes)), 20 + Map3DScene.Builder.lift(of: .motorway), accuracy: 0.01)
         }
-        XCTAssertTrue(builder.roadGrade.cells.isEmpty, "a motorway on the plain is never looked up")
-        XCTAssertTrue(builder.roadGrade.cuts.isEmpty)
+        XCTAssertTrue(builder.state.roadGrade.cells.isEmpty, "a motorway on the plain is never looked up")
+        XCTAssertTrue(builder.state.roadGrade.cuts.isEmpty)
         let trunk = Map3DScene.Builder.lift(of: .trunk)
         for x: Float in [300, 448, 512, 600] {
             XCTAssertEqual(try XCTUnwrap(roadTop(x, 800, in: meshes, kind: .trunk)), builder.drawnGround(x: x, z: 800) + trunk, accuracy: 0.01, "at \(x)")

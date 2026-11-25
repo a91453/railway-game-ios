@@ -243,7 +243,7 @@ final class Map3DRoadBridgeTests: XCTestCase {
         for (height, crossing) in [(Int64(18), Map3DRoadBridges.Crossing.overCutting), (22, .overEmbankment), (20, .level)] {
             let world = try flatWorld(track: true, trackHeight: height)
             let builder = built(world, roads: [road([(500, 300), (500, 724)]), road([(100, 300), (400, 300)])])
-            XCTAssertEqual(builder.roadBridges.crossings, [crossing: 1], "track at \(height) m")
+            XCTAssertEqual(builder.state.roadBridges.crossings, [crossing: 1], "track at \(height) m")
             let meshes = meshes(builder)
             let bed = Float(height) + Map3DScene.railLift - Map3DScene.Builder.bedDrop
             let over = roadTop(500, 512, in: meshes)
@@ -324,9 +324,9 @@ final class Map3DRoadBridgeTests: XCTestCase {
         // The drawn ground far under the bed from here on.
         for key in Array(builder.corners.keys) { builder.corners[key] = -200 }
         _ = builder.addBaseMap(Map3DBaseMap(roads: [road([(500, 300), (480, 724)])]))
-        XCTAssertNil(builder.roadBridges.crossings[.overCutting])
-        XCTAssertEqual(builder.roadBridges.crossings.values.reduce(0, +), 1)
-        XCTAssertTrue(builder.roadBridges.joins.allSatisfy { $0.plateau > 0 && $0.plateau.isFinite })
+        XCTAssertNil(builder.state.roadBridges.crossings[.overCutting])
+        XCTAssertEqual(builder.state.roadBridges.crossings.values.reduce(0, +), 1)
+        XCTAssertTrue(builder.state.roadBridges.joins.allSatisfy { $0.plateau > 0 && $0.plateau.isFinite })
     }
 
     /// The concrete of the bridges (girders, parapets, walls, piers).
@@ -504,7 +504,7 @@ extension Map3DSceneMemoryTests {
             let region = WorldRegion(minX: Double(square.column) * side * metre, minY: Double(square.row) * side * metre,
                                      maxX: Double(square.column + 1) * side * metre, maxY: Double(square.row + 1) * side * metre)
             let map = Map3DBaseMap(tiles: tiles, frame: frame, region: region, originX: 0, originY: 0)
-            builder.roadBridges = builder.bridgeDecks(of: map, frame: frame)
+            builder.state.roadBridges = builder.bridgeDecks(of: map, frame: frame)
             for road in map.roads where road.bridgeLevel > 0 {
                 for (a, b) in zip(road.points, road.points.dropFirst()) {
                     guard let (start, end) = Map3DScene.Builder.clipSegment(a, b, to: road.bounds) else { continue }
@@ -578,10 +578,10 @@ extension Map3DSceneMemoryTests {
             let map = Map3DBaseMap(tiles: tiles, frame: frame, region: region, originX: 0, originY: 0)
             // The square's own roads on the ground, each crossing counted once.
             var own = builder
-            own.roadBridges = own.bridgeDecks(of: Map3DBaseMap(roads: map.roads.filter { $0.bridgeLevel == 0 }), frame: frame)
-            for (kind, count) in own.roadBridges.crossings { kinds[kind, default: 0] += count }
-            builder.roadBridges = builder.bridgeDecks(of: map, frame: frame)
-            for join in own.roadBridges.joins {
+            own.state.roadBridges = own.bridgeDecks(of: Map3DBaseMap(roads: map.roads.filter { $0.bridgeLevel == 0 }), frame: frame)
+            for (kind, count) in own.state.roadBridges.crossings { kinds[kind, default: 0] += count }
+            builder.state.roadBridges = builder.bridgeDecks(of: map, frame: frame)
+            for join in own.state.roadBridges.joins {
                 let ground = builder.drawnGround(x: Float(join.point.x), z: Float(join.point.z))
                 let bed = join.height - Map3DRoadBridges.overTrack
                 if bed > ground { banks.append(bed - ground) }
@@ -590,7 +590,7 @@ extension Map3DSceneMemoryTests {
             }
             // Under an embankment tall enough, the road stays on the
             // ground and the bank opens over it.
-            for opening in own.roadBridges.openings {
+            for opening in own.state.roadBridges.openings {
                 let pieces = own.trackCover.pieces.filter { !$0.isTunnel && Map3DRoadBridges.nearest(opening.point, Map3DBaseMap.Point(x: Double($0.a.x), z: Double($0.a.z)),
                                                                                                  Map3DBaseMap.Point(x: Double($0.b.x), z: Double($0.b.z))).distance < 1 }
                 if !pieces.contains(where: { !own.openings(of: [$0.a, $0.b]).spans.isEmpty }) { unopened += 1 }

@@ -325,11 +325,23 @@ struct Map3DUndergroundStations: Sendable {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the underground stations, kept while the scene is
+    /// built (``LayerStates/underground``).
+    struct UndergroundState {
+        /// Decision 860: the underground platforms as laid, for their
+        /// props and screen doors (``addPlatformProps``) only: no canopy,
+        /// building, street or shop stands by them as by those above.
+        var laidUnderground: [LaidPlatform] = []
+        /// Decision 860: the underground platforms and their stations'
+        /// boxes, from the whole network.
+        var undergroundStations = Map3DUndergroundStations()
+    }
+
     /// Decision 860: the underground platforms, solid, and each station's
     /// box round them (``Map3DUndergroundStations``); the platforms kept
     /// (``laidUnderground``) for their props and screen doors.
     mutating func addUndergroundPlatforms() {
-        let underground = undergroundStations
+        let underground = state.underground.undergroundStations
         for (index, platform) in underground.platforms.enumerated() {
             guard platform.line.contains(where: { contains(scenePoint: $0) }) else { continue }
             let line = platform.line, middle = line[line.count / 2]
@@ -356,7 +368,7 @@ extension Map3DScene.Builder {
                let last = Map3DUndergroundStations.locate(line[line.count - 1], along: box.path) {
                 laid.modulesForward = last.along >= first.along
             }
-            laidUnderground.append(laid)
+            state.underground.laidUnderground.append(laid)
         }
         for box in underground.boxes where box.path.contains(where: { contains(scenePoint: $0) }) {
             addUndergroundBox(box, platforms: underground.platforms)

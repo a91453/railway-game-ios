@@ -226,15 +226,30 @@ struct Map3DViaducts: Sendable {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the viaducts, kept while the scene is built
+    /// (``LayerStates/elevated``).
+    struct ElevatedState {
+        /// The feet of the viaducts' piers stood: a street passes under a
+        /// viaduct only where no pier stands in it.
+        var piers: [Map3DPoint] = []
+        /// Decision 407: the viaducts laid and their piers, drawn together
+        /// (``addViaducts()``) so the tracks of a pair share a pier and a
+        /// truss; where the last viaduct laid ended, so the next piece of
+        /// it keeps its piers' spacing.
+        var viaducts = Map3DViaducts()
+        /// Decision 407: the player's track a high-speed line runs on.
+        var highSpeedEdges: Set<TrackEdgeID>?
+    }
+
     /// Decision 407: the player's track high-speed lines run on.
     mutating func highSpeedTrack() -> Set<TrackEdgeID> {
-        if let highSpeedEdges { return highSpeedEdges }
+        if let highSpeedEdges = state.elevated.highSpeedEdges { return highSpeedEdges }
         var edges = Set<TrackEdgeID>()
         for line in world.lines where line.isHighSpeed {
             guard let journey = world.lineJourney(line.id) else { continue }
             for (traversal, _, _) in LineMap.pieces(of: journey, in: world.network) { edges.insert(traversal.edge) }
         }
-        highSpeedEdges = edges
+        state.elevated.highSpeedEdges = edges
         return edges
     }
 
@@ -242,9 +257,9 @@ extension Map3DScene.Builder {
     /// girder; their piers, one under each pair; their parapets and a
     /// truss's sides where no track runs beside them.
     mutating func addViaducts() {
-        guard !viaducts.isEmpty else { return }
-        let laid = viaducts
-        viaducts = Map3DViaducts()
+        guard !state.elevated.viaducts.isEmpty else { return }
+        let laid = state.elevated.viaducts
+        state.elevated.viaducts = Map3DViaducts()
         let cells = laid.segmentCells()
         for (number, piece) in laid.pieces.enumerated() {
             let line = piece.line, look = piece.viaduct.look(over: piece.kind)
@@ -444,7 +459,7 @@ extension Map3DScene.Builder {
             // Decision 869: none under a deck a suspension bridge's cables carry.
             guard top.y - foot > 0.5, !hangsFromCables(x: top.x, z: top.z) else { continue }
             let base = Map3DPoint(top.x, foot, top.z), capFoot = top.y - look.capDepth
-            piers.append(base)
+            state.elevated.piers.append(base)
             mesh(at: base) { mesh in
                 switch look.pier {
                 case let .wall(along, wide, cap):

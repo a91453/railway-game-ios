@@ -106,10 +106,10 @@ final class Map3DGuidewayTests: XCTestCase {
             XCTAssertFalse(base.contains(Map3DPalette.ballast), "\(kind)")
             XCTAssertTrue(base.contains(kind.body[0].colour), "\(kind)")
             XCTAssertTrue(colours(builder.nearMeshes).contains(Map3DGuideway.dark), "\(kind)")
-            XCTAssertEqual(builder.guidedTrackLines, Set(builder.trackLines.indices), "\(kind)")
+            XCTAssertEqual(builder.state.track.guidedTrackLines, Set(builder.state.track.trackLines.indices), "\(kind)")
             // The beam's top where the trains' z 0 is drawn (the
             // suspended beam's portal frames' crossbars on it).
-            let track = try XCTUnwrap(builder.trackLines.first?.points.first).y
+            let track = try XCTUnwrap(builder.state.track.trackLines.first?.points.first).y
             let top = builder.meshes.values.flatMap(\.vertices).filter { $0.color == kind.body[0].colour }.map(\.y).max()
             let bar = kind == .suspended ? Map3DGuideway.portalBar : 0
             XCTAssertEqual(try XCTUnwrap(top), track + kind.runningSurface + (kind.body.map(\.top).max() ?? 0) + bar, accuracy: 0.01, "\(kind)")
@@ -120,14 +120,14 @@ final class Map3DGuidewayTests: XCTestCase {
     /// stands ``Map3DScene/Builder/platformHeight`` over it stands on it.
     func testThePlatformsAreLevelWithTheDoors() throws {
         let rail = built(try laid(.c).world)
-        let railTrack = try XCTUnwrap(rail.trackLines.first?.points.first).y
-        XCTAssertEqual(try XCTUnwrap(rail.laidPlatforms.first?.line.first).y, railTrack, accuracy: 0.01)
+        let railTrack = try XCTUnwrap(rail.state.track.trackLines.first?.points.first).y
+        XCTAssertEqual(try XCTUnwrap(rail.state.platforms.laidPlatforms.first?.line.first).y, railTrack, accuracy: 0.01)
         for type in [TrainType.monorail, .maglev, .skyRail] {
             let builder = built(try laid(type).world)
             let kind = try XCTUnwrap(Map3DGuideway.Kind(type))
-            let track = try XCTUnwrap(builder.trackLines.first?.points.first).y
-            XCTAssertEqual(builder.laidPlatforms.count, 2, "\(kind)")
-            for platform in builder.laidPlatforms {
+            let track = try XCTUnwrap(builder.state.track.trackLines.first?.points.first).y
+            XCTAssertEqual(builder.state.platforms.laidPlatforms.count, 2, "\(kind)")
+            for platform in builder.state.platforms.laidPlatforms {
                 XCTAssertEqual(try XCTUnwrap(platform.line.first).y + Map3DScene.Builder.platformHeight, track + kind.platformTop, accuracy: 0.01)
                 XCTAssertGreaterThanOrEqual(abs(platform.offset) - platform.width / 2, kind.platformEdge - 0.01, "\(kind)")
             }
@@ -185,7 +185,7 @@ final class Map3DGuidewayTests: XCTestCase {
         let builder = built(try laid(.skyRail).world)
         let legs = builder.meshes.values.flatMap(\.vertices).filter { $0.color == Map3DGuideway.steel || $0.color == Map3DColor.shaded(Map3DGuideway.steel, 0.92) }
         XCTAssertFalse(legs.isEmpty)
-        for platform in try XCTUnwrap(builder.guidewayEdges?.hung) {
+        for platform in try XCTUnwrap(builder.state.guideway.guidewayEdges?.hung) {
             let middle = platform[platform.count / 2]
             XCTAssertFalse(legs.contains { abs($0.x - middle.x) < 1 && abs($0.z - middle.z) < 3 && $0.y < middle.y })
         }
@@ -220,7 +220,7 @@ final class Map3DGuidewayTests: XCTestCase {
             XCTAssertEqual(Map3DGuideway.edges(in: laid.world), [beam: kind], "\(kind)")
             let builder = built(laid.world)
             XCTAssertTrue(colours(builder.meshes).contains(kind.body[0].colour), "\(kind)")
-            XCTAssertFalse(builder.guidedTrackLines.isEmpty, "\(kind)")
+            XCTAssertFalse(builder.state.track.guidedTrackLines.isEmpty, "\(kind)")
             XCTAssertTrue(colours(builder.meshes).contains(Map3DPalette.railTop), "\(kind): the ordinary line keeps its rails")
         }
     }

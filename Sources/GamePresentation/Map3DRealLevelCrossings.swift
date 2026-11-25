@@ -34,13 +34,13 @@ extension Map3DScene.Builder {
     /// walkers lifted over its deck.
     mutating func addRealLevelCrossings() {
         var segments: [(p: Map3DPoint, q: Map3DPoint)] = []
-        for (number, line) in trackLines.enumerated() where line.kind == .surface && !guidedTrackLines.contains(number) {
+        for (number, line) in state.track.trackLines.enumerated() where line.kind == .surface && !state.track.guidedTrackLines.contains(number) {
             for (p, q) in zip(line.points, line.points.dropFirst()) { segments.append((p, q)) }
         }
-        for line in realSurfaceLines {
+        for line in state.realTrains.realSurfaceLines {
             for (p, q) in zip(line, line.dropFirst()) { segments.append((p, q)) }
         }
-        guard !segments.isEmpty, !groundRoadLines.isEmpty else { return }
+        guard !segments.isEmpty, !state.baseMap.groundRoadLines.isEmpty else { return }
         var index: [Int64: [Int]] = [:]
         for (number, segment) in segments.enumerated() {
             let (p, q) = segment
@@ -49,7 +49,7 @@ extension Map3DScene.Builder {
             }
         }
         var found: [Map3DLevelCrossing] = []
-        for road in groundRoadLines where road.points.count >= 2 {
+        for road in state.baseMap.groundRoadLines where road.points.count >= 2 {
             let line = road.points
             // Each track crossed: how far along the road, where (at the
             // rails' height), the track's way and the road's.
@@ -95,7 +95,7 @@ extension Map3DScene.Builder {
                                                   trackWay: low.way, spread: high.d - low.d)
                 guard contains(x: originX + Double(at.x) * Self.metre, y: originY + Double(at.z) * Self.metre),
                       !found.contains(where: { abs($0.point.x - at.x) < 2 && abs($0.point.z - at.z) < 2 }),
-                      !crossings.contains(where: { abs($0.point.x - at.x) < 2 && abs($0.point.z - at.z) < 2 }) else { continue }
+                      !state.streets.crossings.contains(where: { abs($0.point.x - at.x) < 2 && abs($0.point.z - at.z) < 2 }) else { continue }
                 // On the level: the deck just over the road, which is not
                 // lifted over the track there.
                 let surface = drawnGround(x: at.x, z: at.z) + Self.lift(of: road.kind)
@@ -107,9 +107,9 @@ extension Map3DScene.Builder {
             }
         }
         guard !found.isEmpty else { return }
-        let start = crossings.count
-        crossings += found
-        for number in start..<crossings.count { crossings[number].gateFeet = addLevelCrossing(crossings[number]) }
+        let start = state.streets.crossings.count
+        state.streets.crossings += found
+        for number in start..<state.streets.crossings.count { state.streets.crossings[number].gateFeet = addLevelCrossing(state.streets.crossings[number]) }
         streetLife.lift(over: found)
     }
 }

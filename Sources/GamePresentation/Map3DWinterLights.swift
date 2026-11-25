@@ -314,6 +314,13 @@ public struct Map3DWinterLights: Equatable, Sendable {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the winter event's decorations, kept while the scene
+    /// is built (``LayerStates/winter``).
+    struct WinterState {
+        /// Decision 794: the winter event's trees and lights laid.
+        var winterDecor: [Map3DWinterLights.Placement] = []
+    }
+
     /// Decision 794: where the winter event's trees and lights go
     /// (``winterDecor``): the lights along each station building's front
     /// under its eaves, a tree on a big station's plaza where nothing is
@@ -322,10 +329,10 @@ extension Map3DScene.Builder {
     /// trees keep to what they leave.
     mutating func addWinterDecor(frame: RealWorldFrame?) {
         typealias Lights = Map3DWinterLights
-        for front in stationFronts {
+        for front in state.stations.stationFronts {
             let right = front.forward.cross(.up)
             for at in front.strings {
-                winterDecor.append(.init(decor: .lightString, point: at, forward: right))
+                state.winter.winterDecor.append(.init(decor: .lightString, point: at, forward: right))
             }
             guard front.big else { continue }
             // XMAS-TREE-SIZE: the biggest tree the plaza has room for.
@@ -336,13 +343,13 @@ extension Map3DScene.Builder {
                 let corners: [(Float, Float)] = [(-half, -half), (half, -half), (half, half), (-half, half)]
                 let footprint = corners.map { spot + front.forward * $0.0 + right * $0.1 }
                 guard isClear(footprint, facing: front.forward), isClearOfBuildings(spot, radius: half) else { continue }
-                winterDecor.append(.init(decor: .treeMedium, point: Map3DPoint(spot.x, drawnGround(x: spot.x, z: spot.z), spot.z),
+                state.winter.winterDecor.append(.init(decor: .treeMedium, point: Map3DPoint(spot.x, drawnGround(x: spot.x, z: spot.z), spot.z),
                                          forward: front.forward, scale: scale))
                 break
             }
         }
-        for exit in exitLights {
-            winterDecor.append(.init(decor: .lightString, point: exit.at, forward: exit.forward))
+        for exit in state.stations.exitLights {
+            state.winter.winterDecor.append(.init(decor: .lightString, point: exit.at, forward: exit.forward))
         }
         guard let frame else { return }
         for plaza in Lights.plazas {
@@ -360,7 +367,7 @@ extension Map3DScene.Builder {
                     return !underLandmark(spot) && isClear(footprint, facing: Map3DPoint(1, 0, 0))
                         && isClearOfBuildings(spot, radius: Lights.plazaTreeFoot * scale)
                 }) else { continue }
-                winterDecor.append(.init(decor: .treeLarge, point: Map3DPoint(spot.x, drawnGround(x: spot.x, z: spot.z), spot.z),
+                state.winter.winterDecor.append(.init(decor: .treeLarge, point: Map3DPoint(spot.x, drawnGround(x: spot.x, z: spot.z), spot.z),
                                          forward: Map3DPoint(1, 0, 0), scale: scale))
                 break
             }
@@ -377,7 +384,7 @@ extension Map3DScene.Builder {
     /// (``houseFootprints``, ``shopFootprints``), each a convex outline
     /// on the ground.
     func isClearOfBuildings(_ spot: Map3DPoint, radius: Float) -> Bool {
-        !(houseFootprints + shopFootprints).contains { Self.distance(from: spot, to: $0) < radius }
+        !(state.stations.houseFootprints + state.shops.shopFootprints).contains { Self.distance(from: spot, to: $0) < radius }
     }
 
     /// How far `point` is from the convex outline `corners` on the

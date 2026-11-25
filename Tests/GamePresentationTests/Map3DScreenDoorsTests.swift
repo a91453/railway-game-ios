@@ -112,7 +112,7 @@ final class Map3DScreenDoorsTests: XCTestCase {
         var builder = Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                               world: world)
         let line = stride(from: Float(-75), through: 75, by: 15).map { Map3DPoint($0, Map3DScene.railLift, 0) }
-        builder.laidPlatforms = [Builder.LaidPlatform(station: station, line: line, offset: 1.6 + 2, width: 4, structure: .elevated,
+        builder.state.platforms.laidPlatforms = [Builder.LaidPlatform(station: station, line: line, offset: 1.6 + 2, width: 4, structure: .elevated,
                                                       edge: edge)]
         return builder
     }
@@ -148,7 +148,7 @@ final class Map3DScreenDoorsTests: XCTestCase {
         let openings = pieces.filter(\.door).count
         XCTAssertGreaterThan(openings, 0)
         var alone = Map3DMesh()
-        let path = try XCTUnwrap(Map3DStreetLife.Path(with.laidPlatforms[0].line))
+        let path = try XCTUnwrap(Map3DStreetLife.Path(with.state.platforms.laidPlatforms[0].line))
         Builder.addScreenDoors(&alone, path: path, across: 1.6 + Doors.setBack, top: top, pieces: pieces, doors: .full)
         XCTAssertLessThanOrEqual(alone.triangleCount, openings * 36 + 8, "\(alone.triangleCount) triangles for \(openings) doors")
         print("SCREEN-DOORS: Wenhu line platform, \(openings) doors, \(alone.triangleCount) triangles")

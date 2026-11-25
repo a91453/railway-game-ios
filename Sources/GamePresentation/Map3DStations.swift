@@ -254,6 +254,51 @@ extension StationKitBuilder {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the stations' buildings and what stands round them,
+    /// kept while the scene is built (``LayerStates/stations``).
+    struct StationState {
+        /// Decision 436: each station's station kit system
+        /// (``Map3DStationKit/Station/system``), as ``addStations`` found it.
+        var stationSystems: [StationID: String] = [:]
+        /// Decision 874: the stations under a shell of their own
+        /// (decision 827), with no kit canopy a sign could hang from.
+        var shellRoofed: Set<StationID> = []
+        /// Decision 936: the stations a real building stands for
+        /// (decision 625).
+        var studiedStations: Set<StationID> = []
+        /// Decision 458: each station building's middle, the way its
+        /// front faces, its depth and width, for the bushes on its plaza.
+        /// Decision 794: and its top and whether it is a big station's,
+        /// for the winter event's lights and tree.
+        var stationFronts: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float, top: Float, big: Bool, strings: [Map3DPoint])] = []
+        /// WINTER-LIGHTS-2: the lights on the stations' exits and stair
+        /// entrances: the middle of each length and the way it runs.
+        var exitLights: [(at: Map3DPoint, forward: Map3DPoint)] = []
+        /// The corners of each station building's ground.
+        var houseFootprints: [[Map3DPoint]] = []
+        /// MRT-SHELL-CLEAR-OUTLINE: the outlines of the stations' own
+        /// buildings (the Tamsui line's shells, the kit's houses, the
+        /// depots' sheds), ``Map3DScene/Builder/stationOutlineMargin``
+        /// wider, where a real building is left out; and the 64 m cells
+        /// only they take, where no city lot goes but the real buildings
+        /// round them stay (``underRailway(_:)``).
+        var stationOutlines: [StationOutline] = []
+        /// MRT-SHELL-CLEAR-OUTLINE: the pieces of the track and the
+        /// platforms out of tunnels, with how far round them no real
+        /// building stands, by the 64 m cells they reach (``onTrack(_:)``).
+        var trackPieces: [ChunkKey: [(a: Map3DPoint, b: Map3DPoint, reach: Float)]] = [:]
+        var outlineOnlyCells: Set<ChunkKey> = []
+        /// Decision 331: the big stations' buildings, for their commercial
+        /// kit (`addStationCommerce`).
+        var bigStations: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float)] = []
+        /// The shop streets still to lay beside the station buildings.
+        var shopStreets: [(station: Map3DStationKit.Station, centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float,
+                           cells: Set<ChunkKey>)] = []
+        /// Decision 722: the triangles of the station kit's buildings among
+        /// ``ownColourNear``'s, which hold the studies' too.
+        var houseTriangleCount = 0
+    }
+
     /// A platform as ``addPlatforms(_:)`` laid it: its line at the rails'
     /// height, how far its middle lies to the line's right and how wide
     /// it is, and what carries its track.
@@ -309,19 +354,19 @@ extension Map3DScene.Builder {
             // raised platforms, not only those laid in this block of
             // chunks, so a block holding part of the station agrees.
             let network = snapshot.platforms.map { (station: $0.platform.station, structure: $0.structure, points: $0.points) }
-            let lines = Self.shellLines(laid: laidPlatforms, network: network) { self.point($0) + Self.lifted }
+            let lines = Self.shellLines(laid: state.platforms.laidPlatforms, network: network) { self.point($0) + Self.lifted }
             for (id, platformLines) in lines.sorted(by: { $0.key < $1.key }) where world.station(id: id)?.isDepot != true {
                 if let shell = taipeiMRTShell(platforms: platformLines, frame: frame) { shells[id] = shell }
             }
         }
         addCanopies(skipping: Set(shells.keys))
-        shellRoofed = Set(shells.keys)
+        state.stations.shellRoofed = Set(shells.keys)
         let tunnels = snapshot.platforms.filter { platform in
             platform.structure == .tunnel && platform.points.count > 1
                 && platform.points.contains { contains(x: Double($0.x), y: Double($0.y)) }
         }
         var laid: [StationID: [LaidPlatform]] = [:], under: [StationID: [[Map3DPoint]]] = [:]
-        for platform in laidPlatforms { laid[platform.station, default: []].append(platform) }
+        for platform in state.platforms.laidPlatforms { laid[platform.station, default: []].append(platform) }
         for platform in tunnels { under[platform.platform.station, default: []].append(platform.points.map { point($0) + Self.lifted }) }
         var cells = Set<Map3DScene.ChunkKey>()
         // MRT-SHELL-CLEAR-OUTLINE: the cells of the buildings with an
@@ -342,7 +387,7 @@ extension Map3DScene.Builder {
                 : .surface(platforms: open.count, longest: longest.length)
             let world = (x: originX + Double(middle.point.x) * Self.metre, y: originY + Double(middle.point.z) * Self.metre)
             let station = Map3DStationKit.recipe(for: id, at: world, layout: layout, frame: frame)
-            stationSystems[id] = station.system
+            state.stations.stationSystems[id] = station.system
             found.append((id, station, open, longest, middle))
             // Decision 721: the station's own light on the ground round it
             // after dark, wide and soft, so its building stands against it.
@@ -383,7 +428,7 @@ extension Map3DScene.Builder {
                     guard place.x >= reach.minX, place.x <= reach.maxX, place.y >= reach.minY, place.y <= reach.maxY else { continue }
                 }
                 if standing[study] == nil {
-                    standing[study] = stationExteriors.contains { $0.station == study } || exteriorStands(study, snapshot: snapshot, frame: frame)
+                    standing[study] = state.exteriors.stationExteriors.contains { $0.station == study } || exteriorStands(study, snapshot: snapshot, frame: frame)
                 }
                 if standing[study] == true { return study }
             }
@@ -401,7 +446,7 @@ extension Map3DScene.Builder {
                 outlined.formUnion(outlining { $0.addTaipeiMRTShell(shell.station, at: shell.placement) })
             } else if let study = exterior(for: id, profile: station.profile, at: anchors[id] ?? middle.point) {
                 // Decision 625: the real building stands for it.
-                studiedStations.insert(id)
+                state.stations.studiedStations.insert(id)
                 if let expansion = self.world.station(id: id)?.expansion, let frame {
                     cells.formUnion(addExpansionWings(expansion, beside: study, frame: frame, snapshot: snapshot))
                 }
@@ -413,13 +458,13 @@ extension Map3DScene.Builder {
             // Decision 837: its freight yard, beside platforms on the
             // ground, away from its building.
             if let product = yards[id], open.contains(where: { $0.structure != .elevated && $0.structure != .bridge }) {
-                let house = stationFronts.last { ($0.centre - middle.point).length < 60 }?.forward
+                let house = state.stations.stationFronts.last { ($0.centre - middle.point).length < 60 }?.forward
                 cells.formUnion(addFreightYard(product, at: id, platforms: open.filter { $0.structure != .elevated && $0.structure != .bridge },
                                                house: house, middle: middle))
             }
         }
         if shops { addShopStreets() }
-        outlineOnlyCells.formUnion(outlined.subtracting(cells))
+        state.stations.outlineOnlyCells.formUnion(outlined.subtracting(cells))
         return cells.union(outlined)
     }
 
@@ -428,9 +473,9 @@ extension Map3DScene.Builder {
     /// kept in ``stationOutlines``, so the real buildings round it are
     /// judged by that outline, not by the whole 64 m cells it touches.
     private mutating func outlining(_ build: (inout Self) -> Set<Map3DScene.ChunkKey>) -> Set<Map3DScene.ChunkKey> {
-        let before = houseFootprints.count
+        let before = state.stations.houseFootprints.count
         let taken = build(&self)
-        stationOutlines.append(contentsOf: houseFootprints[before...].map { StationOutline($0, margin: Self.stationOutlineMargin) })
+        state.stations.stationOutlines.append(contentsOf: state.stations.houseFootprints[before...].map { StationOutline($0, margin: Self.stationOutlineMargin) })
         return taken
     }
 
@@ -448,22 +493,22 @@ extension Map3DScene.Builder {
     /// of tunnels, by the cells their pieces reach: after the platforms
     /// are laid, before the real buildings.
     mutating func indexTrackOutline() {
-        trackPieces = [:]
+        state.stations.trackPieces = [:]
         func add(_ points: [Map3DPoint], reach: Float) {
             for (a, b) in zip(points, points.dropFirst()) {
                 let low = chunk(of: Map3DPoint(min(a.x, b.x) - reach, 0, min(a.z, b.z) - reach))
                 let high = chunk(of: Map3DPoint(max(a.x, b.x) + reach, 0, max(a.z, b.z) + reach))
                 for row in low.row...high.row {
                     for column in low.column...high.column {
-                        trackPieces[Map3DScene.ChunkKey(column: column, row: row), default: []].append((a, b, reach))
+                        state.stations.trackPieces[Map3DScene.ChunkKey(column: column, row: row), default: []].append((a, b, reach))
                     }
                 }
             }
         }
-        for line in trackLines where line.kind != .tunnel { add(line.points, reach: Self.trackClearance) }
+        for line in state.track.trackLines where line.kind != .tunnel { add(line.points, reach: Self.trackClearance) }
         // A platform beside its track's line, as wide as it is, and a
         // metre more.
-        for platform in laidPlatforms where platform.structure != .tunnel {
+        for platform in state.platforms.laidPlatforms where platform.structure != .tunnel {
             add(platform.line, reach: max(Self.trackClearance, abs(platform.offset) + platform.width / 2 + 1))
         }
     }
@@ -474,12 +519,12 @@ extension Map3DScene.Builder {
     /// 64 m cell the track ran through was left out: whole blocks beside
     /// a viaduct.
     func onTrack(_ ring: [Map3DPoint]) -> Bool {
-        guard !trackPieces.isEmpty, ring.count >= 3 else { return false }
+        guard !state.stations.trackPieces.isEmpty, ring.count >= 3 else { return false }
         let low = chunk(of: Map3DPoint(ring.map(\.x).min() ?? 0, 0, ring.map(\.z).min() ?? 0))
         let high = chunk(of: Map3DPoint(ring.map(\.x).max() ?? 0, 0, ring.map(\.z).max() ?? 0))
         for row in low.row...high.row {
             for column in low.column...high.column {
-                for piece in trackPieces[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
+                for piece in state.stations.trackPieces[Map3DScene.ChunkKey(column: column, row: row)] ?? [] {
                     let (a, b, reach) = piece
                     if Self.inside(a, [ring]) { return true }
                     for (at, c) in ring.enumerated() {
@@ -505,7 +550,7 @@ extension Map3DScene.Builder {
     /// drawn.
     func underRailway(_ ring: [Map3DPoint]) -> Bool {
         guard ring.count >= 3 else { return false }
-        return stationOutlines.contains { $0.overlaps(ring) } || onTrack(ring)
+        return state.stations.stationOutlines.contains { $0.overlaps(ring) } || onTrack(ring)
     }
 
     /// Decision 322: the shop streets of the stations' buildings laid so
@@ -513,10 +558,10 @@ extension Map3DScene.Builder {
     mutating func addShopStreets() {
         let saved = target
         defer { target = saved }
-        for street in shopStreets {
+        for street in state.stations.shopStreets {
             addShopStreet(street.station, centre: street.centre, forward: street.forward, depth: street.depth, wide: street.wide, cells: street.cells)
         }
-        shopStreets = []
+        state.stations.shopStreets = []
     }
 
     /// The kit's canopy over the middle three fifths of each platform (as
@@ -524,7 +569,7 @@ extension Map3DScene.Builder {
     /// (decision 506, later: ``Map3DStationKit/canopyShare(_:)``), in
     /// pieces of at most 8 m along its line; far off the flat canopy.
     private mutating func addCanopies(skipping roofed: Set<StationID> = []) {
-        for platform in laidPlatforms where !roofed.contains(platform.station) {
+        for platform in state.platforms.laidPlatforms where !roofed.contains(platform.station) {
             let share = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
             let middle = Self.middle(of: platform.line, share: share)
             guard let path = Map3DStreetLife.Path(middle) else { continue }
@@ -607,7 +652,7 @@ extension Map3DScene.Builder {
         let key = key(of: centre)
         if !isCoarse(key) {
             ownColourNear[key, default: Map3DMesh()].append(near)
-            houseTriangleCount += near.triangleCount
+            state.stations.houseTriangleCount += near.triangleCount
         }
         ownColourFar[key, default: Map3DMesh()].append(far)
         target = .near
@@ -621,14 +666,14 @@ extension Map3DScene.Builder {
         let columns = corners.map { index($0.x, originX) }, rows = corners.map { index($0.z, originY) }
         var cells = Set<Map3DScene.ChunkKey>()
         for row in rows.min()!...rows.max()! { for column in columns.min()!...columns.max()! { cells.insert(Map3DScene.ChunkKey(column: column, row: row)) } }
-        houseFootprints.append(corners)
+        state.stations.houseFootprints.append(corners)
         // Decision 322: the shop street on the plaza they leave.
-        shopStreets.append((station, centre, forward, depth, wide, cells))
+        state.stations.shopStreets.append((station, centre, forward, depth, wide, cells))
         // WINTER-LIGHTS-2: the lights on the building's own front.
         let strings = Map3DWinterLights.strings(on: kit.mesh).map { foot + forward * ($0.x + shift.x) + right * ($0.z + shift.z) + Map3DPoint(0, $0.y, 0) }
-        stationFronts.append((centre, forward, depth, wide, bounds.max.y, Self.isBig(station) || platforms.count >= Map3DWinterLights.bigPlatforms, strings))
+        state.stations.stationFronts.append((centre, forward, depth, wide, bounds.max.y, Self.isBig(station) || platforms.count >= Map3DWinterLights.bigPlatforms, strings))
         // Decision 331: a big station's commercial kit, later.
-        if Self.isBig(station) { bigStations.append((centre, forward, depth)) }
+        if Self.isBig(station) { state.stations.bigStations.append((centre, forward, depth)) }
         return cells
     }
 
@@ -666,7 +711,7 @@ extension Map3DScene.Builder {
         // How far the track points within `from` to `to` metres of
         // `anchor` that way lie, beside the building's length.
         func farthest(_ side: Float, from: Float, to: Float, at anchor: Map3DPoint) -> [Float] {
-            trackLines.flatMap { line in
+            state.track.trackLines.flatMap { line in
                 line.points.compactMap { p -> Float? in
                     let d = p - anchor, across = d.dot(middle.right) * side, along = abs(d.dot(middle.along))
                     return across > from && across < to && along < wide / 2 + 4 ? across : nil
@@ -766,7 +811,7 @@ extension Map3DScene.Builder {
             }
             let along = Map3DPoint(piece.forward.x, 0, piece.forward.z).normalized ?? Map3DPoint(1, 0, 0), right = along.cross(.up)
             for string in Map3DWinterLights.exitStrings {
-                exitLights.append((foot + along * string.x + right * string.z + Map3DPoint(0, string.y, 0), along))
+                state.stations.exitLights.append((foot + along * string.x + right * string.z + Map3DPoint(0, string.y, 0), along))
             }
         }
     }

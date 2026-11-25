@@ -144,7 +144,7 @@ final class Map3DRealGroundTests: XCTestCase {
     /// scene metres, with `roads` (middle line, half width) laid.
     private func room(_ roads: [(points: [Map3DPoint], half: Float)], side: Int = 40) -> (x: Double, z: Double, side: Int)? {
         var builder = builder()
-        builder.roadLines = roads
+        builder.state.baseMap.roadLines = roads
         let key = Map3DScene.ChunkKey(column: 0, row: 0)
         let metre = Double(WorldCoordinate.unitsPerMetre)
         return builder.roomBesideRoads(column: 0, row: 0, side: side, in: builder.roadPieces(near: [key])[key] ?? [])
