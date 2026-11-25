@@ -12,6 +12,30 @@ import GameCore
 // so a park keeps its shape on a 64 m grid.
 
 extension Map3DScene.Builder {
+    /// Decision 976: the base map's water, woods and roads as read, kept
+    /// while the scene is built (``LayerStates/baseMap``).
+    struct BaseMapState {
+        /// Decision 407: on a real-world map, the base map's water areas
+        /// by the 64 m cell, each area's rings cut to the cell; where the
+        /// railway crosses one, it is on a truss.
+        var waterCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
+        /// Decision 458: the base map's woods and grass the same way, for
+        /// the conifers and the bushes beside the line.
+        var woodCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
+        var grassCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
+        /// Decision 941 (later, LEVEL-CROSSING-REAL-MAP): the roads laid on
+        /// the ground (no bridge, link road or motorway), for where the real
+        /// lines' track crosses them on the level
+        /// (``addRealLevelCrossings()``).
+        var groundRoadLines: [(points: [Map3DPoint], kind: Map3DBaseMap.RoadKind)] = []
+        /// Decision 322: every road's middle line and how far either side
+        /// its carriageway and pavement reach, metres.
+        var roadLines: [(points: [Map3DPoint], half: Float)] = []
+        /// Decision 385: each of ``roadLines``' kind, and whether it is a
+        /// link road.
+        var roadKinds: [(kind: Map3DBaseMap.RoadKind, ramp: Bool)] = []
+    }
+
     /// How far over the ground each part of the base map lies, in metres:
     /// each cover over the ones before it, the roads over the water, the
     /// bigger roads over the smaller, and all of them under the shadows
@@ -76,9 +100,9 @@ extension Map3DScene.Builder {
     mutating func addBaseMap(_ map: Map3DBaseMap) -> TakenGround {
         var taken = TakenGround()
         // Decision 865: its roads' beds, before anything is laid on them.
-        roadBed = roadBed(of: map)
+        state.roadBed = roadBed(of: map)
         // Decision 391: its bridges' decks, before the roads on them.
-        roadBridges = bridgeDecks(of: map, frame: RealWorldFrame(world: world))
+        state.roadBridges = bridgeDecks(of: map, frame: RealWorldFrame(world: world))
         // Decision 822: a river's or a lake's islands (its holes) under
         // every cover, so one the tiles give no cover of its own is no
         // bare ground in the water (IMG_5324's grey strips).
@@ -126,7 +150,7 @@ extension Map3DScene.Builder {
     func roadPieces(near cells: Set<Map3DScene.ChunkKey>) -> [Map3DScene.ChunkKey: [(a: Map3DPoint, b: Map3DPoint, half: Float)]] {
         var pieces: [Map3DScene.ChunkKey: [(a: Map3DPoint, b: Map3DPoint, half: Float)]] = [:]
         guard !cells.isEmpty else { return pieces }
-        for (points, half) in roadLines {
+        for (points, half) in state.baseMap.roadLines {
             for (a, b) in zip(points, points.dropFirst()) {
                 let reach = Double(half) + 1
                 let west = gridCell(Double(min(a.x, b.x)) - reach, origin: originX), east = gridCell(Double(max(a.x, b.x)) + reach, origin: originX)
@@ -211,11 +235,11 @@ extension Map3DScene.Builder {
     /// roads, or (decision 263) the seeded streets of a map without one.
     mutating func addRoads(_ roads: [Map3DBaseMap.Road], taking taken: inout Set<Map3DScene.ChunkKey>) {
         for road in roads {
-            roadLines.append((road.points.map { Map3DPoint(Float($0.x), 0, Float($0.z)) },
+            state.baseMap.roadLines.append((road.points.map { Map3DPoint(Float($0.x), 0, Float($0.z)) },
                               road.kind.width(ramp: road.isRamp) / 2 + Self.sidewalk(of: road.kind)))
-            roadKinds.append((road.kind, road.isRamp))
+            state.baseMap.roadKinds.append((road.kind, road.isRamp))
             if road.bridgeLevel == 0, !road.isRamp, road.kind != .motorway {
-                groundRoadLines.append((road.points.map { Map3DPoint(Float($0.x), 0, Float($0.z)) }, road.kind))
+                state.baseMap.groundRoadLines.append((road.points.map { Map3DPoint(Float($0.x), 0, Float($0.z)) }, road.kind))
             }
         }
         // Decision 241: the sidewalks first, a strip wider than the road
@@ -415,14 +439,14 @@ extension Map3DScene.Builder {
                 }
                 // Decision 407: where the railway crosses water on a truss.
                 if area.cover == .water && covered > 0 {
-                    waterCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
+                    state.baseMap.waterCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
                 }
                 // Decision 458: where the conifers and bushes may stand.
                 if area.cover == .wood && covered > 0 {
-                    woodCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
+                    state.baseMap.woodCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
                 }
                 if area.cover == .grass && covered > 0 {
-                    grassCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
+                    state.baseMap.grassCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(cellRings)
                 }
             }
         }
@@ -524,10 +548,10 @@ extension Map3DScene.Builder {
             // wholly on it, there only (its bed's bends are no further
             // apart than the ground's grid), not where the ground it is
             // not laid on does.
-            let bedded = raised && !roadBed.isEmpty
+            let bedded = raised && !state.roadBed.isEmpty
             if bedded {
                 let onBed = cuts.allSatisfy { cut in
-                    roadBed.level(at: Map3DBaseMap.Point(x: first.x + (last.x - first.x) * cut, z: first.z + (last.z - first.z) * cut), along: along,
+                    state.roadBed.level(at: Map3DBaseMap.Point(x: first.x + (last.x - first.x) * cut, z: first.z + (last.z - first.z) * cut), along: along,
                                   onDeck: onDeck) != nil
                 }
                 cuts = merged(onBed ? [0, 1] : cuts, bedCuts(from: first, to: last, along: along, onDeck: onDeck))
@@ -598,8 +622,8 @@ extension Map3DScene.Builder {
                 guard sideA.left + sideA.right > 0.05 || sideB.left + sideB.right > 0.05 else { continue }
                 // Decision 865: both kerbs at its bed's height there; off
                 // any bed, each corner on the ground under it.
-                let bedA = bedded ? roadBed.level(at: a, along: along, onDeck: onDeck) : nil
-                let bedB = bedded ? roadBed.level(at: b, along: along, onDeck: onDeck) : nil
+                let bedA = bedded ? state.roadBed.level(at: a, along: along, onDeck: onDeck) : nil
+                let bedB = bedded ? state.roadBed.level(at: b, along: along, onDeck: onDeck) : nil
                 var corners = [
                     (a.x + leftX * sideA.left, a.z + leftZ * sideA.left, riseA.rise, bedA), (a.x - leftX * sideA.right, a.z - leftZ * sideA.right, riseA.rise, bedA),
                     (b.x - leftX * sideB.right, b.z - leftZ * sideB.right, riseB.rise, bedB), (b.x + leftX * sideB.left, b.z + leftZ * sideB.left, riseB.rise, bedB),
@@ -627,7 +651,7 @@ extension Map3DScene.Builder {
             guard let before = laid[vertex - 1], let after = laid[vertex] else { continue }
             addStripJoin(at: points[vertex], before: before.along, after: after.along, half: half, lift: lift, color: color,
                          paint: paint, water: water, lifted: raised && nearRaisedRoad(from: points[vertex], to: points[vertex]),
-                         onDeck: onDeck, bridges: bridged[vertex - 1] || bridged[vertex], roadCuts: roadCuts, bedded: raised && !roadBed.isEmpty)
+                         onDeck: onDeck, bridges: bridged[vertex - 1] || bridged[vertex], roadCuts: roadCuts, bedded: raised && !state.roadBed.isEmpty)
         }
     }
 
@@ -704,7 +728,7 @@ extension Map3DScene.Builder {
         var points: [Map3DPoint] = []
         var triangles: [Int] = []
         // Decision 865: on its road's bed, level, in one piece.
-        let bed = bedded ? roadBed.level(at: joint, along: before, onDeck: onDeck) : nil
+        let bed = bedded ? state.roadBed.level(at: joint, along: before, onDeck: onDeck) : nil
         if let bed {
             points = outline.map { Map3DPoint(Float($0.x), bed + lift + rise($0), Float($0.z)) }
             triangles = Self.fan(outline.count)
@@ -785,7 +809,7 @@ extension Map3DScene.Builder {
     /// apart cuts it where the whole scene does.
     mutating func raisedCuts(from first: Map3DBaseMap.Point, to last: Map3DBaseMap.Point, anchor: Map3DBaseMap.Point,
                              along: (x: Double, z: Double), onDeck: Bool) -> [Double] {
-        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return [] }
+        guard !state.roadBridges.isEmpty || !state.roadGrade.isEmpty else { return [] }
         let step = Self.raisedStep
         let start = (first.x - anchor.x) * along.x + (first.z - anchor.z) * along.z
         let end = (last.x - anchor.x) * along.x + (last.z - anchor.z) * along.z
@@ -1206,7 +1230,7 @@ extension Map3DScene.Builder {
     /// (its areas, not the narrow waterways' lines): inside an odd number
     /// of one area's rings in its cell.
     func isOverWater(_ p: Map3DPoint) -> Bool {
-        isInside(p, waterCells)
+        isInside(p, state.baseMap.waterCells)
     }
 
     /// Decision 458: whether scene point `p` is inside one of `cells`'

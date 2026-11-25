@@ -126,20 +126,20 @@ final class Map3DStationFootbridgeTests: XCTestCase {
         let station = StationID(rawValue: 1)
         // Right of +x is +z: a platform on the -z side has a negative offset.
         if island {
-            builder.laidPlatforms = [
+            builder.state.platforms.laidPlatforms = [
                 Builder.LaidPlatform(station: station, line: line(-half), offset: 3.2, width: 3.2, structure: .surface, island: true),
                 Builder.LaidPlatform(station: station, line: line(half + 6.4), offset: -3.2, width: 3.2, structure: .surface, island: true),
                 Builder.LaidPlatform(station: station, line: line(-half), offset: -3.2, width: 3.2, structure: .surface),
             ]
-            builder.trackLines = [(line(-half), .surface), (line(half + 6.4), .surface)]
+            builder.state.track.trackLines = [(line(-half), .surface), (line(half + 6.4), .surface)]
         } else {
-            builder.laidPlatforms = [
+            builder.state.platforms.laidPlatforms = [
                 Builder.LaidPlatform(station: station, line: line(-half), offset: -3.2, width: 3.2, structure: .surface),
                 Builder.LaidPlatform(station: station, line: line(half), offset: 3.2, width: 3.2, structure: .surface),
             ]
-            builder.trackLines = [(line(-half), .surface), (line(half), .surface)]
+            builder.state.track.trackLines = [(line(-half), .surface), (line(half), .surface)]
         }
-        builder.stationSystems[station] = "tra_sched"
+        builder.state.stations.stationSystems[station] = "tra_sched"
         return builder
     }
 
@@ -169,8 +169,8 @@ final class Map3DStationFootbridgeTests: XCTestCase {
         XCTAssertFalse(low.isEmpty)
         XCTAssertTrue(low.allSatisfy { abs($0.z) < 0.7 })
         // Each platform keeps its own things clear of its tower.
-        XCTAssertEqual(b.crossingKeepOut.count, 2)
-        let kept = try XCTUnwrap(b.crossingKeepOut[0])
+        XCTAssertEqual(b.state.stationCrossings.crossingKeepOut.count, 2)
+        let kept = try XCTUnwrap(b.state.stationCrossings.crossingKeepOut[0])
         XCTAssertEqual(kept.upperBound - kept.lowerBound, Bridge.towerLength, accuracy: 0.01)
         XCTAssertEqual(kept.upperBound, 40 - Bridge.canopyGap, accuracy: 0.01)
         b.addPlatformProps()
@@ -193,21 +193,21 @@ final class Map3DStationFootbridgeTests: XCTestCase {
     func testNoneWhereNothingCrossesOrOnTheNordicMap() {
         // One platform.
         var one = builder()
-        one.laidPlatforms.removeLast()
+        one.state.platforms.laidPlatforms.removeLast()
         one.addStationCrossings(one.world.railwaySnapshot())
-        XCTAssertTrue(one.nearMeshes.isEmpty && one.crossingKeepOut.isEmpty)
+        XCTAssertTrue(one.nearMeshes.isEmpty && one.state.stationCrossings.crossingKeepOut.isEmpty)
         // Under a shell, or where a real building stands for it.
         var shell = builder()
-        shell.shellRoofed = [StationID(rawValue: 1)]
+        shell.state.stations.shellRoofed = [StationID(rawValue: 1)]
         shell.addStationCrossings(shell.world.railwaySnapshot())
         XCTAssertTrue(shell.nearMeshes.isEmpty)
         var studied = builder()
-        studied.studiedStations = [StationID(rawValue: 1)]
+        studied.state.stations.studiedStations = [StationID(rawValue: 1)]
         studied.addStationCrossings(studied.world.railwaySnapshot())
         XCTAssertTrue(studied.nearMeshes.isEmpty)
         // A track high over the platforms.
         var viaduct = builder()
-        viaduct.trackLines.append((stride(from: Float(-100), through: 100, by: 20).map { Map3DPoint($0, 9, 0) }, .surface))
+        viaduct.state.track.trackLines.append((stride(from: Float(-100), through: 100, by: 20).map { Map3DPoint($0, 9, 0) }, .surface))
         viaduct.addStationCrossings(viaduct.world.railwaySnapshot())
         XCTAssertTrue(roofs(viaduct.nearMeshes).isEmpty)
     }
@@ -273,9 +273,9 @@ final class Map3DStationFootbridgeTests: XCTestCase {
     func testAnIslandWithNoLinesHasNoSign() throws {
         var b = builder(island: true)
         var transfers: [StationID: StationTransfers] = [:]
-        for index in b.laidPlatforms.indices {
-            let path = try XCTUnwrap(Map3DStreetLife.Path(b.laidPlatforms[index].line))
-            XCTAssertTrue(b.transferSigns(on: index, of: b.laidPlatforms, path: path, crossing: nil, transfers: &transfers).isEmpty)
+        for index in b.state.platforms.laidPlatforms.indices {
+            let path = try XCTUnwrap(Map3DStreetLife.Path(b.state.platforms.laidPlatforms[index].line))
+            XCTAssertTrue(b.transferSigns(on: index, of: b.state.platforms.laidPlatforms, path: path, crossing: nil, transfers: &transfers).isEmpty)
         }
         let before = b.closeMeshes.values.reduce(0) { $0 + $1.triangleCount }
         XCTAssertEqual(before, 0)

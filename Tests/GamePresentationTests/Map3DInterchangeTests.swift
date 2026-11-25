@@ -134,7 +134,7 @@ extension Map3DSceneMemoryTests {
             let region = WorldRegion(minX: Double(square.column) * side * metre, minY: Double(square.row) * side * metre,
                                      maxX: Double(square.column + 1) * side * metre, maxY: Double(square.row + 1) * side * metre)
             let map = Map3DBaseMap(tiles: tiles, frame: frame, region: region, originX: 0, originY: 0)
-            builder.roadBridges = builder.bridgeDecks(of: map, frame: frame)
+            builder.state.roadBridges = builder.bridgeDecks(of: map, frame: frame)
             let inside = Map3DBaseMap.Bounds(minX: Double(square.column) * side, minZ: Double(square.row) * side,
                                              maxX: Double(square.column + 1) * side, maxZ: Double(square.row + 1) * side)
             let found = Self.clashes(of: map, builder: &builder, inside: inside)
@@ -212,10 +212,10 @@ extension Map3DSceneMemoryTests {
         let region = WorldRegion(minX: square.column * side * metre, minY: square.row * side * metre,
                                  maxX: (square.column + 1) * side * metre, maxY: (square.row + 1) * side * metre)
         let map = Map3DBaseMap(tiles: tiles, frame: frame, region: region, originX: 0, originY: 0)
-        builder.roadBridges = builder.bridgeDecks(of: map, frame: frame)
+        builder.state.roadBridges = builder.bridgeDecks(of: map, frame: frame)
         let p = Map3DBaseMap.Point(x: at[0], z: at[1])
         let radius = Double(ProcessInfo.processInfo.environment["ROADIX_R"] ?? "40") ?? 40
-        let bridges = builder.roadBridges
+        let bridges = builder.state.roadBridges
         print("ROADIX site", at, Self.place(at[0], at[1], frame: frame), "ground", builder.drawnGround(x: Float(p.x), z: Float(p.z)))
         for (number, road) in map.roads.enumerated() {
             guard let near = zip(road.points, road.points.dropFirst()).map({ Map3DRoadBridges.nearest(p, $0.0, $0.1) }).min(by: { $0.distance < $1.distance }),

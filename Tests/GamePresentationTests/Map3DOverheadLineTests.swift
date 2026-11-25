@@ -13,8 +13,8 @@ final class Map3DOverheadLineTests: XCTestCase {
     private func builder(tracks: [Float] = [0], kind: TrackSectionKind = .surface, platforms: [Float] = []) -> Builder {
         var builder = Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                               world: GameWorld.newGame())
-        builder.trackLines = tracks.map { (line($0), kind) }
-        builder.laidPlatforms = platforms.map {
+        builder.state.track.trackLines = tracks.map { (line($0), kind) }
+        builder.state.platforms.laidPlatforms = platforms.map {
             Builder.LaidPlatform(station: StationID(rawValue: 1), line: line(0), offset: $0, width: 3.2, structure: .surface)
         }
         return builder
@@ -64,7 +64,7 @@ final class Map3DOverheadLineTests: XCTestCase {
     func testNoMastStandsInTheStreetAtALevelCrossing() {
         var b = builder()
         let crossing = Map3DLevelCrossing(point: Map3DPoint(0, Map3DScene.railLift, 0), along: Map3DPoint(0, 0, 1), kind: .secondary)
-        b.crossings = [crossing]
+        b.state.streets.crossings = [crossing]
         b.addOverheadLine()
         let masts = mastTops(b.closeMeshes)
         XCTAssertFalse(masts.isEmpty)
@@ -76,7 +76,7 @@ final class Map3DOverheadLineTests: XCTestCase {
         // 3 km of track: each chunk holds only the spans over it, so its
         // box is not seen, nor drawn close up, from all along the line.
         var b = builder()
-        b.trackLines = [(stride(from: Float(-1_500), through: 1_500, by: 16).map { Map3DPoint($0, Map3DScene.railLift, 0) }, .surface)]
+        b.state.track.trackLines = [(stride(from: Float(-1_500), through: 1_500, by: 16).map { Map3DPoint($0, Map3DScene.railLift, 0) }, .surface)]
         b.addOverheadLine()
         XCTAssertGreaterThan(b.closeMeshes.count, 4)
         for mesh in b.closeMeshes.values {
@@ -140,7 +140,7 @@ final class Map3DOverheadLineTests: XCTestCase {
     func testAnIslandsTwoTracksShareOneMastOnItsMiddle() {
         var island = builder(tracks: [-4.5, 0, 11, 15.5])
         let half: Float = 5.5 - 1.6
-        island.laidPlatforms = [
+        island.state.platforms.laidPlatforms = [
             Builder.LaidPlatform(station: StationID(rawValue: 1), line: line(0), offset: 1.6 + half / 2, width: half, structure: .surface, island: true),
             Builder.LaidPlatform(station: StationID(rawValue: 1), line: line(11), offset: -(1.6 + half / 2), width: half, structure: .surface, island: true),
         ]
@@ -180,7 +180,7 @@ final class Map3DOverheadLineTests: XCTestCase {
         var b = builder()
         // 200 m in the open (supports at 0, 40, … 200 m: the last's wire
         // swung the other way from a first's), then 200 m in the tunnel.
-        b.trackLines = [(stride(from: Float(-200), through: 0, by: 16).map { Map3DPoint($0, Map3DScene.railLift, 0) } + [Map3DPoint(0, Map3DScene.railLift, 0)], .surface),
+        b.state.track.trackLines = [(stride(from: Float(-200), through: 0, by: 16).map { Map3DPoint($0, Map3DScene.railLift, 0) } + [Map3DPoint(0, Map3DScene.railLift, 0)], .surface),
                         (stride(from: Float(0), through: 200, by: 16).map { Map3DPoint($0, Map3DScene.railLift, 0) }, .tunnel)]
         b.addOverheadLine()
         let height = Map3DScene.railLift + Builder.contactHeight
@@ -204,7 +204,7 @@ final class Map3DOverheadLineTests: XCTestCase {
         for (name, lines) in [("into the tunnel", [(open.reversed() as [Map3DPoint], TrackSectionKind.surface), (bore.reversed() as [Map3DPoint], .tunnel)]),
                               ("out of the tunnel", [(bore, .tunnel), (open, .surface)])] {
             var b = builder()
-            b.trackLines = lines
+            b.state.track.trackLines = lines
             b.addOverheadLine()
             let nearest = mastTops(b.closeMeshes).map { abs($0.x) }.min()
             XCTAssertNotNil(nearest, name)
@@ -214,7 +214,7 @@ final class Map3DOverheadLineTests: XCTestCase {
 
     func testNoOverheadLineWhereTheGroundCoversTheTrack() {
         var buried = builder()
-        buried.trackLines = [(line(0).map { $0 - Map3DPoint(0, 6, 0) }, .surface)]
+        buried.state.track.trackLines = [(line(0).map { $0 - Map3DPoint(0, 6, 0) }, .surface)]
         buried.addOverheadLine()
         XCTAssertTrue(wires(buried.closeMeshes).isEmpty)
         XCTAssertFalse(buried.closeMeshes.values.contains { $0.vertices.contains { $0.color == Map3DPalette.mastSteel } })
@@ -222,17 +222,17 @@ final class Map3DOverheadLineTests: XCTestCase {
 
     func testNoOverheadLineAlongARealLineRunWithoutOne() {
         var diesel = builder()
-        diesel.realLines = [(line(1), false)]
+        diesel.state.overhead.realLines = [(line(1), false)]
         diesel.addOverheadLine()
         XCTAssertTrue(mastTops(diesel.closeMeshes).isEmpty && wires(diesel.closeMeshes).isEmpty)
         // A wired line nearer than the diesel one wins; a real line 100 m
         // off says nothing of this track.
         var wired = builder()
-        wired.realLines = [(line(1), true), (line(8), false)]
+        wired.state.overhead.realLines = [(line(1), true), (line(8), false)]
         wired.addOverheadLine()
         XCTAssertEqual(mastTops(wired.closeMeshes).count, 11)
         var away = builder()
-        away.realLines = [(line(100), false)]
+        away.state.overhead.realLines = [(line(100), false)]
         away.addOverheadLine()
         XCTAssertEqual(mastTops(away.closeMeshes).count, 11)
     }
@@ -254,7 +254,7 @@ final class Map3DOverheadLineTests: XCTestCase {
             let at = frame.worldPosition(latitude: station.coordinate.latitude, longitude: station.coordinate.longitude)
             let p = b.point(x: at.x, y: at.y, height: 0)
             var nearest: (distance: Float, wired: Bool) = (.infinity, true)
-            for line in b.realLines {
+            for line in b.state.overhead.realLines {
                 for point in line.points where (point - p).length < nearest.distance { nearest = ((point - p).length, line.wired) }
             }
             return nearest.wired

@@ -190,7 +190,7 @@ extension Map3DScene.Builder {
         // high, drawn as a block of flats in the river) is not drawn again.
         if stayedDeck(bridge, at: 0, known: &known) != nil {
             let plot = Map3DCableStays.plot
-            landmarkPlots.append(PlacedSquare(minX: foot.x - plot, minZ: foot.z - plot, maxX: foot.x + plot, maxZ: foot.z + plot))
+            state.landmarks.landmarkPlots.append(PlacedSquare(minX: foot.x - plot, minZ: foot.z - plot, maxX: foot.x + plot, maxZ: foot.z + plot))
         }
         if covers(foot), let deck = stayedDeck(bridge, at: 0, known: &known) {
             var built = Map3DMesh()

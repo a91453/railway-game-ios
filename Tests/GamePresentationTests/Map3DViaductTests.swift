@@ -26,7 +26,7 @@ final class Map3DViaductTests: XCTestCase {
             for x in stride(from: -320.0, through: 320, by: 32) {
                 for z in stride(from: -64.0, through: 64, by: 32) {
                     let ring = [(-400.0, -100.0), (400, -100), (400, 100), (-400, 100)].map { Map3DBaseMap.Point(x: $0.0, z: $0.1) }
-                    builder.waterCells[Map3DScene.ChunkKey(column: builder.gridCell(x, origin: builder.originX),
+                    builder.state.baseMap.waterCells[Map3DScene.ChunkKey(column: builder.gridCell(x, origin: builder.originX),
                                                            row: builder.gridCell(z, origin: builder.originY))] = [[ring]]
                 }
             }

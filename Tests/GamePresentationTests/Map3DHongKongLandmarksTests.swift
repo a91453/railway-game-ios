@@ -97,10 +97,10 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
 
         let line = stride(from: Float(-60), through: 60, by: 2).map { middle + Map3DPoint($0, 0, 0) }
         var blocked = builder()
-        blocked.trackLines = [(line, .surface)]
+        blocked.state.track.trackLines = [(line, .surface)]
         XCTAssertFalse(blocked.addHongKongLandmarks(frame: frame).contains(ifc.rawValue))
         var tunnel = builder()
-        tunnel.trackLines = [(line, .tunnel)]
+        tunnel.state.track.trackLines = [(line, .tunnel)]
         XCTAssertTrue(tunnel.addHongKongLandmarks(frame: frame).contains(ifc.rawValue))
     }
 
@@ -117,9 +117,9 @@ final class Map3DHongKongLandmarksTests: XCTestCase {
         let region = WorldRegion(minX: place.x - reach, minY: place.y - reach, maxX: place.x + reach, maxY: place.y + reach)
         var builder = Map3DScene.Builder(originX: place.x, originY: place.y, region: region, world: world, heights: nil)
         XCTAssertEqual(builder.addHongKongLandmarks(frame: frame), [hakata.id])
-        XCTAssertTrue(builder.landmarkPlots.isEmpty)
-        let plan = try XCTUnwrap(builder.landmarkPlans.first)
-        XCTAssertEqual(builder.landmarkPlans.count, 1)
+        XCTAssertTrue(builder.state.landmarks.landmarkPlots.isEmpty)
+        let plan = try XCTUnwrap(builder.state.landmarks.landmarkPlans.first)
+        XCTAssertEqual(builder.state.landmarks.landmarkPlans.count, 1)
         // Less than two thirds of its rectangle is under the model.
         XCTAssertLessThan(plan.covered.filter { $0 }.count * 3, plan.covered.count * 2)
         let maxX = plan.minX + Float(plan.columns) * LandmarkPlan.cell, maxZ = plan.minZ + Float(plan.rows) * LandmarkPlan.cell

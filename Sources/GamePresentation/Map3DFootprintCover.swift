@@ -12,6 +12,16 @@ import GameCore
 // that stays as decision 389 left it.
 
 extension Map3DScene.Builder {
+    /// Decision 976: how much of each cell the real buildings cover, kept
+    /// while the scene is built (``LayerStates/realCover``).
+    struct RealCoverState {
+        /// Decision 723: the city tiles' buildings and the footprints
+        /// drawn, and how much of each cell they cover: where that is
+        /// little, the game's houses stand between them.
+        var tileCover = RealCover()
+        var footprintCover = RealCover()
+    }
+
     /// Decision 723: the real buildings of one source drawn (the city
     /// tiles', ``addRealBuildings``; the footprints', ``addFootprints``):
     /// each one's outline, which a house of the game's keeps off, and how
@@ -112,9 +122,9 @@ extension Map3DScene.Builder {
     /// `others` (a landmark's, a temple's, a kit's scene's, water).
     func thinlyBuilt(but others: Set<Map3DScene.ChunkKey>) -> Set<Map3DScene.ChunkKey> {
         var thin = Set<Map3DScene.ChunkKey>()
-        for cell in Set(tileCover.share.keys).union(footprintCover.share.keys) {
-            guard (tileCover.share[cell] ?? 0) + (footprintCover.share[cell] ?? 0) < RealCover.thinShare,
-                  !tileCover.kept.contains(cell), !footprintCover.kept.contains(cell), !others.contains(cell) else { continue }
+        for cell in Set(state.realCover.tileCover.share.keys).union(state.realCover.footprintCover.share.keys) {
+            guard (state.realCover.tileCover.share[cell] ?? 0) + (state.realCover.footprintCover.share[cell] ?? 0) < RealCover.thinShare,
+                  !state.realCover.tileCover.kept.contains(cell), !state.realCover.footprintCover.kept.contains(cell), !others.contains(cell) else { continue }
             thin.insert(cell)
         }
         return thin

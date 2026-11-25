@@ -310,13 +310,21 @@ public struct Map3DTrackKindSignature: Hashable, Sendable {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the track that is not ballast, kept while the scene is
+    /// built (``LayerStates/trackKinds``).
+    struct TrackKindState {
+        /// Decision 964: the kind of each edge that is not ballast, once
+        /// worked out (``trackKinds(of:)``).
+        var trackKindEdges: [TrackEdgeID: Map3DTrackKind]?
+    }
+
     /// Decision 964: the kind of each edge of `snapshot`'s track that is
     /// not ballast (``Map3DTrackKind/edges(in:)``, kept by the scene's
     /// shared build).
     mutating func trackKinds(of snapshot: RailwaySnapshot) -> [TrackEdgeID: Map3DTrackKind] {
-        if let trackKindEdges { return trackKindEdges }
+        if let trackKindEdges = state.trackKinds.trackKindEdges { return trackKindEdges }
         let edges = shared.trackKinds(of: snapshot, world: world)
-        trackKindEdges = edges
+        state.trackKinds.trackKindEdges = edges
         return edges
     }
 }

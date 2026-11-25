@@ -89,7 +89,7 @@ final class StationIslandRebuildTests: XCTestCase {
         let snapshot = session.world.railwaySnapshot()
         _ = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
-        let laid = builder.laidPlatforms.filter { $0.station == id }
+        let laid = builder.state.platforms.laidPlatforms.filter { $0.station == id }
         XCTAssertEqual(laid.count, 2)
         for platform in laid {
             XCTAssertEqual(platform.width, half, accuracy: 0.05)

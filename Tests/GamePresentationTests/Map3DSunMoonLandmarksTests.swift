@@ -110,7 +110,7 @@ final class Map3DSunMoonLandmarksTests: XCTestCase {
         XCTAssertEqual(built, Landmark.all.map(\.name))
         let temple = origin(Landmark.all[4], builder, frame), front = Landmark.all[4].front
         func replaced(_ p: Map3DPoint) -> Bool {
-            builder.replacedPlots.contains { $0.minX <= p.x && p.x <= $0.maxX && $0.minZ <= p.z && p.z <= $0.maxZ }
+            builder.state.landmarks.replacedPlots.contains { $0.minX <= p.x && p.x <= $0.maxX && $0.minZ <= p.z && p.z <= $0.maxZ }
         }
         XCTAssertTrue(replaced(temple))
         XCTAssertFalse(replaced(temple + front * 27))
@@ -118,7 +118,7 @@ final class Map3DSunMoonLandmarksTests: XCTestCase {
         XCTAssertTrue(replaced(origin(Landmark.all[5], builder, frame)))
         XCTAssertFalse(replaced(origin(Landmark.all[0], builder, frame)))
         // No cell is kept clear of the houses along the roads.
-        XCTAssertTrue(builder.landmarkPlots.isEmpty)
+        XCTAssertTrue(builder.state.landmarks.landmarkPlots.isEmpty)
 
         // A scene away from the lake has none.
         var (away, awayFrame) = try scene(reach: 300, east: 5_000)
@@ -190,10 +190,10 @@ final class Map3DSunMoonLandmarksTests: XCTestCase {
         let temple = origin(Landmark.all[4], plain, frame)
         let line = stride(from: Float(-60), through: 60, by: 2).map { temple + Map3DPoint($0, 0, 0) }
         var blocked = plain
-        blocked.trackLines = [(line, .surface)]
+        blocked.state.track.trackLines = [(line, .surface)]
         blocked.addSunMoonLandmarks(frame: frame)
         var tunnel = plain
-        tunnel.trackLines = [(line, .tunnel)]
+        tunnel.state.track.trackLines = [(line, .tunnel)]
         tunnel.addSunMoonLandmarks(frame: frame)
         let triangles = { (builder: Map3DScene.Builder) in builder.closeMeshes.values.reduce(0) { $0 + $1.indices.count / 3 } }
         XCTAssertEqual(triangles(tunnel) - triangles(blocked), Landmark.Model.temple.mesh(full: true).indices.count / 3 + 10)
