@@ -49,8 +49,11 @@ final class CatalogTrackFilterTests: XCTestCase {
         XCTAssertTrue(catalog.entries.allSatisfy { !Self.guided.contains($0.type) })
         XCTAssertEqual(
             Set(catalog.entries.map(\.type)),
-            Set(rails.world.offeredTrainTypes.filter { !Self.guided.contains($0) })
+            // Decision 970: and only those of the track's gauge, here the
+            // default 1,067 mm.
+            Set(rails.world.offeredTrainTypes.filter { !Self.guided.contains($0) && rails.world.fitsGauge($0, ofLine: rails.line) })
         )
+        XCTAssertFalse(catalog.entries.contains { $0.type == .highSpeed }, "the high-speed set needs Shinkansen-size track")
         XCTAssertTrue(catalog.carriesStandardCar)
         XCTAssertEqual(catalog.trackNote(in: .english), "Only the types this line's track carries are listed.")
         XCTAssertEqual(catalog.emptyListText(in: .english), "No train type the company can pay for now.")

@@ -104,7 +104,9 @@ final class TrainLiveryTests: XCTestCase {
     /// A train's run carries its livery.
     func testARunCarriesItsTrainsLivery() throws {
         var world = try makeWorld(width: 8_192, height: 4_096, balance: 100_000_000)
-        let track = TestLine(tiles: 7, row: 1)
+        // Decision 970: track the high-speed set runs on; the standard
+        // cars run on 1,435 mm too.
+        let track = TestLine(tiles: 7, row: 1, gauge: .shinkansen)
         try track.build(in: &world)
         let express = try world.purchaseTrain(named: "Puyuma")
         try world.setTrainPerformance(express.id, to: .tiltingPuyuma)
