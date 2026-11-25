@@ -4,7 +4,10 @@
 
 - 做到哪：一張 PR 做完 GameCore 與介面（決策 970、存檔 114），分支 `claude/project-thread-nqfbdv`。
 - 已驗證：見 PR 說明（本機 `swift build --build-tests -Xswiftc -warnings-as-errors` 與碰到的測試類別）。
-- 下一步：下面「還留下什麼」。
+- PR：#2671（draft），head `e8f180f` 的 CI 只有 `Swift 6.4 (Linux) / rest-1` 紅，3 個 GamePresentation 測試（2026-11-25 這串第 2 次壓縮，照規則停手，留給下一串）：
+  - `Map3DTrackKindsTests.testALinesTrackIsItsTrainsKind`、`testEachKindIsDrawn`：丟出 `trainGaugeMismatch(1)`。測試在預設（1,067）軌道上放有軌距的真實車型；照 `HighSpeedTests` 的改法，鋪軌時給那台車的軌距（例如 `buildTrackEdge(from:to:gauge: .shinkansen)`），不要改規則。
+  - `RollingStockSessionTests.testStaffingOrReformingWithHighSpeedSetsMakesAHighSpeedLine`（第 205–207 行）：`staffSelectedLine(type: .highSpeed)` 在預設軌道上成功，但 `reformSelectedLine(type: .highSpeed)` 把同一條線的車改成 `.highSpeed` 時被軌距擋下。先查清楚 `.highSpeed`（「High-speed set」）有沒有 `TrainGauge`：有的話派車那條路也該擋（兩條路不一致就是 bug，`staffSelectedLine` 的檢查要補），測試的 `lineWorld()` 改鋪 1,435 新幹線級；沒有的話是改車種的檢查誤擋，修 `fitsGauge`。
+- 下一步：修好這 3 個、只重跑這 3 類，推上去；#2671 綠了照規則自己合（`main` 動了先併、新 head 綠了再合），接著合 `a91453/railway-assets-private-2` #467（評分狀態，guard 已綠在 `453d283`），在 #2118 回報合併並放掉號碼。其餘見下面「還留下什麼」。
 
 ## 派工與現況
 
