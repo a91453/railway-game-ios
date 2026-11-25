@@ -202,171 +202,18 @@ extension Map3DScene {
             case facade
         }
         var target = Target.base
-        /// Decision 699: where the airfields' passengers board (a jet
-        /// bridge's foot, or a stand with none), and how near a building
-        /// stands to be their terminal (``isTerminal(_:)``).
-        var terminalSpots: [(at: Map3DPoint, reach: Float)] = []
-        var terminalsJoined = false
+        /// Decision 976: what each layer keeps while the scene is built, each
+        /// layer's in its own file (``LayerStates``). A new layer's state
+        /// goes there, not here.
+        var state = LayerStates()
         /// Decision 610: the street fronts, by chunk.
         var facadeMeshes: [ChunkKey: Map3DMesh] = [:]
-        /// Decision 610: each chunk's buildings' street fronts as built, with
-        /// the number they are kept by (``addFacadeParts()``).
-        var facadeParts: [ChunkKey: [(rank: Float, mesh: Map3DMesh)]] = [:]
-        /// Decision 817: each chunk's towers' reliefs (balconies, fins, bay
-        /// windows) as built, kept by their number within their own budget
-        /// (``Map3DFacadeVariety/chunkBudget``).
-        var reliefParts: [ChunkKey: [(rank: Float, mesh: Map3DMesh)]] = [:]
-        /// Decision 610: while the real buildings are built in full, the
-        /// 4 m cells by their streets (``streetCells(within:)``), for
-        /// ``addRealFacade``; `nil` builds no street fronts.
-        var facadeStreets: Set<ChunkKey>?
-        /// Decision 610 續 (review L12-1): whether the street fronts are
-        /// built at all; not on a device or 3D look that never draws them,
-        /// so their memory is not kept for nothing.
-        var buildsFacades = true
         /// Decision 244: the street furniture, by chunk.
         var props: [ChunkKey: [Map3DInstance]] = [:]
         /// Decision 352: the signs, by chunk.
         var signs: [ChunkKey: [Map3DSign]] = [:]
         /// Decision 259: where people walk and vehicles drive.
         var streetLife = Map3DStreetLife()
-        /// Decision 263: the track as laid (its centre line at the rails'
-        /// height, by section), the platforms' lines, the seeded streets
-        /// kept and the level crossings.
-        var trackLines: [(points: [Map3DPoint], kind: TrackSectionKind)] = []
-        /// Decision 947: which of ``trackLines`` are guideways (no overhead
-        /// line over them).
-        var guidedTrackLines: Set<Int> = []
-        /// Decision 947: the edges that are guideways, and the lines of the
-        /// platforms beside a suspended beam, once worked out
-        /// (``guideways(of:)``).
-        var guidewayEdges: (edges: [TrackEdgeID: Map3DGuideway.Kind], hung: [[Map3DPoint]])?
-        /// Decision 964: the kind of each edge that is not ballast, once
-        /// worked out (``trackKinds(of:)``).
-        var trackKindEdges: [TrackEdgeID: Map3DTrackKind]?
-        var platformLines: [[Map3DPoint]] = []
-        /// Decision 321: the platforms as laid, for the station kit.
-        var laidPlatforms: [LaidPlatform] = []
-        /// Decision 860: the underground platforms as laid, for their
-        /// props and screen doors (``addPlatformProps``) only: no canopy,
-        /// building, street or shop stands by them as by those above.
-        var laidUnderground: [LaidPlatform] = []
-        /// Decision 436: each station's station kit system
-        /// (``Map3DStationKit/Station/system``), as ``addStations`` found it.
-        var stationSystems: [StationID: String] = [:]
-        /// Decision 882: each real station's other name (its English one
-        /// under a Chinese name), for its platforms' name boards.
-        var boardSecondNames: [StationID: String] = [:]
-        /// NAME-BOARD-STYLES: the boards of the stations of systems with
-        /// a style of their own.
-        var boardSigns: [StationID: Map3DBoardSign] = [:]
-        /// Decision 874: the stations under a shell of their own
-        /// (decision 827), with no kit canopy a sign could hang from.
-        var shellRoofed: Set<StationID> = []
-        /// Decision 936: the stations a real building stands for
-        /// (decision 625), and where along each platform laid (by its
-        /// place in ``laidPlatforms``) a footbridge's tower or an
-        /// underpass's stairs stand (``addStationCrossings``).
-        var studiedStations: Set<StationID> = []
-        var crossingKeepOut: [Int: ClosedRange<Float>] = [:]
-        var piers: [Map3DPoint] = []
-        /// Decision 407: the viaducts laid and their piers, drawn together
-        /// (``addViaducts()``) so the tracks of a pair share a pier and a
-        /// truss; where the last viaduct laid ended, so the next piece of
-        /// it keeps its piers' spacing.
-        var viaducts = Map3DViaducts()
-        /// Decision 407: on a real-world map, the base map's water areas
-        /// by the 64 m cell, each area's rings cut to the cell; where the
-        /// railway crosses one, it is on a truss.
-        var waterCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
-        /// Decision 458: the base map's woods and grass the same way, for
-        /// the conifers and the bushes beside the line.
-        var woodCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
-        var grassCells: [ChunkKey: [[[Map3DBaseMap.Point]]]] = [:]
-        /// Decision 811: the land cover of each 64 m cell round the region
-        /// (``readLandCover(_:frame:)``), and the cells the city's lots
-        /// stand on (``addGround(water:lots:clearOf:)``), which no forest
-        /// tree of it takes.
-        var landCover: [ChunkKey: LandCoverGrid.Cover] = [:]
-        var lotCells = Set<ChunkKey>()
-        /// Decision 458: each station building's middle, the way its
-        /// front faces, its depth and width, for the bushes on its plaza.
-        /// Decision 794: and its top and whether it is a big station's,
-        /// for the winter event's lights and tree.
-        var stationFronts: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float, top: Float, big: Bool, strings: [Map3DPoint])] = []
-        /// WINTER-LIGHTS-2: the lights on the stations' exits and stair
-        /// entrances: the middle of each length and the way it runs.
-        var exitLights: [(at: Map3DPoint, forward: Map3DPoint)] = []
-        /// Decision 794: the winter event's trees and lights laid.
-        var winterDecor: [Map3DWinterLights.Placement] = []
-        /// Decision 840: the Santa Claus village's reindeer laid.
-        var reindeerHerd: [Map3DReindeerHerd.Placement] = []
-        /// Decision 407: the player's track a high-speed line runs on.
-        var highSpeedEdges: Set<TrackEdgeID>?
-        var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
-        var crossings: [Map3DLevelCrossing] = []
-        /// Decision 941 (later, LEVEL-CROSSING-REAL-MAP): the roads laid on
-        /// the ground (no bridge, link road or motorway) and the real
-        /// lines' track laid on the ground, where they cross on the level
-        /// (``addRealLevelCrossings()``).
-        var groundRoadLines: [(points: [Map3DPoint], kind: Map3DBaseMap.RoadKind)] = []
-        var realSurfaceLines: [[Map3DPoint]] = []
-        /// Decision 322: every road's middle line and how far either side
-        /// its carriageway and pavement reach, metres.
-        var roadLines: [(points: [Map3DPoint], half: Float)] = []
-        /// Decision 385: each of ``roadLines``' kind, and whether it is a
-        /// link road; on a real-world map, the houses along them
-        /// (``addFrontage``) and the land with none (``prepareNoBuild``).
-        var roadKinds: [(kind: Map3DBaseMap.RoadKind, ramp: Bool)] = []
-        var streetFrontage = false
-        var frontage = Frontage()
-        var noBuild = NoBuild()
-        /// Decision 707: the airfields' runway strips, taxiways and aprons.
-        var airfieldClear = AirfieldClear()
-        /// Decision 707: the tallest real building round each place, which
-        /// the game's own houses do not pass; `nil` without footprints.
-        var lowRise: Map3DLowRise?
-        /// Decision 723: the city tiles' buildings and the footprints
-        /// drawn, and how much of each cell they cover: where that is
-        /// little, the game's houses stand between them.
-        var tileCover = RealCover()
-        var footprintCover = RealCover()
-        /// The corners of each station building's ground, and the
-        /// shop streets still to lay beside them.
-        var houseFootprints: [[Map3DPoint]] = []
-        /// MRT-SHELL-CLEAR-OUTLINE: the outlines of the stations' own
-        /// buildings (the Tamsui line's shells, the kit's houses, the
-        /// depots' sheds), ``Map3DScene/Builder/stationOutlineMargin``
-        /// wider, where a real building is left out; and the 64 m cells
-        /// only they take, where no city lot goes but the real buildings
-        /// round them stay (``underRailway(_:)``).
-        var stationOutlines: [StationOutline] = []
-        /// MRT-SHELL-CLEAR-OUTLINE: the pieces of the track and the
-        /// platforms out of tunnels, with how far round them no real
-        /// building stands, by the 64 m cells they reach (``onTrack(_:)``).
-        var trackPieces: [ChunkKey: [(a: Map3DPoint, b: Map3DPoint, reach: Float)]] = [:]
-        var outlineOnlyCells: Set<ChunkKey> = []
-        /// XMAS-TREE-SIZE: the ground each station shop takes (its slab
-        /// and awning), so a station's Christmas tree keeps off it.
-        var shopFootprints: [[Map3DPoint]] = []
-        /// Decision 331: the big stations' buildings, for their commercial
-        /// kit (`addStationCommerce`).
-        var bigStations: [(centre: Map3DPoint, forward: Map3DPoint, depth: Float)] = []
-        var shopStreets: [(station: Map3DStationKit.Station, centre: Map3DPoint, forward: Map3DPoint, depth: Float, wide: Float,
-                           cells: Set<ChunkKey>)] = []
-        /// Decision 326: on a real-world map, the real lines round the
-        /// scene and whether each runs under an overhead line.
-        var realLines: [(points: [Map3DPoint], wired: Bool)] = []
-        /// Decision 339: the 64 m cells the real lines' track runs through
-        /// above the ground, which keep no city lot.
-        var realTrackCells = Set<ChunkKey>()
-        /// Decision 625: the real lines' track drawn (decision 402), each
-        /// lane where a car shows, for the room the exterior studies keep.
-        var realTrackLines: [[Map3DPoint]] = []
-        /// Decision 625: the exterior studies stood.
-        var stationExteriors: [Map3DStationExterior] = []
-        /// Decision 837: the freight yards laid so far.
-        var freightYardPlaces: [Map3DFreightYard.Place] = []
         /// Review L14-7: where a study can be drawn (its origin in a chunk
         /// some block of the scene builds): a station stands for one only
         /// whose origin is in it, else it draws its own building, as a
@@ -377,24 +224,6 @@ extension Map3DScene {
         /// Decision 370: colours the model look leaves as they are besides
         /// ``Map3DLook``'s own (the lines' bands).
         var keptColours = Set<UInt32>()
-        /// Decision 791: the ground Hong Kong's landmarks stand on, where
-        /// no footprint is drawn.
-        var landmarkPlots: [PlacedSquare] = []
-        /// OLD-PORT-AUDIT: the ground each of the cities' landmarks
-        /// covers (``LandmarkPlan``), where no footprint is drawn.
-        var landmarkPlans: [LandmarkPlan] = []
-        /// Decision 879: the squares a model stands on in the place of one
-        /// real building (the Wenwu temple's middle hall): the footprint
-        /// whose middle is within one is not drawn again, but counts as
-        /// built, so the houses along the roads round it stay
-        /// (``landmarkPlots`` keeps them off its cells).
-        var replacedPlots: [PlacedSquare] = []
-        /// Decision 869: the suspension bridges round the scene, once found
-        /// (``suspensionBridges()``).
-        var placedSuspensionBridges: [Map3DSuspensionBridge.Placed]?
-        /// Decision 944: the landmark bridges carrying a road round the
-        /// scene, once found (``archBridges()``).
-        var placedArchBridges: [Map3DArchBridgeDeck.Placed]?
         var farMeshes: [ChunkKey: Map3DMesh] = [:]
         /// Decision 455: whether the simplified city's boxes are kept as
         /// instances (the city's lots), not vertices.
@@ -407,9 +236,6 @@ extension Map3DScene {
         /// elsewhere only in a build that holds them.
         var ownColourNear: [ChunkKey: Map3DMesh] = [:]
         var ownColourFar: [ChunkKey: Map3DMesh] = [:]
-        /// Decision 722: the triangles of the station kit's buildings among
-        /// ``ownColourNear``'s, which hold the studies' too.
-        var houseTriangleCount = 0
         /// Whether what is being built is the simplified city.
         var isFar: Bool { target == .far }
         /// The ground's heights at the 64 m grid's corners, in metres, by
@@ -425,18 +251,6 @@ extension Map3DScene {
         /// them; a builder's own until it is given a scene's
         /// (``Map3DTrackCover/shared``).
         var shared = Map3DSharedBuild()
-        /// Decision 860: the underground platforms and their stations'
-        /// boxes, from the whole network.
-        var undergroundStations = Map3DUndergroundStations()
-        /// Decision 888: the track network's diamond crossings
-        /// (``addTrack(_:)``'s).
-        var diamonds: [Map3DDiamondCrossing] = []
-        /// Decision 391: the base map's road bridges and their decks.
-        var roadBridges = Map3DRoadBridges()
-        /// Decision 834: the motorways' profiles and cuttings.
-        var roadGrade = Map3DRoadGrade()
-        /// Decision 865: the base map's roads' beds, level across.
-        var roadBed = Map3DRoadBed()
         /// Decision 368: the scene point within ``Map3DScene/detailRadius``
         /// of which the city is built in full; everywhere when `nil`.
         var detail: Map3DPoint?
@@ -676,13 +490,13 @@ extension Map3DScene {
 
         func chunks() -> [Chunk] {
             // Decision 407: the viaducts not yet drawn, drawn first.
-            guard viaducts.isEmpty else {
+            guard state.elevated.viaducts.isEmpty else {
                 var drawn = self
                 drawn.addViaducts()
                 return drawn.chunks()
             }
             // Decision 610: the street fronts not yet kept, kept first.
-            guard facadeParts.isEmpty, reliefParts.isEmpty else {
+            guard state.facades.facadeParts.isEmpty, state.facades.reliefParts.isEmpty else {
                 var drawn = self
                 drawn.addFacadeParts()
                 return drawn.chunks()

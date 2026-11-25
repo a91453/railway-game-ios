@@ -275,17 +275,26 @@ public struct Map3DGuidewaySignature: Hashable, Sendable {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the guideways among the track, kept while the scene is
+    /// built (``LayerStates/guideway``).
+    struct GuidewayState {
+        /// Decision 947: the edges that are guideways, and the lines of the
+        /// platforms beside a suspended beam, once worked out
+        /// (``guideways(of:)``).
+        var guidewayEdges: (edges: [TrackEdgeID: Map3DGuideway.Kind], hung: [[Map3DPoint]])?
+    }
+
     /// Decision 947: the edges of `snapshot`'s track that are guideways
     /// (``Map3DGuideway/edges(in:)``, kept by the scene's shared build),
     /// and the lines of the platforms beside a suspended beam, where its
     /// portal frames would stand on them.
     mutating func guideways(of snapshot: RailwaySnapshot) -> (edges: [TrackEdgeID: Map3DGuideway.Kind], hung: [[Map3DPoint]]) {
-        if let guidewayEdges { return guidewayEdges }
+        if let guidewayEdges = state.guideway.guidewayEdges { return guidewayEdges }
         let edges = shared.guideways(of: snapshot, world: world)
         let hung = edges.values.contains(.suspended)
             ? snapshot.platforms.filter { edges[$0.platform.edge] == .suspended }.map { $0.points.map { point($0) + Self.lifted } }
             : []
-        guidewayEdges = (edges, hung)
+        state.guideway.guidewayEdges = (edges, hung)
         return (edges, hung)
     }
 
@@ -298,7 +307,7 @@ extension Map3DScene.Builder {
         let open = kind != .tunnel
         if !open {
             var bore = Map3DMesh()
-            for piece in undergroundStations.outside(line) { addBore(piece, into: &bore) }
+            for piece in state.underground.undergroundStations.outside(line) { addBore(piece, into: &bore) }
             mesh(at: middle) { $0.append(bore) }
         } else {
             let raised = line.map { $0 + Map3DPoint(0, guideway.runningSurface, 0) }
@@ -312,7 +321,7 @@ extension Map3DScene.Builder {
         mesh(at: middle) { Map3DGuideway.sweep(guideway.details, along: line, lift: guideway.runningSurface, under: false, into: &$0) }
         self.target = target
         guard open, let path = Map3DStreetLife.Path(line) else { return }
-        let hung = guideway == .suspended ? guidewayEdges?.hung ?? [] : []
+        let hung = guideway == .suspended ? state.guideway.guidewayEdges?.hung ?? [] : []
         for distance in Map3DGuideway.supports(of: guideway, length: path.length) {
             let at = path.at(distance)
             // Not on a platform beside a suspended beam: its station holds it.

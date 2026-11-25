@@ -13,9 +13,9 @@ final class Map3DShopStreetTests: XCTestCase {
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                                          world: GameWorld.newGame())
         func line(_ z: Float) -> [Map3DPoint] { stride(from: Float(-60), through: 60, by: 2).map { Map3DPoint($0, Map3DScene.railLift, z) } }
-        builder.laidPlatforms = [Map3DScene.Builder.LaidPlatform(station: Self.station, line: line(0), offset: 3.5, width: 3.2, structure: .surface)]
-        builder.trackLines = [(line(0), .surface), (line(-5), .surface)]
-        builder.roadLines = roads.map { z in ([Map3DPoint(-300, 0, z), Map3DPoint(300, 0, z)], 5) }
+        builder.state.platforms.laidPlatforms = [Map3DScene.Builder.LaidPlatform(station: Self.station, line: line(0), offset: 3.5, width: 3.2, structure: .surface)]
+        builder.state.track.trackLines = [(line(0), .surface), (line(-5), .surface)]
+        builder.state.baseMap.roadLines = roads.map { z in ([Map3DPoint(-300, 0, z), Map3DPoint(300, 0, z)], 5) }
         return builder
     }
 

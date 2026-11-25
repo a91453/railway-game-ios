@@ -845,6 +845,21 @@ public struct Map3DRealTrains: Sendable {
 // MARK: - The real track
 
 extension Map3DScene.Builder {
+    /// Decision 976: the real lines' track drawn, kept while the scene is
+    /// built (``LayerStates/realTrains``).
+    struct RealTrainState {
+        /// Decision 941 (later, LEVEL-CROSSING-REAL-MAP): the real lines'
+        /// track laid on the ground, for where a road crosses it on the
+        /// level (``addRealLevelCrossings()``).
+        var realSurfaceLines: [[Map3DPoint]] = []
+        /// Decision 339: the 64 m cells the real lines' track runs through
+        /// above the ground, which keep no city lot.
+        var realTrackCells = Set<ChunkKey>()
+        /// Decision 625: the real lines' track drawn (decision 402), each
+        /// lane where a car shows, for the room the exterior studies keep.
+        var realTrackLines: [[Map3DPoint]] = []
+    }
+
     /// Decision 339: the real line through `stretch` (world points and how
     /// far along the line each is), every ``Map3DRealTrains/spacing``
     /// metres at the height ``TrackRise`` gives it, kept to `system`'s
@@ -911,11 +926,11 @@ extension Map3DScene.Builder {
             if run.count % 2 == 0, let last = run.last { kept.append(points[last]) }
             for piece in Self.pieces(of: kept) { addTrackPiece(piece, kind: kind, viaduct: viaduct) }
             // Decision 941 (later): where a road may cross it on the level.
-            if kind == .surface { realSurfaceLines.append(run.map { points[$0] }) }
+            if kind == .surface { state.realTrains.realSurfaceLines.append(run.map { points[$0] }) }
             let cell = Double(Land.cellLength)
             for index in run {
                 let at = path.point(at: distances[index])
-                realTrackCells.insert(Map3DScene.ChunkKey(column: Int((at.x / cell).rounded(.down)), row: Int((at.y / cell).rounded(.down))))
+                state.realTrains.realTrackCells.insert(Map3DScene.ChunkKey(column: Int((at.x / cell).rounded(.down)), row: Int((at.y / cell).rounded(.down))))
             }
         }
         for index in distances.indices {
@@ -1291,10 +1306,10 @@ extension Map3DScene.Builder {
                 addTrackPiece(piece.compactMap { points[$0] }, kind: kind, viaduct: viaduct, railsNear: true, from: Float(along[piece[0]]))
             }
             // Decision 941 (later): where a road may cross it on the level.
-            if kind == .surface { realSurfaceLines.append(run.compactMap { points[$0] }) }
+            if kind == .surface { state.realTrains.realSurfaceLines.append(run.compactMap { points[$0] }) }
             let cell = Double(Land.cellLength)
             for index in run {
-                realTrackCells.insert(Map3DScene.ChunkKey(column: Int((cells[index].x / cell).rounded(.down)),
+                state.realTrains.realTrackCells.insert(Map3DScene.ChunkKey(column: Int((cells[index].x / cell).rounded(.down)),
                                                           row: Int((cells[index].y / cell).rounded(.down))))
             }
         }

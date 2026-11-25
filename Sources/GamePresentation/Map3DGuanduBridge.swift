@@ -97,10 +97,18 @@ struct Map3DArchBridgeDeck: Sendable {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the landmark road bridges, kept while the scene is
+    /// built (``LayerStates/archBridges``).
+    struct ArchBridgeState {
+        /// Decision 944: the landmark bridges carrying a road round the
+        /// scene, once found (``archBridges()``).
+        var placedArchBridges: [Map3DArchBridgeDeck.Placed]?
+    }
+
     /// Decision 944: the landmark bridges whose deck reaches within 2 km of
     /// what the scene covers.
     mutating func archBridges() -> [Map3DArchBridgeDeck.Placed] {
-        if let placedArchBridges { return placedArchBridges }
+        if let placedArchBridges = state.archBridges.placedArchBridges { return placedArchBridges }
         var found: [Map3DArchBridgeDeck.Placed] = []
         if let frame = RealWorldFrame(world: world) {
             let reach = 2_000 * Self.metre
@@ -114,7 +122,7 @@ extension Map3DScene.Builder {
                 found.append(placed)
             }
         }
-        placedArchBridges = found
+        state.archBridges.placedArchBridges = found
         return found
     }
 

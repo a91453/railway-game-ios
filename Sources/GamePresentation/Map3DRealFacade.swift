@@ -68,6 +68,26 @@ public enum Map3DRealFacade {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the real buildings' street fronts, kept while the
+    /// scene is built (``LayerStates/facades``).
+    struct FacadeState {
+        /// Decision 610: each chunk's buildings' street fronts as built, with
+        /// the number they are kept by (``addFacadeParts()``).
+        var facadeParts: [ChunkKey: [(rank: Float, mesh: Map3DMesh)]] = [:]
+        /// Decision 817: each chunk's towers' reliefs (balconies, fins, bay
+        /// windows) as built, kept by their number within their own budget
+        /// (``Map3DFacadeVariety/chunkBudget``).
+        var reliefParts: [ChunkKey: [(rank: Float, mesh: Map3DMesh)]] = [:]
+        /// Decision 610: while the real buildings are built in full, the
+        /// 4 m cells by their streets (``streetCells(within:)``), for
+        /// ``addRealFacade``; `nil` builds no street fronts.
+        var facadeStreets: Set<ChunkKey>?
+        /// Decision 610 續 (review L12-1): whether the street fronts are
+        /// built at all; not on a device or 3D look that never draws them,
+        /// so their memory is not kept for nothing.
+        var buildsFacades = true
+    }
+
     /// Decision 610: the street cells (``streetCells(within:)``) round the
     /// part of the region built in full: within ``Map3DScene/detailRadius``
     /// of ``detail`` and a chunk more, or all of it.
@@ -101,7 +121,7 @@ extension Map3DScene.Builder {
     /// ``facadeStreets`` is set and its chunk is built in full.
     mutating func addRealFacade(_ outline: [Map3DPoint], centre: Map3DPoint, ground: Float, height: Float, storeys: Int, kind: RealKind,
                                 wall: UInt32, street: FrontStreetLevel, rooms: Bool, r: (Int32) -> Float) {
-        guard buildsFacades, let streets = facadeStreets, outline.count >= 3, !isCoarse(key(of: centre)) else { return }
+        guard state.facades.buildsFacades, let streets = state.facades.facadeStreets, outline.count >= 3, !isCoarse(key(of: centre)) else { return }
         let homes: Bool
         switch kind {
         case .shophouse, .house: homes = true
@@ -180,14 +200,14 @@ extension Map3DScene.Builder {
             }
         }
         guard !front.isEmpty else { return }
-        facadeParts[key(of: centre), default: []].append((r(999), front))
+        state.facades.facadeParts[key(of: centre), default: []].append((r(999), front))
     }
 
     /// Decision 610: the street fronts of each chunk into its ``Map3DScene/Chunk/facade``,
     /// those of the lowest ranks first, up to ``Map3DRealFacade/chunkBudget``
     /// triangles.
     mutating func addFacadeParts() {
-        for (key, parts) in facadeParts {
+        for (key, parts) in state.facades.facadeParts {
             var kept = Map3DMesh()
             for part in parts.sorted(by: { ($0.rank, $0.mesh.triangleCount) < ($1.rank, $1.mesh.triangleCount) }) {
                 guard kept.triangleCount + part.mesh.triangleCount <= Map3DRealFacade.chunkBudget else { continue }
@@ -195,9 +215,9 @@ extension Map3DScene.Builder {
             }
             facadeMeshes[key, default: Map3DMesh()].append(kept)
         }
-        facadeParts = [:]
+        state.facades.facadeParts = [:]
         // Decision 817: the towers' reliefs, within their own budget.
-        for (key, parts) in reliefParts {
+        for (key, parts) in state.facades.reliefParts {
             var kept = Map3DMesh()
             for part in parts.sorted(by: { ($0.rank, $0.mesh.triangleCount) < ($1.rank, $1.mesh.triangleCount) }) {
                 guard kept.triangleCount + part.mesh.triangleCount <= Map3DFacadeVariety.chunkBudget else { continue }
@@ -205,7 +225,7 @@ extension Map3DScene.Builder {
             }
             facadeMeshes[key, default: Map3DMesh()].append(kept)
         }
-        reliefParts = [:]
+        state.facades.reliefParts = [:]
     }
 
     /// Decision 610: a box `depth` out from a wall along `out`, `width`

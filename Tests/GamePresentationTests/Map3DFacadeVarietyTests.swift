@@ -83,8 +83,8 @@ final class Map3DFacadeVarietyTests: XCTestCase {
                        facades: Bool = true, target: Map3DScene.Builder.Target = .near) -> Map3DMesh {
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
         builder.target = target
-        builder.buildsFacades = facades
-        builder.facadeStreets = target == .far ? nil : []
+        builder.state.facades.buildsFacades = facades
+        builder.state.facades.facadeStreets = target == .far ? nil : []
         let ring = [Map3DPoint(x, 0, 0), Map3DPoint(x + 24, 0, 0), Map3DPoint(x + 24, 0, 16), Map3DPoint(x, 0, 16)]
         builder.addRealBuilding([[ring]], ground: 0, height: Float(storeys) * 3.2, storeys: storeys, kind: kind)
         var facade = Map3DMesh()
@@ -121,7 +121,7 @@ final class Map3DFacadeVarietyTests: XCTestCase {
         func built(_ order: [Int]) -> Map3DMesh {
             var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(bounds: world.bounds), world: world)
             builder.target = .near
-            builder.facadeStreets = []
+            builder.state.facades.facadeStreets = []
             for index in order {
                 let x = Float(index % 20) * 26, z = Float(index / 20) * 20
                 let ring = [Map3DPoint(x, 0, z), Map3DPoint(x + 24, 0, z), Map3DPoint(x + 24, 0, z + 16), Map3DPoint(x, 0, z + 16)]

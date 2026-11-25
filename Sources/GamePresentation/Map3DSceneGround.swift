@@ -188,7 +188,7 @@ extension Map3DScene.Builder {
             let around = WorldRegion(minX: region.minX - cell, minY: region.minY - cell, maxX: region.maxX + cell, maxY: region.maxY + cell)
             for lot in lots.lots(in: around) {
                 let key = ChunkKey(column: lot.column, row: lot.row)
-                lotCells.insert(key)
+                state.land.lotCells.insert(key)
                 guard let kind = Map3DPalette.GroundKind(lot), !track.contains(key) else { continue }
                 // Decision 733: none on the no-build land, where no
                 // lot's building stands either (``addCity``): the
@@ -200,7 +200,7 @@ extension Map3DScene.Builder {
         }
         // Decision 811: the land cover's ground where no lot is, but
         // plain where the player's track runs.
-        for (key, cover) in landCover where kinds[key] == nil && !track.contains(key) {
+        for (key, cover) in state.land.landCover where kinds[key] == nil && !track.contains(key) {
             if let kind = Map3DPalette.GroundKind(cover) { kinds[key] = kind }
         }
         // A corner's colour: its four squares' run together.
