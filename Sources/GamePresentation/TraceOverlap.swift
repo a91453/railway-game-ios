@@ -239,7 +239,7 @@ extension GameSession {
         let reach = Self.traceReach(NetworkBuilding.minimumSpacing * 2)
         guard tracesRealRailway, let from = world.position(of: start, height: networkHeight),
               let to = world.position(of: end, height: networkHeight),
-              let way = tracedWay(from: from, to: to, reach: reach) else { return tracePlan(from: start, to: end) }
+              let way = tracedWay(from: from, to: to, reach: reach, leaving: start, arriving: end) else { return tracePlan(from: start, to: end) }
         let raw = WorldPath(way)
         guard raw.points.count > 1 else { return tracePlan(from: start, to: end) }
         let smooth = raw.smoothed()

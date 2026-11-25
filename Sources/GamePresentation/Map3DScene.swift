@@ -587,6 +587,9 @@ public struct Map3DScene: Sendable {
         realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
         builder.mark("real railways")
         builder.realTrackLines = realTrains?.shownLanes ?? []
+        // Decision 941 (later): the real map's roads crossing the track on
+        // the level, the player's and the real lines', at level crossings.
+        if real != nil { builder.addRealLevelCrossings() }
         // Decision 407: the viaducts, each pair of tracks on its piers.
         builder.addViaducts()
         builder.mark("viaducts")
@@ -1311,6 +1314,12 @@ extension Map3DScene {
         var highSpeedEdges: Set<TrackEdgeID>?
         var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
         var crossings: [Map3DLevelCrossing] = []
+        /// Decision 941 (later, LEVEL-CROSSING-REAL-MAP): the roads laid on
+        /// the ground (no bridge, link road or motorway) and the real
+        /// lines' track laid on the ground, where they cross on the level
+        /// (``addRealLevelCrossings()``).
+        var groundRoadLines: [(points: [Map3DPoint], kind: Map3DBaseMap.RoadKind)] = []
+        var realSurfaceLines: [[Map3DPoint]] = []
         /// Decision 322: every road's middle line and how far either side
         /// its carriageway and pavement reach, metres.
         var roadLines: [(points: [Map3DPoint], half: Float)] = []

@@ -4,132 +4,33 @@ import XCTest
 /// K1-1: what the game's model pack holds, pinned. The app builds
 /// ``Map3DModelPack/standard`` (with the bus and trucks from their files)
 /// before the first 3D scene and keeps it twice, in memory and on the GPU
-/// (40 bytes a vertex each). A pull request that adds models to it updates
-/// these numbers and says in its description by how much they grew; a
+/// (40 bytes a vertex each). A pull request that adds models to it adds
+/// their lines to the lock files and says in its description by how much
+/// the pack grew; a
 /// static study the game does not draw goes in ``Map3DModelPack/studies``.
 final class Map3DModelPackSizeTests: XCTestCase {
-    func testTheStandardPacksSizeIsPinned() {
+    func testTheStandardPacksSizeIsPinned() throws {
         // Decision 782: the registered trains (``Map3DTrainRegistry``) left
         // out; each one's models and triangles are pinned in its own lock
         // file, and its pull request says how much it adds.
         let models = Map3DModelPack.standard.models.filter { Map3DTrainRegistry.registration(ofModel: $0.name) == nil }
         let vertices = models.reduce(0) { $0 + $1.vertices.count }
-        // K1-1 (2026-10-28): 618 models and 4,200,744 vertices before the
-        // 89 studies (1,073,040 vertices) moved out. Decision 458 added the
-        // six scenery stand-ins (954 vertices; the app swaps in their
-        // files' 2,760). Decision 461 added the C371, C381 and 610 sets,
-        // near and far (48 models, 203,424 vertices). Decision 466 added
-        // the Sanying set, near and far (8 models, 42,024 vertices).
-        // Decision 467 added the post boxes' and stop pole's stand-ins (498
-        // vertices; the app swaps in their files' 6,072). Decision 484 put
-        // #1456's revision-2 units in the Puyuma set, near and far (the
-        // same models; 45,612 vertices more, 1.8 MB a copy). Decision 483
-        // added the Kaohsiung and Taichung Green sets, near and far (20
-        // models, 107,856 vertices), and made the Ming-Ri #1480's E200
-        // and Chu-Kuang coaches (37,716 more vertices than its E500 and
-        // generic coaches). Decision 496 added the Danhai, Ankeng and
-        // Kaohsiung CAF and Citadis light rail sets, near and far (32
-        // models with their windows' models, 679,008 vertices, 27.2 MB a copy).
-        // #1530 made the DR1000 railcar the 45DR1000, near and far (8
-        // models with the far cars' windows' models, 32,592 vertices
-        // more, 1.3 MB a copy). Decision 511 drew the DR3100 on the
-        // 45DR1000's shape in its own paint, near and far, instead of the
-        // scene kit's three cars (10 models more, 34,128 vertices more,
-        // 1.4 MB a copy). Decision 529 put #1589's R200 in the R200CK
-        // sets, near and far, in place of the scene kit's (the same models,
-        // 46,416 vertices more, 1.9 MB a copy). Decision 531 added the
-        // Alishan train's DL-38 and coaches, near and far (10 models with
-        // the coaches' windows' models, 62,580 vertices more, 2.5 MB a
-        // copy, drawn from photographs of the real cars).
-        // R100 native heads and new cab window light: +25,356 vertices.
-        // Decision 541: the Blue Train's two R100s and #1671's four coach
-        // roles, near and far, in place of the R135 set (14 models more with
-        // the windows' models, 295,182 vertices more, 11.8 MB a copy).
-        // Decision 539: the freight train's container wagons, near and
-        // far, behind the R200 Chu-Kuang's own R200 model (8 models, no
-        // window models, 53,184 vertices more, 2.1 MB a copy).
-        // Decision 554: the Hai-Feng and Shan-Lan as #1539's converted
-        // EMU500 units, near and far (32 models with the windows' models,
-        // 197,880 vertices more, 7.9 MB a copy).
-        // Decision 558: the Wenhu line's VAL256 and 370 as #1742's A and
-        // B units, near and far (32 models with the windows' models,
-        // 441,888 vertices more, 17.7 MB a copy); the old generic car
-        // stays, drawn only before them. Decision 560: the EMU700 as
-        // #1730's units, near and far, after them (32 models more with the
-        // windows' models, 312,264 vertices more, 12.5 MB a copy).
-        // Decision 561: the Taoyuan Airport MRT's 1000 and 2000 as #1700's
-        // units, near and far, after them (35 models more with the
-        // windows' models, 487,980 vertices more, 19.5 MB a copy).
-        // Decision 575 續 (CABLEMAP): the cable car's cabins, tower and
-        // halls, near and far, and a rope's metre, last (13 models, 53,148
-        // vertices more, 2.1 MB a copy). Decision 585 PR-3 (FERRY3): the
-        // two ferries and the pier, near and far, after them (6 models,
-        // 43,464 vertices more, 1.7 MB a copy). Decision 615: the Sun Moon
-        // Lake cabins, near and far, in the cable car's (8 models, 101,424
-        // vertices more, 4.1 MB a copy). Decision 699: the four aircraft,
-        // near and far, and the four airfield vehicles, after the ferries
-        // (12 models, 54,240 vertices more, 2.2 MB a copy). Decision 708:
-        // the coaches' seven liveries, near and far, and the coach stop,
-        // near and far, after the aircraft (16 models, 97,050 vertices
-        // more, 3.9 MB a copy). Decision 732: Hong Kong's four signals,
-        // after the coaches (4 models, 960 vertices more, 38 KB a copy).
-        // Decision 743: Hong Kong's double-decker, minibus and taxi
-        // stand-ins, after its signals (3 models, 1,200 vertices more).
-        // Decision 767: the coal bunker's stand-in after the scenery props
-        // (1 model, 474 vertices more). The owner's old red commuter car
-        // (Map3DRedCommuter), last of the sets: its cab, middle and tail
-        // cars and their window models (6 models, 14,226 vertices more,
-        // 569 KB a copy). Decision 787: the close-up commuter, standing
-        // and mid-stride, after Hong Kong's vehicles (2 models, 1,728
-        // vertices more, 69 KB a copy). Decision 794: the winter event's
-        // trees, near and far, and lights after it (5 models, 6,516
-        // vertices more, 261 KB a copy). Decision 825: the E200 drawn from
-        // photographs, its far version its own (23,832 vertices fewer, 953
-        // KB a copy). Decision 831: Santa's sleigh's stand-in after the
-        // winter models (1 model, 4,536 vertices more, 181 KB a copy).
-        // Decision 838: Taiwan's SUV and yellow taxi stand-ins after the
-        // sleigh (2 models, 690 vertices more, 28 KB a copy). Decision 840:
-        // the studio's sleigh and reindeer team in place of the stand-in
-        // (the same model, 18,900 vertices more, 756 KB a copy), and the
-        // Santa Claus village's reindeer after Taiwan's cars (6 models,
-        // 13,314 vertices more, 533 KB a copy). Decision 846: the
-        // pedestrian signals with no countdown after the reindeer (3
-        // models, 486 vertices more, 19 KB a copy). Its later note:
-        // Finland's street furniture after them (10 models, 6,555 vertices
-        // more, 262 KB a copy); its fourth later note: the second batch
-        // (3 models, 1,872 vertices more, 75 KB a copy). Decision 889: the
-        // yellow tit's four poses after them (4 models, 3,936 vertices
-        // more, 157 KB a copy). Decision 897: the Ngong Ping cabins after
-        // the Sun Moon Lake cabins and the Maokong cabins' ceiling lamps (4
-        // models, 12,840 vertices more, 514 KB a copy). Decision 909: Hong
-        // Kong's ferry and its two piers, near and far, after the ferries
-        // (6 models, 34,944 vertices more, 1.4 MB a copy). Decision 921:
-        // Japan's traffic signals after the yellow tit (3 models, 1,458
-        // vertices more, 58 KB a copy). Decision 923: Japan's utility poles,
-        // pedestrian signals and bus stop after them (9 models, 3,849
-        // vertices more, 154 KB a copy). Decision 930: the Midsummer
-        // Formosa's locomotive and tender the studio's CT273, near and far
-        // (the same 4 models, 55,356 vertices fewer, 2.2 MB a copy), and
-        // Hong Kong's outlying island catamaran, near and far, after its
-        // ferry's piers (2 models, 7,848 vertices more, 314 KB a copy).
-        // Decision 940: the post boxes' stand-in in the studio's shape
-        // (24 vertices fewer). Decision 918: the two bicycles and the ten
-        // close-up people after them (12 models, 15,006 vertices more,
-        // 600 KB a copy).
-        // Decision 941: the level crossings' boom after them (1 model, 204
-        // vertices more, 8 KB a copy).
-        // Decision 949: the bicycle rack and shed after it (2 models, 720
-        // vertices more, 29 KB a copy).
-        // Decision 953: the Formosa Star's coaches the Chu-Kuang coach in
-        // pink, near and far, and their light versions (the same models,
-        // 46,512 vertices more, 1.9 MB a copy).
-        // Decision 957: the steam train a registered train, its seven
-        // models (45,348 vertices) no longer counted here.
-        // Decision 956: the Keikyu New 1000's cars in the red commuter's
-        // place and its far set after them (6 models, 2,874 vertices more,
-        // 115 KB a copy).
-        XCTAssertEqual(models.count, 974)
-        XCTAssertEqual(vertices, 6_838_062)
+        // MODEL-PACK-PINS-SPLIT (2026-11-25): the count and the vertices
+        // are no longer one number every pull request rewrote (and so
+        // conflicted on; the growth from decision 458 to 956 is in git's
+        // history of this file). They are the sum of the lock files' lines:
+        // one a model in `pack.lock.txt`, its triangles in
+        // `hashes.lock.json`; a pull request that adds a model adds its
+        // lines there and says in its description how much it grew.
+        let names = try Map3DModelPackLockTests.lockedPackLines().map { String($0.prefix { $0 != " " }) }
+        let triangles = try XCTUnwrap(Map3DModelPackLockTests.lockFile(Map3DModelPackLockTests.toolDirectory
+            .appendingPathComponent("hashes.lock.json"))["models"] as? [String: [String: Any]])
+        let locked = try names.reduce(0) { sum, name in
+            try sum + 3 * XCTUnwrap(triangles[name]?["triangles"] as? Int, "\(name): not in hashes.lock.json")
+        }
+        print("model pack: \(models.count) models, \(vertices) vertices, \(vertices * MemoryLayout<Map3DVertex>.stride) bytes a copy")
+        XCTAssertEqual(models.count, names.count)
+        XCTAssertEqual(vertices, locked)
         XCTAssertEqual(MemoryLayout<Map3DVertex>.stride, 40)
     }
 

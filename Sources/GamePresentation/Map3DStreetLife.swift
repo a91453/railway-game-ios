@@ -400,7 +400,10 @@ public struct Map3DStreetLife: Sendable {
     /// A road's vehicles: its middle line, both ways or one, how fast and
     /// how many.
     public struct Lane: Sendable {
-        public let path: Path
+        public var path: Path
+        /// Decision 941 (later): its path on the road as laid, when a
+        /// level crossing laid after it lifts `path` over its deck.
+        var ground: Path?
         /// Half the carriageway's width, metres.
         public let half: Float
         public let twoWay: Bool
@@ -465,7 +468,10 @@ public struct Map3DStreetLife: Sendable {
         }
 
         public let kind: Kind
-        public let path: Path
+        public var path: Path
+        /// Decision 941 (later): its path as laid, when a level crossing
+        /// laid after it lifts `path` over its deck.
+        var ground: Path?
         /// How far either side of its line its people stand, metres.
         public let width: Float
         /// Its people, for a spot that is not a station's (those follow its

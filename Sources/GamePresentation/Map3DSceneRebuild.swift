@@ -155,7 +155,6 @@ extension Map3DScene {
         drawnGround = builder.groundGrid()
         realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
         seededStreets = old.seededStreets
-        levelCrossings = old.levelCrossings
         layers = old.layers
         steps = []
 
@@ -165,6 +164,9 @@ extension Map3DScene {
         var built: [Chunk] = []
         var life = Map3DStreetLife()
         var exteriors = old.stationExteriors
+        // Decision 941 (later): the level crossings of the blocks built
+        // again, the old ones elsewhere.
+        var crossings = old.levelCrossings.filter { !keys.contains(grid.key(of: $0.point)) }
         var winter = old.winterLights.placements.filter { !keys.contains(grid.key(of: $0.point)) }
         var herd = old.reindeerHerd.placements.filter { !keys.contains(grid.key(of: $0.point)) }
         var yards = old.freightYards.filter { !keys.contains(grid.key(of: $0.centre)) }
@@ -190,18 +192,23 @@ extension Map3DScene {
             herd += part.reindeerHerd.placements.filter { wanted.contains(grid.key(of: $0.point)) }
             // Decision 837: and the freight yards.
             yards += part.freightYards.filter { wanted.contains(grid.key(of: $0.centre)) }
+            crossings += part.levelCrossings.filter { wanted.contains(grid.key(of: $0.point)) }
             life.spots += part.streetLife.spots.filter { Self.isStations($0) && wanted.contains(grid.key(of: $0.path.points[0])) }
         }
         stationExteriors = exteriors
         winterLights = Map3DWinterLights(placements: winter)
         reindeerHerd = Map3DReindeerHerd(placements: herd)
         freightYards = yards
+        levelCrossings = crossings
         screenDoors = builder.shared.screenDoors(of: world)
         chunks = (old.chunks.filter { !keys.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) } + built)
             .sorted { ($0.row, $0.column) < ($1.row, $1.column) }
         var streetLife = old.streetLife
         streetLife.spots.removeAll { Self.isStations($0) && keys.contains(grid.key(of: $0.path.points[0])) }
         streetLife.spots += life.spots
+        // Decision 941 (later): the traffic kept over the level crossings
+        // there are now (none where the track was taken up).
+        streetLife.lift(over: crossings)
         self.streetLife = streetLife
     }
 
