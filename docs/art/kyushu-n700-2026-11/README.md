@@ -15,7 +15,7 @@
 車頭的形狀是舊版的：整節車一起放大到真車尺寸（長 × 1.19、寬 × 1.2、高 × 0.94），車鼻沒有另外拉長或改形。因為舊版比真車窄而高（2.80 × 3.82 m，真車 3.36 × 3.60 m），正面看起來比舊版寬一點、矮一點。
 
 - 來源：作者舊版 SwiftRailMac 的模型（作者自己的內容），舊版型錄的「N700系『みずほ』『さくら』等」：車頭 `bc97d3e5`、中間車 `fd0310c2`。不用加資料來源頁。原始 GLB 與貼圖不進這個公開庫。
-- 轉換：`tools/texture-palette/kyushu_n700.py` 把貼圖切成色票面（車頭 1,146 面、中間車 964 面），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DKyushuN700Mesh.swift`。材質順序寫在 `Map3DKyushuN700.swift`。
+- 轉換：`tools/texture-palette/kyushu_n700.py` 把貼圖切成色票面（車頭 1,162 面、中間車 964 面），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DKyushuN700Mesh.swift`。材質順序寫在 `Map3DKyushuN700.swift`。
 - 用在：九州新幹線（`kyushushinkansen`）的列車，八節；車庫在「日本」類。
 - 決策：`docs/decisions/977.md`。
 

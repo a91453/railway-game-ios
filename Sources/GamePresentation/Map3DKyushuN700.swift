@@ -67,7 +67,7 @@ extension Map3DPalette {
 
 extension Map3DKyushuN700 {
     /// Decision 782: its set, its showcase row (eight cars) and its cars'
-    /// triangles (1,146 the cab car, 964 the middle car: few enough to be
+    /// triangles (1,162 the cab car, 964 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(

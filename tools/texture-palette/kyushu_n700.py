@@ -45,7 +45,7 @@ from PIL import Image, ImageDraw
 MATERIALS = ["whiteBlue", "navy", "gold", "glass", "dark", "headlamp", "taillamp"]
 BODY, NAVY, GOLD, GLASS, DARK, HEAD, TAIL = range(7)
 PREVIEW = [(0xD8, 0xE5, 0xEB), (0x21, 0x41, 0x68), (0x89, 0x74, 0x55), (0x40, 0x55, 0x60),
-           (0x2B, 0x2F, 0x36), (0xFF, 0xF1, 0xCF), (0xD9, 0x47, 0x3F)]
+           (0x2B, 0x2F, 0x36), (0xFF, 0xF1, 0xCF), (0xE0, 0x39, 0x2C)]
 
 # 作者原檔的 SHA-256（頭車 bc97d3e5…、中間車 fd0310c2…）：不是這兩個檔就停。
 SHA256 = {
@@ -58,6 +58,8 @@ TEXT_MASKS = [(150, 60, 222, 112), (132, 168, 196, 190)]
 # 真車的線是深藍帶、上下各鑲一條金色細線（實車照片：金 2.5 cm、深藍 10 cm）。
 # 貼圖上的藍帶 15 cm 高，上下各切出這個比例當金線。
 GOLD_SHARE = 0.2
+# 沒有厚度的雙面薄片（頭車車頂的天線鰭）做成這麼厚的實心片。
+PLATE = 0.025
 # 車頭兩頰的燈在貼圖上的位置，切成外側頭燈、內側尾燈。
 LAMP = (8, 211, 22, 219)
 
@@ -275,8 +277,9 @@ def read_rectangles(labels: np.ndarray):
                 rest[y, x] = part["kind"]
     x0, y0, x1, y1 = LAMP
     middle = (x0 + x1) // 2
-    rectangles.append((x0, y0, middle, y1, HEAD))
-    rectangles.append((middle, y0, x1, y1, TAIL))
+    # 貼圖的左半在車上是內側（靠車鼻中線）：內側尾燈、外側頭燈。
+    rectangles.append((x0, y0, middle, y1, TAIL))
+    rectangles.append((middle, y0, x1, y1, HEAD))
     return rectangles, rest
 
 
@@ -548,17 +551,64 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
     turned = [(np.stack([-c[:, 2], c[:, 1], c[:, 0]], 1), kind) for c, kind in scaled]
     xs = np.concatenate([c[:, 0] for c, _ in turned])
     shift = -(xs.max() + xs.min()) / 2
-    seen, out = set(), []
+    def normal(corners):
+        return np.cross(corners[1] - corners[0], corners[2] - corners[0])
+
+    def point(corner):
+        return tuple(int(round(v * 1000)) for v in corner)
+
+    # 同三個頂點的面只留一個。同向的是重複的面；反向的一對是沒有厚度的雙面
+    # 薄片（頭車車頂的天線鰭）：只留一面會從另一側看不到，改成有厚度的實心片。
+    faces, plates = {}, {}
     for corners, kind in turned:
         corners = corners + np.array([shift, 0, 0])
-        key = frozenset(tuple(int(round(v * 1000)) for v in corner) for corner in corners)
-        if len(key) < 3 or key in seen:
-            continue  # 沒有面積，或同一個面的另一面
-        if np.linalg.norm(np.cross(corners[1] - corners[0], corners[2] - corners[0])) < 1e-7:
-            continue
-        seen.add(key)
-        out.append((corners, kind))
+        key = frozenset(point(corner) for corner in corners)
+        if len(key) < 3 or np.linalg.norm(normal(corners)) < 1e-7:
+            continue  # 沒有面積
+        if key not in faces:
+            faces[key] = (corners, kind)
+        elif np.dot(normal(faces[key][0]), normal(corners)) < 0:
+            plates[key] = faces[key]
+    out = [face for key, face in faces.items() if key not in plates]
+    out += solid_plates(list(plates.values()), point, normal)
     return out, digest
+
+
+def solid_plates(plate, point, normal):
+    """雙面薄片 → `PLATE` 厚的封閉實心片：兩個面各往外推一半，邊緣補上側面。"""
+    out = []
+    left = list(plate)
+    while left:
+        # 共用頂點的面是同一片。
+        group = [left.pop()]
+        keys = {point(c) for c in group[0][0]}
+        grown = True
+        while grown:
+            grown = False
+            for face in left[:]:
+                if keys & {point(c) for c in face[0]}:
+                    group.append(face)
+                    keys |= {point(c) for c in face[0]}
+                    left.remove(face)
+                    grown = True
+        towards = normal(group[0][0])
+        fronts = [(c if np.dot(normal(c), towards) > 0 else c[::-1], kind) for c, kind in group]
+        total = sum(normal(c) for c, _ in fronts)
+        unit = total / np.linalg.norm(total)
+        half = unit * PLATE / 2
+        edges = {}
+        for corners, kind in fronts:
+            out.append((corners + half, kind))
+            out.append((corners[::-1] - half, kind))
+            for a, b in ((0, 1), (1, 2), (2, 0)):
+                edge = (point(corners[a]), point(corners[b]))
+                edges[edge] = (corners[a], corners[b], kind)
+        for (a, b), (start, end, kind) in edges.items():
+            if (b, a) in edges:
+                continue  # 片裡面的邊
+            out.append((np.stack([start + half, start - half, end - half]), kind))
+            out.append((np.stack([start + half, end - half, end + half]), kind))
+    return out
 
 
 def main():

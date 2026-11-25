@@ -78,6 +78,17 @@ final class Map3DKyushuN700Tests: XCTestCase {
             XCTAssertFalse(xs.isEmpty)
             XCTAssertGreaterThan(xs.min() ?? 0, Map3DKyushuN700.Unit.cab.pitch * 0.2, "the lamps on the nose")
         }
+        // The headlamps outside, the tail lamps beside them towards the nose's centre line.
+        func side(_ lens: UInt32) -> Float {
+            let ys = cab.vertices.filter { $0.color == lens }.map { abs($0.y) }
+            return ys.reduce(0, +) / Float(max(ys.count, 1))
+        }
+        XCTAssertGreaterThan(side(Map3DTrainStyle.headlamp), side(Map3DPalette.lantern) + 0.1)
+        // The aerial's fin on the roof is a closed plate 2.5 cm thick, seen from either side.
+        let fin = cab.vertices.filter { $0.z > 3.61 }
+        XCTAssertFalse(fin.filter { $0.ny > 0.9 }.isEmpty)
+        XCTAssertFalse(fin.filter { $0.ny < -0.9 }.isEmpty)
+        XCTAssertEqual((fin.map(\.y).max() ?? 0) - (fin.map(\.y).min() ?? 0), 0.025, accuracy: 0.002)
         // The windscreen over the nose, on the car's centre line too.
         XCTAssertFalse(cab.vertices.filter { $0.color == Map3DTrainStyle.glass && $0.x > 6 && abs($0.y) < 0.3 }.isEmpty)
         let middle = try XCTUnwrap(Map3DKyushuN700.model(.middle))
