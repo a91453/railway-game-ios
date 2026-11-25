@@ -1927,9 +1927,14 @@ public final class GameLauncher {
             message = StatusMessage(kind: .failure, text: city.notDownloadedText(MapPackDownloads.status(city), in: language))
             return false
         }
+        // Decision 969: a game on a city's map as it was before the map
+        // grew grows with it, keeping the tiles it had and buying the rest.
+        // With the city's older pack still on the device it is played as
+        // it was.
+        let grown = overseasGrounds.lazy.compactMap { $0.grown(world) }.first ?? world
         // Decision 706: a free game on a real-world map gets its map's
         // coach stops, once the app has read them.
-        let world = Self.withFreePlayFunds(coachNetwork.map { CoachCatalog.withCoachStops(world, network: $0) } ?? world)
+        let world = Self.withFreePlayFunds(coachNetwork.map { CoachCatalog.withCoachStops(grown, network: $0) } ?? grown)
         let isDemo = isDemo || (news == nil && isDemoMode)
         if keepingAutosave {
             do throws(SaveError) {

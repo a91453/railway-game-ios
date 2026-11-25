@@ -149,11 +149,14 @@ struct AppleMapBackground: UIViewRepresentable {
         case .standard, .openStreetMap: context.environment.colorScheme == .dark ? .dark : .light
         case .hybrid, .satellite: .satellite
         }
+        // Decision 969: round the middle of the map, which a map that grew
+        // has away from the anchor.
+        let middle = realWorld.place(atMiddleOf: camera.mapRegion)
         map.showRailways(
             railways,
-            near: realWorld.anchor,
+            near: middle,
             look: FollowingMapView.RailwayLook(
-                anchor: realWorld.anchor, reach: FollowingMapView.railwayReach(of: camera.mapRegion), style: trackStyle, theme: theme,
+                anchor: middle, reach: FollowingMapView.railwayReach(of: camera.mapRegion), style: trackStyle, theme: theme,
                 yield: yield
             ),
             credit: DataSourceCredits.mapCorner(baseMap: false, railways: true, in: language)
@@ -189,6 +192,7 @@ final class FollowingMapView: MKMapView, MKMapViewDelegate {
 
     /// How the real railways are drawn: set again only when it changes.
     struct RailwayLook: Equatable {
+        /// Where they are drawn round: the middle of the map (decision 969).
         let anchor: GeoAnchor
         /// How far from the anchor real railways are drawn, in metres.
         let reach: Double

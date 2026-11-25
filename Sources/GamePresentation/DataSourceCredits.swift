@@ -418,10 +418,12 @@ public enum DataSourceCredits {
                             "拉普蘭的山丘與河谷：軌道鋪設處地面多高，以及地圖上山的陰影。"
                         ),
                         notice: language.text(
-                            "Copernicus DEM GLO-30: © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.",
-                            "Copernicus DEM GLO-30：© DLR e.V. 2010-2014 與 © Airbus Defence and Space GmbH 2014-2018，由歐盟與歐洲太空總署（ESA）透過哥白尼計畫（COPERNICUS）提供；保留一切權利。"
+                            "Contains data from the National Land Survey of Finland Elevation model 10 m, 08/2023, under the Creative Commons Attribution 4.0 licence.",
+                            "含芬蘭國土測量局（Maanmittauslaitos）10 公尺高程模型 2023 年 8 月的資料，依創用 CC 姓名標示 4.0 授權使用。"
                         ),
-                        links: []
+                        links: [
+                            DataSourceCredit.Link(title: language.text("National Land Survey open data licence", "芬蘭國土測量局開放資料授權"), url: "https://www.maanmittauslaitos.fi/en/opendata-licence-cc40"),
+                        ]
                     ),
                     DataSourceCredit(
                         id: "rovaniemiPopulation",

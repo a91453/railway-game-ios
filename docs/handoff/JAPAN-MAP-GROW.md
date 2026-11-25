@@ -5,13 +5,14 @@
 
 ## 進度
 
-- 做到哪：**GameCore 一半做完並合了（決策 969、存檔 113），畫面層一半還沒寫。** 沒有任何地圖包的範圍被改，
-  玩家看不到變化。這一串壓縮兩次，照規則停（2026-11-25）。
-- 已驗證（雲端 Linux，Swift 6.4.0）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`MapGrowthTests` 11、
-  `MapExpansionTests` 27、`SavedGameTests` 38、`SaveVersionNotesTests` 1、`GoldenScenarioTests` 24、`ReplayFixtureTests` 3（1 跳過）、
-  `MapPackExtentsTests` 4 全過。
-- 下一步的第一個指令：`grep -rn "frame.anchor\|realWorld.anchor\|halfExtent" Sources/GamePresentation RailwayGameApp/Views`，
-  照下面「畫面層 1」把「錨點在世界正中央」的假設一處一處改掉，先寫 `RealWorldFrame` 的測試。
+- 做到哪：**這張單做完了（2026-11-25）。** GameCore 一半在 #2666（決策 969、存檔 113），畫面層一半在分支
+  `claude/project-thread-e6erls` 的 PR（決策 969「後來」一段）。三個包都還沒有 `earlier`，玩家看不到變化；
+  福岡的 `pack.json` 寫上熊本的範圍與 `earlier`（KUMAMOTO-GROUND）之後，舊存檔開起來就會長大、新局四塊起跳。
+- 已驗證（雲端 Linux，Swift 6.4.0）：`swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`MapGrowthLayoutTests` 8
+  與 `MapExpansionSessionTests`、`AchievementsTests`、`FukuokaRailwaysTests`、`HongKongMapTests`、`RovaniemiRailwaysTests`、
+  `RealRailwayYieldTests`、`RealTrainMotionTests`、`AmbientRealTrainsTests`、`RealWorldMapTests`、`RealWorldExpansionTests`、
+  `MapPackDownloadsTests`、`AirRoutesTests`、`RealWorldLoadingTests`、`MapPackExtentsTests` 全過（189 個，1 跳過）。
+- 下一張接這裡的是 KUMAMOTO-GROUND（寫 `earlier`）與 KUMAMOTO-OPEN（見下面「還留下什麼」）。
 
 ## 作者定案的事（不要再問他怎麼設計）
 
@@ -35,35 +36,25 @@
   （由 `MapGrowthTests` 在 `MAP_GROWTH_SAVE_NEW=1` 時產生一次；之後不可再產生）。
 - `MapPack.extents(ofManifest:)`：`pack.json` 的 `earlier`（以前的範圍，由舊到新，每個是下一個的西北部分）。
 
-## 還留下什麼：畫面層（這張單的另一半）
+## 畫面層做了什麼（決策 969「後來」）
 
-設計已經想好，還沒寫：
+- `RealWorldFrame.init?(world:)` 用 `geoAnchorBounds ?? bounds`；`RealWorldFrame.place(atMiddleOf:)`。
+  `RealRailwayYield`、`MapView` 的樣式選單、`AppleMapBackground`、`OSMMapBackground` 改從世界或地圖的中央找真實鐵道；
+  `RealTrainTraffic(operations:frame:bounds:)` 從世界四邊加邊距。
+- `MapPack.Layout`（`OverseasMaps.swift`）：錨點、現在的世界、以前每個階段的世界、`anchorBounds`、`startTiles`、`holds`。
+  `OverseasGround`、`OverseasPlace` 的 `anchor`、`bounds` 改成從 `layout` 讀。
+- `OverseasGround.grown(_:)`：舊階段的世界長大、擁有 `startTiles`；`GameLauncher.begin` 在 `awaitedCity` 檢查後呼叫它。
+  `GameWorld.newOverseasGame` 有 `earlier` 時先照第一個範圍開局再 `grown`。
+- `namesMapExpansionButton` 看 `MapExpansion.bought == 0`；`AchievementFacts.tilesBought` 用 `bought`。
+- 測試 `Tests/GamePresentationTests/MapGrowthLayoutTests.swift`。
 
-1. **實景座標框。** `RealWorldFrame.init?(world:)` 改成 `self.init(anchor: anchor, bounds: world.geoAnchorBounds ?? world.bounds)`
-   （`Sources/GamePresentation/RealWorldMap.swift`）。投影（`middleX/Y`）這樣就對了；`Map3DBaseMap`、`Map3DLowRise`、`Map3DFootprints`、
-   `RealRoadCells`、`Map3DSharedBuild` 用的都是投影，不用改。要改的是把「錨點 ≈ 世界中央」當搜尋半徑用的地方：
-   `RealRailwayYield.swift:90-91`（`lines(near: frame.anchor, within: …)`）、`RailwayGameApp/Views/MapView.swift:3850`、
-   `OSMMapBackground.swift:61-74`、`AppleMapBackground.swift:152-158,206`、`RealTrainMotion.swift:517-524`（用 `halfExtent` 從錨點加減，
-   改成從世界四邊加邊距）。建議加 `RealWorldFrame.place(atMiddleOf: WorldRegion) -> GeoAnchor`（區域中央就是 `middleX/Y` 時
-   回傳原本的 `anchor`，一位不差；否則用 `coordinate(worldX:worldY:)`），上面幾處改用它。
-2. **地圖包的鋪法。** 有 `earlier` 的包：錨點 = `earlier[0].anchor`，`earlier[0].bounds` = `geoAnchorBounds`，世界的大小 =
-   每個階段的東南角在 `earlier[0]` 的座標框裡的世界座標（無條件進位）。**沒有 `earlier` 的包，錨點與大小要和今天一位不差**
-   （香港、羅瓦涅米、福岡各寫一個測試釘住現在的數字）。`OverseasPlace.holds`、`OverseasGround.holds` 改成：現在的圖
-   （`geoAnchor`、`bounds`、`geoAnchorBounds` 都相同）或任何一個以前的階段。
-3. **讀到舊存檔就長大。** `GameLauncher.begin`（`awaitedCity` 檢查之後、建立 `GameSession` 之前）：世界停在以前的階段、
-   而裝置上的包已經是新範圍時，在複本上 `growMap(to:)`，`mapExpansion == nil` 就
-   `enableMapExpansion(owning: 蓋住 earlier[0].bounds 的所有塊（福岡是 2 × 2）, townSeed: nil, ridersStep: …)`。
-   `ridersStep` 用 `RealWorldExpansion.ridersStep(forResidents:)`，餵那幾塊在包的 `population.json` 裡的居民數。
-   裝置上的包還是舊的（決策 858 §1.8）就不長，照舊玩。
-4. **新局走同一條路。** `newOverseasGame` 遇到有 `earlier` 的包：先照 `earlier[0]` 開局，再走 3 的同一個函式。
-   新局與舊存檔因此擁有同樣的四塊。
-5. **按鈕與成就。** `MapExpansionSession.swift:88-91` 的 `namesMapExpansionButton` 改成 `owned.count <= granted`；
-   `Achievements.swift:96` 的 `tilesBought` 改成 `world.mapExpansion?.bought ?? 0`。
-6. **測試（GamePresentation，Linux）。** 三個包的錨點與大小一位不差；一個合成的「長大的包」讓舊範圍的世界長大後
-   每一站、每一段軌道的經緯度不變（差 0），擁有四塊，第一塊的價錢與里程碑和一塊起跳的新局一樣。
+## 還留下什麼（KUMAMOTO-OPEN 的事）
 
-做完後：`python3 -I tools/golden-checks/doc_numbers.py --check`，`swift build --build-tests -Xswiftc -warnings-as-errors`，
-GamePresentation 的相關測試；決策 969 補「後來」一段。畫面沒有新的，不用截圖（還沒有任何包變大）。
+- **「整張全開、不計成就」的選項**還沒做（評分檔第 5 張）。`newOverseasGame` 遇到有 `earlier` 的包一律四塊起跳。
+- **裝置上的包比存檔舊**：已經長大的存檔（`bounds` 是新範圍），裝置上卻是還沒長大的舊包時，`OverseasGround.holds`
+  認不得它，`overseasAwaited` 也沒有它（包在裝置上），會被當成台灣的地面。正常更新不會發生（存檔要先在新包上
+  長大），但換機、還原舊版時可能；KUMAMOTO-OPEN 時看包的更新方式要不要擋。
+- 讀到舊存檔長大的那一次，預先讀好的路（`RoadsReadAhead`）因為世界大小變了不會被用，會重讀一次；開檔會慢一點，量一次。
 
 ## 要小心的
 

@@ -93,7 +93,8 @@ public struct AchievementFacts: Hashable, Sendable {
         let today = world.clock.now.seconds / GameTime.secondsPerDay
         hasDeliveredFreight = world.accounts.days.contains { $0.freightRevenue > .zero }
         companyBuildings = world.placedBuildings.count
-        tilesBought = max(0, (world.mapExpansion?.owned.count ?? 1) - 1)
+        // Decision 969: the tiles given as a city's map grew are not bought.
+        tilesBought = world.mapExpansion?.bought ?? 0
         typhoonSeasonOverDebtFree = today % FinancePeriod.year.days == AchievementFacts.typhoonSeasonEnd
             && !world.lines.isEmpty && world.accounts.loan == .zero && world.economy.balance >= .zero
         let served = CompanyFigures.servedCells(in: world)

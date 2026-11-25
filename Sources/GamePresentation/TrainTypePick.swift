@@ -88,9 +88,13 @@ extension GameSession {
     /// The lines train `id` may be given from the fleet: each with two
     /// stops or more, not a ring (each way of a ring needs its own trains
     /// facing its own way, as ``GameWorld/lineStaffingPlan(_:headway:type:cars:)``
-    /// says).
+    /// says), whose track carries it (``GameWorld/runsOnTrack(_:ofLine:)``:
+    /// a guideway train only on its guideway, no other train there, and
+    /// only a mountain train where there is mountain track; REVIEW-L34
+    /// P3-5).
     public func assignToLineChoices(for id: TrainID) -> [ServiceLine] {
-        world.lines.filter { $0.stops.count >= 2 && !$0.isRing }
+        guard let train = world.train(id: id) else { return [] }
+        return world.lines.filter { $0.stops.count >= 2 && !$0.isRing && world.runsOnTrack(train.type, ofLine: $0.id) }
     }
 
     /// Puts train `id`, off the track, where line `line`'s trips start and

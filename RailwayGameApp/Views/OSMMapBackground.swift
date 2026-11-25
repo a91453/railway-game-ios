@@ -59,7 +59,9 @@ struct OSMMapBackground: UIViewRepresentable {
     func updateUIView(_ map: FollowingMapLibreView, context: Context) {
         let dark = context.environment.colorScheme == .dark
         let look = FollowingMapView.RailwayLook(
-            anchor: realWorld.anchor,
+            // Decision 969: round the middle of the map, which a map that
+            // grew has away from the anchor.
+            anchor: realWorld.place(atMiddleOf: camera.mapRegion),
             reach: FollowingMapView.railwayReach(of: camera.mapRegion),
             style: trackStyle,
             theme: dark ? .dark : .light,
