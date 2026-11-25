@@ -33,6 +33,8 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
                 cars.append(try XCTUnwrap(Map3DRedCommuter.cab(far: far)))
                 cars.append(try XCTUnwrap(Map3DRedCommuter.middle(far: far)))
             }
+            // Decision 977: and the Kyushu Shinkansen's N700 series, near only.
+            for unit in Map3DKyushuN700.Unit.allCases { cars.append(try XCTUnwrap(Map3DKyushuN700.model(unit))) }
             return cars
         }
     }
@@ -103,8 +105,9 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
             // are charcoal and their window bands dark (the Tuen Ma line's
             // are navy, never taken for glass): those lit no longer. The
             // Keikyu New 1000's (decision 956) dark is its underframe's and
-            // gangways', never taken for glass either.
-            if !model.name.hasPrefix("mtr-tuen-ma") && !model.name.hasPrefix("keikyu-new1000") {
+            // gangways', never taken for glass either, and so is the
+            // Kyushu Shinkansen's N700's (decision 977).
+            if !["mtr-tuen-ma", "keikyu-new1000", "kyushu-n700"].contains(where: model.name.hasPrefix) {
                 XCTAssertLessThan(panes.triangleCount, byColour.triangleCount, "\(model.name): the dark greys no longer lit")
             }
         }

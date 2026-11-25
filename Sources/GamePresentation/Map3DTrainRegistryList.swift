@@ -25,5 +25,6 @@ extension Map3DTrainRegistry {
         Map3DGuidedSkyrail.registration,
         Map3DHKPeakTram.registration,
         Map3DSteamCoach.registration,
+        Map3DKyushuN700.registration,
     ]
 }
