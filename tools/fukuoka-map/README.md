@@ -99,7 +99,9 @@ swift test --skip-build --filter FukuokaRailwaysTests
 - **七隈線整天從橋本端排車**（決策 898，`SERVICE["N"]["depotEnd"]`、`FAR_TURN`）：博多的每一班都是橋本開來的車到站 6 分鐘後折返，夜裡 23 組車都在橋本（4 組在站、19 組在機廠），博多不留夜車。博多離機廠 13.5 km，留在那裡的車夜裡會被收回機廠、清晨再空車開回去，擋住博多的頭幾班。只重排時刻不重讀 OSM：`python3 -I tools/fukuoka-map/build_fukuoka_rail.py times RailwayGameApp/Resources/MapPacks/fukuoka`，再跑 `extract_fukuoka_runs.py`。車組數照遊戲的最短停站 36 秒算（時刻表每站 25 秒），橋本再留 3 分鐘讓晚到的車追回來（`extract_branch_runs.RECOVERY`），所以是 23 組不是 20 組。
 - **建物**：OSM 的外形與用途，樓層或高度有標的照標（福岡約九成有標，是圖友匯入的福岡市 3D 模型），沒標的照羅瓦涅米的規則估（同類、同人口密度、同面積的四分位數）。約 28.5 萬棟、4.5 MB，最高 48 層；統計在 `fukuoka_buildings.json`。PLATEAU 不另外接：OSM 已經帶了它的高度。
 
-## 九州新幹線（博多—熊本，KYUSHU-SHINKANSEN-DATA，暫存）
+## 九州新幹線（博多—熊本，KYUSHU-SHINKANSEN-DATA）
+
+> **2026-11-25，SHINKANSEN-SALE（決策 975，做到一半）**：這裡的檔已用 `build_kyushu_shinkansen.py merge tools/fukuoka-map/kyushu-shinkansen RailwayGameApp/Resources/MapPacks/fukuoka` 併進地圖包，遊戲會讀；`build_fukuoka_rail.py` 重寫鐵道檔後要再跑一次 `merge`，再跑 `extract_fukuoka_runs.py`。機廠在遊戲裡放在熊本站南邊（`RealLineDepotSite.kumamoto`），`depot.json` 只是紀錄。下面寫「還不在地圖包裡」的段落是併入之前的說明，接手的人收尾時改寫；現況見 `docs/handoff/SHINKANSEN-SALE.md`。
 
 日本的圖要往南長到熊本（決策 969）。九州新幹線博多到熊本的資料先做好、放在 `tools/fukuoka-map/kyushu-shinkansen/`，**還不在地圖包裡，遊戲不讀**；SHINKANSEN-SALE 與 KUMAMOTO-OPEN 開圖時再一次搬進 `MapPacks/fukuoka/`（併進 `track_lines.geojson` 等檔、排 `metro_runs.json`、改 `pack.json`）。格式與福岡地鐵的檔一樣，工具用 `build_fukuoka_rail.py` 的同一套讀法。
 

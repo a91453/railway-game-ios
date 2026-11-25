@@ -110,6 +110,20 @@ public struct RealBranchLine: Hashable, Sendable {
         return isWenhu ? 4 : DemoRealLines.cars(ofSystem: system)
     }
 
+    /// SHINKANSEN-SALE (decision 975): how long its platforms (and its
+    /// depot's sidings) are: a car more than its trains at the standard
+    /// car's 16 m, as every line's before; for high-speed sets no less
+    /// than the train itself in a world with real car lengths (decision
+    /// 227), where six 25 m cars do not stand at seven cars' 112 m.
+    func platformLength(real: Bool) -> Int64 {
+        Self.platformLength(cars: cars, of: trainType, real: real)
+    }
+
+    static func platformLength(cars: Int, of type: TrainType?, real: Bool) -> Int64 {
+        let standard = Int64(cars + 1) * Train.carLength
+        return type == .highSpeed ? max(standard, DemoRealLines.platformLength(cars: cars, of: type, carLength: Train.carLength, real: real)) : standard
+    }
+
     /// Whether it is the Wenhu Line (decision 535), whose rubber-tyred
     /// medium-capacity trains are the game's APM.
     var isWenhu: Bool { system == "mrt" && network == "BR" }
@@ -213,7 +227,7 @@ public struct RealBranchLine: Hashable, Sendable {
     /// turned some 100° onto its own inside its end station; the loops
     /// laid round that bend lay too close for a train on each, and the
     /// line was refused. Taiwan's lines as they were.
-    var standsOnItsOwnPoints: Bool { OverseasMap.allCases.contains { $0.system == system } }
+    var standsOnItsOwnPoints: Bool { OverseasMap.map(ofSystem: system) != nil }
 
     /// Whether it is the Taoyuan Airport MRT (decision 556).
     var isTaoyuanAirport: Bool { system == "tymc" && network == "A" }
@@ -247,7 +261,9 @@ public struct RealBranchLine: Hashable, Sendable {
         switch tier {
         case .branch: nil
         case .lightRail: .c
-        case .metro: isWenhu ? .apm : system == "mrt" ? .a : .b
+        // SHINKANSEN-SALE (decision 975): high-speed sets on the Kyushu
+        // Shinkansen, which makes the line a high-speed one (decision 168).
+        case .metro: isWenhu ? .apm : system == "mrt" ? .a : DemoRealLines.trainType(ofLine: "\(system)|\(network)", system: system) == .highSpeed ? .highSpeed : .b
         }
     }
 
@@ -1193,7 +1209,7 @@ extension RealLineLaying {
             guard abs(held) < abs(offset) else { return nil }
             return (other.nearest(drawn.points[at]).along, held)
         }
-        let platform = Double(Int64(line.cars + 1) * Train.carLength) / 2 + RealLineAcquisition.runOn
+        let platform = Double(line.platformLength(real: world.realCarLengths)) / 2 + RealLineAcquisition.runOn
         let blend = Self.laneIslandBlend
         let spacing = 5 * RealLineAcquisition.metre, count = max(2, Int((laid.length / spacing).rounded()))
         let moved = (0...count).map { laid.point(at: laid.length * Double($0) / Double(count)) }.map { point -> WorldVector in
@@ -1591,8 +1607,8 @@ extension RealLineLaying {
                 .min { (WorldVector($0.location) - points[index]).length < (WorldVector($1.location) - points[index]).length }?.id
         }
         let cars = line.cars
-        let half = Double(Int64(cars + 1) * Train.carLength) / 2
-        let platformLength = Int64(cars + 1) * Train.carLength
+        let platformLength = line.platformLength(real: world.realCarLengths)
+        let half = Double(platformLength) / 2
         let double = line.isDoubleTrack
         let layout = !line.isUrban ? RealLineLayout.branch : cars > RealLineLayout.lightRailCars ? .metro : .lightRail
         // SHARED-STATION-LEVEL: a line's end at a station another of the
@@ -1681,12 +1697,12 @@ extension RealLineLaying {
         // real yard, over the Jingmei River), read but not bought.
         let yardSamples = depotEnds.flatMap { _, site, points in
             RealLineDepotLayout.groundSamples(
-                beyond: points, site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step,
+                beyond: points, site: site, length: line.platformLength(real: world.realCarLengths), back: 50 * RealLineAcquisition.metre, step: step,
                 throat: site.fan.map { onMap($0.throat) }
             )
         } + (depot && line.readsGroundBesideYards ? midDepotSites : []).flatMap { site in
             RealLineDepotLayout.groundSamples(
-                of: worldPoints(site), site: site, length: Int64(line.cars + 1) * Train.carLength, back: 50 * RealLineAcquisition.metre, step: step
+                of: worldPoints(site), site: site, length: line.platformLength(real: world.realCarLengths), back: 50 * RealLineAcquisition.metre, step: step
             )
         }
         // Decision 401: on a map bought tile by tile, the tiles under the
@@ -2690,6 +2706,11 @@ extension RealLineLaying {
         let line = try world.createLine(named: acquisition.lineName, stops: stations.reversed())
         if let color = acquisition.color { try world.setLineColor(line.id, to: color) }
         try world.setLineServiceWindow(line.id, to: .allDay)
+        // SHINKANSEN-SALE (decision 975): a line of high-speed sets is
+        // planned at high speed, which makes it a high-speed line
+        // (decision 168): its riders pay the high-speed fare, and its
+        // stations draw the long trips of the people round them.
+        if acquisition.trainType == .highSpeed { try world.setLinePerformance(line.id, to: .highSpeed) }
         // Decision 535 (continued, KLRT): a ring, before its runs; each
         // run's way round turned with the stops.
         let ring = acquisition.ring == true
@@ -2729,7 +2750,7 @@ extension RealLineLaying {
         let built = world.economy.balance
         let count = acquisition.trains.count
         try world.setLineTrainsInService(line.id, to: TrainsInService(peak: count, offPeak: count, low: count))
-        let length = Int64(acquisition.cars + 1) * Train.carLength
+        let length = RealBranchLine.platformLength(cars: acquisition.cars, of: acquisition.trainType, real: world.realCarLengths)
         for start in acquisition.trains {
             let train: TrainID
             if let type = acquisition.trainType {

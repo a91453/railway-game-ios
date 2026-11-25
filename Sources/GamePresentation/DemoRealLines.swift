@@ -88,7 +88,8 @@ public struct DemoRealLines: Sendable {
         switch system {
         case "tra_sched": 8
         case "thsr_sched": 12
-        case "mrt": 6
+        // SHINKANSEN-SALE (decision 975): the 800 series' six.
+        case "mrt", "kyushushinkansen": 6
         case "tymc", "afr_sched": 4
         case "krtc", "sanying": 3
         default: 2
@@ -107,7 +108,7 @@ public struct DemoRealLines: Sendable {
     /// own, and on a system this does not name.
     static func trainType(ofLine key: String, system: String) -> TrainType? {
         switch system {
-        case "thsr_sched": .highSpeed
+        case "thsr_sched", "kyushushinkansen": .highSpeed
         case "afr_sched": .alishan
         case "mrt": key == "mrt|BR" ? .apm : key == "mrt|Y" ? .b : .a
         case "krtc": key == "krtc|C" ? .c : .a
@@ -184,7 +185,7 @@ public struct DemoRealLines: Sendable {
             for chain in Self.chains(lines.map { $0.points.map(world) }) {
                 // Decision 712: an overseas line's drawing ends at its end
                 // stations, so it goes straight on past them.
-                let path = WorldPath(OverseasMap.allCases.contains { $0.system == first.system.id } ? runningOn(chain, by: length / 2 + runOn) : chain)
+                let path = WorldPath(OverseasMap.map(ofSystem: first.system.id) != nil ? runningOn(chain, by: length / 2 + runOn) : chain)
                 guard path.points.count > 1 else { continue }
                 // Its stations on this piece, in order along it, each with
                 // room for its platform and the track between.

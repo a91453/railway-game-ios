@@ -8,11 +8,17 @@ OpenStreetMap it uses.
     python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py \\
         N02-25_Station.geojson kyushu.pbf tools/fukuoka-map/kyushu-shinkansen
 
-The files are **staged**, not in the map pack: the pack still ends at
-33.52N, the game reads none of them, and SHINKANSEN-SALE and KUMAMOTO-OPEN
-move them into `RailwayGameApp/Resources/MapPacks/fukuoka/` together when
-the map opens (the pack's `pack.json`, `metro_runs.json` and the subway's
-files are not touched here).
+The files are made in `tools/fukuoka-map/kyushu-shinkansen/` and, since
+SHINKANSEN-SALE (decision 975), merged from there into the map pack, where
+the game reads them as the map's second system:
+
+    python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py merge \
+        tools/fukuoka-map/kyushu-shinkansen RailwayGameApp/Resources/MapPacks/fukuoka
+    python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/MapPacks/fukuoka
+
+(`merge` needs neither N02 nor OpenStreetMap; `build_fukuoka_rail.py`
+writes the pack's railway files with the subway alone, so `merge` is run
+again after it.)
 
 Where each part comes from:
 
@@ -27,7 +33,10 @@ Where each part comes from:
   for both), joined and walked as the subway's are.
 - **The depot**: JR Kyushu's Kumamoto General Rolling Stock Depot (熊本総合
   車両所) at Tomiai, south of Kumamoto: where its lead leaves the main line,
-  the lead, and the storage tracks, from OpenStreetMap (`depot.json`).
+  the lead, and the storage tracks, from OpenStreetMap (`depot.json`). It
+  lies 8.45 km past Kumamoto, the end of the stretch on sale, so the game
+  lays a depot of its own just past the station
+  (`RealLineDepotSite.kumamoto`, decision 975) and `depot.json` is a record.
 - **Chinese and English names, the line's colour**: this project's. The
   seven names are the same in traditional characters; the English names are
   JR Kyushu's romaji without macrons, checked against OpenStreetMap's
@@ -41,8 +50,8 @@ Where each part comes from:
   which pass stations, and the trains running through to Kagoshima-Chuo and
   Shin-Osaka are left out (KYUSHU-SHINKANSEN-EXPRESS, later).
 - **Gauge and loading gauge**: 1,435 mm and the Shinkansen's, with 25 kV
-  60 Hz overhead wire, written on the line for TRACK-GAUGE and
-  TRACK-ELECTRIFICATION to read; nothing reads them yet.
+  60 Hz overhead wire, written on the line as a record; the game lays the
+  line at the gauge `TrackGauge.ofRealLine` names (decision 970).
 """
 import collections
 import json
@@ -224,7 +233,7 @@ def depot_of(parts, line, at):
                    "leaves the main line (junction, kmFromKumamoto along mainLine), the lead from there to the storage "
                    "tracks (lead), and the storage tracks (storage: how many OpenStreetMap draws, their length, the "
                    "middles of their near (north) and far (south) ends), for RealLineDepotSite. Points are [lon, lat]. "
-                   "Staged; nothing reads it yet. Made by tools/fukuoka-map/build_kyushu_shinkansen.py.",
+                   "A record: the game lays its own depot just past Kumamoto (RealLineDepotSite.kumamoto, decision 975). Made by tools/fukuoka-map/build_kyushu_shinkansen.py.",
         "system": SYSTEM, "line": LINE_ID, "end": "熊本",
         "ja": "熊本総合車両所", "name": "熊本綜合車輛所", "english": "Kumamoto General Rolling Stock Depot",
         "osmArea": DEPOT_AREA, "centre": middle(parts.depot_area["points"]),
@@ -371,5 +380,58 @@ def main(n02_path, extract, out):
           f"{depot['leadKm']} km to {depot['storage']['tracks']} storage tracks of {depot['storage']['metres']} m")
 
 
+# SHINKANSEN-SALE (decision 975): the staged files moved into the map pack.
+MERGED_NOTE = " Kyushu Shinkansen: "
+# The files copied as they are (their sources are in `build_fukuoka_rail.SOURCES`).
+PACK_FILES = (f"{SYSTEM}.json", f"{SYSTEM}_times.json")
+
+
+def merge(staged, pack):
+    """The staged line into the map pack `pack`, beside the subway's
+    (decision 975): its own `kyushushinkansen.json` and `_times.json`
+    copied, its line, stations, names and structures added to the pack's
+    `track_lines.geojson`, `track_stations.geojson`, `station_names.json`
+    and `rail_structures.json` after the subway's, and `pack.json` written
+    again. Run again, it replaces what it added before; the subway's part
+    of each file is kept byte for byte. `depot.json` stays staged (the
+    game's depot is a `RealLineDepotSite`). `extract_fukuoka_runs.py`
+    then lays out `metro_runs.json` for both systems."""
+    def read(folder, name):
+        with open(os.path.join(folder, name), encoding="utf-8") as f:
+            return json.load(f)
+
+    def base(note):
+        return note.split(MERGED_NOTE)[0]
+
+    for name in PACK_FILES:
+        fk.write(pack, name, read(staged, name))
+    for name in ("track_lines.geojson", "track_stations.geojson"):
+        ours, theirs = read(staged, name), read(pack, name)
+        kept = [f for f in theirs["features"] if f["properties"]["sys"] != SYSTEM]
+        added = ours["features"]
+        if name == "track_lines.geojson":
+            added = [dict(f, properties=dict(f["properties"], sortKey=len(kept) + n)) for n, f in enumerate(added)]
+        theirs["source"] = base(theirs["source"]) + MERGED_NOTE + ours["source"]
+        theirs["features"] = kept + added
+        fk.write(pack, name, theirs)
+    ours, theirs = read(staged, "station_names.json"), read(pack, "station_names.json")
+    theirs["source"] = base(theirs["source"]) + MERGED_NOTE + ours["source"]
+    for key in ("systems", "routes"):
+        theirs[key] = {k: v for k, v in theirs[key].items() if k != SYSTEM}
+        theirs[key][SYSTEM] = ours[key][SYSTEM]
+    fk.write(pack, "station_names.json", theirs)
+    ours, theirs = read(staged, "rail_structures.json"), read(pack, "rail_structures.json")
+    theirs["structures"] = [s for s in theirs["structures"] if s["system"] != SYSTEM] + ours["structures"]
+    theirs["source"][SYSTEM] = ours["source"]["openStreetMap"]
+    fk.write(pack, "rail_structures.json", theirs)
+    fk.write_manifest(pack)
+    print(f"{pack}: {len(read(pack, 'track_lines.geojson')['features'])} lines, "
+          f"{len(read(pack, 'track_stations.geojson')['features'])} stations, "
+          f"{len(theirs['structures'])} structures")
+
+
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    if sys.argv[1:2] == ["merge"]:
+        merge(*sys.argv[2:])
+    else:
+        main(*sys.argv[1:])

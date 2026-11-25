@@ -112,7 +112,7 @@ final class FukuokaGroundTests: XCTestCase {
         XCTAssertTrue(licences.values.contains { $0.contains("WorldPop") })
         for language in DisplayLanguage.allCases {
             let section = try XCTUnwrap(DataSourceCredits.sections(in: language, overseas: [.fukuoka]).first { $0.id == "fukuokaRailways" })
-            XCTAssertEqual(section.credits.map(\.id), ["fukuokaSubway", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport"])
+            XCTAssertEqual(section.credits.map(\.id), ["fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport"])
         }
     }
 }

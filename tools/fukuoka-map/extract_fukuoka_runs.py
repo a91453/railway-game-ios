@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """The runs of the Fukuoka City Subway lines, from `fksubway.json` and
-`fksubway_times.json`, as the pack's `metro_runs.json` (decision 854).
+`fksubway_times.json`, and (decision 975) of the Kyushu Shinkansen, from
+`kyushushinkansen.json` and `kyushushinkansen_times.json`, as the pack's
+`metro_runs.json` (decision 854).
 
     python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/MapPacks/fukuoka
 
@@ -16,6 +18,8 @@ import os
 import sys
 
 SYSTEM = "fksubway"
+# SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen, a system of its own in the same pack.
+SHINKANSEN = "kyushushinkansen"
 
 
 def main(folder):
@@ -24,10 +28,16 @@ def main(folder):
     spec = importlib.util.spec_from_file_location("extract_metro_runs", path)
     tool = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(tool)
-    with open(os.path.join(folder, f"{SYSTEM}.json"), encoding="utf-8") as f:
-        network = json.load(f)
-    tool.LINES = [(SYSTEM, line["id"], None, None) for line in network["lines"]]
-    tool.METROS = {SYSTEM}
+    tool.LINES = []
+    for system in (SYSTEM, SHINKANSEN):
+        # The Shinkansen's file is there once `build_kyushu_shinkansen.py
+        # merge` has run.
+        if not os.path.exists(os.path.join(folder, f"{system}.json")):
+            continue
+        with open(os.path.join(folder, f"{system}.json"), encoding="utf-8") as f:
+            network = json.load(f)
+        tool.LINES += [(system, line["id"], None, None) for line in network["lines"]]
+    tool.METROS = {SYSTEM, SHINKANSEN}
     # Decision 712 (Hong Kong's, kept): a train standing overnight at a station between the
     # ends leaves before the morning's first train the same way reaches it.
     tool.OUT_BEFORE_FIRST = True
@@ -35,9 +45,12 @@ def main(folder):
     # Hashimoto, its end (`RealLineDepotSite.hashimoto`), counts its trains
     # by the game's dwell, and has three minutes at Hashimoto to make a
     # delay good (`extract_branch_runs.RECOVERY`): 23 trains, not 20.
-    tool.DEPOT_ENDS = dict(tool.DEPOT_ENDS, **{f"{SYSTEM}:N": ("橋本",)})
+    # Decision 975: the Kyushu Shinkansen is bought with a depot past
+    # Kumamoto (`RealLineDepotSite.kumamoto`), where its day starts and
+    # ends, with five minutes there to make a delay good.
+    tool.DEPOT_ENDS = dict(tool.DEPOT_ENDS, **{f"{SYSTEM}:N": ("橋本",), f"{SHINKANSEN}:KS": ("熊本",)})
     tool.COUNT_GAME_DWELL = True
-    tool.RECOVERY = {"橋本": 180}
+    tool.RECOVERY = {"橋本": 180, "熊本": 300}
     out = os.path.join(folder, "metro_runs.json")
     tool.main(folder, out)
     with open(out, encoding="utf-8") as f:
@@ -45,7 +58,7 @@ def main(folder):
     head, rest = text.split(',"lines":[', 1)
     head = json.dumps({
         "source": "Trips laid out from headways this project estimated and times between stations worked out from "
-                  "the distance, via fksubway_times.json; not the operator's timetable",
+                  "the distance, via fksubway_times.json and kyushushinkansen_times.json; not the operator's timetable",
         "licence": "this project's estimate; stations: National Land Numerical Information N02 (MLIT), CC BY 4.0",
     }, ensure_ascii=False, separators=(",", ":"))[:-1]
     text = head + ',"lines":[' + rest
