@@ -11,14 +11,14 @@
 | `finland.pbf` | OpenStreetMap 芬蘭整包，`https://osmtoday.com/europe/finland.pbf`（約 853 MB，會轉到 geo2day.com），用 `osmium extract` 切成 `rovaniemi.pbf`（約 7 MB） | ODbL 1.0，© OpenStreetMap 貢獻者 |
 | `digitraffic_trains.json`（這個資料夾裡） | Fintraffic Digitraffic，`https://rata.digitraffic.fi/api/v1/trains/<日期>` 與 `metadata/stations` | CC BY 4.0：「Source: Fintraffic / digitraffic.fi, licence CC 4.0 BY」 |
 | `fin_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop 芬蘭 2025，constrained，1 km | CC BY 4.0，WorldPop |
-| `N66_E025.tif`、`N66_E026.tif`、`N66_E027.tif` | Copernicus DEM GLO-30，`https://copernicus-dem-30m.s3.amazonaws.com/`（各約 21 MB） | Copernicus DEM 授權（免費、可商用，要附「© DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved」） |
+| `T4312.tif` … `T5223.tif`（36 張） | 芬蘭國土測量局（Maanmittauslaitos）10 m 高程模型（Korkeusmalli 10 m，雷射測量的地面，ETRS-TM35FIN、N2000），2023 年 8 月版，從 Kapsi 的鏡像 `https://kartat.kapsi.fi/files/korkeusmalli/hila_10m/etrs-tm35fin-n2000/` 抓（各約 9 MB，共 322 MB；`fetch_nls_dem.py`）。CSC Paituli 的鏡像 `https://www.nic.funet.fi/index/geodata/mml/dem10m/2019/` 有 2019 年版，檔名相同 | 芬蘭國土測量局開放資料授權＝CC BY 4.0（可商用）；署名「National Land Survey of Finland, Elevation model 10 m, 08/2023」 |
 
-這些在雲端容器都連得到（2026-11-15）。芬蘭國土測量局（MML）的高程要 API 金鑰（401），所以沒用。每次讀了什麼寫在 `rovaniemi_sources.json`。
+這些在雲端容器都連得到（2026-11-15）。芬蘭國土測量局（MML）自己的下載服務要 API 金鑰（401），所以高程從上面兩個公開鏡像抓（2026-11-25）。決策 971 之前用的是 Copernicus DEM GLO-30：它是地表模型，量到的是樹頂，拉普蘭整片是林，鐵路、道路、空地在裡面都成了 10–20 m 深的溝。每次讀了什麼寫在 `rovaniemi_sources.json`。
 
 ## 重做
 
 ```sh
-mkdir -p /tmp/rv/osm /tmp/rv/pop /tmp/rv/dem
+mkdir -p /tmp/rv/osm /tmp/rv/pop /tmp/rv/nls
 curl -L -o /tmp/rv/osm/finland.pbf https://osmtoday.com/europe/finland.pbf
 apt-get install -y osmium-tool    # 只用來切範圍
 osmium extract -b 25.15,66.27,27.65,66.83 -s smart -o /tmp/rv/osm/rovaniemi.pbf /tmp/rv/osm/finland.pbf
@@ -40,9 +40,9 @@ python3 -I tools/rovaniemi-map/build_rovaniemi_ground.py /tmp/rv/pop/fin.tif Rai
 python3 -I tools/rovaniemi-map/build_rovaniemi_basemap.py /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi/basemap.pmtiles
 
 # 5. 地形與水域。
-for e in 025 026 027; do curl -L -o /tmp/rv/dem/N66_E$e.tif \
-  https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N66_00_E${e}_00_DEM/Copernicus_DSM_COG_10_N66_00_E${e}_00_DEM.tif; done
-python3 -I tools/rovaniemi-map/build_rovaniemi_ground_grids.py /tmp/rv/dem /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
+pip install tifffile imagecodecs numpy
+python3 -I tools/rovaniemi-map/fetch_nls_dem.py /tmp/rv/nls    # 36 張，約 2 分鐘
+python3 -I tools/rovaniemi-map/build_rovaniemi_ground_grids.py /tmp/rv/nls /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
 
 # 5b. 建物（決策 799；約 20 秒，先要有第 3 步的人口）。
 python3 -I tools/rovaniemi-map/build_rovaniemi_buildings.py /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi

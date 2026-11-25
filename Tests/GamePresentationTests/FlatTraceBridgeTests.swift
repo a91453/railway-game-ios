@@ -3,7 +3,7 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 973: on flat ground (decision 198), a trace along the real
+/// Decision 974: on flat ground (decision 198), a trace along the real
 /// railway still crosses the map's water on a bridge, and is level
 /// everywhere else.
 @MainActor

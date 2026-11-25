@@ -320,7 +320,7 @@ def write(folder, name, value):
 
 
 OSM, FINTRAFFIC, OURS, WORLDPOP = "OpenStreetMap", "Fintraffic / Digitraffic", "this project", "WorldPop"
-COPERNICUS = "Copernicus DEM GLO-30"
+NLS = "National Land Survey of Finland"
 SOURCES = {
     "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_rovaniemi_basemap.py)": OSM,
@@ -331,9 +331,9 @@ SOURCES = {
     "no_build.json": {"the airport, military land, cemeteries, golf courses, railway land and the airport's buildings "
                       "(tools/no-build-land/build_no_build.py)": OSM},
     # build_rovaniemi_ground_grids.py.
-    "heights.dat": {"heights (the model at each 1.875 arc-second cell's middle)": COPERNICUS},
-    "water.json": {"water (rivers and lakes)": OSM, "steep (slopes over 30 %)": COPERNICUS},
-    "terrain.pmtiles": {"heights (heights.dat, Terrarium-encoded)": COPERNICUS},
+    "heights.dat": {"heights (the mean of the 10 m elevation model within each 1.875 arc-second cell)": NLS},
+    "water.json": {"water (rivers and lakes)": OSM, "steep (slopes over 30 %)": NLS},
+    "terrain.pmtiles": {"heights (heights.dat, Terrarium-encoded)": NLS},
     "track_lines.geojson": {"geometry": OSM, "id, name, color": OURS},
     "track_stations.geojson": {"geometry": OSM, "code (Digitraffic's station short code)": FINTRAFFIC,
                                "name (Chinese)": OURS, "color": OURS},
@@ -357,8 +357,7 @@ def write_manifest(folder):
     if "population.json" in files:
         licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
     if "heights.dat" in files:
-        licences[COPERNICUS] = ("© DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under "
-                                "COPERNICUS by the European Union and ESA; all rights reserved")
+        licences[NLS] = "National Land Survey of Finland, Elevation model 10 m, 08/2023, CC BY 4.0"
     write(folder, "pack.json", {
         "id": "rovaniemi", "system": SYSTEM, "decision": 789,
         "english": "Rovaniemi", "chinese": "羅瓦涅米",

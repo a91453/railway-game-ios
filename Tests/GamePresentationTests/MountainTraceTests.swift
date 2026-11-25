@@ -97,7 +97,7 @@ final class MountainTraceTests: XCTestCase {
         }
         XCTAssertEqual(GameSession.traceGrade(ofSystem: "afr_sched"), GameSession.mountainTraceGrade)
         XCTAssertLessThan(GameSession.mountainTraceGrade, 0.07)
-        XCTAssertEqual(GameSession.traceMinimumRadius(ofSystem: "afr_sched"), GameSession.urbanTraceMinimumRadius)
+        XCTAssertEqual(GameSession.traceMinimumRadius(ofSystem: "afr_sched"), GameSession.mountainTraceMinimumRadius)
         XCTAssertEqual(GameSession.traceMinimumRadius(ofSystem: "tra_sched"), GameSession.traceMinimumRadius)
     }
 }
