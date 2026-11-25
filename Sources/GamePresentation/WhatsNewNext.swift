@@ -12,6 +12,7 @@
 // form and that none is left here once it is in a released entry.
 extension WhatsNew {
     public static let nextItems: [Line] = [
+        Line(english: "Photo Mode on the 3D map: the buttons step aside, one tap takes the camera to a train, a station or the skyline, and the shutter saves the picture to Photos.", chinese: "3D 地圖有拍照模式：按鈕收起來，一鍵把鏡頭帶到列車、車站或天際線，按快門就存到「照片」。"),
     ]
 
     public static let nextFixes: [Line] = [

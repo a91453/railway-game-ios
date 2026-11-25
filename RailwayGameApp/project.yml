@@ -144,10 +144,11 @@ targets:
         # one fix while the app is in use; the reason is localized in
         # Resources/*.lproj/InfoPlist.strings.
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Your location is used once to move a real-world map's start square near you. It is not sent anywhere.
-        # A postcard's share sheet offers Save Image, which adds the picture
-        # to Photos; iOS needs this reason for it. The app never reads Photos.
+        # A postcard's share sheet offers Save Image, and the 3D map's photo
+        # mode (decision 981) saves its pictures: both add a picture to
+        # Photos; iOS needs this reason for it. The app never reads Photos.
         # Localized in Resources/*.lproj/InfoPlist.strings.
-        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Saves your postcard to Photos when you choose Save Image.
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: Saves a postcard or a photo of your railway to Photos when you choose to save it.
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: "YES"
         # Decision 106: a phone plays on its side, as builder games do.
