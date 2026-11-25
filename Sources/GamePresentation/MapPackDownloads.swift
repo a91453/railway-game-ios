@@ -55,7 +55,7 @@ public enum MapPackDownloads {
     /// app that carries none of the city).
     @discardableResult
     public static func use(_ city: OverseasMap, root: URL, bundled: MapPack?) -> Refusal? {
-        use(city, locators: [{ root.appendingPathComponent($0) }], bundled: bundled)
+        use(city, locators: [{ MapPack.place(of: $0, root: root) }], bundled: bundled)
     }
 
     /// Decision 819: where a downloaded pack's file may lie, by its name in
@@ -211,7 +211,7 @@ public enum MapPackDownloads {
     /// `nil` when it can.
     public static func check(_ city: OverseasMap, root: URL, bundled: MapPack?) -> Refusal? {
         let expected = bundled.flatMap { try? $0.file("pack", "json") }
-        if case let .failure(refused) = inspect(city, locators: [{ root.appendingPathComponent($0) }], expected: expected) {
+        if case let .failure(refused) = inspect(city, locators: [{ MapPack.place(of: $0, root: root) }], expected: expected) {
             return refused.refusal
         }
         return nil
@@ -259,7 +259,7 @@ public enum MapPackDownloads {
                 continue
             }
             byLocator[hit.index] += 1
-            if hit.url != root.appendingPathComponent(name) { files[name] = hit.url }
+            if hit.url != MapPack.place(of: name, root: root) { files[name] = hit.url }
         }
         if let missing {
             let found = byLocator.reduce(0, +)
@@ -396,6 +396,34 @@ extension OverseasMap {
     /// (`RailwayGameApp/AssetPacks/<folder>.json`'s `assetPackID`).
     public var assetPackID: String {
         "mappack-\(packFolder)"
+    }
+
+    /// Decision 991: the folders beside the city's own (`MapPacks/<folder>`)
+    /// that hold the parts of its map downloaded apart, each its own asset
+    /// pack (`mappack-<folder>`): Japan's map is cut along the prefectures'
+    /// borders, Fukuoka's own folder holding Fukuoka Prefecture's tiles
+    /// and everything the map shares (its railways, heights, water and
+    /// people), Saga's and Kumamoto's theirs. A part's files are listed
+    /// in the city's `pack.json` by their folder and name
+    /// (`fukuoka-kumamoto/basemap.pmtiles`).
+    public var partFolders: [String] {
+        switch self {
+        case .hongKong, .rovaniemi: []
+        case .fukuoka: ["fukuoka-saga", "fukuoka-kumamoto"]
+        }
+    }
+
+    /// Decision 991: the IDs of every asset pack the city's map is in, its
+    /// own first; the map is read once all of them are on the device.
+    public var assetPackIDs: [String] {
+        [assetPackID] + partFolders.map { "mappack-\($0)" }
+    }
+
+    /// Decision 991: where the file `name` of the city's pack (its name in
+    /// `pack.json`) lies in the downloaded assets: in the city's folder, or
+    /// in a part's (``partFolders``) for a name with a folder in it.
+    public func assetPackPath(of name: String) -> String {
+        name.contains("/") ? "MapPacks/\(name)" : "\(assetPackFolderPath)/\(name)"
     }
 
     /// Decision 776: where the city's `pack.json` lies in the downloaded

@@ -47,7 +47,10 @@ enum MapPackDownloader {
         }
         Task.detached(priority: .userInitiated) {
             for city in OverseasMap.allCases where OverseasMaps.open.contains(city) && removed.contains(city) {
-                try? await AssetPackManager.shared.remove(assetPackWithID: city.assetPackID)
+                // Decision 991: every asset pack of its map.
+                for id in city.assetPackIDs {
+                    try? await AssetPackManager.shared.remove(assetPackWithID: id)
+                }
             }
             // Decision 858: what is on the device already is taken before
             // anything is asked of the network, so a city downloaded
@@ -84,7 +87,10 @@ enum MapPackDownloader {
     static func remove(_ city: OverseasMap) async -> Bool {
         guard isAvailable, !city.isCarried else { return false }
         do {
-            try await AssetPackManager.shared.remove(assetPackWithID: city.assetPackID)
+            // Decision 991: every asset pack of its map.
+            for id in city.assetPackIDs {
+                try await AssetPackManager.shared.remove(assetPackWithID: id)
+            }
         } catch {
             log.notice("map pack \(city.assetPackID, privacy: .public) not removed: \(String(describing: error), privacy: .public)")
             return false
@@ -108,12 +114,16 @@ enum MapPackDownloader {
     }
 
     /// Fetches `city`'s pack and takes it; `false` when it did not arrive
-    /// and is worth asking for again.
+    /// and is worth asking for again. Decision 991: every asset pack its
+    /// map is in (``OverseasMap/assetPackIDs``), the city's own first; it
+    /// is taken once all of them are on the device.
     private static func fetch(_ city: OverseasMap) async -> Bool {
         do {
             let manager = AssetPackManager.shared
-            let pack = try await manager.assetPack(withID: city.assetPackID)
-            try await manager.ensureLocalAvailability(of: pack)
+            for id in city.assetPackIDs {
+                let pack = try await manager.assetPack(withID: id)
+                try await manager.ensureLocalAvailability(of: pack)
+            }
             var refusal = take(city, from: manager)
             // DEBUG-138: a pack whose `pack.json` is not the app's own is the
             // version an earlier build was given (0.6.0 (138) on the owner's
@@ -121,16 +131,23 @@ enum MapPackDownloader {
             // before the build came out). The system looks for a new version
             // only now and then, so ask it now, while the app is open, and
             // take the new version once it is down.
-            if refusal == .differsFromBundled {
+            // Decision 991: or a part of it is (a file it lists not at the
+            // listed size).
+            var partOld = false
+            if case .incomplete? = refusal, city.assetPackIDs.count > 1 { partOld = true }
+            if refusal == .differsFromBundled || partOld {
                 let (updating, _) = try await manager.checkForUpdates()
-                log.notice("map pack \(city.assetPackID, privacy: .public) differs from the app's; updating: \(updating.contains(city.assetPackID), privacy: .public)")
-                if updating.contains(city.assetPackID) {
+                let ids = city.assetPackIDs.filter(updating.contains)
+                log.notice("map pack \(city.assetPackID, privacy: .public) differs from the app's; updating: \(ids.joined(separator: ", "), privacy: .public)")
+                if !ids.isEmpty {
                     MapPackDownloads.note(city, .downloading)
-                    let latest = try await manager.assetPack(withID: city.assetPackID)
-                    if #available(iOS 26.4, *) {
-                        try await manager.ensureLocalAvailability(of: latest, requireLatestVersion: true)
-                    } else {
-                        try await manager.ensureLocalAvailability(of: latest)
+                    for id in ids {
+                        let latest = try await manager.assetPack(withID: id)
+                        if #available(iOS 26.4, *) {
+                            try await manager.ensureLocalAvailability(of: latest, requireLatestVersion: true)
+                        } else {
+                            try await manager.ensureLocalAvailability(of: latest)
+                        }
                     }
                     refusal = take(city, from: manager)
                 }
@@ -183,17 +200,18 @@ enum MapPackDownloader {
         // nothing else. The city's folder, asked for whole, is the second
         // place to look (Apple's answer to a bug in asking for a file,
         // FB19512759); asked for at most once, and only when needed.
-        let folder = city.assetPackFolderPath
-        var askedForFolder = false
-        var folderURL: URL?
+        // Decision 991: a file of a part of the map (a name with a folder
+        // in it) lies in that part's folder, beside the city's.
+        var folderURLs: [String: URL?] = [:]
         let locators: [MapPackDownloads.Locator] = [
-            { try? manager.url(for: FilePath("\(folder)/\($0)")) },
+            { try? manager.url(for: FilePath(city.assetPackPath(of: $0))) },
             { name in
-                if !askedForFolder {
-                    askedForFolder = true
-                    folderURL = try? manager.url(for: FilePath(folder))
+                let path = city.assetPackPath(of: name)
+                let folder = (path as NSString).deletingLastPathComponent
+                if folderURLs[folder] == nil {
+                    folderURLs[folder] = .some(try? manager.url(for: FilePath(folder)))
                 }
-                return folderURL?.appendingPathComponent(name)
+                return folderURLs[folder]??.appendingPathComponent((path as NSString).lastPathComponent)
             },
         ]
         return MapPackDownloads.use(city, locators: locators, expected: expected)

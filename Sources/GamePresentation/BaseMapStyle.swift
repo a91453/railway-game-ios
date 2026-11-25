@@ -106,7 +106,12 @@ public enum BaseMapStyle {
     /// The style JSON object for `tiles`, light or dark, its glyphs at
     /// `glyphs` (a MapLibre glyph address with `{fontstack}` and `{range}`),
     /// the hills shaded from the Terrarium PMTiles file at `terrain`, if any.
-    public static func style(tiles: Tiles, dark: Bool, glyphs: String, terrain: String? = nil) -> [String: Any] {
+    ///
+    /// Decision 991: `parts` are the PMTiles files of the parts of a city's
+    /// map downloaded apart, each with tiles none of the others has: each
+    /// is a source of its own, drawn by a copy of every layer of `tiles`
+    /// right after it, so a part's water lies under every part's roads.
+    public static func style(tiles: Tiles, dark: Bool, glyphs: String, terrain: String? = nil, parts: [String] = []) -> [String: Any] {
         let colors = dark ? Colors.dark : Colors.light
         var vector: [String: Any] = ["type": "vector", "url": address(of: tiles)]
         if tiles == .openFreeMap {
@@ -118,6 +123,20 @@ public enum BaseMapStyle {
         }
         var sources: [String: Any] = [source: vector]
         var drawn = layers(colors)
+        if !parts.isEmpty {
+            for (number, file) in parts.enumerated() {
+                sources["\(source)-\(number + 1)"] = ["type": "vector", "url": "pmtiles://\(file)", "attribution": bundledAttribution] as [String: Any]
+            }
+            drawn = drawn.flatMap { layer -> [[String: Any]] in
+                guard layer["source"] as? String == source, let id = layer["id"] as? String else { return [layer] }
+                return [layer] + parts.indices.map { number in
+                    var copy = layer
+                    copy["id"] = "\(id)-\(number + 1)"
+                    copy["source"] = "\(source)-\(number + 1)"
+                    return copy
+                }
+            }
+        }
         if let terrain {
             sources[terrainSource] = [
                 "type": "raster-dem", "url": "pmtiles://\(terrain)", "encoding": "terrarium", "tileSize": 512,
@@ -153,8 +172,10 @@ public enum BaseMapStyle {
     }
 
     /// The style as JSON, for a file MapLibre loads.
-    public static func json(tiles: Tiles, dark: Bool, glyphs: String, terrain: String? = nil) throws -> Data {
-        try JSONSerialization.data(withJSONObject: style(tiles: tiles, dark: dark, glyphs: glyphs, terrain: terrain), options: [.sortedKeys])
+    public static func json(tiles: Tiles, dark: Bool, glyphs: String, terrain: String? = nil, parts: [String] = []) throws -> Data {
+        try JSONSerialization.data(
+            withJSONObject: style(tiles: tiles, dark: dark, glyphs: glyphs, terrain: terrain, parts: parts), options: [.sortedKeys]
+        )
     }
 
     // MARK: - Layers

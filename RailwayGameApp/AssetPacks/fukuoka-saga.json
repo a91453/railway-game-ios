@@ -1,0 +1,12 @@
+{
+  "assetPackID": "mappack-fukuoka-saga",
+  "downloadPolicy": {
+    "prefetch": {
+      "installationEventTypes": ["firstInstallation", "subsequentUpdate"]
+    }
+  },
+  "fileSelectors": [
+    { "directory": "MapPacks/fukuoka-saga" }
+  ],
+  "platforms": ["iOS"]
+}

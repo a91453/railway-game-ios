@@ -9,9 +9,9 @@ each 256 × 256 tile of zoom 15 from the 5 m models, the laser survey's
 first (dem5a), then the photogrammetric ones (dem5b, dem5c), and the 10 m
 model (dem_png, DEM10B, zoom 14) where none of them has the tile. Each tile is
 saved as `<layer>_<z>_<x>_<y>.png`; a tile GSI does not have (404, the sea)
-as nothing. Asks three tiles at a time, fewer than a browser showing GSI's
-map does (the Kumamoto extent is some 6,700 tiles, an hour so; one at a
-time it is three), and a run that stopped goes on from where it was.
+as nothing. Asks six tiles at a time, about as many as a browser showing
+GSI's map does (decision 991's three prefectures are some 40,000 tiles,
+two hours so), and a run that stopped goes on from where it was.
 
 Licence: 国土地理院コンテンツ利用規約 (compatible with CC BY 4.0), with the
 credit 「国土地理院の標高タイルを加工して作成」.
@@ -32,7 +32,7 @@ TEN = 'dem_png'
 # A margin past the extent, in degrees: the grid reaches to whole
 # population cells beyond it.
 MARGIN = 0.01
-WORKERS = 3
+WORKERS = 6
 
 
 def tile(lat, lon, z):
