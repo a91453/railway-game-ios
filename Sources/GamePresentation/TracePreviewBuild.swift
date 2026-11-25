@@ -21,7 +21,8 @@ extension GameSession {
         // Decision 247: with double track on, the second track beside it;
         // its later: or where the real line is double. Decision 468: single
         // where the trace joins track already laid.
-        let decided = plan.existing.isEmpty ? tracedDouble(built) : (double: false, real: nil)
+        lazy var wanted = tracedDouble(built)
+        let decided = plan.existing.isEmpty ? wanted : (double: false, real: nil)
         var double: Result<DoubleChainPlan, TraceDoubleProblem>?
         if decided.double, !built.isEmpty {
             double = tracedDoublePlan(built, from: start, to: end, reachesEnd: !plan.stopped, traced: plan)
@@ -112,7 +113,7 @@ extension GameSession {
             )
         }
         if !preview.existing.isEmpty {
-            preview.traceNote = [Self.joinedText(plan, wantedDouble: networkBuildsDouble || tracedDouble(built).double, in: language), preview.traceNote]
+            preview.traceNote = [Self.joinedText(plan, wantedDouble: networkBuildsDouble || wanted.double, in: language), preview.traceNote]
                 .compactMap { $0 }.joined(separator: " ")
         }
         return (preview, second)
@@ -245,7 +246,7 @@ extension GameSession {
         if let memo = tracedWayMemo, memo.key == key { return memo.way }
         tracedWaysWorkedOut += 1
         let way = tracedWay(from: from, to: to, reach: Self.traceReach(NetworkBuilding.minimumSpacing * 2)).map {
-            $0.dropFirst().dropLast().map { WorldCoordinate(x: Int64($0.x.rounded()), y: Int64($0.y.rounded()), z: 0) }
+            $0.dropFirst().dropLast().map { $0.coordinate() }
         } ?? []
         tracedWayMemo = (key, way)
         return way

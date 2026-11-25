@@ -221,6 +221,19 @@ final class RealRailwayTracingTests: XCTestCase {
         XCTAssertEqual(session.tracedWaysWorkedOut, 2, "the finger is a new end")
     }
 
+    /// In one move of a drag the map's lit line, the preview and the
+    /// trace it falls back to each asked for the way along the real lines
+    /// between the same two points; it is found once.
+    func testOneMoveOfADragFindsTheWayOnce() throws {
+        let (session, taipei, banqiao) = try taipei()
+        session.tapNetwork(at: taipei, reach: reach)
+        session.tracedRoutesWorkedOut = 0
+        session.dragNetwork(from: taipei, to: banqiao, reach: reach)
+        XCTAssertNotNil(session.networkPreview)
+        XCTAssertFalse(session.networkTracedWay.isEmpty)
+        XCTAssertEqual(session.tracedRoutesWorkedOut, 1, "the lit line, the preview and its plan share one search")
+    }
+
     func testTheTightestRadiusOfAnEdge() {
         func stretch(_ curve: TrackCurve, to: PlanPoint) -> PlayerCommand.TrackStretch {
             PlayerCommand.TrackStretch(

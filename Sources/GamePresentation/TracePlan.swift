@@ -228,9 +228,7 @@ extension GameSession {
                 "沿這段真實鐵路，從一端到另一端的高低差超過遊戲的坡度上限 40‰，鋪不上去。"
             ))
             refused.brief = language.text("Too steep along this line", "沿線太陡，鋪不上去")
-            refused.refusedWay = [from] + path.points.dropFirst().dropLast().map {
-                WorldCoordinate(x: Int64($0.x.rounded()), y: Int64($0.y.rounded()), z: Int64(ground($0).rounded()))
-            } + [to]
+            refused.refusedWay = [from] + path.points.dropFirst().dropLast().map { $0.coordinate(z: Int64(ground($0).rounded())) } + [to]
             return refused
         }
         // Decision 351: each platform level, between the heights the track

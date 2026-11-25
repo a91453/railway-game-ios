@@ -98,9 +98,37 @@ extension GameSession {
     func tracedWay(
         from start: WorldCoordinate, to end: WorldCoordinate, reach: Double, leaving: NetworkAnchor? = nil, arriving: NetworkAnchor? = nil
     ) -> [WorldVector]? {
-        guard let traces = realRailwayTraces else { return nil }
-        let from = WorldVector(start.plan), to = WorldVector(end.plan)
-        guard let nearest = traces.snap(from, within: reach) else { return nil }
+        guard let best = tracedRoute(from: start.plan, to: end.plan, reach: reach) else { return nil }
+        // And each step from one line to the one beside it slanting, as a
+        // crossover is.
+        let way = RealRailwayTraces.eased(best.points, hops: best.hops)
+        guard networkFollowsTrack, leaving != nil || arriving != nil else { return way }
+        let path = WorldPath(way)
+        guard path.points.count > 1 else { return way }
+        let ahead = path.point(at: min(path.length, 50 * RealRailwayTraces.metre)).plan
+        let behind = path.point(at: max(0, path.length - 50 * RealRailwayTraces.metre)).plan
+        let away = leaving.flatMap { Self.joiningDirection(of: $0, toward: ahead, in: world) }
+        let toward = arriving.flatMap { Self.joiningDirection(of: $0, toward: behind, in: world) }?.reversed
+        guard away != nil || toward != nil else { return way }
+        return RealRailwayTraces.eased(best.points, hops: best.hops, leaving: away, arriving: toward)
+    }
+
+    /// The shortest way along the real lines from `start` to `end` that
+    /// ``tracedWay(from:to:reach:leaving:arriving:)`` eases, with its
+    /// hops; `nil` where either is too far from a real line or no line
+    /// joins them. Worked out once for each pair of points and kept
+    /// (``tracedRouteMemo``): in one move of a drag the map's lit line,
+    /// the preview and the track it joins each ask for it.
+    func tracedRoute(from start: PlanPoint, to end: PlanPoint, reach: Double) -> (points: [WorldVector], hops: [Int])? {
+        guard let traces = realRailwayTraces, let frame = RealWorldFrame(world: world) else { return nil }
+        let key = TracedRouteKey(lines: RealRailwayTracesKey(frame: frame, bounds: world.bounds), from: start, to: end, reach: reach)
+        if let memo = tracedRouteMemo, memo.key == key { return memo.route }
+        tracedRoutesWorkedOut += 1
+        let from = WorldVector(start), to = WorldVector(end)
+        guard let nearest = traces.snap(from, within: reach) else {
+            tracedRouteMemo = (key, nil)
+            return nil
+        }
         // Decision 972: where lines of the system are drawn side by side
         // (the North-Link Line beside the Yilan Line through Su'aoxin's
         // yard, 9 to 14 m apart for 450 m), each end may be on any of them
@@ -120,19 +148,9 @@ extension GameSession {
                 }
             }
         }
-        // And each step from one line to the one beside it slanting, as a
-        // crossover is.
-        guard let best else { return nil }
-        let way = RealRailwayTraces.eased(best.points, hops: best.hops)
-        guard networkFollowsTrack, leaving != nil || arriving != nil else { return way }
-        let path = WorldPath(way)
-        guard path.points.count > 1 else { return way }
-        let ahead = path.point(at: min(path.length, 50 * RealRailwayTraces.metre)).plan
-        let behind = path.point(at: max(0, path.length - 50 * RealRailwayTraces.metre)).plan
-        let away = leaving.flatMap { Self.joiningDirection(of: $0, toward: ahead, in: world) }
-        let toward = arriving.flatMap { Self.joiningDirection(of: $0, toward: behind, in: world) }?.reversed
-        guard away != nil || toward != nil else { return way }
-        return RealRailwayTraces.eased(best.points, hops: best.hops, leaving: away, arriving: toward)
+        let route = best.map { (points: $0.points, hops: $0.hops) }
+        tracedRouteMemo = (key, route)
+        return route
     }
 
     /// The way track joining `anchor` runs from it toward `point`, where
