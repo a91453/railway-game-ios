@@ -19,8 +19,12 @@ import Foundation
 /// as far apart as the cab car's and about the real train's (a window to
 /// each row of seats, a metre apart); the door behind the row stands
 /// half a metre nearer the car's end for it, taken out of the plain
-/// wall there (the owner, 2026-11-25). No company mark, lettering or
-/// number is drawn, and no pantograph (the old cars have none).
+/// wall there (the owner, 2026-11-25). Each coupled end has a dark hood
+/// all the way round, the end's outline run on to 2 cm short of the
+/// joint, as the real train's outer hood stands flush with its body; the
+/// old cars had a narrow gangway alone and 0.6 m of daylight around it.
+/// No company mark, lettering or number is drawn, and no pantograph (the
+/// old cars have none).
 public enum Map3DKyushu800 {
     /// The cars the game draws: the cab car and the middle car.
     public enum Unit: String, CaseIterable, Sendable {
@@ -103,7 +107,7 @@ public enum Map3DKyushu800 {
 
 extension Map3DKyushu800 {
     /// Decision 782: its set, its showcase row (six cars) and its cars'
-    /// triangles (1,487 the cab car, 1,467 the middle car: few enough to be
+    /// triangles (1,509 the cab car, 1,523 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(

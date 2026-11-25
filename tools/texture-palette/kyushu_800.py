@@ -22,7 +22,8 @@
 - 紅線照貼圖是兩個像素高（約 5 cm，和真車照片量的一樣），不為遊戲大小加
   粗；在門的地方斷開，和貼圖、真車一樣。
 - 拿掉：凸出側牆 3 cm 的行先表示器薄片、通道幌的兩個端面、重複的面。
-- 車端的牆塗深色（真車兩節之間是全高的黑色外幌）。
+- 車端的牆塗深色，每個連結端再補一圈全周幌（`hoods`）：真車兩節之間是和車身
+  齊平、全高的黑色外幌，舊版只有中間一條窄的通道幌，兩節之間 0.6 m 看得穿。
 - 舊版把車壓成 21 m × 2.80 m × 3.96 m；這裡放回真車的尺寸：中間車 25.00 m、
   寬 3.38 m、屋頂高 3.65 m，頭車 27.35 m。頭車是整節沿車身等比放大（舊版
   21.0 m → 27.35 m），車鼻不單獨拉長、不改形（作者 2026-11-25：車頭不可
@@ -66,6 +67,7 @@ CAB = 27.35 / 21.001     # 頭車整節：鼻尖 −10.5、連結面 +10.501 →
 MORE_WINDOWS = 2          # 中間車的窗帶多排幾格（14 → 16）
 WINDOW_SCALE = 0.9        # 中間車的窗帶沿車身再乘多少：窗距 1.155、1.203 m → 1.04、1.08 m，和頭車一樣
 BOGIE_FROM_END = 3.75     # 真車：轉向架中心離連結面
+HOOD_SHORT = 0.02         # 全周幌的口離連結面多少：兩節的幌相隔 4 cm，轉彎時不互相穿過
 BOGIE_CENTRES = 17.5      # 真車：轉向架中心距
 
 def rect(x0, y0, x1, y1):
@@ -335,6 +337,47 @@ def more_windows(triangles):
     return out, numbers
 
 
+def hull(points: np.ndarray) -> list[tuple[float, float]]:
+    """平面上一堆點的凸包，逆時針，同一條邊上的中間點拿掉。"""
+    found = sorted({(round(float(x), 3), round(float(y), 3)) for x, y in points})
+
+    def half(order):
+        chain = []
+        for point in order:
+            while len(chain) >= 2 and ((chain[-1][0] - chain[-2][0]) * (point[1] - chain[-2][1])
+                                       - (chain[-1][1] - chain[-2][1]) * (point[0] - chain[-2][0])) <= 1e-6:
+                chain.pop()
+            chain.append(point)
+        return chain[:-1]
+
+    return half(found) + half(found[::-1])
+
+
+def hoods(body, cab: bool):
+    """全周幌：每個連結端，把車身端面的輪廓整圈往連結面延伸到差 `HOOD_SHORT`，
+    口封起來，深色。真車兩節之間是和車身齊平、從屋頂到裙板的深色外幌；舊版
+    只有中間一條 1.2 m 寬的通道幌，兩節車身之間 0.6 m 看得穿。
+
+    `body` 是放大後、還沒轉軸的車身（x 右、y 上、z 沿車身）。"""
+    points = np.concatenate([corners for corners, _ in body])
+    out = []
+    for sign in ((1,) if cab else (-1, 1)):
+        wall = float((points[:, 2] * sign).max())
+        mouth = float(along(np.array([10.501]), cab)[0]) - HOOD_SHORT
+        if mouth - wall < 0.05:
+            raise SystemExit("車身已經到連結面，沒有地方放幌")
+        ring = hull(points[points[:, 2] * sign > wall - 0.02][:, :2])
+        if sign < 0:
+            ring = ring[::-1]  # 從另一頭看，外側才朝外
+        at = lambda point, z: (point[0], point[1], sign * z)
+        for a, b in zip(ring, ring[1:] + ring[:1]):
+            out.append((np.array([at(a, wall), at(b, wall), at(b, mouth)]), DARK))
+            out.append((np.array([at(a, wall), at(b, mouth), at(a, mouth)]), DARK))
+        for a, b in zip(ring[1:], ring[2:]):
+            out.append((np.array([at(ring[0], mouth), at(a, mouth), at(b, mouth)]), DARK))
+    return out
+
+
 def build(path: Path, cab: bool, debug_dir: Path | None):
     gltf, blob, digest = base.read_glb(path)
     pieces = base.parts(gltf, blob)
@@ -358,6 +401,7 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
 
     # 原座標：x 右、y 上、z 沿車身（頭車的車鼻在 -z）。車體照真車尺寸放大。
     scaled = [(grown(corners), kind) for corners, kind in triangles]
+    scaled += hoods(scaled, cab)
     for piece in pieces:
         if piece is body:
             continue
@@ -374,7 +418,9 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
             moved = world + np.array([0, 0, target - middle])
             scaled += [(moved[face], DARK) for face in piece["faces"]]
         elif size[1] > 1.5:
-            # 通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在連結面上）。
+            # 舊版中間那條窄的通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在
+            # 連結面上）。它幾乎整條在全周幌裡面，只有到連結面的最後 2 cm 露出來，
+            # 車的全長也靠它量到連結面。
             hood = grown(world)
             for face in piece["faces"]:
                 corners = hood[face]

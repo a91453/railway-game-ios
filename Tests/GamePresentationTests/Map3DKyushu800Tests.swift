@@ -116,14 +116,41 @@ final class Map3DKyushu800Tests: XCTestCase {
             XCTAssertLessThan(line.max() ?? 9, glass.min() ?? 0, "\(unit.rawValue): the line under the windows")
             // As thin as the real one: some 5 cm.
             XCTAssertLessThan((line.max() ?? 9) - (line.min() ?? 0), 0.06, unit.rawValue)
-            // The roof's flat top is red from side to side.
-            let roof = all.filter { $0.x < 0 && $0.z > 3.6 && abs($0.y) < 1.3 }
+            // The roof's flat top is red from side to side, as far as the
+            // hood at the car's end.
+            let roof = all.filter { $0.x < 0 && $0.x > 0.35 - unit.pitch / 2 && $0.z > 3.6 && abs($0.y) < 1.3 }
             XCTAssertFalse(roof.isEmpty, unit.rawValue)
             XCTAssertTrue(roof.allSatisfy { $0.colour == Map3DPalette.trainRed }, "\(unit.rawValue): the red roof")
             XCTAssertFalse(all.filter { $0.colour == Map3DPalette.steel && $0.z < 1 }.isEmpty, "\(unit.rawValue): the grey skirt")
             // Each door has its frame (the old texture's thin line around the
             // panel), up the wall above the red line.
             XCTAssertFalse(all.filter { $0.colour == Map3DPalette.steel && $0.z > 1.6 && $0.z < 3.3 }.isEmpty, "\(unit.rawValue): the door frames")
+        }
+    }
+
+    /// Between two cars the real train has a dark hood all the way round,
+    /// flush with the body from the roof to the skirt. The old cars had a
+    /// narrow gangway alone, and 0.6 m of daylight around it; here each
+    /// coupled end's outline runs on to 2 cm short of the joint, so two
+    /// cars' hoods stand 4 cm apart.
+    func testADarkHoodClosesTheGapBetweenTwoCars() throws {
+        for unit in Map3DKyushu800.Unit.allCases {
+            let model = try XCTUnwrap(Map3DKyushu800.model(unit))
+            let half = unit.pitch / 2
+            // The cab car couples at its back alone.
+            for end in unit == .cab ? [Float(-1)] : [-1, 1] {
+                let past = faces(model).filter { $0.x * end > half - 0.29 }
+                XCTAssertTrue(past.allSatisfy { $0.colour == Map3DPalette.dark }, "\(unit.rawValue): dark past the body's end")
+                XCTAssertFalse(past.filter { $0.z > 3.6 }.isEmpty, "\(unit.rawValue): over the roof")
+                XCTAssertFalse(past.filter { $0.y > 1.68 }.isEmpty, "\(unit.rawValue): down one wall")
+                XCTAssertFalse(past.filter { $0.y < -1.68 }.isEmpty, "\(unit.rawValue): down the other")
+                XCTAssertFalse(past.filter { $0.z < 0.7 && abs($0.y) > 1.4 }.isEmpty, "\(unit.rawValue): as far down as the skirt")
+                // Its mouth is closed, 2 cm short of the joint.
+                let mouth = past.filter { abs($0.x * end - (half - 0.02)) < 0.001 }
+                XCTAssertFalse(mouth.isEmpty, "\(unit.rawValue): the mouth")
+                let wide = model.vertices.filter { abs($0.y) > 1 && $0.x * end > half - 0.29 }.map { $0.x * end }
+                XCTAssertEqual(wide.max() ?? 0, half - 0.02, accuracy: 0.001, "\(unit.rawValue): short of the joint")
+            }
         }
     }
 
