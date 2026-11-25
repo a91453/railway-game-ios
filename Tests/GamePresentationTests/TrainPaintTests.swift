@@ -191,7 +191,7 @@ final class TrainPaintTests: XCTestCase {
         let scene = Map3DScene(world: world), motion = TrainMotion(world: world, time: 0), heights = Map3DTrains.Heights(world: world)
         var pack = Map3DModelPack.standard
         // Every high-speed set a 700T, as while the train pack is locked.
-        pack.locked = ["n700sG"]
+        pack.locked = [Map3DN700S.key]
         let boxes = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: nil, eye: nil)
         let eye = try XCTUnwrap(boxes.boxes.vertices.first?.position) + Map3DPoint(0, 100, 0)
         let own = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: pack, eye: eye)
@@ -223,7 +223,7 @@ final class TrainPaintTests: XCTestCase {
     @MainActor
     func testTheLinePagesMenuAndTheChoice() throws {
         let (session, fast, second, plain) = try session()
-        let locked: Set<String> = ["n700sG"]
+        let locked: Set<String> = [Map3DN700S.key]
         XCTAssertEqual(session.trainPaintMenus(on: plain, locked: locked), [])
         XCTAssertEqual(session.trainPaintMenus(on: LineID(rawValue: 999), locked: locked), [])
         let menu = try XCTUnwrap(session.trainPaintMenus(on: fast, locked: locked).first)
@@ -273,7 +273,7 @@ final class TrainPaintTests: XCTestCase {
     @MainActor
     func testEveryLineRunningTheModelAtOnce() throws {
         let (session, fast, second, plain) = try session()
-        let locked: Set<String> = ["n700sG"]
+        let locked: Set<String> = [Map3DN700S.key]
         let family = try XCTUnwrap(TrainPaintFamily.named(set: "highSpeed"))
         XCTAssertEqual(Set(session.lines(running: family, locked: locked)), [fast, second])
         var told = 0

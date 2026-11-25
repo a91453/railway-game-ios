@@ -78,7 +78,9 @@ final class Map3DTrainMaterialTests: XCTestCase {
                                             // Decision 977: the Kyushu Shinkansen's N700 series.
                                             "set-kyushuN700",
                                             // Decision 979: the N700S.
-                                            "set-n700s-"].contains { recipe.name.hasPrefix($0) },
+                                            "set-n700s-",
+                                            // Decision 988: the 700T, the owner's old 700 series.
+                                            "set-highSpeed-"].contains { recipe.name.hasPrefix($0) },
                                   "\(recipe.name): only a cabin or a studio train marks its own glass")
                     continue
                 }

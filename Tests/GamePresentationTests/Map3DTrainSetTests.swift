@@ -59,8 +59,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : name == set.headName && set.key == "SUMMER" ? 5_370...5_370
                     : name == set.headName && set.key == "SUMMERFar" ? 1_654...1_654
                     : name == set.headName && set.key == "STEAM" ? 8_000...10_500
-                    // Decision 408: #1201's 700T, eight to nine thousand a
-                    // cab and five to six a middle car, so drawn near only;
+                    // Decision 408: #1201's 700T was eight to nine thousand a
+                    // cab and five to six a middle car, so drawn near only
+                    // (until decision 988, below);
                     // its E200, five to six thousand (the N700S-G was
                     // here until decision 979; the N700S in its place is a
                     // registered train).
@@ -78,7 +79,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu700" ? ([set.headName, set.tailName].contains(name) ? 13_500...14_000 : 5_900...6_200)
                     : set.key == "emu700Far" && [set.headName, set.tailName].contains(name) ? 6_600...6_800
                     : set.key == "emu500" ? (name == set.middleName || name == set.middleBackName || [set.headName, set.tailName].contains(name) ? 4_400...4_700 : 2_800...2_950)
-                    : set.key == "highSpeed" ? ([set.headName, set.tailName].contains(name) ? 8_000...9_500 : 5_000...6_000)
+                    // Decision 988: the 700T is the owner's old 700 series, 1,903
+                    // a cab car and 1,308 to 1,392 the others.
+                    : set.key == "highSpeed" ? 1_200...2_000
                     // Decision 461: #1323's C371 and C381 cabs, 5,358 and 6,976.
                     : ["metroC371", "metroC381"].contains(set.key) && [set.headName, set.tailName].contains(name) ? 5_300...7_000
                     // Decision 466: #1422's Sanying cabs, 4,306 each.
@@ -341,8 +344,11 @@ final class Map3DTrainSetTests: XCTestCase {
         // pantograph cars, the EMU3000, every metro size a C381 (decision
         // 461: #1323's, at its own lengths).
         XCTAssertEqual(names("HSR", 1), ["set-highSpeed-head"])
-        XCTAssertEqual(names("HSR", 12), ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-panto"]
-            + Array(repeating: "set-highSpeed-car", count: 4) + ["set-highSpeed-panto", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-tail"])
+        // Decision 988: the back half's cars are the same cars turned round,
+        // so the two pantographs face each other.
+        XCTAssertEqual(names("HSR", 12), ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-panto",
+                                          "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-carBack", "set-highSpeed-carBack",
+                                          "set-highSpeed-pantoBack", "set-highSpeed-carBack", "set-highSpeed-carBack", "set-highSpeed-tail"])
         XCTAssertEqual(names("EMU3000", 3), ["set-emu3000-head", "set-emu3000-car", "set-emu3000-tail"])
         for code in ["A", "B", "D"] {
             XCTAssertEqual(names(code, 2), ["set-metroC381-head", "set-metroC381-tail"], code)
