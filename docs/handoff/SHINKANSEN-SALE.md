@@ -41,8 +41,7 @@
 
 ## 還沒做的事（照這個順序）
 
-1. **釘住的測試**（依文末試跑結果逐一看：是改期望值還是真的壞了）：`RealLineBundleTests`（約第 64 行，福岡的組合多一組 `["kyushushinkansen:KS"]`）、`RovaniemiReportTests`（約 55）、
-   `DemoRealLinesEverySystemTests`（系統集合多一個）、`FukuokaRailwaysTests.testEachLineIsBoughtAndRunsADay` 的待售清單，可能還有地圖包大小、manifest、`rail_structures` 的系統。
+1. **釘住的測試**：照文末「釘住測試試跑」的 5 個紅逐一改（4 個是改期望值，`DemoRealLinesEverySystemTests` 第 80–81 行要真的處理）。這次的篩選沒涵蓋全部測試，CI 整輪跑時可能還有別的。
 2. **共站測試**：`SharedStationLayoutTests`（福岡那段約第 254 行）加新幹線與地鐵兩種順序：`stacked` 空、`uneven` 只有博多；`testReport`（約 328 行，福岡的順序約 384 行）加新幹線的順序；
    用 `SHARED_STATION_REPORT` 比較改前（`origin/main`）改後，**其他地圖要一字不差**。`RealLineBoughtAgainTests` 加新幹線。再跑 `real-line-laying` skill §2 列的鋪線測試
    （`RovaniemiRailwaysTests`、`RealLineAcquisitionTests|RealLineRebuildTests|HongKongEveryLineTests|HongKongSharedTrackBuyOrderTests|LiujiaLineTrainsTests|RealLineBoughtAgainTests`）。
@@ -77,4 +76,11 @@ python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/Ma
 
 （下面由第二串在停手前補上；指令：`swift test --skip-build --parallel --num-workers 3 --filter 'DemoRealLinesEverySystemTests|FukuokaRailwaysTests|FukuokaGroundTests|RealLineBundleTests|RovaniemiReportTests|TimetableCheckupAllBoughtTests|RealRailwaysTests|PlatformNameBoard|MapPack|RealWorldMapTests|TrackGaugeTests|UndergroundStationsTests|RealUndergroundTests|RealRailwayGameplayTests|MapGrowthLayoutTests|OverseasSightsTests|AirRoutesTests|Map3DFukuokaTrainsTests|Map3DRealTrainsTests|Map3DTrainSetTests|HongKongRailwaysTests|RovaniemiRailwaysTests|FukuokaBuildingsTests|Map3DOpenEveryStartTests|Map3DMapLoadReportTests'`）
 
-- 結果：待補。
+- 結果（2026-11-25，VERIFIED 雲端 Linux）：226 個測試，**5 個紅**，其餘全綠（`RovaniemiReportTests`、`FukuokaGroundTests`、`Map3D*`、`HongKongRailwaysTests`、`RovaniemiRailwaysTests` 等都過）。
+  注意這次是 `--skip-build`，**用的是改 `TimetableCheckupAllBoughtTests` 之前建的測試檔**，所以第 5 個是舊期望值。
+  1. `DemoRealLinesEverySystemTests.testALineOfEachSystemHasTrains`：第 66 行系統集合多 `kyushushinkansen`（改期望值）；**第 80–81 行是真的問題**：
+     「kyushushinkansen|KS：畫面裡沒有同一條真實路線的兩個車站」——示範畫面（新局的 2 × 2 塊）只看得到博多一站。要嘛讓示範換一個看得到兩站的範圍，要嘛這個系統照不在起始範圍的線處理（看該測試怎麼對待其他起始範圍外的線），自己拍板。
+  2. `FukuokaRailwaysTests.testEachLineIsBoughtAndRunsADay`（第 127 行）：待售清單多 `kyushushinkansen:KS`（改期望值；看這個測試是否也該買新幹線跑一天，或註明由 `testFukuokaShinkansen` 管）。
+  3. `RealLineBundleTests.testEveryMapSellsItsLinesThatShareAStationTogether`（第 64 行）：福岡多一組 `["kyushushinkansen:KS"]`（改期望值，新幹線單獨賣）。
+  4. `RealRailwayGameplayTests.testTheBundledDataLoadsWithoutIssues`（第 46 行）：系統數 13 → 14（改期望值與說明文字，加上 Kyushu Shinkansen，決策 975）。
+  5. `TimetableCheckupAllBoughtTests.testEveryLineOnSaleIsPlayed`（第 169 行）：已在這串改好（比的是 Set），重建後應該會綠，要再跑一次確認。
