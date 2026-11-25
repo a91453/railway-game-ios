@@ -38,10 +38,13 @@ final class MapPackExtentsTests: XCTestCase {
         }
     }
 
-    func testThePacksInTheAppHaveNotGrown() throws {
+    /// Fukuoka's grew to Kumamoto (KUMAMOTO-GROUND); the others have not
+    /// grown.
+    func testOnlyFukuokasPackInTheAppHasGrown() throws {
         for city in OverseasMap.allCases {
             let pack = try XCTUnwrap(HongKongRailwaysTests.pack(city))
-            XCTAssertEqual(try MapPack.extents(ofManifest: pack.file("pack", "json")).earlier, [], "\(city)")
+            let fukuoka = MapPack.Extent(north: 33.72, south: 33.52, west: 130.29, east: 130.48)
+            XCTAssertEqual(try MapPack.extents(ofManifest: pack.file("pack", "json")).earlier, city == .fukuoka ? [fukuoka] : [], "\(city)")
         }
     }
 }
