@@ -3847,7 +3847,10 @@ struct StoredMapLayerSheet: View {
     /// with the map's data sources. Nothing for a blank map.
     private var mapStyleSection: AnyView? {
         guard let realWorld = RealWorldFrame(world: session.world) else { return nil }
-        let showsRailways = session.railways?.lines(near: realWorld.anchor, within: FollowingMapView.railwayReach(of: WorldRegion(bounds: session.world.bounds))).isEmpty == false
+        // Decision 969: round the middle of the world, which a map that
+        // grew has away from the anchor.
+        let whole = WorldRegion(bounds: session.world.bounds)
+        let showsRailways = session.railways?.lines(near: realWorld.place(atMiddleOf: whole), within: FollowingMapView.railwayReach(of: whole)).isEmpty == false
         let language = session.language
         // Decision 184, later: drawn from these values alone, so a running
         // game's ticks leave an open picker menu alone (the sheet reads
