@@ -10,10 +10,10 @@ final class Map3DPlayerSchoolHospitalTests: XCTestCase {
     typealias Studio = Map3DPlayerSchoolHospital
 
     /// All three decode at the studio's size and triangles (its
-    /// revision-3 README's check), each its middle at its origin.
+    /// revision-4 README's check), each its middle at its origin.
     func testTheModelsDecode() throws {
         let sizes: [(String, Int, Float, Float, Float)] = [
-            (Studio.schoolName, 925, 32.92, 36.40, 11.49),
+            (Studio.schoolName, 1_031, 32.92, 36.40, 11.49),
             (Studio.gymName, 198, 17.16, 27.41, 10.64),
             (Studio.hospitalName, 1_718, 26.79, 21.86, 14.03),
         ]
@@ -92,5 +92,27 @@ final class Map3DPlayerSchoolHospitalTests: XCTestCase {
         XCTAssertGreaterThan(try meanX(.school, Map3DPalette.cityRoofs[5].color), 8, "the long wing at the front")
         XCTAssertLessThan(try meanX(.school, Map3DPalette.gymGreen), -4, "the gym at the back")
         XCTAssertLessThan(try meanX(.hospital, Map3DPalette.cityRoofs[5].color), Studio.hospitalAt.x, "the terrace at the back")
+    }
+
+    /// Decision 963's sequel: on a plot with a pad, what stands on it
+    /// stands on its top, not in it: the school's pitch (8 cm) showed only
+    /// its white lines.
+    func testWhatStandsOnThePadIsOnIt() throws {
+        var checked = 0
+        for kind in Map3DScene.Builder.placedKitLayouts.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            for (look, layout) in try XCTUnwrap(Map3DScene.Builder.placedKitLayouts[kind]).enumerated() where layout.pad != nil {
+                let world = try makeWorld(width: 40_960, height: 40_960)
+                let building = PlacedBuilding(id: PlacedBuildingID(rawValue: 1), kind: kind, centre: PlanPoint(x: 8_192, y: 8_192), look: look)
+                let (region, originX, originY) = Map3DScene.frame(world: world, focus: nil)
+                var builder = Map3DScene.Builder(originX: originX, originY: originY, region: region, world: world, heights: nil)
+                let base = builder.point(x: Double(building.centre.x), y: Double(building.centre.y), height: 0)
+                let side = Float(Double(kind.side) / Map3DScene.Builder.metre)
+                XCTAssertTrue(builder.addPlacedKitBuilding(building, base: base, side: side))
+                let lowest = try XCTUnwrap(builder.closeMeshes.values.flatMap { $0.vertices.map(\.y) }.min())
+                XCTAssertGreaterThanOrEqual(lowest, base.y + Map3DScene.Builder.placedPadHeight - 1e-4, "\(kind) look \(look)")
+                checked += 1
+            }
+        }
+        XCTAssertGreaterThanOrEqual(checked, 2, "the school's and the hospital's first looks at least")
     }
 }
