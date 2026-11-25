@@ -114,7 +114,49 @@ public struct RealFerry: Hashable, Sendable {
         legMetres: [715]
     )
 
-    public static let all = [tamsuiBali, gushanCijin]
+    /// Decision 981: Central–Tsim Sha Tsui across Victoria Harbour, the
+    /// harbour ferry's older crossing. The real piers are the ends of the
+    /// way OpenStreetMap draws its boats along (way 224759247, 1,081 m
+    /// with its turn out of each pier, `duration` 9 minutes; ODbL;
+    /// osmtoday's Hong Kong extract, read 2026-11-25): Central's pier 7
+    /// (node 30745880) and Tsim Sha Tsui's (node 6980052498). Hong Kong
+    /// Island's pier first, so the two crossings, which share Tsim Sha
+    /// Tsui, start apart (``GameSession/realFerryOffers`` knows one is
+    /// open by its first pier). Tsim Sha Tsui's pier point stays some
+    /// 100 m north of the real berth, on the quay's west face: the real
+    /// pier's building stands on the water the 3D map draws, as Gushan's
+    /// does, and from the berth's own cell the pier came out 250 m away,
+    /// north of the cruise terminal
+    /// (``HongKongHarbourFerryTests/testThePiersStandAtTheDrawnShore``).
+    public static let centralTsimShaTsui = RealFerry(
+        name: "中環—尖沙咀", englishName: "Central–Tsim Sha Tsui",
+        piers: [
+            Pier(name: "中環", englishName: "Central", latitude: 22.2871201, longitude: 114.1610833),
+            Pier(name: "尖沙咀", englishName: "Tsim Sha Tsui", latitude: 22.29436, longitude: 114.16867,
+                 terminalLatitude: 22.2936223, terminalLongitude: 114.1681572)
+        ],
+        legMetres: [1_080]
+    )
+
+    /// Decision 981: Wan Chai–Tsim Sha Tsui, the harbour ferry's other
+    /// crossing: OpenStreetMap's way 4187007 (1,479 m, `duration` 8
+    /// minutes), from Wan Chai's pier (node 3049050712) to Tsim Sha
+    /// Tsui's (node 6980052447), some 60 m south-east of the Central
+    /// boats' berth at the same pier. Wan Chai's pier point stays some
+    /// 55 m south of the real berth, for the same reason as Tsim Sha
+    /// Tsui's above: from the berth's own cell the pier came out 270 m
+    /// away.
+    public static let wanChaiTsimShaTsui = RealFerry(
+        name: "灣仔—尖沙咀", englishName: "Wan Chai–Tsim Sha Tsui",
+        piers: [
+            Pier(name: "灣仔", englishName: "Wan Chai", latitude: 22.28286, longitude: 114.17613,
+                 terminalLatitude: 22.2833406, terminalLongitude: 114.176092),
+            Pier(name: "尖沙咀", englishName: "Tsim Sha Tsui", latitude: 22.2932198, longitude: 114.168548)
+        ],
+        legMetres: [1_480]
+    )
+
+    public static let all = [tamsuiBali, gushanCijin, centralTsimShaTsui, wanChaiTsimShaTsui]
 
     /// How near a real ferry's pier, or its station's building, a tap with
     /// no tool opens its ferry (decision 585 續, FERRY-STATION-TAP): 150 m,
@@ -179,14 +221,23 @@ public struct RealFerry: Hashable, Sendable {
     /// the mode to offer it before its own land is read in: 8 km.
     static let offerReach: Int64 = 8_000 * WorldCoordinate.unitsPerMetre
 
+    /// Decision 981: how wide and tall a map of one place is at most,
+    /// 100 km: Hong Kong's is 62.5 by 45.5 km, the whole of Taiwan some
+    /// 400 km tall.
+    static let onePlace: Int64 = 100_000 * WorldCoordinate.unitsPerMetre
+
     /// Decision 585 續 (FERRY-QIJIN): whether its piers lie in `world` and
     /// one within ``offerReach`` of a block of land read in, so the mode
     /// offers it on a map whose land round it is not read in yet.
+    /// Decision 981: on a map of one place (``onePlace``) its piers lying
+    /// in the map is enough, so a new game in Hong Kong offers the
+    /// harbour's crossings before any land is read in.
     func lies(in world: GameWorld) -> Bool {
         guard let frame = RealWorldFrame(world: world) else { return false }
         let points = piers.map { pier -> (Double, Double) in frame.worldPosition(latitude: pier.latitude, longitude: pier.longitude) }
         guard points.allSatisfy({ $0.0.isFinite && $0.1.isFinite && $0.0 >= 0 && $0.1 >= 0
             && $0.0 < Double(world.bounds.width) && $0.1 < Double(world.bounds.height) }) else { return false }
+        if world.bounds.width <= Self.onePlace, world.bounds.height <= Self.onePlace { return true }
         let reach = Double(Self.offerReach), half = Double(Land.blockLength) / 2
         return (world.landBlocks ?? []).contains { block in
             let x = Double(block.column) * Double(Land.blockLength) + half, y = Double(block.row) * Double(Land.blockLength) + half
