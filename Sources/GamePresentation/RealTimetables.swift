@@ -468,7 +468,12 @@ public struct RealLineRuns: Sendable, Equatable {
         let files = try JSONDecoder().decode(Files.self, from: data).lines
         var lines: [String: RealLineRuns] = [:]
         for (name, file) in zip(names, files) {
-            lines[name] = try RealLineRuns(file: file)
+            var runs = try RealLineRuns(file: file)
+            // Decision 995: its stations' real tracks.
+            for (station, count) in RealBranchLine.realTracks(of: name) where runs.stops.contains(station) {
+                runs.tracks[station] = count
+            }
+            lines[name] = runs
         }
         return lines
     }
