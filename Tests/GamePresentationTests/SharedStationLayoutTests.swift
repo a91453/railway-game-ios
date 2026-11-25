@@ -275,6 +275,54 @@ final class SharedStationLayoutTests: XCTestCase {
         }
     }
 
+    /// SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen bought after
+    /// the subway's three lines and before them. Hakata stays one station,
+    /// on two levels as the real one is: the Shinkansen's platforms up on
+    /// its real viaduct, the subway's in their tunnels under the ground,
+    /// some 30 m between them; so Hakata is the one station of the map
+    /// two purchases stand at different heights at (decision 875's rule
+    /// is for lines that could stand side by side, which a viaduct and a
+    /// tunnel cannot), and no platform lies over another of it. Before,
+    /// bought after the subway the line was refused (「這段軌道會與另一段
+    /// 軌道交叉，但兩者的高度差不到 8 公尺」): its Hakata was moved beside
+    /// the Kuko Line's platforms, found none of its real viaduct there,
+    /// came down to them and met the Kuko Line's track at one level.
+    func testTheKyushuShinkansensHakataStandsOverTheSubways() throws {
+        let shinkansen = KyushuShinkansenTests.id
+        for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen], [shinkansen, "fksubway:N", "fksubway:H", "fksubway:K"]] {
+            let session = try FukuokaRailwaysTests.fukuoka()
+            let laidBy = try Self.buy(order, on: session)
+            let world = session.world
+            let laid = Self.platforms(of: world, laidBy: laidBy)
+            XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            XCTAssertEqual(Self.uneven(laid, in: world), ["博多"], "\(order): the Shinkansen over the subway at Hakata, every other station level")
+            let stations = world.stations.filter { $0.name == "博多" }
+            XCTAssertEqual(stations.count, 1, "\(order): one Hakata")
+            let hakata = try XCTUnwrap(stations.first?.id)
+            for id in [shinkansen, "fksubway:K", "fksubway:N"] {
+                let line = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: id)?.line)))
+                XCTAssertTrue(line.stops.contains(hakata), "\(order): \(id) stops at Hakata")
+            }
+            for platform in world.network.platforms(of: hakata) {
+                let geometry = try XCTUnwrap(world.trackGeometry(of: platform.edge))
+                let middle = geometry.location(at: (platform.start + platform.end) / 2).position
+                let over = (Double(middle.z) - Double(world.groundHeight(at: middle.plan) ?? 0)) / Self.metre
+                if laidBy[platform] == shinkansen {
+                    XCTAssertGreaterThan(over, 8, "\(order): the Shinkansen's platform on its viaduct")
+                } else {
+                    XCTAssertLessThan(over, -4, "\(order): the subway's platform under the ground")
+                }
+            }
+            XCTAssertEqual(world.network.platforms(of: hakata).filter { laidBy[$0] == shinkansen }.count, 2, "\(order)")
+            // The subway's two lines there as they stand without it.
+            let subway = try XCTUnwrap(Self.between("fksubway:K", "fksubway:N", at: hakata, in: laid), "\(order)")
+            XCTAssertLessThanOrEqual(subway.height, 0.5, "\(order): the subway's two lines at one height")
+            let pair = try XCTUnwrap(Self.between(shinkansen, "fksubway:K", at: hakata, in: laid), "\(order)")
+            XCTAssertGreaterThanOrEqual(pair.distance, 8, "\(order): beside the Kuko Line's in plan, not over it")
+            XCTAssertGreaterThan(pair.height, 16, "\(order): two levels")
+        }
+    }
+
     // MARK: - Every map
 
     /// The maps this file buys every shared station of. A new
@@ -382,6 +430,13 @@ final class SharedStationLayoutTests: XCTestCase {
             try buy("rovaniemi", order) { try RovaniemiRailwaysTests.rovaniemi() }
         }
         for order in [["fksubway:K", "fksubway:H", "fksubway:N"], ["fksubway:N", "fksubway:H", "fksubway:K"]] {
+            try buy("fukuoka", order) { try FukuokaRailwaysTests.fukuoka() }
+        }
+        // SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen after the
+        // subway's lines and before them. Written after every earlier
+        // row, which stay where they were when two reports are compared.
+        let shinkansen = KyushuShinkansenTests.id
+        for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen], [shinkansen, "fksubway:N", "fksubway:H", "fksubway:K"]] {
             try buy("fukuoka", order) { try FukuokaRailwaysTests.fukuoka() }
         }
         try lines.joined(separator: "\n").appending("\n").write(toFile: path, atomically: true, encoding: .utf8)
