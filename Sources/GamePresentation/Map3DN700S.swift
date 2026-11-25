@@ -49,6 +49,17 @@ public enum Map3DN700S {
     /// real car's.
     public static let cabLength: Float = 27.35
 
+    /// How far short of its coupling a car's hood ends, metres. The old
+    /// cars' bodies end 0.30 m short of their couplings (the cab car's
+    /// 0.33 m), as the real cars' do, with only a gangway 1.2 m wide
+    /// between them: 0.6 m of open air beside it, where the game's own
+    /// cars leave 0.24 m (the owner: the first car and the second too far
+    /// apart). The real train covers it with a hood of the body's own
+    /// outline, and so does the tool: the end wall's outline drawn out to
+    /// this far from the coupling, white over the skirt's grey, the blue
+    /// lines not carried across it.
+    public static let hoodGap: Float = 0.02
+
     /// `unit`'s length, metres.
     public static func length(_ unit: Unit) -> Float { unit.isCab ? cabLength : pitch }
 
@@ -124,7 +135,7 @@ extension Map3DPalette {
 
 extension Map3DN700S {
     /// Decision 782: its set, its showcase row (twelve cars) and its cars'
-    /// triangles (3,622 the cab car, 2,217 the middle car, 2,439 the car
+    /// triangles (3,646 the cab car, 2,265 the middle car, 2,495 the car
     /// under the pantograph: a twelve-car train some 30,000, few enough
     /// to be drawn at any distance a train's model is, so no far set) and
     /// lengths.

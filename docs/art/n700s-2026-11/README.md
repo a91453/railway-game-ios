@@ -12,7 +12,7 @@
 白色車身、窗下兩道藍線（上寬下細）、灰裙板、深色轉向架與通道幌；車頭一片前窗、鼻端兩肩各一組燈（白頭燈、紅尾燈）。色票平塗，不畫文字與標誌。
 
 - 來源：作者舊版 SwiftRailMac 的模型（作者自己的內容），舊版型錄的 N700S「のぞみ」：頭車 `c264b30b`、中間車 `2cf2255b`、集電弓車 `8d903762`。原始 GLB 與貼圖不進這個公開庫。
-- 轉換：`tools/texture-palette/n700s.py` 把貼圖切成色票面（頭車 3,622 面、中間車 2,217 面、集電弓車 2,439 面），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DN700SMesh.swift`。材質順序寫在 `Map3DN700S.swift`。
+- 轉換：`tools/texture-palette/n700s.py` 把貼圖切成色票面（頭車 3,646 面、中間車 2,265 面、集電弓車 2,495 面），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DN700SMesh.swift`。材質順序寫在 `Map3DN700S.swift`。
 - 用在：列車包的第二款高鐵車（原來的 N700S-G），十二節；車庫在「高鐵」類。
 - 決策：`docs/decisions/979.md`。
 
@@ -46,6 +46,6 @@ python3 -I tools/train-models/glb_to_swift.py --enum Map3DN700S \
 2. 門框是方角的細線（舊版是圓角）；乘務員門的框跟著車鼻的曲面有一點歪；扶手沒有畫。
 3. 中間車只有一種。
 4. 集電弓車沒有集電弓本體。
-5. 轉向架與通道幌整塊深灰；床下只有一片灰裙板（舊版貼圖上是深灰的機器箱）。
+5. 轉向架與通道幌整塊深灰（連結端外面一圈是工具加的全周幌，車體的白與裙板的灰，舊版模型沒有：車與車之間原本空 0.6 m）；床下只有一片灰裙板（舊版貼圖上是深灰的機器箱）。
 6. 夜晚那一排的窗沒有亮，是繪圖工具沒開夜燈；遊戲裡窗會亮（玻璃面有標）。
 7. 還沒在 iPhone 上看過。

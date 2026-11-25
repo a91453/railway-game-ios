@@ -117,6 +117,11 @@ LENGTH = 12.5 / 10.501   # 連結面 ±10.501 → ±12.5（車距 25 m）
 CAB_LENGTH = 13.675 / 10.501
 WIDTH = 3.36 / 2.80      # 側牆 ±1.40 → ±1.68
 HEIGHT = 3.60 / 3.625    # 車頂 3.625 → 3.60
+# 全周幌：舊版車與車之間只有一條 1.2 m 寬的通道幌，車體端面之間空 0.6 m，
+# 看得穿（擁有者 2026-11-25：「第一節跟第二節車廂靠得太遠了」；遊戲自己的車
+# 只空 0.24 m）。真車的車體也是這個長度，空的地方由和車體同外形的全周幌蓋
+# 住：照端面的外形往連結面拉一圈，離連結面留這麼多（兩車之間一條細縫）。
+HOOD_GAP = 0.02  # `Map3DN700S.hoodGap`
 
 
 # ---------------------------------------------------------------- 貼圖 → 類別與長方形
@@ -332,7 +337,7 @@ def write_glb(path: Path, triangles):
 
 # ---------------------------------------------------------------- 一節車
 
-def build(path: Path, debug_dir: Path | None, length: float = LENGTH):
+def build(path: Path, debug_dir: Path | None, length: float = LENGTH, cab: bool = False):
     gltf, blob, digest = cut.read_glb(path)
     pieces = cut.parts(gltf, blob)
     body = max(pieces, key=lambda p: np.ptp(p["world"][:, 2]))
@@ -386,7 +391,53 @@ def build(path: Path, debug_dir: Path | None, length: float = LENGTH):
             continue
         seen.add(key)
         out.append((corners, kind, door))
+    out += hoods(out, (-1,) if cab else (-1, 1))
     return name_doors(out), digest
+
+
+def hoods(triangles, ends):
+    """每個連結端的全周幌：端面外形（凸包）拉到離連結面 HOOD_GAP 的一圈，
+    裙板的高度以下是裙板的灰，以上是車體的白（藍線不接過去，和真車一樣）。"""
+    points = np.concatenate([corners for corners, _, _ in triangles])
+    half = float(np.abs(points[:, 0]).max())
+    body = [(corners, kind) for corners, kind, _ in triangles if kind != DARK]
+    # 既有的面朝外的那一面是哪一種繞法：拿側牆的面量。
+    walls = [c for c, _ in body if np.abs(c[:, 2]).min() > 1.6]
+    turn = np.sign(sum(float(np.cross(c[1] - c[0], c[2] - c[0])[2] * c[:, 2].mean()) for c in walls))
+    out = []
+    for end in ends:
+        wall = max(float((end * corners[:, 0]).max()) for corners, _ in body)
+        cap = [(corners, kind) for corners, kind in body if np.abs(end * corners[:, 0] - wall).max() < 1e-3]
+        skirt = max(float(corners[:, 1].max()) for corners, kind in cap if kind == GREY)
+        ring = sorted({(round(float(y), 4), round(float(z), 4)) for corners, _ in cap for _, y, z in corners})
+
+        def hull(sequence):
+            chain = []
+            for q in sequence:
+                while len(chain) >= 2 and ((chain[-1][0] - chain[-2][0]) * (q[1] - chain[-2][1])
+                                            - (chain[-1][1] - chain[-2][1]) * (q[0] - chain[-2][0])) <= 1e-9:
+                    chain.pop()
+                chain.append(q)
+            return chain[:-1]
+        outline = hull(ring) + hull(ring[::-1])
+        centre = np.mean(outline, 0)
+        x0, x1 = end * wall, end * (half - HOOD_GAP)
+        for a, b in zip(outline, outline[1:] + outline[:1]):
+            pieces = [(a, b)]
+            if min(a[0], b[0]) < skirt - 1e-4 and max(a[0], b[0]) > skirt + 1e-4:
+                t = (skirt - a[0]) / (b[0] - a[0])
+                m = (skirt, a[1] + (b[1] - a[1]) * t)
+                pieces = [(a, m), (m, b)]
+            for p, q in pieces:
+                kind = GREY if (p[0] + q[0]) / 2 < skirt else BODY
+                quad = [np.array([x0, *p]), np.array([x1, *p]), np.array([x1, *q]), np.array([x0, *q])]
+                for corners in (np.array(quad[:3]), np.array([quad[0], quad[2], quad[3]])):
+                    normal = np.cross(corners[1] - corners[0], corners[2] - corners[0])
+                    outward = np.array([0, (p[0] + q[0]) / 2 - centre[0], (p[1] + q[1]) / 2 - centre[1]])
+                    if np.sign(np.dot(normal, outward)) != turn:
+                        corners = corners[::-1]
+                    out.append((corners, kind, -1))
+    return out
 
 
 def name_doors(triangles):
@@ -434,7 +485,7 @@ def main():
     report = {}
     for unit, path in (("cab", args.cab), ("middle", args.middle), ("pantograph", args.pantograph)):
         (triangles, doors), digest = build(path.expanduser(), args.out_dir if args.debug else None,
-                                           CAB_LENGTH if unit == "cab" else LENGTH)
+                                           CAB_LENGTH if unit == "cab" else LENGTH, unit == "cab")
         if digest != SHA256[unit]:
             raise SystemExit(f"{path.name}: 不是這個工具認得的原檔（SHA-256 {digest}）")
         name = f"n700s-{unit}"

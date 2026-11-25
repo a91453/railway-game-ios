@@ -41,6 +41,28 @@ final class Map3DN700STests: XCTestCase {
         }
     }
 
+    /// Each coupled end has its hood: the body's outline (its white over
+    /// its skirt's grey, the full width and height) drawn out to 2 cm from
+    /// the coupling, so two cars are 4 cm apart and not 0.6 m of open air
+    /// beside a narrow gangway (the owner: the first car and the second
+    /// were too far apart). The blue lines are not carried across it.
+    func testTheHoodsCloseTheGapBetweenCars() throws {
+        for unit in Map3DN700S.Unit.allCases {
+            let model = try XCTUnwrap(Map3DN700S.model(unit))
+            let half = Map3DN700S.length(unit) / 2
+            for end: Float in unit.isCab ? [-1] : [-1, 1] {
+                let rim = model.vertices.filter { abs($0.x * end - (half - Map3DN700S.hoodGap)) < 0.002 && $0.color != Map3DPalette.dark }
+                let name = "\(unit.rawValue) \(end)"
+                XCTAssertEqual(rim.map { abs($0.y) }.max() ?? 0, 1.68, accuracy: 0.01, "\(name): as wide as the body")
+                XCTAssertEqual(rim.map(\.z).max() ?? 0, 3.60, accuracy: 0.01, "\(name): to the roof")
+                XCTAssertEqual(rim.map(\.z).min() ?? 9, 0.20, accuracy: 0.02, "\(name): to the skirt's foot")
+                XCTAssertTrue(rim.allSatisfy { $0.color == ($0.z > 0.95 ? Map3DTrainShapeRefresh.highSpeedBodyColor : $0.z < 0.94 ? Map3DPalette.steel : $0.color) }, name)
+                // Nothing of the body's reaches past it but the gangway.
+                XCTAssertTrue(model.vertices.allSatisfy { $0.x * end <= half - Map3DN700S.hoodGap + 0.002 || $0.color == Map3DPalette.dark }, name)
+            }
+        }
+    }
+
     /// The real livery: a white body, the two blue lines along its side
     /// under the windows (the upper one the wider), a grey skirt, and no
     /// colour that is not the palette's.
