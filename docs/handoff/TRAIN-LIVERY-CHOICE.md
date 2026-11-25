@@ -4,7 +4,9 @@
 
 - 做到哪：機制、700T（橘色帶預設、青綠帶可選）、路線頁選單與「同款列車的路線全部套用」都做完，決策 983。
 - 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 通過；`TrainPaintTests` 9 項與相關模型、鎖、聖誕塗裝測試通過；`hashes.lock.json` 只改 700T 的 12 行。App 端靠 CI 的 Xcode 建置，實機 UNVERIFIED。
-- 下一步的第一個指令：沒有待辦；要加下一款車的塗裝，讀 `docs/decisions/983.md`「加一套塗裝怎麼做」。
+- 合併狀態（2026-11-25 23:20）：PR #2689 在 head `467a4da` 的 Swift CI 與 iOS App Build 全綠，但 #2683 合進 main 後又在 `WhatsNewNext.swift` 衝突。協調者排了合併順序（今晚發版的 PR、新功能清單拆檔、#2686 之後才輪到這張），叫了才併 main。工作串在壓縮第 2 次後停手，只收這張。
+- 下一步的第一個指令：協調者說可以之後，`git fetch origin main && git merge origin/main`（`WhatsNewNext.swift` 兩邊的行都留），本機 `swift build --build-tests -Xswiftc -warnings-as-errors` 與 `swift test --skip-build --filter 'TrainPaintTests|WhatsNewTests'`，推上去；新 head 的 `Swift CI (gate)` 與 `iOS App Build` 綠就合 #2689，在 #2118 留合併；再把素材庫 -2 #503（評分表第 1 列狀態）轉 ready，`guard` 綠就合。
+- 之後要加下一款車的塗裝，讀 `docs/decisions/983.md`「加一套塗裝怎麼做」。
 
 派工：總表第三版功能第 7 名（`a91453/railway-assets-private-2` `docs/priorities/TRAIN-LIVERY-CHOICE.md` 第 1 列）。雲端工作串「讓玩家逐線選塗裝」，分支 `claude/project-thread-40kinx`。不動 GameCore、存檔版本、golden。
 
