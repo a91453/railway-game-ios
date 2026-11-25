@@ -133,7 +133,13 @@ HEIGHT = 3.60 / 3.625    # 車頂 3.625 → 3.60
 # 看得穿（擁有者 2026-11-25：「第一節跟第二節車廂靠得太遠了」；遊戲自己的車
 # 只空 0.24 m）。真車的車體也是這個長度，空的地方由和車體同外形的全周幌蓋
 # 住：照端面的外形往連結面拉一圈，離連結面留這麼多（兩車之間一條細縫）。
-HOOD_GAP = 0.02  # `Map3DN700S.hoodGap`
+HOOD_GAP = 0.02  # `Map3DN700S.hoodGap`：幌口正中離連結面多少
+# 幌口從上面看是淺淺的 V（和 800 系的 `kyushu_800.py` 同一個做法）：往兩側每離中線
+# 1 m 再退這麼多。平的口在兩節相對轉 1.4 度就相交（工作室 r1，2026-11-26）；V 的口
+# 轉 HOOD_YAW 度以內不相碰：2·atan(HOOD_TAPER + HOOD_GAP / 1.68)。
+HOOD_TAPER = 0.025  # `Map3DN700S.hoodTaper`
+HOOD_YAW = 4.2
+COUPLER = (0.95, 1.05)  # 車鉤（連結面上唯一的東西）離軌面的高度
 
 
 # ---------------------------------------------------------------- 貼圖 → 類別與長方形
@@ -382,11 +388,12 @@ def build(path: Path, debug_dir: Path | None, cab: bool = False):
         elif size[1] > 1.5:
             # 通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在連結面上）。
             grown = world * np.array([WIDTH, HEIGHT, LENGTH])
+            # （整條在全周幌裡面看不到：`hoods` 量完車長就拿掉。）
             for face in piece["faces"]:
                 corners = grown[face]
                 if np.ptp(corners[:, 2]) < 1e-6:
                     continue
-                scaled.append((corners, DARK, -1))
+                scaled.append((corners, DARK, GANGWAY))
         # 其餘（車鼻外露的連結器）不要。
 
     # 轉成輸出的軸（+y 上、車沿 x、駕駛室在 +x）：旋轉，行列式 +1。
@@ -403,13 +410,137 @@ def build(path: Path, debug_dir: Path | None, cab: bool = False):
             continue
         seen.add(key)
         out.append((corners, kind, door))
+    out = mend(out)
     if cab:
         out = real_cab(out)
     out += hoods(out, (-1,) if cab else (-1, 1))
-    return name_doors(out), digest
+    out = [(corners, kind, door) for corners, kind, door in out if door != GANGWAY]
+    if cab:
+        out = mirrored(out)
+    # 放到格點上以後再補一次：格點上才離隔壁的邊零點幾毫米的頂點也接上。
+    return name_doors(snap(mend(snap(mend(out))))), digest
 
 
-BOGIE = -2  # 轉向架的面（「門」那一欄）：`real_cab` 整個平移，不切、不拉
+BOGIE = -2    # 轉向架的面（「門」那一欄）：`real_cab` 整個平移，不切、不拉
+GANGWAY = -3  # 舊版的通道幌：量車長用，全周幌做好就拿掉
+
+
+# `mend` 認作「在邊上」的距離：舊版網格有幾處相鄰的面本來就差零點幾毫米（切出來
+# 的頂點離隔壁的邊 0.26 mm），放到毫米的格點上一樣會疊出細條。
+TOUCH = 4e-4
+# 鄰面夾角這麼多度以內才補：同一平面上會疊出細條；車鼻的曲面上，夾角幾度的兩面
+# 之間會裂一條縫（乘務員門上量到 14 mm²）。
+FOLD = 30
+
+
+def mirrored(triangles):
+    """頭車的右半（+z，遊戲的右側）換成左半的鏡像。舊版頭車兩側差幾公釐，車鼻兩肩
+    的燈因此切成 11 與 12 面（工作室 r1）；鏡像以後兩肩的燈、門、窗都一樣。"""
+    out = []
+    for corners, kind, door in triangles:
+        zs = corners[:, 2]
+        if zs.max() <= 1e-9:
+            out.append((corners, kind, door))
+            continue
+        if zs.min() >= -1e-9:
+            continue
+        polygon = []
+        for i in range(3):
+            a, b = corners[i], corners[(i + 1) % 3]
+            if a[2] <= 0:
+                polygon.append(a)
+            if (a[2] <= 0) != (b[2] <= 0):
+                point = a + (b - a) * (a[2] / (a[2] - b[2]))
+                point[2] = 0.0
+                polygon.append(point)
+        for i in range(1, len(polygon) - 1):
+            piece = np.array([polygon[0], polygon[i], polygon[i + 1]])
+            if np.linalg.norm(np.cross(piece[1] - piece[0], piece[2] - piece[0])) > 1e-9:
+                out.append((piece, kind, door))
+    return out + [((corners * np.array([1, 1, -1]))[::-1], kind, door) for corners, kind, door in out
+                  if corners[:, 2].min() < -1e-9]
+
+
+def mend(triangles):
+    """T 形接點（`kyushu_800.py` 的同名函式）：切面時一塊的頂點常落在隔壁一塊的
+    邊中間。GLB 存到毫米，頂點各自放到毫米的格點上，邊中間那個點就會離開那條邊，
+    兩塊顏色不同的面沿邊疊出細條（或裂一條縫）；頭車的客室沿車長分段伸縮
+    （`real_cab`），跨過分段點的邊也一樣。凡是邊中間有鄰面（夾角 `FOLD` 度以內）
+    別的面的頂點，就把那條邊在那點切開，兩邊才共用同一個頂點；車鼻曲面上夾角
+    `FOLD` 度以內的鄰面也一樣（不然裂縫）。"""
+    corners = np.concatenate([c for c, _, _ in triangles])
+    normals = np.array([np.cross(c[1] - c[0], c[2] - c[0]) for c, _, _ in triangles])
+    normals /= np.maximum(np.linalg.norm(normals, axis=1), 1e-15)[:, None]
+    normals = np.repeat(normals, 3, axis=0)
+    out = []
+    for number, (c, kind, door) in enumerate(triangles):
+        flat = np.abs(normals @ normals[3 * number]) > np.cos(np.radians(FOLD))
+        ring = []
+        for i in range(3):
+            a, b = c[i], c[(i + 1) % 3]
+            ring.append(a)
+            edge = b - a
+            length = float(edge @ edge)
+            if length < 1e-10:
+                continue
+            t = (corners - a) @ edge / length
+            off = np.linalg.norm(corners - a - np.outer(t, edge), axis=1)
+            on = (t > 1e-6) & (t < 1 - 1e-6) & (off < TOUCH) & flat
+            for value in sorted({round(float(v), 9) for v in t[on]}):
+                ring.append(a + edge * value)
+        if len(ring) == 3:
+            out.append((c, kind, door))
+            continue
+        out += [(piece, kind, door) for piece in clip(ring, normals[3 * number])]
+    return out
+
+
+def clip(ring, normal):
+    """凸多邊形（有幾個點在邊上）切成三角形：一次切掉一個角，那個角不共線、切線上
+    也沒有別的頂點（離切線 `TOUCH` 以內都算在線上：插進去的點本來就離邊這麼遠以內）；
+    能切的角裡挑最大的，都不能切就挑最大的那個角。凹進去的角（放到格點上以後，邊上
+    的點可能落在多邊形裡面一點）不切。"""
+    ring, out = list(ring), []
+    while len(ring) > 3:
+        best = fallback = None
+        for i in range(len(ring)):
+            p, q, r = ring[i - 1], ring[i], ring[(i + 1) % len(ring)]
+            size = np.linalg.norm(np.cross(q - p, r - p))
+            if np.cross(q - p, r - q) @ normal <= 0:
+                continue
+            chord = r - p
+            ear = {(i - 1) % len(ring), i, (i + 1) % len(ring)}
+            others = np.array([v for k, v in enumerate(ring) if k not in ear])
+            t = np.clip((others - p) @ chord / max(float(chord @ chord), 1e-18), 0, 1)
+            touches = (np.linalg.norm(others - p - np.outer(t, chord), axis=1) < TOUCH * 1.01).any()
+            if fallback is None or size > fallback[0]:
+                fallback = (size, i)
+            if size > 1e-12 and not touches and (best is None or size > best[0]):
+                best = (size, i)
+        if fallback is None:
+            break
+        i = (best or fallback)[1]
+        out.append(np.array([ring[i - 1], ring[i], ring[(i + 1) % len(ring)]]))
+        del ring[i]
+    out.append(np.array(ring[:3]))
+    return out
+
+
+def snap(triangles):
+    """頂點放到毫米的格點上（GLB 存的就是這個）。格點上沒有面積（三點共線）或翻了面
+    （切出來的細條，放到格點上繞向反了）的拿掉：都不到幾個平方毫米。"""
+    seen, out = set(), []
+    for corners, kind, door in triangles:
+        snapped = np.round(corners * 1000) / 1000
+        normal = np.cross(snapped[1] - snapped[0], snapped[2] - snapped[0])
+        if np.linalg.norm(normal) < 2e-6 or normal @ np.cross(corners[1] - corners[0], corners[2] - corners[0]) <= 0:
+            continue
+        key = frozenset(tuple(int(round(v * 1000)) for v in corner) for corner in snapped)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append((snapped, kind, door))
+    return out
 
 
 def split_at(triangles, plane):
@@ -530,14 +661,27 @@ def real_cab(triangles):
 
 
 def hoods(triangles, ends):
-    """每個連結端的全周幌：端面外形（凸包）拉到離連結面 HOOD_GAP 的一圈，
-    裙板的高度以下是裙板的灰，以上是車體的白（藍線不接過去，和真車一樣）。"""
+    """每個連結端的全周幌：端面外形（凸包）往連結面拉一圈，裙板的高度以下是裙板
+    的灰，以上是車體的白（藍線不接過去，和真車一樣）。
+
+    幌口從上面看是淺淺的 V：正中離連結面 `HOOD_GAP`（直線上兩節相隔 4 cm），往
+    兩側每離中線 1 m 再退 `HOOD_TAPER`，兩節在彎道上相對轉 `HOOD_YAW` 度以內幌
+    不相碰。口封起來（深色，兩半各是一個平面）：從側面看，兩節之間是一道往中間
+    收窄的深色縫。
+
+    連結面上只有車鉤：一塊深色的楔子，尖端豎在連結面的正中（兩節轉彎時繞的
+    那條線），車長靠它量到連結面。舊版的通道幌整條在幌裡面，`build` 拿掉。"""
     points = np.concatenate([corners for corners, _, _ in triangles])
     half = float(np.abs(points[:, 0]).max())
     body = [(corners, kind) for corners, kind, _ in triangles if kind != DARK]
     # 既有的面朝外的那一面是哪一種繞法：拿側牆的面量。
     walls = [c for c, _ in body if np.abs(c[:, 2]).min() > 1.6]
     turn = np.sign(sum(float(np.cross(c[1] - c[0], c[2] - c[0])[2] * c[:, 2].mean()) for c in walls))
+
+    def facing(corners, outward):
+        normal = np.cross(corners[1] - corners[0], corners[2] - corners[0])
+        return corners if np.sign(np.dot(normal, outward)) == turn else corners[::-1]
+
     out = []
     for end in ends:
         wall = max(float((end * corners[:, 0]).max()) for corners, _ in body)
@@ -554,23 +698,52 @@ def hoods(triangles, ends):
                 chain.append(q)
             return chain[:-1]
         outline = hull(ring) + hull(ring[::-1])
-        centre = np.mean(outline, 0)
-        x0, x1 = end * wall, end * (half - HOOD_GAP)
+        # 幌口的 V 在中線上轉折、裙板的高度換顏色：輪廓在那裡要有頂點。
+        split = []
         for a, b in zip(outline, outline[1:] + outline[:1]):
-            pieces = [(a, b)]
+            split.append(a)
+            crossings = []
+            if a[1] * b[1] < 0:
+                t = a[1] / (a[1] - b[1])
+                crossings.append((t, (a[0] + (b[0] - a[0]) * t, 0.0)))
             if min(a[0], b[0]) < skirt - 1e-4 and max(a[0], b[0]) > skirt + 1e-4:
                 t = (skirt - a[0]) / (b[0] - a[0])
-                m = (skirt, a[1] + (b[1] - a[1]) * t)
-                pieces = [(a, m), (m, b)]
-            for p, q in pieces:
-                kind = GREY if (p[0] + q[0]) / 2 < skirt else BODY
-                quad = [np.array([x0, *p]), np.array([x1, *p]), np.array([x1, *q]), np.array([x0, *q])]
-                for corners in (np.array(quad[:3]), np.array([quad[0], quad[2], quad[3]])):
-                    normal = np.cross(corners[1] - corners[0], corners[2] - corners[0])
-                    outward = np.array([0, (p[0] + q[0]) / 2 - centre[0], (p[1] + q[1]) / 2 - centre[1]])
-                    if np.sign(np.dot(normal, outward)) != turn:
-                        corners = corners[::-1]
-                    out.append((corners, kind, -1))
+                crossings.append((t, (skirt, a[1] + (b[1] - a[1]) * t)))
+            split += [point for _, point in sorted(crossings)]
+        outline = split
+        centre = np.mean(outline, 0)
+        mouth = lambda z: end * (half - HOOD_GAP - abs(z) * HOOD_TAPER)
+        x0 = end * wall
+        if end * mouth(1.7) - wall < 0.05:
+            raise SystemExit("車體已經到連結面，沒有地方放幌")
+        for p, q in zip(outline, outline[1:] + outline[:1]):
+            kind = GREY if (p[0] + q[0]) / 2 < skirt else BODY
+            quad = [np.array([x0, *p]), np.array([mouth(p[1]), *p]), np.array([mouth(q[1]), *q]), np.array([x0, *q])]
+            outward = np.array([0, (p[0] + q[0]) / 2 - centre[0], (p[1] + q[1]) / 2 - centre[1]])
+            for corners in (np.array(quad[:3]), np.array([quad[0], quad[2], quad[3]])):
+                out.append((facing(corners, outward), kind, -1))
+        for side in (1, -1):
+            # 幌口的一半（中線這一側，連中線上的兩個點）：凸多邊形、平面，扇形切開。
+            mine = [point for point in outline if point[1] * side >= 0]
+            start = next(i for i in range(len(mine)) if mine[i][1] == 0 and mine[i - 1][1] == 0)
+            mine = mine[start:] + mine[:start]
+            at = lambda point: np.array([mouth(point[1]), *point])
+            for a, b in zip(mine[1:], mine[2:]):
+                out.append((facing(np.array([at(mine[0]), at(a), at(b)]), np.array([end, 0, 0])), DARK, -1))
+        # 車鉤：尖端在連結面，後面埋在幌裡。
+        low, high = COUPLER
+        tip, back, width = end * half, end * (half - HOOD_GAP - 0.01), 0.05
+        corners = {"tip-low": (tip, low, 0), "tip-high": (tip, high, 0),
+                   "left-low": (back, low, -width), "left-high": (back, high, -width),
+                   "right-low": (back, low, width), "right-high": (back, high, width)}
+        middle = np.mean([corners[name] for name in corners], 0)
+        faces = [("tip-low", "right-low", "right-high"), ("tip-low", "right-high", "tip-high"),
+                 ("tip-low", "tip-high", "left-high"), ("tip-low", "left-high", "left-low"),
+                 ("tip-high", "right-high", "left-high"), ("tip-low", "left-low", "right-low"),
+                 ("left-low", "left-high", "right-high"), ("left-low", "right-high", "right-low")]
+        for face in faces:
+            triangle = np.array([corners[name] for name in face], float)
+            out.append((facing(triangle, triangle.mean(0) - middle), DARK, -1))
     return out
 
 
@@ -623,6 +796,12 @@ def main():
             raise SystemExit(f"{path.name}: 不是這個工具認得的原檔（SHA-256 {digest}）")
         name = f"n700s-{unit}"
         write_glb(args.out_dir / f"{name}.glb", triangles)
+        # 每扇門在寫出去的面裡從第幾個起（`write_glb` 先寫車身、再照門名的順序寫每扇
+        # 門；`glb_to_swift.py` 照同一個順序讀）：`Map3DN700S.doors(_:)` 的 `triangles`。
+        first = sum(1 for _, _, where in triangles if where is None)
+        for door in sorted(doors, key=lambda door: door["name"]):
+            door["first"] = first
+            first += door["triangles"]
         points = np.concatenate([c for c, _, _ in triangles])
         counts = {MATERIALS[k]: sum(1 for _, kind, _ in triangles if kind == k) for k in range(len(MATERIALS))}
         report[name] = {"sha256": digest, "triangles": len(triangles), "materials": counts,

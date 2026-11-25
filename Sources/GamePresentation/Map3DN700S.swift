@@ -26,7 +26,10 @@ import Foundation
 /// 2.35 m it lacks is given back to its saloon as the real first car has
 /// it (``cabWindows``, ``cabWindowPitch``): one more window, the windows
 /// and doors as wide as the middle cars'. No company mark, lettering or
-/// number is drawn.
+/// number is drawn. Each coupled end has a hood of the body's own outline
+/// (``hoodGap``), its mouth a shallow V seen from above (``hoodTaper``),
+/// so two cars turned up to 4 degrees to each other on a curve keep their
+/// hoods apart; only the couplers' tips meet at the joint.
 public enum Map3DN700S {
     /// The cars the game draws: the cab car, the middle car and the car
     /// under the pantograph.
@@ -70,16 +73,26 @@ public enum Map3DN700S {
     /// scale would make it.
     public static let noseLength: Float = 7.41 * 12.5 / 10.501
 
-    /// How far short of its coupling a car's hood ends, metres. The old
-    /// cars' bodies end 0.30 m short of their couplings, as the real cars'
-    /// do, with only a gangway 1.2 m wide between them: 0.6 m of open air
-    /// beside it, where the game's own
-    /// cars leave 0.24 m (the owner: the first car and the second too far
-    /// apart). The real train covers it with a hood of the body's own
-    /// outline, and so does the tool: the end wall's outline drawn out to
-    /// this far from the coupling, white over the skirt's grey, the blue
-    /// lines not carried across it.
+    /// How far short of its coupling a car's hood ends on its centre line,
+    /// metres. The old cars' bodies end 0.30 m short of their couplings, as
+    /// the real cars' do, with only a gangway 1.2 m wide between them: 0.6 m
+    /// of open air beside it, where the game's own cars leave 0.24 m (the
+    /// owner: the first car and the second too far apart). The real train
+    /// covers it with a hood of the body's own outline, and so does the
+    /// tool: the end wall's outline drawn out to this far from the coupling,
+    /// white over the skirt's grey, the blue lines not carried across it,
+    /// its mouth closed in the dark grey. The old gangway, all inside it,
+    /// is left out; only the coupler, a dark wedge, reaches the coupling,
+    /// its edge upright on the centre line (where two cars turn about).
     public static let hoodGap: Float = 0.02
+
+    /// How much further short of the coupling the hood's mouth is for each
+    /// metre out from the centre line: seen from above the mouth is a
+    /// shallow V, 4 cm between two cars on the centre line and 12 cm at
+    /// their sides, so that two cars turned up to `2·atan(hoodTaper +
+    /// hoodGap / 1.68)`, 4.2 degrees, to each other keep their hoods apart
+    /// (a straight mouth's met at 1.4 degrees: the studio's first review).
+    public static let hoodTaper: Float = 0.025
 
     /// `unit`'s length, metres.
     public static func length(_ unit: Unit) -> Float { unit.isCab ? cabLength : pitch }
@@ -102,13 +115,15 @@ public enum Map3DN700S {
 
     /// A door of a car: where its leaf, with its frame, its window and the
     /// piece of the blue lines across it, is on each of the car's two side
-    /// walls. The mesh is cut along this outline, so every triangle is
-    /// wholly a door's or wholly the wall's (the tool writes each door as
-    /// a node of its own too): the doors can be moved apart from the wall,
-    /// to open at a station, without the mesh being cut again. (A
-    /// passenger door's outline is this box; the driver's door is on the
-    /// nose's taper, its outline not square to the car, so its box is
-    /// only its place and the tool's node its piece.)
+    /// walls, and which of the model's triangles are it. The mesh is cut
+    /// along its outline, so every triangle is wholly a door's or wholly
+    /// the wall's, and the wall is whole without it: the tool writes each
+    /// door as a node of its own, after the body, and the model keeps
+    /// their triangles in that order (``left``, ``right``), so the doors
+    /// can be moved apart from the wall, to open at a station, without
+    /// the mesh being cut again. (A passenger door's outline is this box;
+    /// the driver's door is on the nose's taper, its outline not square to
+    /// the car, so its box is only its place and its triangles its piece.)
     public struct Door: Sendable, Equatable {
         /// Along the car, metres from its middle, the cab's end positive.
         public let x: ClosedRange<Float>
@@ -116,6 +131,14 @@ public enum Map3DN700S {
         public let z: ClosedRange<Float>
         /// The driver's own door, by the cab.
         public let crew: Bool
+        /// Its triangles on the left wall (+y) and on the right, as
+        /// ``Map3DN700S/model(_:)`` has them (the vertices `3 * n` to
+        /// `3 * n + 2` of triangle `n`): the GLB's nodes `…-door-left-…` and
+        /// `…-door-right-…`.
+        public let left: Range<Int>, right: Range<Int>
+
+        /// Its triangles on the wall `side` is on (+y the left).
+        public func triangles(side: Float) -> Range<Int> { side > 0 ? left : right }
 
         /// Whether `point` is on this door, on the side wall its `y` is on.
         public func contains(_ point: Map3DPoint, margin: Float = 0.002) -> Bool {
@@ -125,16 +148,20 @@ public enum Map3DN700S {
     }
 
     /// `unit`'s doors, from its front to its back; each is on both sides.
-    /// As `tools/texture-palette/n700s.py` reports them.
+    /// As `tools/texture-palette/n700s.py` reports them (`report.json`'s
+    /// `doors`, `first` and `triangles`).
     public static func doors(_ unit: Unit) -> [Door] {
         switch unit {
         case .cab:
-            [Door(x: 4.998...5.498, z: 1.341...2.791, crew: true), Door(x: 3.987...4.727, z: 1.272...2.906, crew: false),
-             Door(x: -10.976 ... -10.236, z: 1.252...2.982, crew: false)]
+            [Door(x: 4.998...5.496, z: 1.341...2.791, crew: true, left: 4304..<4427, right: 4614..<4737),
+             Door(x: 3.987...4.727, z: 1.272...2.905, crew: false, left: 4427..<4521, right: 4737..<4831),
+             Door(x: -10.976 ... -10.236, z: 1.252...2.982, crew: false, left: 4521..<4614, right: 4831..<4924)]
         case .middle:
-            [Door(x: 10.141...10.876, z: 1.265...2.954, crew: false), Door(x: -9.155 ... -8.414, z: 1.253...2.980, crew: false)]
+            [Door(x: 10.141...10.876, z: 1.265...2.954, crew: false, left: 2292..<2380, right: 2456..<2550),
+             Door(x: -9.155 ... -8.414, z: 1.253...2.980, crew: false, left: 2380..<2456, right: 2550..<2664)]
         case .pantograph:
-            [Door(x: 11.334...12.077, z: 1.265...2.953, crew: false), Door(x: -9.155 ... -8.416, z: 1.253...2.980, crew: false)]
+            [Door(x: 11.334...12.077, z: 1.265...2.953, crew: false, left: 2545..<2615, right: 2701..<2785),
+             Door(x: -9.155 ... -8.416, z: 1.253...2.980, crew: false, left: 2615..<2701, right: 2785..<2898)]
         }
     }
 
@@ -156,8 +183,8 @@ extension Map3DPalette {
 
 extension Map3DN700S {
     /// Decision 782: its set, its showcase row (twelve cars) and its cars'
-    /// triangles (4,166 the cab car, 2,265 the middle car, 2,495 the car
-    /// under the pantograph: a twelve-car train some 31,000, few enough
+    /// triangles (4,924 the cab car, 2,664 the middle car, 2,898 the car
+    /// under the pantograph: a twelve-car train some 35,000, few enough
     /// to be drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(
@@ -166,7 +193,7 @@ extension Map3DN700S {
         showcase: [
             Map3DShowcase.Entry(key, "N700S", "N700S", .highSpeed, cars: cars),
         ],
-        triangles: 2_100...4_300, length: 24.9...27.4)
+        triangles: 2_500...5_000, length: 24.9...27.4)
 }
 
 extension Map3DTrainSet {
