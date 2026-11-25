@@ -61,8 +61,9 @@ extension GameWorld {
         // standard car (decision 153): its own type, as a train bought there
         // is, so re-forming with the line's default keeps it.
         // Decision 955: a line on a guideway gets the guideway's trains.
+        // Decision 970: and high-speed sets only where its track takes them.
         let type = type ?? guidewayType(ofLine: id) ?? (!offersStandardCar ? offeredTrainTypes.first
-            : line.isHighSpeed ? offeredTrainTypes.first(where: \.isHighSpeed) : nil)
+            : line.isHighSpeed ? offeredTrainTypes.first(where: { $0.isHighSpeed && fitsGauge($0, ofLine: id) }) : nil)
         let price = purchaseCost(of: type, cars: cars)
         let (cost, overflow) = price.amount.multipliedReportingOverflow(by: Int64(trains))
         return LineStaffingPlan(
@@ -220,6 +221,10 @@ extension GameSession {
                 try Self.placeAtStart(train.id, of: journey, in: &placed)
                 world = placed
             } catch {
+                // Decision 970: a train whose gauge the line's track does
+                // not take fits nowhere on the line; refused as a whole
+                // rather than bought and left off as "too long".
+                if case .trainGaugeMismatch = error { throw error }
                 var far = world
                 let back = orAtTheFarEnd ? Self.farEndJourney(of: id, in: world) : nil
                 if case .trackReserved = error, let back, (try? Self.placeAtStart(train.id, of: back, in: &far)) != nil {
