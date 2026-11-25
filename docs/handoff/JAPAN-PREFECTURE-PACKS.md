@@ -1,6 +1,6 @@
 # JAPAN-PREFECTURE-PACKS 交接（決策 991）
 
-分支 `claude/project-thread-qth4v9`。這張 PR 做的事寫在 `docs/decisions/991.md`。下面是之後要做的。
+分支 `claude/project-thread-qth4v9`，PR #2708。這張 PR 做的事寫在 `docs/decisions/991.md`。下面是之後要做的。
 
 ## 1. 下一張：開局畫面選福岡、佐賀、熊本
 
