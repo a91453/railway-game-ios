@@ -46,6 +46,10 @@ struct RealRailwayTraces: Sendable {
     /// Which lines connect to each other, by any number of links: each
     /// line's group.
     let groups: [Int]
+    /// The network ``route(from:to:)`` finds its way on, worked out once:
+    /// the places a way may turn at (each line's ends and the links'
+    /// places), and how they join.
+    private let graph: Graph
 
     static let metre = Double(WorldCoordinate.unitsPerMetre)
     /// How far a line's end may stand from another line and still join it:
@@ -106,6 +110,56 @@ struct RealRailwayTraces: Sendable {
             if a != b { groups[max(a, b)] = min(a, b) }
         }
         self.groups = lines.indices.map(root)
+        graph = Graph(lines: lines, links: links)
+    }
+
+    /// The places a way may turn at, and how they join: along each line to
+    /// the next place on it either way, and across each link. Built once
+    /// with the lines, as a drag asks for several ways each time it moves
+    /// (one for each line within reach at either end).
+    private struct Graph: Sendable {
+        /// Each place once: each line's ends, then the links' places.
+        let stops: [Place]
+        let index: [Place: Int]
+        /// Each line's places, by how far along it.
+        let byLine: [[Int]]
+        /// Each place's neighbours along its line, then across links.
+        let alongLine: [[(stop: Int, cost: Double)]]
+        let acrossLinks: [[(stop: Int, cost: Double)]]
+
+        init(lines: [Line], links: [Link]) {
+            var candidates: [Place] = []
+            for line in lines { candidates += [Place(line: line.id, along: 0), Place(line: line.id, along: line.path.length)] }
+            for link in links { candidates += [link.a, link.b] }
+            var index: [Place: Int] = [:]
+            var stops: [Place] = []
+            for stop in candidates where index[stop] == nil {
+                index[stop] = stops.count
+                stops.append(stop)
+            }
+            var byLine = [[Int]](repeating: [], count: lines.count)
+            for (number, stop) in stops.enumerated() { byLine[stop.line].append(number) }
+            byLine = byLine.map { numbers in numbers.sorted { stops[$0].along < stops[$1].along } }
+            var alongLine = [[(stop: Int, cost: Double)]](repeating: [], count: stops.count)
+            for numbers in byLine {
+                for (a, b) in zip(numbers, numbers.dropFirst()) {
+                    let cost = stops[b].along - stops[a].along
+                    alongLine[a].append((b, cost))
+                    alongLine[b].append((a, cost))
+                }
+            }
+            var acrossLinks = [[(stop: Int, cost: Double)]](repeating: [], count: stops.count)
+            for link in links {
+                guard let a = index[link.a], let b = index[link.b] else { continue }
+                acrossLinks[a].append((b, link.gap))
+                acrossLinks[b].append((a, link.gap))
+            }
+            self.stops = stops
+            self.index = index
+            self.byLine = byLine
+            self.alongLine = alongLine
+            self.acrossLinks = acrossLinks
+        }
     }
 
     /// The place on any line nearest `point` within `reach` world units,
@@ -148,51 +202,57 @@ struct RealRailwayTraces: Sendable {
     /// way leaves across a link, the next point on the other line, the
     /// link's gap to the side of it.
     func route(from start: Place, to end: Place) -> (points: [WorldVector], hops: [Int])? {
-        // The places the way may turn at: each line's ends, the links'
-        // places and the two ends asked for.
-        var stops: [Place] = [start, end]
-        for line in lines { stops += [Place(line: line.id, along: 0), Place(line: line.id, along: line.path.length)] }
-        for link in links { stops += [link.a, link.b] }
-        var index: [Place: Int] = [:]
-        var unique: [Place] = []
-        for stop in stops where index[stop] == nil {
-            index[stop] = unique.count
-            unique.append(stop)
+        // The places the way may turn at: the network's (``Graph``), and
+        // the two ends asked for where they are not among them, each put
+        // between the places either side of it on its line.
+        guard lines.indices.contains(start.line), lines.indices.contains(end.line) else { return nil }
+        var extra: [Place] = []
+        func number(of place: Place) -> Int {
+            if let known = graph.index[place] { return known }
+            if let added = extra.firstIndex(of: place) { return graph.stops.count + added }
+            extra.append(place)
+            return graph.stops.count + extra.count - 1
         }
-        var neighbours = [[(stop: Int, cost: Double)]](repeating: [], count: unique.count)
-        var byLine: [Int: [Int]] = [:]
-        for (number, stop) in unique.enumerated() { byLine[stop.line, default: []].append(number) }
-        for (_, numbers) in byLine {
-            let sorted = numbers.sorted { unique[$0].along < unique[$1].along }
-            for (a, b) in zip(sorted, sorted.dropFirst()) {
-                let cost = unique[b].along - unique[a].along
-                neighbours[a].append((b, cost))
-                neighbours[b].append((a, cost))
+        let from = number(of: start), to = number(of: end)
+        func place(_ stop: Int) -> Place {
+            stop < graph.stops.count ? graph.stops[stop] : extra[stop - graph.stops.count]
+        }
+        // The lines an added end stands on: their neighbours along the line,
+        // worked out again with it.
+        var alongChanged: [Int: [(stop: Int, cost: Double)]] = [:]
+        for line in Set(extra.map(\.line)) {
+            let added = extra.indices.filter { extra[$0].line == line }.map { graph.stops.count + $0 }
+            let numbers = (graph.byLine[line] + added).sorted { place($0).along < place($1).along }
+            for stop in numbers { alongChanged[stop] = [] }
+            for (a, b) in zip(numbers, numbers.dropFirst()) {
+                let cost = place(b).along - place(a).along
+                alongChanged[a]?.append((b, cost))
+                alongChanged[b]?.append((a, cost))
             }
         }
-        for link in links {
-            guard let a = index[link.a], let b = index[link.b] else { continue }
-            neighbours[a].append((b, link.gap))
-            neighbours[b].append((a, link.gap))
-        }
+        let count = graph.stops.count + extra.count
 
-        // Dijkstra's shortest path; the stops are a few hundred at most.
-        guard let from = index[start], let to = index[end] else { return nil }
-        var distance = [Double](repeating: .infinity, count: unique.count)
-        var previous = [Int?](repeating: nil, count: unique.count)
-        var done = [Bool](repeating: false, count: unique.count)
+        // Dijkstra's shortest path, the nearest place first (the lowest
+        // number of those as near), from a heap.
+        var distance = [Double](repeating: .infinity, count: count)
+        var previous = [Int?](repeating: nil, count: count)
+        var done = [Bool](repeating: false, count: count)
+        var heap = StopHeap()
         distance[from] = 0
-        while true {
-            var next: Int?
-            for stop in unique.indices where !done[stop] && distance[stop] < .infinity {
-                if next == nil || distance[stop] < distance[next!] { next = stop }
-            }
-            guard let current = next else { break }
+        heap.push(0, from)
+        while let next = heap.pop() {
+            let current = next.stop
+            guard !done[current], next.distance == distance[current] else { continue }
             if current == to { break }
             done[current] = true
-            for (stop, cost) in neighbours[current] where distance[current] + cost < distance[stop] {
-                distance[stop] = distance[current] + cost
-                previous[stop] = current
+            let along = alongChanged[current] ?? (current < graph.stops.count ? graph.alongLine[current] : [])
+            let across = current < graph.stops.count ? graph.acrossLinks[current] : []
+            for neighbours in [along, across] {
+                for (stop, cost) in neighbours where distance[current] + cost < distance[stop] {
+                    distance[stop] = distance[current] + cost
+                    previous[stop] = current
+                    heap.push(distance[stop], stop)
+                }
             }
         }
         guard distance[to] < .infinity else { return nil }
@@ -203,7 +263,7 @@ struct RealRailwayTraces: Sendable {
         var points: [WorldVector] = [lines[start.line].path.point(at: start.along)]
         var hops: [Int] = []
         for (a, b) in zip(route, route.dropFirst()) {
-            let p = unique[a], q = unique[b]
+            let p = place(a), q = place(b)
             if p.line == q.line {
                 let line = lines[p.line].path
                 let along = line.points(from: min(p.along, q.along), to: max(p.along, q.along))
@@ -214,6 +274,46 @@ struct RealRailwayTraces: Sendable {
             }
         }
         return (points, hops)
+    }
+
+    /// A binary min-heap of places by distance, the lower number first
+    /// among places as near, for ``route(from:to:)``.
+    private struct StopHeap {
+        private var items: [(distance: Double, stop: Int)] = []
+
+        private static func before(_ a: (distance: Double, stop: Int), _ b: (distance: Double, stop: Int)) -> Bool {
+            a.distance < b.distance || (a.distance == b.distance && a.stop < b.stop)
+        }
+
+        mutating func push(_ distance: Double, _ stop: Int) {
+            items.append((distance, stop))
+            var child = items.count - 1
+            while child > 0 {
+                let parent = (child - 1) / 2
+                guard Self.before(items[child], items[parent]) else { break }
+                items.swapAt(child, parent)
+                child = parent
+            }
+        }
+
+        mutating func pop() -> (distance: Double, stop: Int)? {
+            guard let first = items.first else { return nil }
+            let last = items.removeLast()
+            if !items.isEmpty {
+                items[0] = last
+                var parent = 0
+                while true {
+                    let left = 2 * parent + 1, right = left + 1
+                    var smallest = parent
+                    if left < items.count, Self.before(items[left], items[smallest]) { smallest = left }
+                    if right < items.count, Self.before(items[right], items[smallest]) { smallest = right }
+                    if smallest == parent { break }
+                    items.swapAt(parent, smallest)
+                    parent = smallest
+                }
+            }
+            return first
+        }
     }
 
     /// The gentlest a way moves over from one line to the one beside it
