@@ -2,9 +2,9 @@
 
 ## 進度
 
-- 做到哪：**第 1 步（半步）已做完並開 PR**：繞路找不到時記下「因為別的車不能走的那幾步」，那幾步都還被擋就不重找（決策 980，`docs/decisions/980.md`）。接手的工作串（分支 `claude/project-thread-5bvsbq`）壓縮 1 次。「下一步」第 2 項起還沒做。
-- 已驗證：八個世界新舊 build 逐小時雜湊相同；稽核下機捷略過 200,470 次、香港 71,228 次、台灣（到 10 時）177,500 次找路，每次重找都確認找不到。同機成對量：機捷 233.1 → 198.9 ms／tick（−15 %）、香港 175.5 → 165.9（−5 %）、台灣 933.4 → 854.4（−8 %）。數字全表在決策 980。
-- 下一步的第一個指令：照「怎麼量」鋪存檔（八個檔約 5 分鐘），然後做「下一步」第 2 項（見證車 Y 的快路）；改完 `swift build --build-tests -Xswiftc -warnings-as-errors`，把 `.build/debug/GameCoreTests-test-runner` 與 `GameCoreTests.so` 複製出來和 main 的那一份比雜湊。
+- 做到哪：**第 1 步做完，在 PR #2691**（繞路找不到之後，擋住它的那幾步沒放開就不重找；決策 980）。**第 2 步（見證車 Y 的快路）程式寫了約 120 行，但沒編譯、沒跑、沒提交**，不在 #2691 裡；內容與剩下的事見下面「第 2 步寫到哪」，差異檔在專案共用資料夾 `tick-held-ask-once/step2-witness-wip.diff`。接手的工作串（分支 `claude/project-thread-5bvsbq`）壓縮 2 次，照派工說明停手。
+- 已驗證（只有第 1 步）：八個世界新舊 build 逐小時雜湊相同；稽核下機捷略過 200,470 次、香港 71,228 次、台灣（到 10 時）177,500 次找路，每次重找都確認找不到。同機成對量：機捷 233.1 → 198.9 ms／tick（−15 %）、香港 175.5 → 165.9（−5 %）、台灣 933.4 → 854.4（−8 %），寫實世界沒有差別。數字全表在決策 980。
+- 下一步的第一個指令：從最新的 `main` 開分支，`git apply` 那份差異檔（拿不到就照「第 2 步寫到哪」重寫），`swift build --target GameCoreTests -Xswiftc -warnings-as-errors`；編過之後照該節「還要做的」依序做，第一件是稽核開著跑 `HeldDepartureMemoTests`。
 
 ## 派工
 
@@ -136,9 +136,9 @@ SAVED_WORLD=/tmp/worlds/tymc-controlled.json SAVED_WORLD_EACH=1 SAVED_WORLD_HOUR
 ## 下一步（依序，每一步後都比雜湊）
 
 1. **（已做，決策 980）半步：只記繞路找不到（上面第 3 點）。** 實際做法與結果見下面「第 1 步做了什麼」。原來的說明： 評分檔也建議先做這半步，風險最低：`planned` 照舊每次算，被擋時先看紀錄的 B 是否仍成立，成立就跳過 `alternativeRoute` 與 `takingFreeBerthPastStandingTrain`，直接回 `planned`（這半步連擋的車號都和原來一樣，所以可以直接放進 `takingAnyDeparture`，所有呼叫處都受益）。估計（沒驗證）機捷可省問答時間的一半上下。配稽核。
-2. **整步：加見證車 Y（第 2 點）與只問「還被擋嗎」的快路**，接到只比 `.held`／`.granted` 的呼叫處，先接 `departService`（最大宗），再接試走、`turnOwedFor`、`Deadlock.swift:99` 與派車那幾處。每接一處比一次雜湊。
+2. **（程式寫了，沒編譯、沒驗證；見「第 2 步寫到哪」）整步：加見證車 Y（第 2 點）的快路。** 做法比原計畫簡單：快路回的車號現算，和完整路徑逐字相同，所以直接放進 `takingAnyDeparture`，不用一處一處接呼叫處。原來的說明：接到只比 `.held`／`.granted` 的呼叫處，先接 `departService`（最大宗），再接試走、`turnOwedFor`、`Deadlock.swift:99` 與派車那幾處。每接一處比一次雜湊。
 3. 寫實世界的第 4 點；跑寫實的雜湊與稽核。
-4. 寫決策 980（`docs/decisions/980.md`，五個角度各一行、每一項「為什麼結果一樣」、新舊雜湊與時間的表），PR 裡附「找過什麼」（參考庫與外部專案都沒有可搬的：這是這個專案自己的保留規則上的備忘）。
+4. 決策 980 已寫（第 1 步）；第 2、3 步各在同一個檔加一段「**後來**」（做了什麼、為什麼結果一樣、新舊雜湊與時間），不另取編號。PR 裡附「找過什麼」（參考庫與外部專案都沒有可搬的：這是這個專案自己的保留規則上的備忘）。
 5. 之後可再做、不在這張單：紀錄跨 `advance` 借用（照 `RouteMemo.Key` 的 `lend`／`keep`）；第一次找路找得到的那 9 %。
 
 ## 第 1 步做了什麼（2026-11-25，決策 980）
@@ -153,6 +153,70 @@ SAVED_WORLD=/tmp/worlds/tymc-controlled.json SAVED_WORLD_EACH=1 SAVED_WORLD_HOUR
   - 快路要回的 `.held(by:)` 車號可以現算：`holder(of: 記下的 envelope, except: 候選, holders:)`，和完整路徑第一步是同一個呼叫，所以回傳值與原來逐字相同，呼叫處都不用改（不必像原計畫只接「只比 `.held`／`.granted`」的呼叫處）。
   - 見證車要在「要寫紀錄的那一次」另外找（`holders.holding(envelope, except:, fouling: true, in:)` 為真而且 `isLeading` 為假的第一列），因為 `followingAuthority` 在第一列不領頭的車就回 `nil`，那一列可能只是在等（claim），不能當見證。只在 `noDetours` 已有這列車的紀錄時才值得找。
   - `train(id:)` 是從頭掃；見證車記它在 `trains` 裡的位置，用 `trains[place].id == Y` 驗。
+
+## 第 2 步寫到哪（2026-11-25；沒編譯、沒跑、沒提交）
+
+差異檔 `step2-witness-wip.diff`（183 行，對 `af1a2f6`，也就是 #2691 的 GameCore，`git apply`）在專案共用資料夾 `tick-held-ask-once/`。它只動三個檔，不開閉塞時才生效：
+
+- `RouteFollowing.swift`：`isLeading(_:onto:for:)` 拆成三個：原來的簽名改呼叫 `isLeading(_:onto:followerWays:)`（跟車者的 traversal 集合用 `@autoclosure` 傳，前面的 guard 過了才算），加 `ways(of:)`。行為不變。
+- `ServiceDirections.swift`：`DirectionMemo.HeldDeparture`（`candidate`、`station`、`envelope`、`ways`、見證車在 `trains` 裡的位置 `witness` 與 `witnessID`）與 `heldDepartures: [TrainID: HeldDeparture]`；`AnswerAudit.heldNotAsked`。
+- `RouteNeeds.swift`：原來的 `takingAnyDeparture` 本體改名 `askingAnyDeparture`；新的 `takingAnyDeparture` 先問 `stillHolder(of:memo:)`，有答案就回 `.held(by:)`（稽核開著時計數，並 `precondition` `askingAnyDeparture` 回的是同一個 `.held(by:)`），沒有就照舊問。`askingAnyDeparture` 在 `guard blockSections else { … return planned }` 那裡（被擋、繞路也沒有）呼叫 `keepHeld(_:to:memo:)` 寫紀錄。
+
+```swift
+func stillHolder(of candidate: Train, memo: inout DirectionMemo) -> TrainID? {
+    guard isTrafficControlEnabled, !blockSections, let known = memo.heldDepartures[candidate.id] else { return nil }
+    var asked = candidate
+    asked.times = known.candidate.times
+    guard asked == known.candidate, trains.indices.contains(known.witness) else { return nil }
+    let witness = trains[known.witness]
+    guard witness.id == known.witnessID, witness.position != nil else { return nil }
+    let holders = trackHolders(memo: &memo)
+    guard let holder = holder(of: known.envelope, except: candidate.id, holders: holders),
+          holders.firstHolding(known.envelope, except: candidate.id, among: [known.witnessID], fouling: true, in: network) != nil,
+          !isLeading(witness, onto: known.envelope, followerWays: known.ways),
+          stillHasNoDetour(candidate, to: known.station, memo: &memo)
+    else { return nil }
+    return holder
+}
+
+func keepHeld(_ candidate: Train, to station: StationID, memo: inout DirectionMemo) {
+    memo.heldDepartures[candidate.id] = nil
+    guard let known = memo.noDetours[candidate.id], known.start == candidate.position,
+          known.station == station, known.length == candidate.length
+    else { return }
+    let route = routeStretches(of: candidate)
+    guard route.moves else { return }
+    let stretches = bodyStretches(of: candidate) + route.stretches
+    let envelope = cover(of: stretches)
+    let ways = Set(stretches.map(\.traversal))
+    let holding = trackHolders(memo: &memo).holding(envelope, except: candidate.id, fouling: true, in: network)
+    func isStanding(_ train: Train) -> Bool {
+        guard case .travellingToStop? = train.execution, train.movement.rate > 0 else { return true }
+        return false
+    }
+    let inTheWay = trains.indices.filter { holding[$0] && trains[$0].id != candidate.id && trains[$0].position != nil }
+    guard let witness = inTheWay.first(where: { isStanding(trains[$0]) })
+        ?? inTheWay.first(where: { !isLeading(trains[$0], onto: envelope, followerWays: ways) })
+    else { return }
+    memo.heldDepartures[candidate.id] = DirectionMemo.HeldDeparture(
+        candidate: candidate, station: station, envelope: envelope, ways: ways, witness: witness, witnessID: trains[witness].id)
+}
+```
+
+寫的時候對過、但沒跑過的地方（編過之後先懷疑這幾處）：
+
+- envelope 的算法和 `reserving(_:following:memo:)` 不開閉塞時那一行相同（`cover(of: bodyStretches + route.stretches)`），`holder(of:except:holders:)` 也是同一個呼叫，所以車號應該相同；稽核會逐次比。
+- `holding(…)` 回的是不是「每列車一格」的布林陣列、`firstHolding(… among:)` 的參數型別，只憑第 1 步用過的樣子寫的，編譯會說。
+- 「侵到（fouling）但沒占著」的車能不能當見證：要確認 `followingAuthority` 也會問到它的 `isLeading`（做法第 2 點是前一條工作串讀程式後寫的 `fouling: true`）。不確定就把 `keepHeld` 與 `stillHolder` 都改成 `fouling: false`，命中少一點但推論更短。
+- 有月台清單的發車、`turnOwed`：都在 `takingAnyDeparture` 外面（`takingDeparture`），沒動；要確認 `takingAnyDeparture` 沒有別的呼叫處期待它每次都把 `planned` 算過（它順手填的備忘只是快取）。
+- 稽核那一次 `askingAnyDeparture` 會再呼叫 `keepHeld` 重寫同一筆紀錄，不影響答案。
+
+還要做的（依序）：
+
+1. 編譯；`HeldDepartureMemoTests` 加 `XCTAssertGreaterThan(audit.heldNotAsked, …)`（先印出兩個世界各命中幾次再定門檻），`SavedWorldTickReportTests` 的 `SAVED_WORLD audit:` 那行多印 `heldNotAsked`。
+2. 八個世界新舊雜湊（舊的用 #2691 合併後的 `main`；各世界的雜湊總和在決策 980 的表裡，第 2 步做對了不會變），再跑稽核（`SAVED_WORLD_AUDIT=1`），再成對量時間。
+3. 命中率低就看 `keepHeld` 找不到見證的原因（擋的只是 claim、可以跟但沒距離）；第 1 步之後 `planned` 那一問還剩多少時間先量一下再決定值不值得（台灣第 1 步略過近九成找路只省 8 %，貴的可能已經不在這條路上，而在「誰占哪一段」的重建：那是評分檔的 TICK-HOLDERS-BY-CLAIM）。**如果量出來省不到 3 %，就不要合，在決策 980 記一筆「量過不值得」然後收單。**
+4. 決策 980 加「**後來**」一段；開第二張 PR；#2118 留言。
 
 ## 要小心的
 
@@ -169,6 +233,6 @@ SAVED_WORLD=/tmp/worlds/tymc-controlled.json SAVED_WORLD_EACH=1 SAVED_WORLD_HOUR
 
 ## UNVERIFIED
 
-- 整個做法：沒寫、沒跑。「估計少四分之一」是從次數與巢狀計時推的。
+- 第 1 步以外的做法（見證車 Y、開閉塞的最後一段）：第 2 步寫了沒跑，第 3 步沒寫。「估計少四分之一」是從次數與巢狀計時推的，第 1 步實際量到的比估的少（機捷 −15 %）。
 - 上面「時間怎麼分」是多個程序同時跑時量的；基準表是一次只跑一個、雲端 Linux 4 核，換機器只能看相對。
 - 寫實（開閉塞）世界沒量問答次數，只有存檔。
