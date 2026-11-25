@@ -655,6 +655,11 @@ extension GameError {
                 "This train doesn't run on this kind of track: monorail and maglev trains need their own guideway, and other trains can't use one.",
                 "這種列車不能跑這種軌道：單軌和磁浮列車要走自己的軌道梁，其他列車不能上梁。"
             )
+        case .trainGaugeMismatch:
+            language.text(
+                "This train doesn't fit this track's gauge: Taiwan Railway trains need 1,067 mm track, high-speed and metro trains 1,435 mm, a Shinkansen-size train Shinkansen-size track, and the Alishan train its 762 mm track.",
+                "這列車的軌距或車體大小不合這段軌道：台鐵的車要 1,067 mm 軌道，高鐵與捷運要 1,435 mm，新幹線大小的車要新幹線級的軌道，阿里山林鐵的車只跑 762 mm。"
+            )
         case .unknownCableway:
             language.text("That cableway no longer exists.", "這條纜車已經不在了。")
         case .invalidCableway:

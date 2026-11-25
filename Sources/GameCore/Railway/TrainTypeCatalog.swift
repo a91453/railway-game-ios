@@ -124,6 +124,17 @@
 //   end of each side. Its prices are this project's: a small diesel and
 //   small coaches, dear to run on the mountain. It is the only type that
 //   climbs mountain track (``TrainTypeSpec/climbsMountains``).
+// - The gauges (decision 970, `TrackGauge.swift`): every Taiwan Railway
+//   model and the era's steam train (the Liu Mingchuan Railway was laid at
+//   1,067 mm, as the Taiwan Railway still is) run on 1,067 mm track; the
+//   high-speed set, the 700T, on 1,435 mm at the Shinkansen's loading
+//   gauge (THSR's cars are 3.38 m wide, as the Shinkansen's); the Alishan
+//   Forest Railway's on 762 mm; Taipei Metro's C381 on 1,435 mm. The
+//   reference's types (A, B, C, L, D, APM) are China's standard metro car
+//   sizes with no real train behind them, and the game runs them on every
+//   metro it sells, Fukuoka's 1,067 mm Kūkō Line too, so they have no
+//   gauge: they run on any ordinary track but the forest railway's. The
+//   guideway trains have none either (decision 951's rule is theirs).
 // - The families (metro, railway, high speed, special) are decision 224's
 //   catalogue of types; a high-speed set is the type whose family is high
 //   speed.
@@ -184,11 +195,15 @@ public struct TrainTypeSpec: Hashable, Sendable {
     /// ``TrackEdge/system``): ordinary track for all but the three
     /// guideway trains.
     public let trackSystem: TrackSystem
+    /// The wheels and body of the real train it is (decision 970,
+    /// ``TrackCompatibility/runs(_:onGauge:)``); `nil` for a type of no
+    /// real model (the reference's) and the guideway trains.
+    public let gauge: TrainGauge?
 
     init(
         code: String, family: TrainFamily, offer: TrainTypeOffer, capacity: Int64, doors: Int64, overloads: Bool,
         performance: TrainPerformance?, firstDollars: Int64, carDollars: Int64, operatingPermille: Int64, carMetres: (Int64, Int64),
-        sightseeingStars: Int = 0, climbsMountains: Bool = false, trackSystem: TrackSystem = .conventional
+        sightseeingStars: Int = 0, climbsMountains: Bool = false, trackSystem: TrackSystem = .conventional, gauge: TrainGauge? = nil
     ) {
         self.code = code
         self.family = family
@@ -202,6 +217,7 @@ public struct TrainTypeSpec: Hashable, Sendable {
         self.sightseeingStars = sightseeingStars
         self.climbsMountains = climbsMountains
         self.trackSystem = trackSystem
+        self.gauge = gauge
     }
 
     /// `metres.tenths` metres in world units (64 a metre), to the nearest.
@@ -237,67 +253,82 @@ public enum TrainTypeCatalog {
               performance: nil, firstDollars: 480_000, carDollars: 135_000, operatingPermille: 1_000, carMetres: (15, 0),
               trackSystem: .straddle),
         .init(code: "STEAM", family: .railway, offer: .eraOnly, capacity: 50, doors: 2, overloads: true,
-              performance: .steam, firstDollars: 240_000, carDollars: 60_000, operatingPermille: 1_400, carMetres: (8, 0)),
+              performance: .steam, firstDollars: 240_000, carDollars: 60_000, operatingPermille: 1_400, carMetres: (8, 0),
+              gauge: .cape),
         .init(code: "HSR", family: .highSpeed, offer: .added, capacity: 80, doors: 2, overloads: false,
-              performance: .highSpeed, firstDollars: 2_700_000, carDollars: 360_000, operatingPermille: 2_000, carMetres: (25, 0)),
+              performance: .highSpeed, firstDollars: 2_700_000, carDollars: 360_000, operatingPermille: 2_000, carMetres: (25, 0),
+              gauge: .shinkansen),
         .init(code: "EMU3000", family: .railway, offer: .added, capacity: 45, doors: 2, overloads: true,
-              performance: .emu3000, firstDollars: 780_000, carDollars: 165_000, operatingPermille: 1_200, carMetres: (20, 3)),
+              performance: .emu3000, firstDollars: 780_000, carDollars: 165_000, operatingPermille: 1_200, carMetres: (20, 3),
+              gauge: .cape),
         // Decision 252.
         .init(code: "EMU100", family: .railway, offer: .added, capacity: 45, doors: 1, overloads: true,
-              performance: .emu100, firstDollars: 600_000, carDollars: 135_000, operatingPermille: 1_100, carMetres: (20, 1)),
+              performance: .emu100, firstDollars: 600_000, carDollars: 135_000, operatingPermille: 1_100, carMetres: (20, 1),
+              gauge: .cape),
         .init(code: "E200CK", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
-              performance: .e200ChuKuang, firstDollars: 660_000, carDollars: 105_000, operatingPermille: 1_300, carMetres: (20, 0)),
+              performance: .e200ChuKuang, firstDollars: 660_000, carDollars: 105_000, operatingPermille: 1_300, carMetres: (20, 0),
+              gauge: .cape),
         .init(code: "E500CK", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
-              performance: .e500ChuKuang, firstDollars: 900_000, carDollars: 105_000, operatingPermille: 1_200, carMetres: (20, 0)),
+              performance: .e500ChuKuang, firstDollars: 900_000, carDollars: 105_000, operatingPermille: 1_200, carMetres: (20, 0),
+              gauge: .cape),
         .init(code: "R100CK", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
-              performance: .r100ChuKuang, firstDollars: 480_000, carDollars: 105_000, operatingPermille: 1_500, carMetres: (20, 0)),
+              performance: .r100ChuKuang, firstDollars: 480_000, carDollars: 105_000, operatingPermille: 1_500, carMetres: (20, 0),
+              gauge: .cape),
         .init(code: "R200CK", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
-              performance: .r200ChuKuang, firstDollars: 840_000, carDollars: 105_000, operatingPermille: 1_400, carMetres: (20, 0)),
+              performance: .r200ChuKuang, firstDollars: 840_000, carDollars: 105_000, operatingPermille: 1_400, carMetres: (20, 0),
+              gauge: .cape),
         .init(code: "HAIFENG", family: .railway, offer: .added, capacity: 44, doors: 3, overloads: true,
               performance: .haiFeng, firstDollars: 720_000, carDollars: 150_000, operatingPermille: 1_300, carMetres: (20, 3),
-              sightseeingStars: Tourism.starsPerSightseeingTrain),
+              sightseeingStars: Tourism.starsPerSightseeingTrain, gauge: .cape),
         // Decision 286.
         .init(code: "BLUE", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
               performance: .r100ChuKuang, firstDollars: 780_000, carDollars: 135_000, operatingPermille: 1_500, carMetres: (20, 0),
-              sightseeingStars: Tourism.starsPerSightseeingTrain),
+              sightseeingStars: Tourism.starsPerSightseeingTrain, gauge: .cape),
         // Decision 286, later: the Hai-Feng's numbers.
         .init(code: "SHANLAN", family: .railway, offer: .added, capacity: 44, doors: 3, overloads: true,
               performance: .haiFeng, firstDollars: 720_000, carDollars: 150_000, operatingPermille: 1_300, carMetres: (20, 3),
-              sightseeingStars: Tourism.starsPerSightseeingTrain),
+              sightseeingStars: Tourism.starsPerSightseeingTrain, gauge: .cape),
         // Decision 286, later: the E500 Chu-Kuang's prices and more.
         .init(code: "MINGRI", family: .railway, offer: .added, capacity: 26, doors: 2, overloads: true,
               performance: .mingRi, firstDollars: 1_200_000, carDollars: 165_000, operatingPermille: 1_400, carMetres: (20, 0),
-              sightseeingStars: Tourism.starsPerLuxuryTrain),
+              sightseeingStars: Tourism.starsPerLuxuryTrain, gauge: .cape),
         // Decision 286, later (third): halfway between the E500 Chu-Kuang
         // and the Ming-Ri.
         .init(code: "STAR", family: .railway, offer: .added, capacity: 29, doors: 2, overloads: true,
               performance: .formosaStar, firstDollars: 1_125_000, carDollars: 135_000, operatingPermille: 1_300, carMetres: (20, 0),
-              sightseeingStars: Tourism.starsPerRoundIslandTrain),
+              sightseeingStars: Tourism.starsPerRoundIslandTrain, gauge: .cape),
         // Decision 286, later (fourth): the CT273 and six Chu-Kuang coaches.
         .init(code: "SUMMER", family: .railway, offer: .added, capacity: 50, doors: 2, overloads: true,
               performance: .midsummerFormosa, firstDollars: 1_050_000, carDollars: 105_000, operatingPermille: 1_650, carMetres: (20, 0),
-              sightseeingStars: Tourism.starsPerSteamTrain),
+              sightseeingStars: Tourism.starsPerSteamTrain, gauge: .cape),
         // Decision 515: the Alishan Forest Railway's diesel and its coaches.
         .init(code: "ALISHAN", family: .railway, offer: .added, capacity: 40, doors: 2, overloads: true,
               performance: .forestRailway, firstDollars: 540_000, carDollars: 90_000, operatingPermille: 1_500, carMetres: (13, 0),
-              climbsMountains: true),
+              climbsMountains: true, gauge: .forest),
         // Decision 961: the seven real models that had a performance and
         // no type, each a type with its own performance (where each number
         // comes from is in `docs/decisions/961.md`).
         .init(code: "TAROKO", family: .railway, offer: .added, capacity: 47, doors: 1, overloads: true,
-              performance: .tiltingTaroko, firstDollars: 840_000, carDollars: 180_000, operatingPermille: 1_300, carMetres: (21, 0)),
+              performance: .tiltingTaroko, firstDollars: 840_000, carDollars: 180_000, operatingPermille: 1_300, carMetres: (21, 0),
+              gauge: .cape),
         .init(code: "PUYUMA", family: .railway, offer: .added, capacity: 47, doors: 1, overloads: true,
-              performance: .tiltingPuyuma, firstDollars: 840_000, carDollars: 180_000, operatingPermille: 1_300, carMetres: (20, 7)),
+              performance: .tiltingPuyuma, firstDollars: 840_000, carDollars: 180_000, operatingPermille: 1_300, carMetres: (20, 7),
+              gauge: .cape),
         .init(code: "EMU800", family: .railway, offer: .added, capacity: 150, doors: 3, overloads: true,
-              performance: .emu800, firstDollars: 540_000, carDollars: 120_000, operatingPermille: 1_000, carMetres: (20, 3)),
+              performance: .emu800, firstDollars: 540_000, carDollars: 120_000, operatingPermille: 1_000, carMetres: (20, 3),
+              gauge: .cape),
         .init(code: "PUSHPULL", family: .railway, offer: .added, capacity: 52, doors: 2, overloads: true,
-              performance: .pushPull, firstDollars: 1_050_000, carDollars: 120_000, operatingPermille: 1_300, carMetres: (20, 3)),
+              performance: .pushPull, firstDollars: 1_050_000, carDollars: 120_000, operatingPermille: 1_300, carMetres: (20, 3),
+              gauge: .cape),
         .init(code: "DR3100", family: .railway, offer: .added, capacity: 52, doors: 2, overloads: true,
-              performance: .dieselExpress, firstDollars: 600_000, carDollars: 135_000, operatingPermille: 1_500, carMetres: (20, 0)),
+              performance: .dieselExpress, firstDollars: 600_000, carDollars: 135_000, operatingPermille: 1_500, carMetres: (20, 0),
+              gauge: .cape),
         .init(code: "DR1000", family: .railway, offer: .added, capacity: 120, doors: 2, overloads: true,
-              performance: .dieselRailcar, firstDollars: 300_000, carDollars: 120_000, operatingPermille: 1_400, carMetres: (20, 0)),
+              performance: .dieselRailcar, firstDollars: 300_000, carDollars: 120_000, operatingPermille: 1_400, carMetres: (20, 0),
+              gauge: .cape),
         .init(code: "C381", family: .metro, offer: .added, capacity: 310, doors: 4, overloads: true,
-              performance: .metroC381, firstDollars: 450_000, carDollars: 120_000, operatingPermille: 1_000, carMetres: (22, 0)),
+              performance: .metroC381, firstDollars: 450_000, carDollars: 120_000, operatingPermille: 1_000, carMetres: (22, 0),
+              gauge: .standard),
     ]
 
     /// Each code's row. Building it traps on a code listed twice.

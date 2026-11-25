@@ -1183,6 +1183,8 @@ extension GameWorld {
         releaseTrainsThatCannotClimb()
         // Decision 951: and a line on a guideway only that guideway's.
         releaseTrainsOffTheirSystem()
+        // Decision 970: and a line keeps only trains its track's gauge fits.
+        releaseTrainsOffTheirGauge()
         passengerPlan = PassengerPlanCache()
         abandonStrandedRiders()
         // A pair's balanced routes must still be ridable one after another,

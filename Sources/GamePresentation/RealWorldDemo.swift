@@ -569,8 +569,11 @@ public enum RealWorldDemo {
         /// (``GameWorld/buildTrackEdges(_:)``), the spacing checked once all
         /// are built: a passing loop, which runs within 4 m of the main
         /// track near each end, joins it at its far end only with its last
-        /// edge.
-        func build(in world: inout GameWorld, start: TrackNodeID? = nil, end: TrackNodeID? = nil, together: Bool = false) throws(GameError) -> Track {
+        /// edge. `gauge` is the track's (decision 970); `nil` follows the
+        /// track it joins.
+        func build(
+            in world: inout GameWorld, start: TrackNodeID? = nil, end: TrackNodeID? = nil, together: Bool = false, gauge: TrackGauge? = nil
+        ) throws(GameError) -> Track {
             var ids: [TrackNodeID] = []
             for (index, node) in nodes.enumerated() {
                 if index == 0, let start {
@@ -586,11 +589,11 @@ public enum RealWorldDemo {
             var edges: [TrackEdgeID] = []
             if together {
                 edges = try world.buildTrackEdges(curves.enumerated().map { index, curve in
-                    TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: carrier(ofEdge: index))
+                    TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: carrier(ofEdge: index), gauge: gauge)
                 })
             } else {
                 for (index, curve) in curves.enumerated() {
-                    edges.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: carrier(ofEdge: index)))
+                    edges.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: carrier(ofEdge: index), gauge: gauge))
                 }
             }
             return Track(plan: self, nodes: ids, edges: edges)

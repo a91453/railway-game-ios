@@ -1,0 +1,312 @@
+{
+  "saveVersion" : 114,
+  "world" : {
+    "bounds" : {
+      "height" : 65536,
+      "width" : 65536
+    },
+    "clock" : {
+      "now" : 0,
+      "resumeSpeed" : "normal",
+      "speed" : "paused"
+    },
+    "economy" : {
+      "balance" : 999992600,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 500
+      }
+    },
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Line",
+        "stops" : [
+          1,
+          2
+        ],
+        "trains" : [
+          1
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      },
+      {
+        "id" : 2,
+        "name" : "Forest",
+        "stops" : [
+          3,
+          4
+        ],
+        "trains" : [
+          2
+        ],
+        "trainsInService" : {
+          "low" : 1,
+          "offPeak" : 1,
+          "peak" : 1
+        },
+        "window" : "allDay"
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "gauge" : {
+            "loading" : "shinkansen",
+            "rails" : [
+              1435
+            ]
+          },
+          "id" : 1,
+          "to" : 2
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 2,
+          "gauge" : {
+            "loading" : "shinkansen",
+            "rails" : [
+              1435
+            ]
+          },
+          "id" : 2,
+          "to" : 3
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 3,
+          "gauge" : {
+            "loading" : "shinkansen",
+            "rails" : [
+              1435
+            ]
+          },
+          "id" : 3,
+          "to" : 4
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 5,
+          "gauge" : {
+            "rails" : [
+              762
+            ]
+          },
+          "id" : 4,
+          "to" : 6
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 6,
+          "gauge" : {
+            "rails" : [
+              762
+            ]
+          },
+          "id" : 5,
+          "to" : 7
+        },
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 7,
+          "gauge" : {
+            "rails" : [
+              762
+            ]
+          },
+          "id" : 6,
+          "to" : 8
+        }
+      ],
+      "nextEdgeID" : 7,
+      "nextNodeID" : 9,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 2048,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 6144,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 3,
+          "x" : 10240,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 4,
+          "x" : 14336,
+          "y" : 2048,
+          "z" : 0
+        },
+        {
+          "id" : 5,
+          "x" : 2048,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 6,
+          "x" : 6144,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 7,
+          "x" : 10240,
+          "y" : 8192,
+          "z" : 0
+        },
+        {
+          "id" : 8,
+          "x" : 14336,
+          "y" : 8192,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 4096,
+          "start" : 0,
+          "station" : 1
+        },
+        {
+          "edge" : 3,
+          "end" : 4096,
+          "start" : 0,
+          "station" : 2
+        },
+        {
+          "edge" : 4,
+          "end" : 4096,
+          "start" : 0,
+          "station" : 3
+        },
+        {
+          "edge" : 6,
+          "end" : 4096,
+          "start" : 0,
+          "station" : 4
+        }
+      ]
+    },
+    "nextLineID" : 3,
+    "nextStationID" : 5,
+    "nextTrainID" : 3,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "Line A",
+        "point" : {
+          "x" : 4096,
+          "y" : 2560
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "Line B",
+        "point" : {
+          "x" : 12288,
+          "y" : 2560
+        }
+      },
+      {
+        "id" : 3,
+        "name" : "Forest A",
+        "point" : {
+          "x" : 4096,
+          "y" : 8704
+        }
+      },
+      {
+        "id" : 4,
+        "name" : "Forest B",
+        "point" : {
+          "x" : 12288,
+          "y" : 8704
+        }
+      }
+    ],
+    "trains" : [
+      {
+        "id" : 1,
+        "name" : "700T",
+        "performance" : {
+          "acceleration" : 1400,
+          "alternativeAcceleration" : 2000,
+          "alternativeBraking" : 2700,
+          "braking" : 1500,
+          "coast" : {
+            "deceleration" : 450,
+            "speedRatio" : 450
+          },
+          "topSpeed" : 300
+        },
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 1,
+            "offset" : 4096
+          }
+        },
+        "type" : "HSR"
+      },
+      {
+        "id" : 2,
+        "name" : "Alishan",
+        "performance" : {
+          "acceleration" : 700,
+          "braking" : 1100,
+          "topSpeed" : 45
+        },
+        "position" : {
+          "onEdge" : {
+            "direction" : "forward",
+            "edge" : 4,
+            "offset" : 4096
+          }
+        },
+        "type" : "ALISHAN"
+      }
+    ]
+  }
+}

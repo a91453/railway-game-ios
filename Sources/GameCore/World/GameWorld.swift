@@ -493,10 +493,10 @@ public struct GameWorld: Equatable, Sendable {
     @discardableResult
     public mutating func buildTrackEdge(
         from: TrackNodeID, to: TrackNodeID, curve: TrackCurve = .straight, profile: TrackProfile = .uniform, structure: TrackStructure = .surface,
-        mountain: Bool = false, system: TrackSystem? = nil
+        mountain: Bool = false, system: TrackSystem? = nil, gauge: TrackGauge? = nil
     ) throws(GameError) -> TrackEdgeID {
         let id = try buildTrackEdge(from: from, to: to, curve: curve, profile: profile, structure: structure, mountain: mountain, system: system,
-                                    checksSpacing: true)
+                                    gauge: gauge, checksSpacing: true)
         abandonUnservedPassengers()
         return id
     }
@@ -523,7 +523,7 @@ public struct GameWorld: Equatable, Sendable {
         for plan in plans {
             built.append(try after.buildTrackEdge(from: plan.from, to: plan.to, curve: plan.curve, profile: plan.profile,
                                                   structure: plan.structure, mountain: plan.mountain, system: plan.system,
-                                                  checksSpacing: false))
+                                                  gauge: plan.gauge, checksSpacing: false))
         }
         for id in built {
             if let other = after.network.firstTooClose(existing: id, besides: []) {
@@ -537,7 +537,7 @@ public struct GameWorld: Equatable, Sendable {
 
     private mutating func buildTrackEdge(
         from: TrackNodeID, to: TrackNodeID, curve: TrackCurve, profile: TrackProfile, structure: TrackStructure, mountain: Bool,
-        system wanted: TrackSystem?, checksSpacing: Bool
+        system wanted: TrackSystem?, gauge wantedGauge: TrackGauge? = nil, checksSpacing: Bool
     ) throws(GameError) -> TrackEdgeID {
         guard let start = network.node(from) else { throw .unknownTrackNode(from) }
         guard let end = network.node(to) else { throw .unknownTrackNode(to) }
@@ -557,6 +557,9 @@ public struct GameWorld: Equatable, Sendable {
         let system = wanted ?? joined.first?.system ?? .conventional
         if let other = joined.first(where: { $0.system != system }) { throw .trackSystemMismatch(other.edge) }
         guard !mountain || !system.isGuideway else { throw .trackSystemMismatch(.edge(0)) }
+        // Decision 970: ordinary track at the gauge asked for, or at that of
+        // the ordinary track it joins.
+        let gauge = wantedGauge ?? joinedGauge(from: from, to: to, mountain: mountain)
         if let other = network.firstConflict(from: from, to: to, curve: curve, geometry: geometry) {
             throw .trackConflict(other)
         }
@@ -581,7 +584,7 @@ public struct GameWorld: Equatable, Sendable {
 
         let id = network.addEdge(
             from: from, to: to, curve: curve, profile: profile, structure: structure, sections: sections, mountain: mountain, system: system,
-            geometry: geometry, next: next
+            gauge: gauge, geometry: geometry, next: next
         )
         network.dropSpacedExemptions()
         // Phase 7a: the edge is on the books at what it cost.
@@ -594,6 +597,12 @@ public struct GameWorld: Equatable, Sendable {
     /// (``RailwayNetwork/setSystems(_:)``), for ``layGuideways()``.
     mutating func setTrackSystems(_ systems: [TrackEdgeID: TrackSystem]) {
         network.setSystems(systems)
+    }
+
+    /// Decision 970: each edge of `gauges` is of its gauge from now on
+    /// (``RailwayNetwork/setGauges(_:)``), for ``layGauges()``.
+    mutating func setTrackGauges(_ gauges: [TrackEdgeID: TrackGauge]) {
+        network.setGauges(gauges)
     }
 
     /// The lower numbered of the first two placed trains, in ID order, whose
@@ -774,14 +783,14 @@ public struct GameWorld: Equatable, Sendable {
         }
         let (_, firstNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let first = after.addEdge(from: edge.from, to: node, curve: cut.first, profile: firstProfile, structure: edge.structure,
-                                  sections: firstSections, mountain: edge.mountain, system: edge.system, geometry: firstGeometry,
+                                  sections: firstSections, mountain: edge.mountain, system: edge.system, gauge: edge.gauge, geometry: firstGeometry,
                                   next: firstNext)
         if let other = after.firstConflict(from: node, to: edge.to, curve: cut.second, geometry: secondGeometry) {
             throw .trackConflict(other)
         }
         let (_, secondNext) = try Self.allocateID(from: after.nextEdgeNumber)
         let second = after.addEdge(from: node, to: edge.to, curve: cut.second, profile: secondProfile, structure: edge.structure,
-                                   sections: secondSections, mountain: edge.mountain, system: edge.system, geometry: secondGeometry,
+                                   sections: secondSections, mountain: edge.mountain, system: edge.system, gauge: edge.gauge, geometry: secondGeometry,
                                    next: secondNext)
         if closure != .open {
             after.setClosure(first, closure)
@@ -2149,6 +2158,8 @@ public struct GameWorld: Equatable, Sendable {
             }
             // Decision 951: and only on track of its own system.
             guard runs(train, over: [traversal.edge] + trail) else { throw .trainTrackMismatch(id) }
+            // Decision 970: and only on track of its gauge.
+            guard fitsGauge(train, over: [traversal.edge] + trail) else { throw .trainGaugeMismatch(id) }
         }
 
         try admit(train, at: index)
@@ -2305,6 +2316,11 @@ public struct GameWorld: Equatable, Sendable {
         if (type?.trackSystem ?? .conventional) != trains[index].trackSystem,
            let line = assignedLine(of: id).flatMap({ self.line(id: $0) }), !runs(type, on: line) {
             throw .trainTrackMismatch(id)
+        }
+        // Decision 970: nor to a type whose wheels or size do not fit its
+        // line's track.
+        if type?.gauge != trains[index].gauge, let line = assignedLine(of: id).flatMap({ self.line(id: $0) }), !fitsGauge(type, on: line) {
+            throw .trainGaugeMismatch(id)
         }
         // Decision 180: a change of type is the old train sold on the sale
         // rule and the new one bought: the new type's price for the cars it
@@ -2560,6 +2576,8 @@ public struct GameWorld: Equatable, Sendable {
         }
         // Decision 951: nor onto track of another system.
         guard runs(trains[index], over: traversals.map(\.edge)) else { throw .trainTrackMismatch(id) }
+        // Decision 970: nor onto track of another gauge.
+        guard fitsGauge(trains[index], over: traversals.map(\.edge)) else { throw .trainGaugeMismatch(id) }
 
         var train = trains[index]
         train.movement.edges = traversals.map(\.edge)
@@ -3285,7 +3303,9 @@ public struct GameWorld: Equatable, Sendable {
     ///   ``GameError/trainCannotClimb(_:)`` when the line runs on mountain
     ///   track and the train is not a mountain train, or, since decision
     ///   951, ``GameError/trainTrackMismatch(_:)`` when the line runs on
-    ///   track of another system than the train's (``TrackCompatibility``).
+    ///   track of another system than the train's (``TrackCompatibility``),
+    ///   or, since decision 970, ``GameError/trainGaugeMismatch(_:)`` when
+    ///   it runs on track whose gauge the train does not fit.
     public mutating func assignTrain(_ id: TrainID, to line: LineID, pattern: Int? = nil) throws(GameError) {
         let index = try trainIndex(of: id)
         let (target, service) = try lineService(line, pattern: pattern)
@@ -3294,6 +3314,8 @@ public struct GameWorld: Equatable, Sendable {
         guard trains[index].climbsMountains || !runsOnMountainTrack(lines[target]) else { throw .trainCannotClimb(id) }
         // Decision 951: a train runs only on track of its own system.
         guard runs(trains[index].type, on: lines[target]) else { throw .trainTrackMismatch(id) }
+        // Decision 970: and only on track its wheels and size fit.
+        guard fitsGauge(trains[index].type, on: lines[target]) else { throw .trainGaugeMismatch(id) }
 
         if service == 0 {
             lines[target].trains.insert(id, at: lines[target].trains.firstIndex { $0 > id } ?? lines[target].trains.count)
