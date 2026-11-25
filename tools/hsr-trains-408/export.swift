@@ -67,8 +67,11 @@ func box(length: Float) -> Map3DModelPack.Model {
 }
 
 let after = Map3DModelPack.standard
-let before = Map3DModelPack(models: Map3DTrainSet.byKey["highSpeedFar"]!.models()
-    + Map3DTrainSet.hauled("E200CK", locomotive: .e200, coach: Map3DTrainSet.coach(TrainLivery.e200ChuKuang)).models())
+// Decision 988: the 700T's far set (#900's train at the 700T's lengths,
+// the "before" of this sheet) is gone, the owner's old 700 series cars in
+// its place with no far set: the high-speed rows are the two trains as
+// they are now.
+let before = Map3DModelPack(models: Map3DTrainSet.hauled("E200CK", locomotive: .e200, coach: Map3DTrainSet.coach(TrainLivery.e200ChuKuang)).models())
 
 /// A `count`-car train of `code` drawn by `pack` (its layout, else 20 m a car).
 func train(_ pack: Map3DModelPack, _ code: String, _ count: Int, curved: Bool, far: Bool = false) -> ([Map3DVertex], String) {
@@ -94,32 +97,26 @@ func shifted(_ vertices: [Map3DVertex], _ across: Float) -> [Map3DVertex] {
 
 for curved in [false, true] {
     let suffix = curved ? "-curve" : ""
-    let (old, oldNote) = train(before, "highSpeedFar", 12, curved: curved)
     let (t700, t700Note) = train(after, "HSR", 12, curved: curved)
-    let (t700far, midNote) = train(after, "HSR", 12, curved: curved, far: true)
-    try write("hsr-700t-far\(suffix)", t700far, group: "hsr" + suffix)
-    let (n700, n700Note) = train(after, "n700sG", 12, curved: curved)
-    let (n700far, n700FarNote) = train(after, "n700sG", 12, curved: curved, far: true)
-    try write("hsr-n700sg-far\(suffix)", n700far, group: "hsr" + suffix)
-    try write("hsr-before\(suffix)", old, group: "hsr" + suffix)
+    // Decision 979: the N700S-G is gone; the owner's old N700S has its
+    // place and no far set.
+    let (n700, n700Note) = train(after, Map3DN700S.key, 12, curved: curved)
     try write("hsr-700t\(suffix)", t700, group: "hsr" + suffix)
-    try write("hsr-n700sg\(suffix)", n700, group: "hsr" + suffix)
-    // The three side by side, 5 m apart: before, the 700T, the N700S-G.
-    try write("hsr-together\(suffix)", shifted(old, 5) + t700 + shifted(n700, -5), group: "together" + suffix)
+    try write("hsr-n700s\(suffix)", n700, group: "hsr" + suffix)
+    // The two side by side, 5 m apart: the 700T, the N700S.
+    try write("hsr-together\(suffix)", t700 + shifted(n700, -5), group: "together" + suffix)
     let (e200old, eOldNote) = train(before, "E200CK", 4, curved: curved)
     let (e200new, eNewNote) = train(after, "E200CK", 4, curved: curved)
     try write("e200-before\(suffix)", e200old, group: "e200" + suffix)
     try write("e200-after\(suffix)", e200new, group: "e200" + suffix)
     if !curved {
-        report += ["high speed before (#900, 20 m a car): \(oldNote)", "700T: \(t700Note)", "700T from 500 m (#900 at the 700T's lengths): \(midNote)",
-                   "N700S-G: \(n700Note)", "N700S-G from 500 m (the light rebuild): \(n700FarNote)", "E200 Chu-Kuang before: \(eOldNote)", "E200 Chu-Kuang after: \(eNewNote)"]
+        report += ["700T: \(t700Note)", "N700S: \(n700Note)", "E200 Chu-Kuang before: \(eOldNote)", "E200 Chu-Kuang after: \(eNewNote)"]
     }
 }
-// The cars close up: the N700S-G (the author's mesh, fewer triangles), the
-// 700T, the light rebuild of the author's shape.
-for (name, model) in [("cab-n700sg", Map3DN700SG.mesh(.a)!), ("cab-700t", Map3DTrainShapeRefresh.model("refresh-700t-cab")),
-                      ("cab-n700sg-light", Map3DN700SG.model(.a)), ("panto-n700sg", Map3DN700SG.mesh(.d)!),
-                      ("car-n700sg", Map3DN700SG.mesh(.c)!)] {
+// The cars close up: the N700S (decision 979: the owner's old cars) and
+// the 700T (decision 988: the owner's old cars too).
+for (name, model) in [("cab-n700s", Map3DN700S.model(.cab)!), ("cab-700t", Map3DTHSR700T.model(.cab)!),
+                      ("panto-n700s", Map3DN700S.model(.pantograph)!), ("car-n700s", Map3DN700S.model(.middle)!)] {
     report.append("\(name): \(model.triangleCount) triangles, \(String(format: "%.2f", model.length)) m")
     try write(name, shifted(model.vertices, 0), group: "cabs")
 }

@@ -158,6 +158,20 @@ extension GameWorld {
         /// of one step, for as long as the world stays as it was asked
         /// (see ``WorldAnswers``).
         var answers = WorldAnswers()
+        /// Decision 980 (TICK-HELD-ASK-ONCE): a search for a way to a
+        /// berth of `station`, for a train `length` long at `start`, that
+        /// avoided all the other trains kept it from and found none, with
+        /// every step it was kept from, `refused`: while each is kept from
+        /// it still there is still none (see
+        /// ``GameWorld/stillHasNoDetour(_:to:memo:)``).
+        struct NoDetour {
+            let start: TrainPosition
+            let station: StationID
+            let length: Int64
+            let refused: [TrackCover]
+        }
+        /// Each train's last such search (see ``NoDetour``).
+        var noDetours: [TrainID: NoDetour] = [:]
 
         /// Keeps `train` in ``released``.
         mutating func release(_ train: Train) {
@@ -225,6 +239,12 @@ extension GameWorld {
     /// worked out again. `nil` in the game.
     final class AnswerAudit: @unchecked Sendable {
         var checked = 0
+        /// Decision 980: how often a held departure's way round was not
+        /// searched for again (see ``GameWorld/stillHasNoDetour(_:to:memo:)``),
+        /// each checked against the search.
+        var detoursNotSearched = 0
+        /// How often it was searched for.
+        var detoursSearched = 0
     }
 
     @TaskLocal static var answerAudit: AnswerAudit?

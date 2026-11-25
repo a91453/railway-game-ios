@@ -750,6 +750,15 @@ set -euo pipefail
 # 2 -> 18). Dealt by the new weights, that run's rest comes to about 668
 # and 691 s, and campaigns-6's 608 s is the longest campaign. No class
 # printed "has no CLASS_WEIGHTS entry" (none without one took 60 s).
+# 2026-11-26 (CIOPT-16, after 147): the nightly 45526632957 (main d7f47c5)
+# and the 147 manual run 45650235089 (main 628fd6a) had rest-2 at 790 and
+# 844 s of tests (job 17.4 minutes, the longest) and rest-1 at 507 and 508:
+# the weights were even (1,229 and 1,228) but rest-1's weighted classes
+# ran at 0.48 of their weights and rest-2's at 0.78, and rest-2 held 179
+# and 269 s of unweighted classes. Every rest class of 3 s or more in
+# either run now weighs the slower of the two (26 new, 50 changed: the
+# old ones came from older, slower runs). Dealt by them, those runs' rest
+# comes to 606/691 and 674/679 s (`select` on the second run's list).
 classes_of() {
   case "$1" in
     campaigns-1) echo "Map3DSceneMemoryTests KernelDifferentialTests ScheduledOvertakeTrackLastPropertyTests BusReadAheadTests RoadDrawRealMapTests NightSkipTests RoadsTurnOnTests CityRequestsTests TraceDragCostTests BusRouteTests HongKongMapTests RovaniemiRailwaysTests HongKongBuildingsTests HongKongRailwaysTests HongKongBoughtAgainTests" ;;
@@ -914,33 +923,44 @@ selected_pattern() {
 # to -4 (230 -> 500), RealLineBundleTests to -6 (276 -> 377). rest keeps
 # about 1,316 s of tests, some 660 in each part, beside campaigns-3's 682.
 CLASS_WEIGHTS="HongKongSharedTrackBuyOrderTests:320
+  HongKongHarbourFerryTests:47 KyushuShinkansenTests:24
+  Map3DSceneLayerRegistryTests:14 HongKongBaseMapTests:11
+  Map3DFukuokaTrainsTests:11 Map3DModelCatalogTests:10
+  Map3DCableStayedBridgeTests:9 DepotLadderSpacingTests:8
+  Map3DGroundTintTests:8 RoadLookRealTests:8 StationSecondNameTests:7
+  Map3DLevelCrossingDeckTests:7 Map3DXRayRealTests:7 Map3DNightTests:6
+  Map3DRegionLookTests:5 HongKongLandCoverTests:5 TrainRosterTests:5
+  ScreenDoorAlignmentTests:5 Map3DRoundaboutTests:5 TermLoanBoardTests:4
+  Map3DBlockMemoTests:4 FairSingleTrackTests:4 Map3DRoofContrastTests:4
+  Map3DScreenDoorsTests:4 Map3DGuanduBridgeTests:4
+  Map3DNorthernMapTests:3
   SharedStationLayoutTests:281 RealLineBoughtAgainTests:270
   RealLineBundleTests:101 HongKongBoughtAgainTests:91
-  PlatformNameBoardStylesTests:48
-  UndergroundStationsTests:48 Map3DHSRStudioStationTests:47
-  Map3DStreamingPaceTests:39 TrainPortraitTests:24
-  Map3DCableNightLightsTests:22 Map3DHKWestKowloonTests:21
-  RailwayMuseumGuideTests:16 Map3DSuspensionBridgeTests:14
-  FukuokaRailwaysTests:68 RealUndergroundTests:114
-  TimetableCheckupTests:100 TimetableCheckupTaiwanTests:75
+  PlatformNameBoardStylesTests:55
+  UndergroundStationsTests:43 Map3DHSRStudioStationTests:35
+  Map3DStreamingPaceTests:33 TrainPortraitTests:38
+  Map3DCableNightLightsTests:22 Map3DHKWestKowloonTests:37
+  RailwayMuseumGuideTests:16 Map3DSuspensionBridgeTests:9
+  FukuokaRailwaysTests:64 RealUndergroundTests:114
+  TimetableCheckupTests:44 TimetableCheckupTaiwanTests:52
   HongKongDepotTests:153 RovaniemiRailwaysTests:30
   HongKongBuildingsTests:28 LandCoverGridTests:26
-  Map3DChristmasLiveryTests:23 Map3DWinterLightsTests:22
-  RovaniemiBuildingsTests:22 TerminalPlatformWaitTests:21
-  SantaFlightTests:18 HolderUpdateTests:17 Map3DCityPaletteTests:17
-  SpacingRingTests:16 FerryFollowTests:15 HongKongAirportTests:15
-  TrafficMeetIndexTests:14 RoadJoinDrawRealMapTests:13
+  Map3DChristmasLiveryTests:10 Map3DWinterLightsTests:22
+  RovaniemiBuildingsTests:6 TerminalPlatformWaitTests:21
+  SantaFlightTests:18 HolderUpdateTests:13 Map3DCityPaletteTests:14
+  SpacingRingTests:12 FerryFollowTests:15 HongKongAirportTests:8
+  TrafficMeetIndexTests:17 RoadJoinDrawRealMapTests:14
   HongKongTungChungDayTests:140 Map3DFarViewTests:375
   HongKongEveryLineTests:130 HongKongMapTests:50
   DemoRealLinesEverySystemTests:78 WenhuUndergroundTests:52
-  AirportLineWholeIslandTests:38 HongKongRailwaysTests:38
-  Map3DCablewaysTests:34 Map3DNearestTrackTests:29
-  SingleLineThreeTrainsTests:24 CollectionShowcaseTests:20
-  TrainPackTests:20 AirCollectionTests:18 DemoRealLinesTrainTypeTests:12
-  Map3DCoachesTests:27 AirRoutesTests:34 TrafficPlanKeptTests:10
-  Map3DStationExteriorBatch2MapTests:9 Map3DAircraftLayerTests:7
-  Map3DAirfieldsTests:19 Map3DLowRiseTests:7 Map3DRoadTunnelTests:68
-  Map3DFarSightTests:6 NewTrainArrivalTests:6
+  AirportLineWholeIslandTests:14 HongKongRailwaysTests:38
+  Map3DCablewaysTests:9 Map3DNearestTrackTests:23
+  SingleLineThreeTrainsTests:13 CollectionShowcaseTests:20
+  TrainPackTests:20 AirCollectionTests:16 DemoRealLinesTrainTypeTests:4
+  Map3DCoachesTests:28 AirRoutesTests:32 TrafficPlanKeptTests:7
+  Map3DStationExteriorBatch2MapTests:7 Map3DAircraftLayerTests:7
+  Map3DAirfieldsTests:35 Map3DLowRiseTests:7 Map3DRoadTunnelTests:68
+  Map3DFarSightTests:6 NewTrainArrivalTests:4
   Map3DStationExteriorsTests:123 Map3DSceneMemoryTests:221
   Map3DModelPackLockTests:152 KaohsiungLightRailDayTests:187
   WenhuLineTests:139 SaveMutationSecondHalfTests:107
@@ -961,7 +981,7 @@ CLASS_WEIGHTS="HongKongSharedTrackBuyOrderTests:320
   Map3DRealBuildingsTests:80 Map3DTrainSetTests:37
   PassengerCheckOnceTests:37 ServiceRepeatingSecondHalfPropertyTests:37
   Map3DSurfaceTests:36 RealLineDepotAdditionTests:36
-  DanhaiBothLinesDayTests:34 OldStationCrossoverTests:34
+  DanhaiBothLinesDayTests:34 OldStationCrossoverTests:17
   DemoSightsAndTransfersTests:33 HighSpeedDemoBatchTests:33
   Map3DNightAndGroundTests:33 ScheduledTrafficPropertyTests:33
   SeededStreetPlanTests:33 DanhaiBlueThenGreenSimpleDayTests:32
@@ -971,55 +991,55 @@ CLASS_WEIGHTS="HongKongSharedTrackBuyOrderTests:320
   ReservationShortcutTests:29 SanyingLineRealisticDayTests:29
   DanhaiGreenLineDayTests:26 EconomyPropertyTests:26
   Map3DEMU900IntegrationTests:26 Map3DSceneryPropsTests:58
-  Map3DEMU700IntegrationTests:25 FollowBusTests:24
+  Map3DEMU700IntegrationTests:3 FollowBusTests:34
   KernelDifferentialTests:24 Map3DRealGroundTests:88
   ScheduledOvertakeTrackMiddlePropertyTests:24
   Map3DEMU800IntegrationTests:23 Map3DPropsTests:108
   Map3DTrainOcclusionTests:22 PassengerPlanKeyTests:22
-  AmbientRealTrainsTests:21 Map3DPPIntegrationTests:21
-  RealLineRunningSideTests:21 ScheduledTrafficSecondHalfPropertyTests:21
+  AmbientRealTrainsTests:4 Map3DPPIntegrationTests:21
+  RealLineRunningSideTests:9 ScheduledTrafficSecondHalfPropertyTests:21
   Map3DEMU3000Tests:20 Map3DEMU500Tests:20 TimetablePropertyTests:20
   DeadlockPropertyTests:19 EconomySecondHalfPropertyTests:19
   Map3DNextDepartureTests:19 RealRailwayTracingTests:19
   Map3DDuplexSteamTests:18 VerticalRailwayPropertyTests:18
   BusOneWayAndTunnelRealMapTests:67 Map3DSignTests:17 PlatformStopTests:17
-  ScheduledOvertakeTrackLastPropertyTests:17 ScreenshotLandmarkTests:17
-  TRADemoTests:17 DanhaiDepotTests:16 DoubleTrackDeadlockTests:16
+  ScheduledOvertakeTrackLastPropertyTests:17 ScreenshotLandmarkTests:5
+  TRADemoTests:17 DanhaiDepotTests:16 DoubleTrackDeadlockTests:7
   Map3DChuKuangIntegrationTests:16 Map3DTourismEMU500Tests:16
   NewGameSavePropertyTests:16 RealWorldDataLoadTests:16
-  WorldSharedAcrossTasksTests:16 ContinuousTrackPropertyTests:15
-  FollowBusVisibleTests:15 Map3DDetailTests:15 Map3DShadowTests:15
+  WorldSharedAcrossTasksTests:14 ContinuousTrackPropertyTests:15
+  FollowBusVisibleTests:14 Map3DDetailTests:15 Map3DShadowTests:15
   ScheduledOvertakeTrackFinalPropertyTests:15 AnkengLineTests:14
-  Map3DBoxInstanceTests:14 Map3DC371C381Tests:34 Map3DCableCarTests:14
+  Map3DBoxInstanceTests:14 Map3DC371C381Tests:34 Map3DCableCarTests:12
   Map3DFrontageTests:14 Map3DKaohsiungLightRailTests:14
   Map3DMeshSimplifierTests:14 Map3DTrainMaterialTests:14 OnboardingTests:14
   Map3DFerriesTests:13 Map3DNewTaipeiLRTTests:13 Map3DTaichungGreenTests:13
-  MetroStructuresTests:13 ScreenshotStreetFrontsTests:32 TRADemoDayTests:13
-  BusReadAheadTests:12 CommandLogTests:12 Map3DE500Tests:12
+  MetroStructuresTests:13 ScreenshotStreetFrontsTests:21 TRADemoDayTests:13
+  BusReadAheadTests:12 CommandLogTests:12 Map3DE500Tests:10
   Map3DKaohsiungTests:12 Map3DTEMU2000Tests:12 RealBusesTests:12
   ScheduledOvertakeTrackPropertyTests:12 Map3DBreezyBlueIntegrationTests:11
   Map3DHighSpeedSetsTests:11 Map3DOpenEveryStartTests:11
   PassengerPropertyTests:11 RealWorldDemoGroundTests:11
   DeadlockSearchCostTests:10 Map3DRealTracksTests:10
-  Map3DRoundhouseStockTests:10 TrainNightLightsReadBackTests:18
+  Map3DRoundhouseStockTests:8 TrainNightLightsReadBackTests:20
   LineLossFixesTests:9 Map3DFiveSectionLRTTests:9
-  Map3DInterchangeStreetTests:9 Map3DTaipeiLandmarksTests:9
+  Map3DInterchangeStreetTests:12 Map3DTaipeiLandmarksTests:9
   RealWorldDemoTests:9 RoadDrawRealMapTests:9 ScreenshotSceneTests:28
   FrameTimeBenchTests:8 IdleTrainDeadlockTests:8 Map3DParksTests:27
   Map3DRealTrainsTests:8 Map3DSceneKitTests:19 Map3DTrainLabelsTests:8
   NetworkPostcardTests:8 NetworkSectionPropertyTests:8 NightSkipTests:8
-  SanyingDepotTests:8 CablewayToolTests:7 DemoRealLinesTests:7
-  FerryPierSnapTests:7 LessonGuideTests:7 LiveOvertakeTests:7
+  SanyingDepotTests:8 CablewayToolTests:5 DemoRealLinesTests:7
+  FerryPierSnapTests:6 LessonGuideTests:7 LiveOvertakeTests:7
   LocalPassTests:7 Map3DRealDispatchTests:7 Map3DStationKitTests:7
   Map3DStationsTests:7 OccupiedRoutingPropertyTests:7
-  PassengerRouteSearchTests:15 QuestionMemoTests:7 RoadsTurnOnTests:7
+  PassengerRouteSearchTests:15 QuestionMemoTests:3 RoadsTurnOnTests:7
   SharedNetworkTests:7 FlexDispatchPropertyTests:6 RealWorldDemoRoadsTests:6
-  WorldStateMachineTests:6 BusRoadsRealMapTests:5 FerryCijinShoreTests:5
+  WorldStateMachineTests:6 BusRoadsRealMapTests:5 FerryCijinShoreTests:6
   KaohsiungLightRailTests:5 RealWorldExpansionTests:5 SparseCityLandTests:5
   TurnbackPropertyTests:5 TurnbackTests:5 BusMotionTests:4 LandImportTests:4
   LineRoutePreferencePropertyTests:4 LoadJourneyCacheTests:28
   Map3DEMU900Tests:4 Map3DEstateKitTests:4 Map3DRoadBridgeTests:4
-  Map3DTaoyuanAirportTests:4 PolicyTests:4 RealLineOfferPreparingTests:4
+  Map3DTaoyuanAirportTests:3 PolicyTests:4 RealLineOfferPreparingTests:4
   RealRoadCellsTests:4 SanyingLineFreezeTests:4 ScheduledTrafficTests:4
   TrafficSpeedTests:4 WeeklyPunctualityTests:4 WholeTaiwanTests:4
   AchievementsTests:3 BusStopLabelsRealMapTests:3 CityRequestsTests:3
