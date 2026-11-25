@@ -37,7 +37,7 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
             for unit in Map3DKyushuN700.Unit.allCases { cars.append(try XCTUnwrap(Map3DKyushuN700.model(unit))) }
             // Decision 979: and the N700S, near only.
             for unit in Map3DN700S.Unit.allCases { cars.append(try XCTUnwrap(Map3DN700S.model(unit))) }
-            // Decision 978: and its 800 series, near only.
+            // Decision 978: and the Kyushu Shinkansen's 800 series, near only.
             for unit in Map3DKyushu800.Unit.allCases { cars.append(try XCTUnwrap(Map3DKyushu800.model(unit))) }
             return cars
         }
