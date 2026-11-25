@@ -1359,7 +1359,11 @@ final class Map3DMetalView: MTKView {
         if let instances = frame?.instances, !instances.isEmpty, models != nil {
             // Decision 795: those in the Christmas livery after the rest of
             // their model, drawn with its repainted vertices.
-            carsSorted = instances.sorted { $0.model != $1.model ? $0.model < $1.model : !$0.christmas && $1.christmas }
+            // Decision 983: and those in a paint the player chose, each
+            // paint's together.
+            carsSorted = instances.sorted {
+                $0.model != $1.model ? $0.model < $1.model : $0.paint != $1.paint ? $0.paint < $1.paint : !$0.christmas && $1.christmas
+            }
         }
         // Decision 259: the people and vehicles near the target.
         // Decision 417: in what the trains leave of the budget.
@@ -1568,15 +1572,19 @@ final class Map3DMetalView: MTKView {
                 encoder.setRenderPipelineState(instancedPipeline)
                 var first = 0
                 while first < sorted.count {
-                    let model = sorted[first].model, christmas = sorted[first].christmas
+                    let model = sorted[first].model, christmas = sorted[first].christmas, paint = sorted[first].paint
                     var last = first
-                    while last + 1 < sorted.count, sorted[last + 1].model == model, sorted[last + 1].christmas == christmas { last += 1 }
+                    while last + 1 < sorted.count, sorted[last + 1].model == model, sorted[last + 1].christmas == christmas,
+                          sorted[last + 1].paint == paint { last += 1 }
                     let count = last - first + 1
                     if model < models.buffers.count {
                         // Decision 806: a car in the Christmas livery has its
                         // decoration after its own triangles, in the same buffer.
-                        let dressed = christmas
-                            ? models.buffers.christmas(model, wear: models.pack.christmas[model], model: models.pack.models[model]) : nil
+                        // Decision 983: one in a paint the player chose,
+                        // its own vertices repainted.
+                        let dressed = christmas || paint != 0
+                            ? models.buffers.dressed(model, paint: paint, in: models.pack.paintFamily(of: model),
+                                                     wear: christmas ? models.pack.christmas[model] : nil, model: models.pack.models[model]) : nil
                         guard let vertices = dressed ?? models.buffers[model] else { first = last + 1; continue }
                         let vertexCount = dressed.map { $0.length / MemoryLayout<Map3DVertex>.stride } ?? models.pack.models[model].vertexCount
                         encoder.setVertexBuffer(vertices, offset: 0, index: 0)
