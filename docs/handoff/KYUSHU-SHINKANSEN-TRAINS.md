@@ -4,7 +4,8 @@
 
 - 做到哪：PR #2683（分支 `claude/kyushu-shinkansen-n700`，草稿）已有 N700 系頭車與中間車、真車顏色、天線鰭與燈位的修正、車門的門縫線，以及每扇門拆成自己的一塊（2026-11-25 晚上，接手的第二個 session 做的）。
 - 已驗證（Mac）：`swift build --build-tests -Xswiftc -warnings-as-errors` 過；`Map3DKyushuN700Tests`（8 個）、`Map3DTrainOwnGlassTests`、`Map3DTrainMaterialTests`、`Map3DPaletteGuardTests`、`Map3DRealTrainsTests`、`Map3DShowcaseTests`、`Map3DTrainRegistryTests`、`Map3DTrainLightsTests` 過；`tools/train-models/check.mjs` ok；`doc_numbers.py --check` 過。拆門前後：兩節車的面（1,726、1,420）逐一比過完全相同，遊戲匯出的 42 張算圖逐像素相同。
-- 下一步的第一個指令：`gh pr checks 2683`（只讀一次，不輪詢），再等工作室第三次複審（r3）的結論。
+- 工作室第三次複審（`recheck-kyushu-n700-r3`，換家：Gemini 審）2026-11-25 通過：鰭、燈位、門縫線、門板四樣都過，審的是 `f7df58f3b`。尺寸作者同一天確認照真車（25 × 3.36 × 3.60 m）。
+- 下一步的第一個指令：`gh pr checks 2683`（只讀一次，不輪詢）；CI 綠了就 `gh pr ready 2683`、合併。
 
 ## 作者定案的事（2026-11-25，不用再問）
 
@@ -22,10 +23,10 @@
 
 ## 還留下什麼
 
-1. **工作室複審 r3**：鰭、燈位、門縫線、門板四樣，要由和 Claude 不同家的審（Gemini／agy）。送審的檔（兩個 GLB、`report.json`、總覽圖、算圖、門板圖）已換成拆門這一版；位置用訊息告訴協調者，不寫在公開 repo。請求留在 #2118。
-2. **尺寸**（長 × 1.19、寬 × 1.20、高 × 0.943）還在等作者回答高度，回答前不要動。
+1. **工作室複審**：三次都做完了，r3 通過（上面）。
+2. **尺寸**：作者 2026-11-25 確認照真車尺寸（長 × 1.19、寬 × 1.20、高 × 0.943），不用再問。
 3. **給作者看的新舊門框對照**：對照圖已經在工作串貼給作者。舊貼圖是作者的原檔，不能放進公開 repo，所以對照圖沒有提交。
-4. **合併**：工作室通過、CI 綠、尺寸確認，三樣都有了才 `gh pr ready 2683`、合併、在 #2118 留言、通知協調者（800 系與 N700S 兩串在等這個 PR）。合併前若落後 main 先併 `origin/main`。不要開 auto-merge。
+4. **合併**：工作室通過與尺寸確認都有了，只等 CI 綠：`gh pr ready 2683`、合併、在 #2118 留言、通知協調者（800 系與 N700S 兩串在等這個 PR），並把這台車的經驗檔交給協調者放進私有素材庫。合併前若落後 main 先併 `origin/main`。不要開 auto-merge。
 5. lock 是在 Mac 上產生的：前兩版的雜湊與 Linux CI 相同；拆門這一版若 `Map3DModelPackLockTests` 在 CI 紅，照 CI 印出的雜湊改 `tools/train-models/locks/kyushuN700.json`。
 6. `tools/texture-palette/n700s.py`（N700S 那一串，還沒推）借用這個轉換器的切面函式，並且有一行 `assert len(MATERIALS) == len(cut.MATERIALS)`：這裡從門縫線那一版起是 8 個材質，N700S 是 7 個，那一串 rebase 時要改那一行。`slabs`、`carve`、`settle`、`classify_point`、`centre`、`components`、`parts`、`read_glb` 的參數與回傳沒有動。
 7. 到站開門的動畫還沒做。
