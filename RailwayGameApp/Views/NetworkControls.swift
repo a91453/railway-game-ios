@@ -81,6 +81,15 @@ struct NetworkControls: View {
             }
             .buttonStyle(.bordered)
             .font(.footnote)
+            // NETWORK-PANEL-SIMPLE: what to tap first, here rather than in
+            // a box above the options (``ControlPanel/showsInspector(_:)``).
+            if session.networkStart == nil {
+                Text(verbatim: session.networkDraftText())
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("network.startHint")
+            }
             // Decision 955: what a guideway joins and crosses, said
             // before the player draws it.
             if let note = session.networkSystemNote {
@@ -209,6 +218,11 @@ struct NetworkControls: View {
                 }
             } label: {
                 Text(verbatim: language.text("Track system", "軌道種類"))
+            } currentValueLabel: {
+                // The chips' size, not the menu's larger default.
+                Text(verbatim: session.networkSystem.name(in: language))
+                    .font(.footnote)
+                    .lineLimit(1)
             }
             .pickerStyle(.menu)
         }
@@ -231,6 +245,7 @@ struct NetworkControls: View {
                 Text(verbatim: language.text("Gauge", "軌距"))
             } currentValueLabel: {
                 Text(verbatim: session.networkGauge.map { $0.shortName(in: language) } ?? TrackGauge.automaticShortName(in: language))
+                    .font(.footnote)
                     .lineLimit(1)
             }
             .pickerStyle(.menu)
