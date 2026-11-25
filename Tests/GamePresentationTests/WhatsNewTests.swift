@@ -92,6 +92,33 @@ final class WhatsNewTests: XCTestCase {
         }
     }
 
+    /// The next build's lines, kept one on a line for `merge=union`, read
+    /// like the released ones, and none is left there once a released
+    /// entry has it (a merge can bring a moved line back).
+    func testTheNextBuildsLinesAreReadyToRelease() throws {
+        let released = Set(WhatsNew.entries.flatMap { ($0.items + $0.fixes).map(\.chinese) })
+        for line in WhatsNew.nextItems + WhatsNew.nextFixes {
+            XCTAssertFalse(line.english.isEmpty)
+            XCTAssertFalse(line.chinese.isEmpty)
+            XCTAssertNotEqual(line.english, line.chinese)
+            XCTAssertLessThanOrEqual(line.chinese.count, 60, line.chinese)
+            XCTAssertFalse(released.contains(line.chinese), "already released: \(line.chinese)")
+        }
+        let all = (WhatsNew.nextItems + WhatsNew.nextFixes).map(\.chinese)
+        XCTAssertEqual(Set(all).count, all.count, "a line added twice")
+
+        let source = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/GamePresentation/WhatsNewNext.swift")
+        let lines = try String(contentsOf: source, encoding: .utf8).split(separator: "\n", omittingEmptySubsequences: false)
+        let opened = lines.filter { $0.contains("Line(") && !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+        XCTAssertEqual(opened.count, all.count, "one Line( for each line of news")
+        for line in opened {
+            XCTAssertTrue(line.contains("english:") && line.contains("chinese:") && line.hasSuffix("),"),
+                          "each Line(english:chinese:) on one line, ending in \"),\": \(line)")
+        }
+    }
+
     /// Help's search finds the row by its name in either language and by
     /// the newest news.
     func testHelpsSearchFindsTheRow() {
