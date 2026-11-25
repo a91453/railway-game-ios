@@ -93,11 +93,16 @@ extension Map3DScene.Builder {
                     model.restyleVertices { $0.color = Self.placedRoof($0.color, from: Self.shedTin, as: tin) }
                 }
             }
+            // The pad is 10 cm thick; what stands on the plot stands on it
+            // (decision 963's sequel: a pitch, a court, a sandpit 8–10 cm
+            // high were under it, only their white lines showing).
+            var floor = base
             if let pad = layout.pad {
-                mesh(at: base) { $0.addBox(base: base, length: side, width: side, height: 0.1, top: pad, side: pad) }
+                mesh(at: base) { $0.addBox(base: base, length: side, width: side, height: Self.placedPadHeight, top: pad, side: pad) }
+                floor = base + Map3DPoint(0, Self.placedPadHeight, 0)
             }
             target = .close
-            mesh(at: base) { $0.append(model, at: base, forward: facing) }
+            mesh(at: base) { $0.append(model, at: floor, forward: facing) }
             addLayoutBicycles(layout.bicycles, base: base, facing: facing)
             // The boxes round the models hide them: not drawn close up.
             for level in [Target.standIn, .far] {
@@ -171,6 +176,11 @@ extension Map3DScene.Builder {
             self.recolours = recolours
         }
     }
+
+    /// How thick a layout's ``PlacedKitLayout/pad`` is, in metres: its
+    /// parts stand on it (decision 963's sequel), and the parked bicycles
+    /// (``StationKitBuilder/addLayoutBicycles(_:base:facing:)``) always did.
+    static let placedPadHeight: Float = 0.1
 
     /// Decision 398: the colours the estate kit's roofs (all
     /// ``Map3DPalette/playerRoof``, a pale cream) take, by the building's
