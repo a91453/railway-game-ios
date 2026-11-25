@@ -100,6 +100,8 @@ final class Map3DPaletteGuardTests: XCTestCase {
         // The Keikyu New 1000 (decision 956); its glass and headlamps are
         // the trains' own.
         check(Map3DRedCommuter.meshPalette.filter { $0 != Map3DTrainStyle.glass && $0 != Map3DTrainStyle.headlamp }, "Keikyu New 1000")
+        // The Kyushu Shinkansen's N700 (decision 977), likewise.
+        check(Map3DKyushuN700.meshPalette.filter { $0 != Map3DTrainStyle.glass && $0 != Map3DTrainStyle.headlamp }, "Kyushu Shinkansen N700")
         check(Map3DSunMoonLandmark.materialColours, "Sun Moon Lake landmarks")
         check(Map3DOldIslandModule.parts.map(\.colour), "old island module and platform furniture")
         check([Map3DPlatformProps.nameBoardGreen], "platform name board")
