@@ -56,6 +56,13 @@ final class DepotReturnReportTests: XCTestCase {
         try report("tymc", Self.resumed() ?? Self.peopled("tymc:A") ?? Self.bought("tymc:A", side: 1 << 22))
     }
 
+    /// THSR-SALE (decision 993): the High Speed Rail bought, on a map as
+    /// long as Taiwan, its depots past Nangang and Zuoying.
+    func testTheHighSpeedRail() throws {
+        try wanted("thsr")
+        try report("thsr", Self.resumed() ?? Self.bought(ThsrSaleTests.id, side: 1 << 25, balance: Money(1_000_000_000_000)))
+    }
+
     /// HEALTH-119: the Kaohsiung Circular Light Rail (decision 612), a ring.
     func testTheKaohsiungLightRail() throws {
         try wanted("klrt")
@@ -332,11 +339,11 @@ final class DepotReturnReportTests: XCTestCase {
 
     /// A game round real line `id` with it bought, under realistic rules
     /// (simple with `DEPOT_RETURN_SIMPLE`), or under `rules`.
-    static func bought(_ id: String, rules: NewGameRules? = nil, side: Int64 = 1 << 21) throws -> GameWorld {
+    static func bought(_ id: String, rules: NewGameRules? = nil, side: Int64 = 1 << 21, balance: Money = Money(100_000_000_000)) throws -> GameWorld {
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         // The Taiwan Railway branch lines are found by their network alone.
         let round = id.hasPrefix("tra:") ? String(id.dropFirst(4)) : id
-        let session = try RealLineAcquisitionTests.game(round: round, side: side, heights: true, rules: rules ?? (simple ? .simple : .realistic))
+        let session = try RealLineAcquisitionTests.game(round: round, balance: balance, side: side, heights: true, rules: rules ?? (simple ? .simple : .realistic))
         guard let line = session.buyableRealLines.first(where: { $0.id == id }) else {
             throw XCTSkip("\(id) is not on sale")
         }

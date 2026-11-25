@@ -285,6 +285,10 @@ public struct RealBranchLine: Hashable, Sendable {
         ("mrt", "BR", "Wenhu Line", "文湖線", nil, .metro, false),
         ("tymc", "A", "Taoyuan Airport MRT", "桃園機場捷運", nil, .metro, false),
         ("krtc", "C", "Kaohsiung Circular Light Rail", "高雄環狀輕軌", nil, .lightRail, false),
+        // THSR-SALE (decision 993): the Taiwan High Speed Rail, Nangang to
+        // Zuoying, the real day's trains (`extract_thsr_runs.py`), with a
+        // depot past each end, as the Kyushu Shinkansen is sold (decision 975).
+        ("thsr_sched", "THSR", "Taiwan High Speed Rail", "台灣高鐵", nil, .metro, false),
     ]
 
     public func name(in language: DisplayLanguage) -> String {
@@ -355,6 +359,18 @@ struct RealLineLayout {
     static let metro = RealLineLayout(
         loopReach: 150 * RealLineAcquisition.metre, loopRamp: 50 * RealLineAcquisition.metre, loopOffset: RealWorldDemo.groundLoopOffset, endLevels: 2
     )
+
+    /// THSR-SALE (decision 993): the loops reaching far enough that a
+    /// platform `half` long either side of its station lies on their
+    /// straight, past their ramps. The High Speed Rail's 300 m platforms
+    /// are longer than a metro's loops hold (150 m out, 50 m of it ramp:
+    /// 200 m of straight, the Kyushu Shinkansen's), and its loops were
+    /// laid as a single edge on the line's own track. Every other line's
+    /// platform fits as it was, so its loops are laid as before.
+    func holding(half: Double) -> RealLineLayout {
+        let reach = max(loopReach, half + loopRamp)
+        return RealLineLayout(loopReach: reach, loopRamp: loopRamp, loopOffset: loopOffset, endLevels: endLevels)
+    }
 
     /// The `level`th loop out (from 1): its reach and its ramp.
     func reach(level: Int) -> Double { loopReach + Double(level - 1) * loopRamp }
@@ -1610,7 +1626,8 @@ extension RealLineLaying {
         let platformLength = line.platformLength(real: world.realCarLengths)
         let half = Double(platformLength) / 2
         let double = line.isDoubleTrack
-        let layout = !line.isUrban ? RealLineLayout.branch : cars > RealLineLayout.lightRailCars ? .metro : .lightRail
+        // THSR-SALE (decision 993): loops long enough for the platform.
+        let layout = (!line.isUrban ? RealLineLayout.branch : cars > RealLineLayout.lightRailCars ? .metro : .lightRail).holding(half: half)
         // SHARED-STATION-LEVEL: a line's end at a station another of the
         // company's lines calls at, whose track lies along its way, is laid
         // beside that track, an island's width out, not over it.

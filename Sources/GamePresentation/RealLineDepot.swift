@@ -344,12 +344,39 @@ struct RealLineDepotSite: Sendable {
         sidings: 8, beyond: "熊本", compact: true
     )
 
+    /// THSR-SALE (decision 993): the High Speed Rail's depot past Nangang,
+    /// its north end, on from its track there along the real line's way
+    /// east, where the real Nangang sidings (南港留置線, ``HighSpeedDemo/realDepots``)
+    /// lie. Its sidings hold the ten sets that stand at the north end
+    /// overnight (`tools/real-timetables/extract_thsr_runs.py`), one each.
+    static let thsrNangang = RealLineDepotSite(
+        line: "thsr_sched:THSR", english: "Nangang Sidings", chinese: "南港留置線",
+        junction: (25.053905, 121.612000),
+        yard: ((25.054150, 121.615000), (25.054500, 121.619500)),
+        sidings: 10, beyond: "南港", compact: true
+    )
+
+    /// THSR-SALE (decision 993): the High Speed Rail's depot past
+    /// Zuoying, its south end, on from its track there along the real
+    /// line's way south-west, as the Kyushu Shinkansen's past Kumamoto
+    /// (``kumamoto``). The real Zuoying depot (左營機廠) lies beside the
+    /// line north of the station; the game's leads go on past the end, so
+    /// its trains run in and out without crossing the line's. Its sidings
+    /// hold the thirty sets that stand at the south end overnight, one
+    /// each.
+    static let thsrZuoying = RealLineDepotSite(
+        line: "thsr_sched:THSR", english: "Zuoying Depot", chinese: "左營機廠",
+        junction: (22.685040, 120.305020),
+        yard: ((22.683800, 120.303600), (22.680900, 120.300100)),
+        sidings: 30, beyond: "左營", compact: true
+    )
+
     /// The real depots line `line` is bought with (decision 535: the
     /// Wenhu Line has one past each end; its continuation, the Ankeng LRT
     /// one past Shuangcheng; decision 556, the Taoyuan Airport MRT two
     /// beside the line).
     static func sites(of line: String) -> [RealLineDepotSite] {
-        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan, hashimoto, kumamoto].filter { $0.line == line }
+        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan, hashimoto, kumamoto, thsrNangang, thsrZuoying].filter { $0.line == line }
     }
 
     /// Decision 556: whether its sidings fan out away from the line, not

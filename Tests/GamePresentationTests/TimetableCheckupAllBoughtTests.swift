@@ -156,7 +156,7 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         let fukuoka = Set(try Self.fukuoka(rules: .simple).buyableRealLines.map(\.id))
         let text = "TIMETABLE_CHECKUP on sale: Taiwan \(taiwan.sorted()), Hong Kong \(hongKong.sorted()), Rovaniemi \(rovaniemi.sorted()), Fukuoka \(fukuoka.sorted())\n"
         FileHandle.standardError.write(Data(text.utf8))
-        XCTAssertEqual(taiwan.count, 15)
+        XCTAssertEqual(taiwan.count, 16, "with the High Speed Rail (decision 993)")
         XCTAssertEqual(hongKong.count, 6)
         XCTAssertEqual(rovaniemi.count, 2)
         XCTAssertEqual(taiwan.subtracting(taiwanAlone), [], "Taiwan lines on sale no world buys alone")
