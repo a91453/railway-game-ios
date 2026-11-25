@@ -50,10 +50,53 @@ final class FukuokaGroundTests: XCTestCase {
         XCTAssertFalse(water.isWater(latitude: 33.5300, longitude: 130.4700), "the south-east corner, inland")
     }
 
-    /// The people: some 1.7 million on the map, WorldPop's.
+    /// The people, WorldPop's: some 4.8 million on the map from Fukuoka to
+    /// Kumamoto (KUMAMOTO-GROUND), some 1.7 million of them on the map as
+    /// it was, Fukuoka's 17.6 by 22.2 km.
     func testThePeople() throws {
         let population = try XCTUnwrap(try FukuokaRailwaysTests.ground().population)
-        XCTAssertTrue((1_400_000...2_000_000).contains(population.total), "\(population.total)")
+        XCTAssertTrue((4_400_000...5_300_000).contains(population.total), "\(population.total)")
+        let fukuoka = population.cells(north: 33.72, south: 33.52, west: 130.29, east: 130.48)
+            .filter { (33.52...33.72).contains($0.centerLatitude) && (130.29...130.48).contains($0.centerLongitude) }
+            .reduce(0) { $0 + $1.count }
+        XCTAssertTrue((1_400_000...2_000_000).contains(fukuoka), "\(fukuoka)")
+    }
+
+    /// KUMAMOTO-GROUND: the ground reaches Kumamoto. Kinpozan (665 m)
+    /// stands west of the city, the city's centre and the Chikugo plain
+    /// are low and dry, the Ariake Sea is sea, and Aso Kumamoto Airport
+    /// is on its plateau (some 190 m).
+    func testTheGroundReachesKumamoto() throws {
+        let (heights, water) = try ground()
+        XCTAssertEqual(top(heights, 32.8140, 130.6388), 665, accuracy: 25, "Kinpozan")
+        for (name, latitude, longitude, range) in [
+            ("Kumamoto Station", 32.7900, 130.6890, 0.0...30.0), ("Kumamoto Castle's town", 32.8030, 130.7080, 0...40),
+            ("Kurume Station", 33.3203, 130.5014, 0...30), ("Shin-Tosu Station", 33.3706, 130.4905, 0...40),
+            ("Aso Kumamoto Airport", 32.8373, 130.8551, 150...230),
+        ] {
+            XCTAssertFalse(water.isWater(latitude: latitude, longitude: longitude), name)
+            XCTAssertTrue(range.contains(heights.height(latitude: latitude, longitude: longitude)), "\(name): \(heights.height(latitude: latitude, longitude: longitude))")
+        }
+        XCTAssertTrue(water.isWater(latitude: 32.9000, longitude: 130.3500), "the Ariake Sea")
+        XCTAssertEqual(heights.height(latitude: 32.9000, longitude: 130.3500), 0, "the Ariake Sea")
+    }
+
+    /// The ground across the edges the map had (33.52°N and 130.48°E) has
+    /// no step: the heights either side of each, 60 m apart, differ by
+    /// what a slope does, nowhere by a wall.
+    func testTheOldEdgesHaveNoStep() throws {
+        let (heights, water) = try ground()
+        var worst = 0.0
+        for index in 0..<400 {
+            let longitude = 130.29 + (130.48 - 130.29) * (Double(index) + 0.5) / 400
+            let latitude = 33.52 + (33.72 - 33.52) * (Double(index) + 0.5) / 400
+            for (a, b) in [((33.5203, longitude), (33.5197, longitude)), ((latitude, 130.4797), (latitude, 130.4803))] {
+                guard !water.isWater(latitude: a.0, longitude: a.1), !water.isWater(latitude: b.0, longitude: b.1) else { continue }
+                worst = max(worst, abs(heights.height(latitude: a.0, longitude: a.1) - heights.height(latitude: b.0, longitude: b.1)))
+            }
+        }
+        // 60 m apart on Aburayama's and Sangun's slopes: at most 1 in 1.
+        XCTAssertLessThan(worst, 60, "the steepest 60 m across an old edge")
     }
 
     /// The pack lists its ground and credits where it comes from.

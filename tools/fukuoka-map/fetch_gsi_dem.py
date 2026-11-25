@@ -9,7 +9,9 @@ each 256 × 256 tile of zoom 15 from the 5 m models, the laser survey's
 first (dem5a), then the photogrammetric ones (dem5b, dem5c), and the 10 m
 model (dem_png, DEM10B, zoom 14) where none of them has the tile. Each tile is
 saved as `<layer>_<z>_<x>_<y>.png`; a tile GSI does not have (404, the sea)
-as nothing. Asks one tile at a time, as GSI asks of automated clients.
+as nothing. Asks three tiles at a time, fewer than a browser showing GSI's
+map does (the Kumamoto extent is some 6,700 tiles, an hour so; one at a
+time it is three), and a run that stopped goes on from where it was.
 
 Licence: 国土地理院コンテンツ利用規約 (compatible with CC BY 4.0), with the
 credit 「国土地理院の標高タイルを加工して作成」.
@@ -30,6 +32,7 @@ TEN = 'dem_png'
 # A margin past the extent, in degrees: the grid reaches to whole
 # population cells beyond it.
 MARGIN = 0.01
+WORKERS = 3
 
 
 def tile(lat, lon, z):
@@ -50,6 +53,10 @@ def get(folder, layer, z, x, y):
     path = os.path.join(folder, f'{layer}_{z}_{x}_{y}.png')
     if os.path.exists(path):
         return True
+    # A tile GSI answered 404 for is remembered, so a run that stopped
+    # half way goes on without asking for the sea again.
+    if os.path.exists(path[:-4] + '.none'):
+        return False
     for attempt in range(4):
         try:
             with urllib.request.urlopen(URL.format(layer=layer, z=z, x=x, y=y), timeout=30) as response:
@@ -59,6 +66,7 @@ def get(folder, layer, z, x, y):
             return True
         except urllib.error.HTTPError as error:
             if error.code == 404:
+                open(path[:-4] + '.none', 'w').close()
                 return False
             time.sleep(2 ** attempt)
         except OSError:
@@ -68,13 +76,16 @@ def get(folder, layer, z, x, y):
 
 def main(folder):
     os.makedirs(folder, exist_ok=True)
+    from concurrent.futures import ThreadPoolExecutor
     counts = {}
-    for x, y in tiles(15):
-        layer = next((layer for layer in FIVE if get(folder, layer, 15, x, y)), None)
-        counts[layer] = counts.get(layer, 0) + 1
-    for x, y in tiles(14):
-        if get(folder, TEN, 14, x, y):
-            counts[TEN] = counts.get(TEN, 0) + 1
+
+    def five(tile_xy):
+        return next((layer for layer in FIVE if get(folder, layer, 15, *tile_xy)), None)
+
+    with ThreadPoolExecutor(WORKERS) as pool:
+        for layer in pool.map(five, tiles(15)):
+            counts[layer] = counts.get(layer, 0) + 1
+        counts[TEN] = sum(pool.map(lambda tile_xy: get(folder, TEN, 14, *tile_xy), tiles(14)))
     print({str(k): v for k, v in counts.items()})
 
 

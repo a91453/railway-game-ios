@@ -1,6 +1,6 @@
 # 福岡的地圖資料（決策 854）
 
-日本的第一張地圖。只開福岡市一小區（北緯 33.52–33.72、東經 130.29–130.48，約 17.6 × 22.2 公里），不匯入全日本；全國的 N02 只拿來挑這一區（評分在私有 `railway-assets-private-2` 的 `docs/priorities/JAPAN-MAP.md`）。做成自成一包的地圖包 `RailwayGameApp/Resources/MapPacks/fukuoka/`，檔名與格式和香港（`tools/hk-map/`）、羅瓦涅米（`tools/rovaniemi-map/`）一樣。
+日本的第一張地圖。開圖時只開福岡市一小區（北緯 33.52–33.72、東經 130.29–130.48，約 17.6 × 22.2 公里）；**2026-11-25 起地面往南、往東做到熊本**（北 33.72、西 130.29 不變，南 32.69、東 130.90，約 56.5 × 114.1 公里，KUMAMOTO-GROUND，決策 969「後來：地面到熊本」；見下面「到熊本」）。不匯入全日本；全國的 N02 只拿來挑這一區（評分在私有 `railway-assets-private-2` 的 `docs/priorities/JAPAN-MAP.md`）。做成自成一包的地圖包 `RailwayGameApp/Resources/MapPacks/fukuoka/`，檔名與格式和香港（`tools/hk-map/`）、羅瓦涅米（`tools/rovaniemi-map/`）一樣。
 
 有鐵道（福岡市地鐵空港線 K、箱崎線 H、七隈線 N）、人口、底圖、建物、高度、水域、地形、機場與不蓋區（FUKUOKA-GROUND，決策 854「後來」）。FUKUOKA-OPEN（2026-11-19）打開了：`OverseasMaps.open` 有福岡，`RailwayGameApp/AssetPacks/fukuoka.json` 是它的地圖包清單（發版時上傳，App 只帶 `pack.json`，決策 858），福岡機場與桃園、高雄的航線開圖（決策 712）。
 
@@ -12,8 +12,8 @@
 |---|---|---|
 | `N02-25_Station.geojson` | 国土数値情報 鉄道データ N02 2025 年版，`https://nlftp.mlit.go.jp/ksj/gml/data/N02/N02-25/N02-25_GML.zip`（14.2 MB，取 `UTF-8/N02-25_Station.geojson`） | CC BY 4.0；署名「『国土数値情報（鉄道データ）』（国土交通省）を加工して作成」 |
 | `jpn_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop 日本 2025，constrained，1 km | CC BY 4.0，WorldPop |
-| 國土地理院標高圖磚 | `https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/…`（沒有就 dem5b、dem5c），另抓 `dem_png/14/…`（DEM10B） 補 5 m 沒有值的點；`fetch_gsi_dem.py` 一次一片地抓（約 630 片，十幾分鐘） | 国土地理院コンテンツ利用規約（與 CC BY 4.0 相容），署名「国土地理院の標高タイルを加工して作成」 |
-| `kyushu.pbf` | OpenStreetMap 九州，`https://osmtoday.com/asia/japan/kyushu.pbf`（約 354 MB，會轉到 geo2day.com），用 `osmium extract` 切成 `fukuoka.pbf`（約 30 MB） | ODbL 1.0，© OpenStreetMap 貢獻者 |
+| 國土地理院標高圖磚 | `https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/…`（沒有就 dem5b、dem5c），另抓 `dem_png/14/…`（DEM10B） 補 5 m 沒有值的點；`fetch_gsi_dem.py` 一次三片地抓（到熊本是 5 m 5,798 片、10 m 1,488 片，共 562 MB，約 40 分鐘；中斷了再跑會接著抓） | 国土地理院コンテンツ利用規約（與 CC BY 4.0 相容），署名「国土地理院の標高タイルを加工して作成」 |
+| `kyushu.pbf` | OpenStreetMap 九州，`https://osmtoday.com/asia/japan/kyushu.pbf`（約 354 MB，會轉到 geo2day.com），用 `osmium extract` 切成 `fukuoka.pbf`（約 30 MB，鐵道用）與 `kumamoto.pbf`（約 107 MB，地面用） | ODbL 1.0，© OpenStreetMap 貢獻者 |
 
 這兩個在雲端容器都連得到（2026-11-18）。每次讀了什麼寫在 `fukuoka_sources.json`。
 
@@ -31,7 +31,8 @@ curl -L -o /tmp/fk/n02/N02-25_GML.zip https://nlftp.mlit.go.jp/ksj/gml/data/N02/
 (cd /tmp/fk/n02 && unzip -o -q N02-25_GML.zip)
 curl -L -o /tmp/fk/osm/kyushu.pbf https://osmtoday.com/asia/japan/kyushu.pbf
 apt-get update && apt-get install -y osmium-tool    # 只用來切範圍（GPL-3.0，只執行、不抄程式）
-osmium extract -b 130.25,33.49,130.52,33.75 -s smart -o /tmp/fk/osm/fukuoka.pbf /tmp/fk/osm/kyushu.pbf
+osmium extract -b 130.25,33.49,130.52,33.75 -s smart -o /tmp/fk/osm/fukuoka.pbf /tmp/fk/osm/kyushu.pbf    # 鐵道（1、2）
+osmium extract -b 130.25,32.66,130.94,33.75 -s smart -o /tmp/fk/osm/kumamoto.pbf /tmp/fk/osm/kyushu.pbf   # 地面（3），到熊本
 pip install osmium
 
 # 1. 鐵道與估計班距（約 50 秒）。
@@ -45,12 +46,12 @@ mkdir -p /tmp/fk/pop /tmp/fk/gsi
 curl -L -o /tmp/fk/pop/jpn.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/JPN/v1/1km_ua/constrained/jpn_pop_2025_CN_1km_R2025A_UA_v1.tif
 pip install tifffile imagecodecs numpy
 python3 -I tools/fukuoka-map/build_fukuoka_ground.py population /tmp/fk/pop/jpn.tif RailwayGameApp/Resources/MapPacks/fukuoka
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/fukuoka.pbf RailwayGameApp/Resources/MapPacks/fukuoka
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/fukuoka.pbf RailwayGameApp/Resources/MapPacks/fukuoka   # 約 30 秒，要先有人口
-python3 -I tools/airfields/build_airfields.py /tmp/fk/osm/fukuoka.pbf RailwayGameApp/Resources/MapPacks/fukuoka/airfields.json
-python3 -I tools/no-build-land/build_no_build.py /tmp/fk/osm/fukuoka.pbf RailwayGameApp/Resources/MapPacks/fukuoka/no_build.json
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka   # 約 2 分鐘，要先有人口
+python3 -I tools/airfields/build_airfields.py /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka/airfields.json
+python3 -I tools/no-build-land/build_no_build.py /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka/no_build.json
 python3 -I tools/fukuoka-map/fetch_gsi_dem.py /tmp/fk/gsi
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/fukuoka.pbf RailwayGameApp/Resources/MapPacks/fukuoka
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka
 
 swift build --build-tests -Xswiftc -warnings-as-errors
 swift test --skip-build --filter FukuokaRailwaysTests
@@ -60,7 +61,28 @@ swift test --skip-build --filter FukuokaRailwaysTests
 
 - **高度用國土地理院的，不用 Copernicus**：Copernicus 是地表模型（樹頂、屋頂），羅瓦涅米的樹林與矮房可以用；福岡市中心高樓多，用它會把線鋪在樓頂上。國土地理院 5 m 是雷射測量的地面（沒有 5 m 的點用 10 m）。每格取格內像素的平均，海與離岸遠的水是 0，岸邊的水保留水面（和香港同一條規則）。
 - **海岸**：九州的海岸線在切出的範圍四邊都被切開，`overseas_ground.coast_in_box` 把每段切到範圍裡、沿範圍的邊逆時針補到下一段（陸地在左，OSM 的畫法），能之島、志賀島是自己封閉的環。
-- **檢查**：愛宕山（68 m）附近最高格差 25 m 以內（格是約 50 m 見方的平均，小山頂會被拉低；5 m 像素量到 64 m）；高程模型 1 m 以上的格子，OSM 也要算陸地的至少 97 %。
+- **檢查**：愛宕山（68 m）與熊本西邊的金峰山（665 m）附近最高格差 25 m 以內（格是約 50 m 見方的平均，小山頂會被拉低；5 m 像素量到 64 m）；高程模型 1 m 以上的格子，OSM 也要算陸地的至少 97 %。
+
+## 到熊本（KUMAMOTO-GROUND，2026-11-25）
+
+範圍寫在 `build_fukuoka_rail.py` 的 `EXTENT`（現在）與 `EARLIER`（以前的範圍，由舊到新），`pack.json` 的 `extent`、`earlier` 由它寫出（決策 969：有 `earlier` 的包，舊存檔開起來世界會長大、擁有原本那四塊，新局四塊起跳）。**西北角不動**，所以格網從同一個角數起，福岡原本那一塊的每一格都在原位。
+
+| | 福岡（以前） | 到熊本 |
+|---|--:|--:|
+| 範圍 | 17.6 × 22.2 km | 56.5 × 114.1 km（地圖塊 4 × 7） |
+| 人口（WorldPop） | 約 170 萬 | 484 萬 |
+| 高度格（1.875″） | 400 × 384 | 2000 × 1200 |
+| 建物 | 28.5 萬棟 | 107.9 萬棟 |
+| `basemap.pmtiles` | 3.1 MB | 23.7 MB |
+| `buildings.pmtiles` | 4.5 MB | 16.5 MB |
+| `heights.dat`＋`terrain.pmtiles`＋`water.json` | 0.2 MB | 3.9 MB |
+| 整包（`pack.json` 的 `bytes`） | 8.6 MB | **45.1 MB** |
+
+- **舊邊界沒有階差**：福岡原本那一塊 153,600 格裡，高度只有 1 格差 1 m（四捨五入的邊界），水域差 6 格（OSM 比 11-19 新），陡坡差 50 格（都在舊的南緣、東緣那一排：以前邊界外沒有鄰格可比）。跨舊南緣（33.52N）相鄰兩格的高差平均 6.4 m、最大 34 m，跨舊東緣（130.48E）平均 2.1 m、最大 27 m，和往裡 200 格、往外 200 格的同樣量法是同一個量級（油山、三郡山的山坡），不是牆。`FukuokaGroundTests.testTheOldEdgesHaveNoStep` 釘住。
+- **新範圍裡有什麼**：筑紫平野（鳥栖、久留米、佐賀東半、大牟田）、有明海、熊本平野與熊本市、阿蘇熊本機場（台地上約 190 m）、佐賀機場；西南角是島原半島東半，最高格 1,457 m 是雲仙的平成新山（1,483 m）。高度 −2 到 1,457 m；陸地 5,607.5 km²（沒有高度的 0.1 km²）、水 1,097.7 km²、陡坡 761.6 km²。有人住的格裡陡坡 0.74 %。
+- **機場**：`airfields.json` 現在有三座（福岡 FUK、佐賀 HSG、熊本 KMJ），只是 3D 地圖上畫出來；航線還是只有福岡。
+- **記憶體**：整張 5 m 像素約 4.5 億點，一次放不進雲端容器的記憶體，`mean_heights` 改成每 8 排圖磚算一次、把每格的總和與點數累加。
+- **還沒做的**：`track_lines.geojson` 等鐵道檔還是只有福岡地鐵三條線；九州新幹線在 `kyushu-shinkansen/`，SHINKANSEN-SALE 搬進來。地圖包的名字與資料來源畫面仍寫「福岡」，KUMAMOTO-OPEN 再決定要不要改。
 
 ## 三條線
 

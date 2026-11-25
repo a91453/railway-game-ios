@@ -1,46 +1,46 @@
 {
  "decision": 854,
  "extract": {
-  "file": "fukuoka.pbf",
-  "sha256": "c73183ab0d1bd0fa914d5c77b30996bb08ffbcc996cf5ae563c667d7a2df4b60",
-  "from": "https://osmtoday.com/asia/japan/kyushu.pbf, cut with osmium extract -b 130.25,33.49,130.52,33.75 -s smart",
+  "file": "kumamoto.pbf",
+  "sha256": "aa24ddd3ad7c2a42945a9e286187e48f53e26132b5d0fb924dcaafb0b7232785",
+  "from": "https://osmtoday.com/asia/japan/kyushu.pbf, cut with osmium extract -b 130.25,32.66,130.94,33.75 -s smart",
   "licence": "ODbL 1.0, © OpenStreetMap contributors",
-  "newestBuildingEdit": "2026-11-17T10:27:49Z",
-  "buildingsRead": 310896
+  "newestBuildingEdit": "2026-11-21T14:19:07Z",
+  "buildingsRead": 1179924
  },
- "buildings": 284964,
+ "buildings": 1079275,
  "leftOut": {
-  "small": 25737
+  "small": 100424
  },
- "tiles": 995,
+ "tiles": 10450,
  "storeysFrom": {
-  "guess": 35538,
-  "tags": 249621
+  "guess": 758756,
+  "tags": 320744
  },
  "uses": {
-  "agricultural": 590,
-  "civic": 8218,
-  "commercial": 17733,
-  "education": 1316,
-  "entertainment": 186,
-  "industrial": 3764,
-  "medical": 201,
-  "none": 46634,
-  "outbuilding": 45,
-  "religious": 80,
-  "residential": 206196,
-  "service": 4,
-  "transportation": 192
+  "agricultural": 9338,
+  "civic": 10990,
+  "commercial": 23725,
+  "education": 2445,
+  "entertainment": 284,
+  "industrial": 6343,
+  "medical": 383,
+  "none": 741744,
+  "outbuilding": 421,
+  "religious": 312,
+  "residential": 283112,
+  "service": 129,
+  "transportation": 274
  },
  "storeys": {
   "median": 2,
   "tallest": 48,
-  "of1": 60327,
-  "of2": 178950,
-  "of3to5": 35361,
-  "of6andMore": 10521
+  "of1": 360038,
+  "of2": 542136,
+  "of3to5": 162173,
+  "of6andMore": 15153
  },
- "rawBytes": 5522159,
- "archiveBytes": 4483124,
- "sha256": "ba8f95cfec5723ed83eb70fa7edaf9ed92412eca87a273cc89c5d6ef26f85ecc"
+ "rawBytes": 20387406,
+ "archiveBytes": 16530089,
+ "sha256": "359331b43940211a0f9b0e309070cc6d426cff769cc5bb404f337879745bd15a"
 }

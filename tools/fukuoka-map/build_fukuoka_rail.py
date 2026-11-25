@@ -147,7 +147,11 @@ CHOICE = 40
 # Hashimoto in the west to the airport in the east, Hakata Bay and Kaizuka
 # in the north, with room to the north for Nishitetsu's Kaizuka Line
 # (NISHITETSU-KAIZUKA, later); some 17.6 km by 22.2 km.
-EXTENT = {"north": 33.72, "south": 33.52, "west": 130.29, "east": 130.48}
+# The map now (KUMAMOTO-GROUND: south and east to Kumamoto, decision 969) and
+# what it was before it grew, oldest first (`pack.json`'s `earlier`): the
+# north and west edges never move.
+EXTENT = {"north": 33.72, "south": 32.69, "west": 130.29, "east": 130.90}
+EARLIER = [{"north": 33.72, "south": 33.52, "west": 130.29, "east": 130.48}]
 SKIPPED_SERVICE = {"yard", "siding", "spur", "crossover"}
 
 
@@ -487,6 +491,7 @@ def write_manifest(folder):
                    "tools/fukuoka-map (README.md there).",
         "bytes": sum(f["bytes"] for f in files.values()),
         "extent": EXTENT,
+        "earlier": EARLIER,
         "licences": licences,
         "files": files,
     })
