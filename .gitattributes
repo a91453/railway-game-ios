@@ -6,3 +6,6 @@ Sources/GamePresentation/Map3DLandmarkRegistryList.swift merge=union
 # Decision 910: one step of the way out of a deadlock a line, the same way
 # (DeadlockRescueListTests checks the result).
 Sources/GameCore/Railway/DeadlockRescue/DeadlockRescueList.swift merge=union
+# Decision 415's amendment: one line of the next build's news a line, the
+# same way (WhatsNewTests checks the result).
+Sources/GamePresentation/WhatsNewNext.swift merge=union
