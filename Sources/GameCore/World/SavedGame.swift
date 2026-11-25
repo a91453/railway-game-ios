@@ -305,6 +305,10 @@ extension SavedGame: Codable {
         // Version 111 or earlier to 112: the track only guideway trains
         // run on becomes their guideway (decision 951).
         if version < 112 { world.layGuideways() }
+        // Version 112 to 113: a map that grew says which part of the world
+        // its anchor is the middle of, and a map bought tile by tile how
+        // many tiles it was given (decision 969). Earlier saves hold
+        // neither and read as before: nothing to turn.
         // Version 113 or earlier to 114: every edge of ordinary track is
         // laid at the gauge of the trains that run on it (decision 970).
         if version < 114 { world.layGauges() }

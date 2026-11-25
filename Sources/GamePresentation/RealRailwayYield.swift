@@ -88,7 +88,9 @@ public struct RealRailwayYield: Sendable, Equatable {
         var covered: [Cell: [Place]] = [:]
         if !track.isEmpty {
             let half = RealWorldFrame.halfExtent(of: world.bounds)
-            let lines = railways.lines(near: frame.anchor, within: max(half.east, half.south) * 1.5 + 2_000)
+            // Decision 969: round the middle of the world, which a map
+            // that grew has away from the anchor.
+            let lines = railways.lines(near: frame.place(atMiddleOf: WorldRegion(bounds: world.bounds)), within: max(half.east, half.south) * 1.5 + 2_000)
             for line in lines where line.points.count > 1 {
                 guard let cut = Self.cut(line, frame: frame, track: track, covered: &covered) else { continue }
                 pieces[line.id] = cut
