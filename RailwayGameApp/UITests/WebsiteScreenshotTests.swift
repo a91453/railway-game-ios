@@ -2240,6 +2240,50 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("map3d-station-tag-details", app)
     }
 
+    /// Decision 987 (PHOTO-MODE): the 3D map's photo mode: its bar with
+    /// the map's own controls put away, each of the three spots, and the
+    /// map alone after a tap on it. The shutter is not pressed (the
+    /// Simulator would ask about Photos).
+    func testPhotoMode() {
+        let app = launch(extra: ["-screenshot-scene", "freight", "-map3D.quality", "saving"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let open3D = app.buttons["map.open3D"]
+        XCTAssertTrue(open3D.appears(within: 10))
+        XCTAssertTrue(open3D.becomesHittable(within: 10))
+        open3D.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 60), "The 3D map opens")
+        waitForPicture(timeout: 150)
+        let open = app.buttons["map3D.photoMode.open"]
+        XCTAssertTrue(open.appears(within: 10), "The 3D map has the photo mode's button")
+        settle(seconds: 2)
+        keep("photo-mode-button", app)
+        XCTAssertTrue(open.becomesHittable(within: 10))
+        open.tap()
+        let shutter = app.buttons["map3D.photoMode.shutter"]
+        XCTAssertTrue(shutter.appears(within: 10), "The photo mode opens")
+        XCTAssertTrue(app.buttons["map3D.close"].disappears(within: 10), "The map's own controls are put away")
+        settle(seconds: 2)
+        keep("photo-mode-open", app)
+        for spot in ["station", "train", "skyline"] {
+            let button = app.buttons["map3D.photoMode.spot.\(spot)"]
+            XCTAssertTrue(button.becomesHittable(within: 10), "The \(spot) spot's button")
+            button.tap()
+            settle(seconds: 8)
+            keep("photo-mode-\(spot)", app)
+        }
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
+        XCTAssertTrue(shutter.disappears(within: 10), "A tap on the map puts the photo buttons away")
+        settle(seconds: 2)
+        keep("photo-mode-map-alone", app)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
+        XCTAssertTrue(shutter.appears(within: 10), "Another tap brings them back")
+        let close = app.buttons["map3D.photoMode.close"]
+        XCTAssertTrue(close.becomesHittable(within: 10))
+        close.tap()
+        XCTAssertTrue(app.buttons["map3D.close"].appears(within: 10), "Leaving brings the map's own controls back")
+    }
+
     /// The freight scene (`ScreenshotScene.freight`): the map with the
     /// stations short of building materials, a yard's station picked (its
     /// tag says the goods waiting), and the freight train's card.
