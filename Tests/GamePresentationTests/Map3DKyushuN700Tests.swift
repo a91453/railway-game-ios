@@ -103,7 +103,8 @@ final class Map3DKyushuN700Tests: XCTestCase {
         XCTAssertEqual(entry.defaultCars, 8)
         XCTAssertEqual(entry.fewestCars, 8)
         XCTAssertEqual(entry.gauge, 1.435)
+        // Decision 978: the line's other fleet is the 800 series.
         XCTAssertEqual(Map3DRealTrains.formation(system: "kyushushinkansen", id: "KS", name: "KS"),
-                       .init(key: Map3DKyushuN700.key, cars: 8))
+                       .init(key: Map3DKyushuN700.key, cars: 8, alternate: Map3DKyushu800.key))
     }
 }

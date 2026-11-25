@@ -243,11 +243,13 @@ public struct Map3DRealTrains: Sendable {
     /// but the EMU900 ten, as it always runs. Decision 560: and the EMU700
     /// eight, as it always runs.
     /// Decision 461: and a line's ``Formation/alternate`` for its
-    /// odd-numbered trains.
+    /// odd-numbered trains. Decision 978: and the Kyushu Shinkansen's
+    /// 800 series six, as it always runs.
     static func formation(of line: Formation, system: String, number: Int, locked: Set<String> = []) -> Formation {
         let key = line.alternate.map { number % 2 != 0 ? $0 : line.key }
             ?? variantKey(system: system, key: line.key, number: number, locked: locked)
-        let cars = key == "emu900" ? Map3DEMU900.sequence.count : key == "emu700" ? Map3DEMU700.formationCars : line.cars
+        let cars = key == "emu900" ? Map3DEMU900.sequence.count : key == "emu700" ? Map3DEMU700.formationCars
+            : key == Map3DKyushu800.key ? Map3DKyushu800.cars : line.cars
         return Formation(key: key, cars: cars)
     }
 
@@ -429,7 +431,9 @@ public struct Map3DRealTrains: Sendable {
         case "kyushushinkansen":
             // Decision 977: the Kyushu Shinkansen's N700 series 7000 and
             // 8000, eight cars (the "Mizuho" and "Sakura" through trains).
-            return Formation(key: Map3DKyushuN700.key, cars: Map3DKyushuN700.cars)
+            // Decision 978: and its odd-numbered trains the 800 series'
+            // six (the "Tsubame"), the line's two fleets.
+            return Formation(key: Map3DKyushuN700.key, cars: Map3DKyushuN700.cars, alternate: Map3DKyushu800.key)
         default:
             // A system the game has no set for: boxes.
             return Formation(key: "", cars: 3)

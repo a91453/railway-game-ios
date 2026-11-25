@@ -141,11 +141,16 @@ def parts(gltf, blob):
     return out
 
 
-def write_glb(path: Path, triangles: list[tuple[np.ndarray, int]]):
-    """`triangles`：（3 × 3 的頂點, 材質）；一個材質一個 primitive，頂點併起來。"""
+def write_glb(path: Path, triangles: list[tuple[np.ndarray, int]], materials=None, preview=None,
+              generator="tools/texture-palette/kyushu_n700.py"):
+    """`triangles`：（3 × 3 的頂點, 材質）；一個材質一個 primitive，頂點併起來。
+    `materials`、`preview`：材質名與預覽色，不給就是這款車的（`kyushu_800.py`
+    給它自己的）。"""
+    materials = materials or MATERIALS
+    preview = preview or PREVIEW
     binary = bytearray()
     views, accessors, primitives = [], [], []
-    for material in range(len(MATERIALS)):
+    for material in range(len(materials)):
         mine = [corners for corners, paint in triangles if paint == material]
         if not mine:
             continue
@@ -171,12 +176,12 @@ def write_glb(path: Path, triangles: list[tuple[np.ndarray, int]]):
     while len(binary) % 4:
         binary.append(0)
     gltf = {
-        "asset": {"version": "2.0", "generator": "tools/texture-palette/kyushu_n700.py"},
+        "asset": {"version": "2.0", "generator": generator},
         "scene": 0, "scenes": [{"nodes": [0]}], "nodes": [{"mesh": 0, "name": path.stem}],
         "meshes": [{"name": path.stem, "primitives": primitives}],
         "materials": [{"name": name, "pbrMetallicRoughness": {
-            "baseColorFactor": [((c / 255) ** 2.2) for c in PREVIEW[i]] + [1.0], "metallicFactor": 0.0, "roughnessFactor": 1.0}}
-            for i, name in enumerate(MATERIALS)],
+            "baseColorFactor": [((c / 255) ** 2.2) for c in preview[i]] + [1.0], "metallicFactor": 0.0, "roughnessFactor": 1.0}}
+            for i, name in enumerate(materials)],
         "buffers": [{"byteLength": len(binary)}], "bufferViews": views, "accessors": accessors,
     }
     text = json.dumps(gltf, separators=(",", ":")).encode()

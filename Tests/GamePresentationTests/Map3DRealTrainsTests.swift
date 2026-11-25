@@ -105,7 +105,11 @@ final class Map3DRealTrainsTests: XCTestCase {
         }
         XCTAssertEqual(Map3DRealTrains.formation(system: "fksubway", id: "N", name: "N"), .init(key: Map3DFukuokaNanakumaLine.key, cars: 4))
         // Decision 977: the Kyushu Shinkansen the N700 series' eight cars.
-        XCTAssertEqual(Map3DRealTrains.formation(system: "kyushushinkansen", id: "KS", name: "KS"), .init(key: Map3DKyushuN700.key, cars: 8))
+        // Decision 978: its odd-numbered trains the 800 series' six.
+        let kyushu = Map3DRealTrains.formation(system: "kyushushinkansen", id: "KS", name: "KS")
+        XCTAssertEqual(kyushu, .init(key: Map3DKyushuN700.key, cars: 8, alternate: Map3DKyushu800.key))
+        XCTAssertEqual(Map3DRealTrains.formation(of: kyushu, system: "kyushushinkansen", number: 2), .init(key: Map3DKyushuN700.key, cars: 8))
+        XCTAssertEqual(Map3DRealTrains.formation(of: kyushu, system: "kyushushinkansen", number: 3), .init(key: Map3DKyushu800.key, cars: 6))
         // Decision 851: the South Island line its own.
         XCTAssertEqual(Map3DRealTrains.formation(system: "hkmtr", id: "SIL", name: "SIL"), .init(key: Map3DMTRSouthIslandLine.key, cars: 3))
         // Decision 852: the Disneyland Resort line its own.

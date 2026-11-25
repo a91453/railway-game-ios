@@ -13,6 +13,7 @@
 extension WhatsNew {
     public static let nextItems: [Line] = [
         Line(english: "The garage has the Kyushu Shinkansen's N700 series: pale blue with a navy line, eight cars.", chinese: "車庫多了九州新幹線 N700 系：白藍車身、窗下深藍細線，八節。"),
+        Line(english: "The garage has the Kyushu Shinkansen's 800 series too: white with a red roof and a thin red line, six cars.", chinese: "車庫也多了九州新幹線 800 系：白車身、紅車頂、窗下一條紅細線，六節。"),
     ]
 
     public static let nextFixes: [Line] = [
