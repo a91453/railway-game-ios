@@ -22,6 +22,8 @@ python3 tools/train-models/overview.py OUT overview.png --time both model-a mode
 
 `run.sh OUT --night-lights --ids set-emu800-head` 匯出既有營運車的夜燈，manifest的 `night_lights` 記是否啟用。`triangles`／`hash` 仍是pack原模型，`package.mjs` 另記含燈的 `exported_triangles`／`exported_bounds`，不把其混作配方雜湊。
 
+`run.sh OUT --ids set-highSpeed-head --paint teal`（決策 983）匯出穿著可選塗裝的車：這款車有那個塗裝 id（`TrainPaintFamily`）才換，manifest 的 `hash` 仍是 pack 原模型。
+
 `standard` 與 `studies` 都可用ID讀取。遊戲不畫的靜態模型放 `studies`；不要增加standard的常駐頂點。新增營運車時另驗set／映射及常駐預算，並跑啟用的 `Map3DMotionBudgetTests.testWhatTheMapKeepsInMemory`。
 
 預算仍以 `budgets.json` 及當下loader為準：近景一節20,000三角、十二節240,000、遠景120,000，遠景單節少於近景一半且同框。精細新set以 `check.mjs OUT --new-set key` 驗遠景。**M3DM v1的單檔15,000是另一個上限**，本工具的GLB／通用assembly交付會拒收超限獨立單元；不能用場景預算放寬格式。高於單檔上限時先設計合法分件／格式契約，不擴大loader常數。
