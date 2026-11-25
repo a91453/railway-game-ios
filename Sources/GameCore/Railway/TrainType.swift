@@ -110,6 +110,9 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     public static let dr1000 = TrainType(listed: "DR1000")
     /// Taipei Metro's C381 (decision 961).
     public static let c381 = TrainType(listed: "C381")
+    /// The Keikyu New 1000 (京急新1000形, decision 986): a standard-gauge
+    /// commuter EMU of 18 m cars.
+    public static let keikyuNew1000 = TrainType(listed: "KEIKYU1000")
 
     /// The reference's main types, offered everywhere
     /// (`LINE_TRAIN_TYPE_MAIN`); the others are its extras

@@ -59,7 +59,9 @@ extension Map3DScene.Builder {
         let samples = shared.samples(of: snapshot)
         // Decision 888: the diamonds, their rails cut and their wing
         // rails laid.
-        state.track.diamonds = Map3DDiamondCrossings.find(snapshot) { point($0) + Self.lifted }
+        // Decision 984: each track through one at its own gauge.
+        let mapGauge = look.gauge
+        state.track.diamonds = Map3DDiamondCrossings.find(snapshot, gauge: { Map3DTrackGauge.drawn($0.gauge, map: mapGauge)[0] }) { point($0) + Self.lifted }
         // Decision 947: the guideway trains' lines' track, their beams.
         let guided = guideways(of: snapshot).edges
         // Decision 964: the kinds of the rest, from the trains run on it.
@@ -70,6 +72,8 @@ extension Map3DScene.Builder {
             let track = guideway == nil ? kinds[alignment.edge.id] ?? .ballast : .ballast
             // Decision 964: a metro's or a light rail's on a metro's viaduct.
             let viaduct: Map3DViaduct = fast.contains(alignment.edge.id) ? .highSpeed : track.ridesMetroViaduct ? .metro : .railway
+            // Decision 984: its rails at its own gauge.
+            let gauges = Map3DTrackGauge.drawn(alignment.edge.gauge, map: mapGauge)
             for span in samples.edges[number] where span.end > span.start && span.reaches(region) {
                 let line = span.line
                 guard line.count > 1 else { continue }
@@ -82,7 +86,7 @@ extension Map3DScene.Builder {
                 if guideway != nil || !track.hasOverheadLine { state.track.guidedTrackLines.insert(state.track.trackLines.count) }
                 state.track.trackLines.append((points, span.kind))
                 for piece in Self.pieces(of: points) {
-                    addTrackPiece(piece, kind: span.kind, viaduct: viaduct, guideway: guideway, track: track)
+                    addTrackPiece(piece, kind: span.kind, viaduct: viaduct, guideway: guideway, track: track, gauges: gauges)
                 }
             }
         }
@@ -190,8 +194,14 @@ extension Map3DScene.Builder {
     /// `from`: how far along its whole track `line` starts, metres
     /// (a real track's, review L11-1), so a viaduct's piers stand where
     /// the whole track puts them, wherever the piece starts.
+    ///
+    /// Decision 984: `gauges`, the gauges its rails are laid at, metres,
+    /// widest first (``Map3DTrackGauge/drawn(_:map:)``); the map's
+    /// without. The widest's rails are the track's (its diamonds, its
+    /// kind's small parts); each narrower gauge's two lie inside them.
     mutating func addTrackPiece(_ line: [Map3DPoint], kind: TrackSectionKind, viaduct: Map3DViaduct = .railway, railsNear: Bool = false,
-                                from along: Float? = nil, guideway: Map3DGuideway.Kind? = nil, track: Map3DTrackKind = .ballast) {
+                                from along: Float? = nil, guideway: Map3DGuideway.Kind? = nil, track: Map3DTrackKind = .ballast,
+                                gauges: [Float]? = nil) {
         let middle = line[line.count / 2]
         // Decision 947: a guideway in place of the rails, the bed and
         // the viaduct.
@@ -255,8 +265,10 @@ extension Map3DScene.Builder {
             }
         }
         // The rails, their middles half a rail outside the gauge.
-        // Decision 799: at the map's gauge (Finland's 1,524 mm).
-        let offset = (look.gauge + Self.railWidth) / 2
+        // Decision 799: at the map's gauge (Finland's 1,524 mm); decision
+        // 984: at the track's own where it has one.
+        let gauges = gauges ?? [look.gauge]
+        let offset = (gauges[0] + Self.railWidth) / 2
         let target = self.target
         defer { self.target = target }
         // Decision 964: the kind's small parts, close up only.
@@ -275,15 +287,20 @@ extension Map3DScene.Builder {
         // Decision 888: at a diamond, short of the rail it crosses.
         let gaps = [Float(-1), 1].map { diamondGaps(line, offset: $0 * offset) }
         mesh(at: middle) { mesh in
+            func rail(_ piece: [Map3DPoint], at offset: Float) {
+                guard track != .embedded else {
+                    Map3DTrackKind.addEmbeddedRail(along: piece, offset: offset, into: &mesh)
+                    return
+                }
+                mesh.addRibbon(along: piece, width: Self.railWidth, offset: offset, lift: 0, depth: Self.railHeight,
+                               top: Map3DPalette.railTop, side: Map3DPalette.rail)
+            }
             for (number, side) in [Float(-1), 1].enumerated() {
                 for piece in gaps[number].isEmpty ? [line] : Map3DDiamondCrossings.cut(line, without: gaps[number]) {
-                    guard track != .embedded else {
-                        Map3DTrackKind.addEmbeddedRail(along: piece, offset: side * offset, into: &mesh)
-                        continue
-                    }
-                    mesh.addRibbon(along: piece, width: Self.railWidth, offset: side * offset, lift: 0, depth: Self.railHeight,
-                                   top: Map3DPalette.railTop, side: Map3DPalette.rail)
+                    rail(piece, at: side * offset)
                 }
+                // Decision 984: a narrower gauge's rail inside it.
+                for inner in gauges.dropFirst() { rail(line, at: side * (inner + Self.railWidth) / 2) }
             }
         }
     }

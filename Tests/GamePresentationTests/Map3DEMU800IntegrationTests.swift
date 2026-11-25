@@ -137,7 +137,7 @@ final class Map3DEMU800IntegrationTests: XCTestCase {
             XCTAssertEqual(Map3DTrainSet.variant(of: key, number: 1), key == "pushPull" ? "pushPullE1000" : key, key)
         }
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu500", number: 2), "emu500")
-        XCTAssertEqual(Map3DTrainSet.variant(of: "highSpeed", number: 1), "n700sG", "decision 408 is as it was")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "highSpeed", number: 1), "n700s", "decision 408 is as it was (decision 979: the N700S)")
     }
 
     /// The units each car of a `count`-car EMU500 is: the EMC at the front,
