@@ -255,17 +255,27 @@ def lengthen(triangles):
                if not any(low - 0.1 < w[0] and w[1] < high + 0.1 for low, high in doors_at)]
     centres = [(low + high) / 2 for low, high in windows]
     steps = np.diff(centres)
-    pitch = float(np.median(steps))
-    if len(windows) < 6 or np.abs(steps - pitch).max() > 0.02 * pitch:
-        raise SystemExit(f"頭車的窗不是等距的：{[round(float(v), 3) for v in steps]}")
+    # 頭車的窗分兩組，窗距不一樣（貼圖沿車身用了兩次，兩段的比例差一點）。
+    # 找最長的一組等距的窗，在那一組的中間插，用那一組自己的窗距。
+    runs, first = [], 0
+    for i in range(1, len(steps) + 1):
+        if i == len(steps) or abs(steps[i] - steps[first]) > 0.004:
+            runs.append((first, i))       # 窗 first … i 等距
+            first = i
+    first, last = max(runs, key=lambda run: run[1] - run[0])
+    if last - first < BAYS + 2:
+        raise SystemExit(f"頭車沒有夠長的一組等距的窗：{[round(float(v), 3) for v in steps]}")
+    middle = (first + last) // 2
+    if middle + BAYS > last:
+        raise SystemExit("要照樣再排一次的那一段超出了那一組等距的窗")
+    pitch = float(centres[middle + BAYS] - centres[middle]) / BAYS
     extra = CAB_LENGTH / LENGTH - 21.001          # 還差的長度（舊版的公尺）
     rest = extra - BAYS * pitch                   # 插完窗格還差的，加在牆上
     if rest < 0:
         raise SystemExit("插的窗格比要補的長度還長")
-    middle = len(windows) // 2
     bay = (centres[middle - 1] + centres[middle]) / 2          # 兩格窗中間的牆
     plain = (doors_at[0][1] + windows[0][0]) / 2 - WALL_ZONE / 2   # 乘務員門與第一格窗之間
-    if not doors_at[0][1] < plain and plain + WALL_ZONE < windows[0][0]:
+    if not (doors_at[0][1] < plain and plain + WALL_ZONE < windows[0][0]):
         raise SystemExit("乘務員門與第一格窗之間沒有空的牆")
     for value in (plain, plain + WALL_ZONE, bay, bay + BAYS * pitch):
         triangles = cut_at(triangles, value)
@@ -310,9 +320,9 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         canvas = Image.blend(canvas, Image.new("RGB", canvas.size, (0, 0, 0)), 0.6)
         draw = ImageDraw.Draw(canvas)
     triangles = cut_body(body, table, draw)
-    moved, extra, numbers = (lambda points: points), 0.0, {}
+    shifted, extra, numbers = (lambda points: points), 0.0, {}
     if cab:
-        triangles, moved, extra, numbers = lengthen(triangles)
+        triangles, shifted, extra, numbers = lengthen(triangles)
     if debug_dir:
         canvas.save(debug_dir / f"{path.stem[:13]}-uv-cut.png")
 
@@ -338,7 +348,7 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
             scaled += [(moved[face], DARK) for face in piece["faces"]]
         elif size[1] > 1.5:
             # 通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在連結面上）。
-            hood = grown(moved(world))
+            hood = grown(shifted(world))
             for face in piece["faces"]:
                 corners = hood[face]
                 if np.ptp(corners[:, 2]) < 1e-6:
