@@ -799,7 +799,8 @@ extension GameSession {
         let (addition, middle, chosen, grade) = draft
         var built: StationID?
         let alsoBeside = addition.beside == nil || layout.isLaidByLayout
-            ? "" : besidePlatformText() + stationCrossoverText(addition.crossovers.count, built: true)
+            ? "" : besidePlatformText(otherGauge: addition.beside.map { !world.sharesRailGauge(addition.edge, $0.edge) } ?? false)
+                + stationCrossoverText(addition.crossovers.count, built: true)
         /// What the tool says it did.
         func text(_ station: Station, on stretch: (edge: TrackEdgeID, start: Int64, end: Int64), in world: GameWorld) -> String {
             let length = NetworkBuilding.lengthText(stretch.end - stretch.start, in: language)
