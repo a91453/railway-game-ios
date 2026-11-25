@@ -2,14 +2,14 @@
 
 ## 進度
 
-- 做到哪：三個世界量完，做法與「為什麼結果不會變」想完；**遊戲程式一行都沒改**，決策 980 還沒寫（號碼保留給接手的人）。這個 session 壓縮兩次，照規定停手。
-- 已驗證：`main` 的基準雜湊與「被擋的發車」問了幾次、卡在哪一步（下面兩張表，GameCore 是 `e5eac2f`，到 `ebaf556` 沒變）。做法只在紙上推過，沒有跑過。
-- 下一步的第一個指令：`BOUGHT_WORLDS=/tmp/worlds swift test --skip-build --filter BoughtWorldSaveTests`（六個存檔），再鋪機捷的存檔（「怎麼量」第 2 行），然後做「下一步」第 1 項。
+- 做到哪：**第 1 步（半步）已做完並開 PR**：繞路找不到時記下「因為別的車不能走的那幾步」，那幾步都還被擋就不重找（決策 980，`docs/decisions/980.md`）。接手的工作串（分支 `claude/project-thread-5bvsbq`）壓縮 1 次。「下一步」第 2 項起還沒做。
+- 已驗證：八個世界新舊 build 逐小時雜湊相同；稽核下機捷略過 200,470 次、香港 71,228 次、台灣（到 10 時）177,500 次找路，每次重找都確認找不到。同機成對量：機捷 233.1 → 198.9 ms／tick（−15 %）、香港 175.5 → 165.9（−5 %）、台灣 933.4 → 854.4（−8 %）。數字全表在決策 980。
+- 下一步的第一個指令：照「怎麼量」鋪存檔（八個檔約 5 分鐘），然後做「下一步」第 2 項（見證車 Y 的快路）；改完 `swift build --build-tests -Xswiftc -warnings-as-errors`，把 `.build/debug/GameCoreTests-test-runner` 與 `GameCoreTests.so` 複製出來和 main 的那一份比雜湊。
 
 ## 派工
 
 - 協調者派工：評分檔（私有庫 `a91453/railway-assets-private-2` `docs/priorities/TICK-ROUTING.md`）第 1 名，2.55。被擋住的列車每秒重問「能走了嗎」並重找繞路；改成記住被什麼擋，那個沒變就不重問、不重找。必須證明結果不變，防撞車的規則不能動到行為。
-- 雲端工作串「讓被擋的列車不再每秒重問」，分支 `claude/project-thread-s6z3ac`，決策 980（#2118 已登記）。
+- 雲端工作串「讓被擋的列車不再每秒重問」，分支 `claude/project-thread-s6z3ac`（量測與做法，停手）；接手的是「完成被擋列車不再每秒重問」，分支 `claude/project-thread-5bvsbq`，決策 980（#2118 已登記）。
 - 存檔版本、golden schema：不動。`GoldenScenarios/`、`SaveFixtures/`、`ReplayFixtures/` 不動。
 
 ## 量到什麼
@@ -83,7 +83,7 @@ taiwan-all-simple
 
 存檔是在 `e5eac2f` 鋪的，照當時 `main` 的鋪法，鋪線規則一變雜湊就不同，新舊 build 一定要用同一份存檔比。
 
-## 做法（還沒寫）：被擋的答案連同「靠什麼成立」一起記
+## 做法（第 3 點已寫，其餘還沒寫）：被擋的答案連同「靠什麼成立」一起記
 
 誰用得到：只需要「被擋還是可走」、不用擋的是誰的呼叫處。整個 GameCore 只有兩處讀 `.held(by:)` 的車號：`RouteReservation.swift:174`（只在有月台清單時）與 `GameWorld.swift:2629`（手動指令，走 `reserving`，不走這條）。其餘（`WorldDeparture.swift:121`、`WorldDispatch.swift:553`、`WorldMovement.swift:522`、`FairSingleTrack.swift:123`、`Deadlock.swift:99` 與派車、機廠那十幾處）都只比 `case .held`／`case .granted`。所以加一個只回答「還是被擋嗎」的快路，`takingDeparture`／`reservingDeparture` 本身的語意一個字不動：快路說「是」就當被擋，說「不知道」就照舊完整算一次，算出被擋時順手記下見證。
 
@@ -135,11 +135,24 @@ SAVED_WORLD=/tmp/worlds/tymc-controlled.json SAVED_WORLD_EACH=1 SAVED_WORLD_HOUR
 
 ## 下一步（依序，每一步後都比雜湊）
 
-1. **半步：只記繞路找不到（上面第 3 點）。** 評分檔也建議先做這半步，風險最低：`planned` 照舊每次算，被擋時先看紀錄的 B 是否仍成立，成立就跳過 `alternativeRoute` 與 `takingFreeBerthPastStandingTrain`，直接回 `planned`（這半步連擋的車號都和原來一樣，所以可以直接放進 `takingAnyDeparture`，所有呼叫處都受益）。估計（沒驗證）機捷可省問答時間的一半上下。配稽核。
+1. **（已做，決策 980）半步：只記繞路找不到（上面第 3 點）。** 實際做法與結果見下面「第 1 步做了什麼」。原來的說明： 評分檔也建議先做這半步，風險最低：`planned` 照舊每次算，被擋時先看紀錄的 B 是否仍成立，成立就跳過 `alternativeRoute` 與 `takingFreeBerthPastStandingTrain`，直接回 `planned`（這半步連擋的車號都和原來一樣，所以可以直接放進 `takingAnyDeparture`，所有呼叫處都受益）。估計（沒驗證）機捷可省問答時間的一半上下。配稽核。
 2. **整步：加見證車 Y（第 2 點）與只問「還被擋嗎」的快路**，接到只比 `.held`／`.granted` 的呼叫處，先接 `departService`（最大宗），再接試走、`turnOwedFor`、`Deadlock.swift:99` 與派車那幾處。每接一處比一次雜湊。
 3. 寫實世界的第 4 點；跑寫實的雜湊與稽核。
 4. 寫決策 980（`docs/decisions/980.md`，五個角度各一行、每一項「為什麼結果一樣」、新舊雜湊與時間的表），PR 裡附「找過什麼」（參考庫與外部專案都沒有可搬的：這是這個專案自己的保留規則上的備忘）。
 5. 之後可再做、不在這張單：紀錄跨 `advance` 借用（照 `RouteMemo.Key` 的 `lend`／`keep`）；第一次找路找得到的那 9 %。
+
+## 第 1 步做了什麼（2026-11-25，決策 980）
+
+- `ServicePath.swift`：`path(from:toStation:length:avoiding:refused:)`，原來的找路多交出「因為 `blocked` 不能走的每一步」（各自的 `TrackCover`）。
+- `ServiceDirections.swift`：`DirectionMemo.NoDetour` 與 `noDetours: [TrainID: NoDetour]`；`AnswerAudit` 多 `detoursNotSearched`、`detoursSearched`。
+- `RouteNeeds.swift`：`alternativeRoute(…keepingNoWay:…)`（只有 `takingAnyDeparture` 第一個呼叫處傳 `true`，第一次找路找不到就寫紀錄）；`stillHasNoDetour(_:to:memo:)`（先用 holders 直接問每一步有沒有車占著，沒有才建 `blockedTrack` 問 `blocksUnheld`；稽核開著時把找路照做一遍）；`takingAnyDeparture` 在紀錄成立時跳過 `alternativeRoute` 與 `takingFreeBerthPastStandingTrain`。`planned` 照舊每次算。`BlockedTrack.blocks` 拆出 `blocksUnheld`（沒有車直接占著時問的那一半）。
+- 測試：`HeldDepartureMemoTests`（帶著走的備忘對全新的備忘，兩個世界）；`SavedWorldTickReportTests` 的稽核那一行多印兩個次數。
+- 量到的：略過率（略過／被擋後進到繞路這一步的次數）機捷 83 %、香港 79 %、台灣 89 %；羅瓦涅米 0（被擋的很少，而且第一次找路都找得到）。時間：機捷 −15 %、香港 −5 %、台灣 −8 %，寫實世界沒有差別（±2 %，雜訊內；寫實的略過次數：機捷 27,686、香港 40,761、台灣到 10 時 38,587）。**比原來估的少**：原估「機捷可省問答時間的一半上下」，實際機捷省 15 %；台灣略過近九成卻只省 8 %，表示那裡貴的不是找路本身。
+- 給第 2 步的提醒（這條工作串讀程式時確認的）：
+  - `isLeading(_:onto:for:)` 每次都重算跟車者的 `ways`（`bodyStretches + routeStretches` 的 traversal 集合）；快路可以把候選的 envelope 與 `ways` 一起記在紀錄裡，另開一個吃現成 `ways` 的 `isLeading`。
+  - 快路要回的 `.held(by:)` 車號可以現算：`holder(of: 記下的 envelope, except: 候選, holders:)`，和完整路徑第一步是同一個呼叫，所以回傳值與原來逐字相同，呼叫處都不用改（不必像原計畫只接「只比 `.held`／`.granted`」的呼叫處）。
+  - 見證車要在「要寫紀錄的那一次」另外找（`holders.holding(envelope, except:, fouling: true, in:)` 為真而且 `isLeading` 為假的第一列），因為 `followingAuthority` 在第一列不領頭的車就回 `nil`，那一列可能只是在等（claim），不能當見證。只在 `noDetours` 已有這列車的紀錄時才值得找。
+  - `train(id:)` 是從頭掃；見證車記它在 `trains` 裡的位置，用 `trains[place].id == Y` 驗。
 
 ## 要小心的
 
