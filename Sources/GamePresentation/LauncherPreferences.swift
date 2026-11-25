@@ -43,6 +43,12 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     /// of the saves their game is kept in (``GameLauncher/gameRow``); `nil`
     /// before any. Only how trains look: not in any save.
     public var christmasLiveries: [String: [Int]]?
+    /// Decision 983: the paint each line's trains wear, by the row of the
+    /// saves their game is kept in, the line's number, and the model's
+    /// family (``TrainPaintFamily/id``): the paint's name
+    /// (``TrainPaint/id``). `nil` before any. Only how trains look: not in
+    /// any save.
+    public var trainPaints: [String: [String: [String: String]]]?
 
     public init() {}
 
