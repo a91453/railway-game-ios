@@ -51,6 +51,13 @@ def main(folder):
     tool.DEPOT_ENDS = dict(tool.DEPOT_ENDS, **{f"{SYSTEM}:N": ("橋本",), f"{SHINKANSEN}:KS": ("熊本",)})
     tool.COUNT_GAME_DWELL = True
     tool.RECOVERY = {"橋本": 180, "熊本": 300}
+    # Decision 975: Hakata, where each train turns round in eight minutes
+    # (`build_kyushu_shinkansen.FAR_TURN`), with two of the real station's
+    # tracks: the timetable stands one train there at a time, but without
+    # traffic control the next one sets off from Shin-Tosu for its
+    # platform before the one standing there has gone, and with one track
+    # waited at Shin-Tosu (24 runs a day late).
+    tool.TRACKS_AT_LEAST = {f"{SHINKANSEN}:KS": {"博多": 2}}
     out = os.path.join(folder, "metro_runs.json")
     tool.main(folder, out)
     with open(out, encoding="utf-8") as f:

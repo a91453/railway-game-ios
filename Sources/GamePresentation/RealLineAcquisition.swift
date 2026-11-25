@@ -1646,8 +1646,35 @@ extension RealLineLaying {
             }
             return Self.endStationSides(of: line, name: name, loops: loops, layout: layout)
         }
+        // SHINKANSEN-SALE (decision 975): a station on its line's real
+        // viaduct, at a station of the company's whose platforms all lie
+        // under the ground, is not moved beside the company's track: a
+        // viaduct and a tunnel are in neither's way, and the real station
+        // stands so (JR's Hakata, the Kyushu Shinkansen up on its viaduct,
+        // over the subway's Hakata). Moved beside the Kuko Line's platforms
+        // (some 56 m off, where its own real station is 66 m off), the
+        // line found none of its real
+        // viaduct there, came down to the subway's platforms 10 m under
+        // the ground, and met the Kuko Line's track at one level.
+        let ownLane = (abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) + (line.after != nil && parts > 0 ? RealLineAcquisition.besideOffset / RealLineAcquisition.metre : 0))
+            * RealLineAcquisition.metre
+        var carriedInItsLane: (at: [Double], carried: [TrackRise.Carried])?
+        func standsOverATunnel(_ index: Int, _ station: StationID) -> Bool {
+            guard platformsAreUnderTheGround(of: station) else { return false }
+            let own = carriedInItsLane ?? (
+                points.map { inItsLane.nearest($0).along },
+                railways.structures?.stretches(along: inItsLane, frame: frame, system: line.system, reach: RealRailStructures.reach + ownLane) ?? []
+            )
+            carriedInItsLane = own
+            return RealLineAcquisition.isRaised(
+                at: own.at[index], before: index > 0 ? own.at[index - 1] : nil, after: index < own.at.count - 1 ? own.at[index + 1] : nil, carried: own.carried
+            )
+        }
         let besideShared = whereItStood || joined != nil ? nil : sharedEnds(
-            of: inItsLane, points: points, through: besideThrough, shared: { index in (index == 0 ? junctionStation?.id : nil) ?? sameName(index) },
+            of: inItsLane, points: points, through: besideThrough, shared: { index in
+                let station = (index == 0 ? junctionStation?.id : nil) ?? sameName(index)
+                return station.flatMap { standsOverATunnel(index, $0) ? nil : $0 }
+            },
             extent: { index in
                 let name = runs.stops[index], tracks = runs.tracks[name] ?? 1
                 guard index > 0, index < runs.stops.count - 1 else {
@@ -1777,8 +1804,7 @@ extension RealLineLaying {
         // off the real viaduct the two share: it found none of it, and
         // its platforms stood on the ground 10 to 17 m under the other's
         // at seven stations.
-        let lane = (abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) + (line.after != nil && parts > 0 ? RealLineAcquisition.besideOffset / RealLineAcquisition.metre : 0))
-            * RealLineAcquisition.metre
+        let lane = ownLane
         let carried = railways.structures?.stretches(along: path, frame: frame, system: line.system, reach: RealRailStructures.reach + lane) ?? []
         // Decision 678: the stations in the line's real tunnel (the Wenhu
         // Line's first; decision 867, Hong Kong's and Fukuoka's; decision

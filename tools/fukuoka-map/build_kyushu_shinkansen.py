@@ -18,7 +18,12 @@ the game reads them as the map's second system:
 
 (`merge` needs neither N02 nor OpenStreetMap; `build_fukuoka_rail.py`
 writes the pack's railway files with the subway alone, so `merge` is run
-again after it.)
+again after it.) When only the service changes (`SERVICE`, `FAR_TURN`),
+the day's trips are laid out again in each folder without N02 or
+OpenStreetMap, before `merge` and `extract_fukuoka_runs.py`:
+
+    python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py times \
+        tools/fukuoka-map/kyushu-shinkansen RailwayGameApp/Resources/MapPacks/fukuoka
 
 Where each part comes from:
 
@@ -105,8 +110,13 @@ SERVICE = {"peakHeadwaySec": 900, "offpeakHeadwaySec": 1800, "depotEnd": "熊本
 KUMAMOTO_FIRST, HAKATA_LAST = 6 * 3600, 23 * 3600 + 10 * 60
 PEAKS = [[7 * 3600, 9 * 3600 + 30 * 60], [17 * 3600, 19 * 3600 + 30 * 60]]
 DWELL = 60
-# A Shinkansen's turnaround at Hakata.
-FAR_TURN = 720
+# A Shinkansen's turnaround at Hakata: eight minutes (decision 975). With
+# twelve, the train standing there was still waiting for its run when the
+# next one, a quarter of an hour behind, set off from Shin-Tosu for the same
+# platform under the realistic rules, and the game sent it to the depot as
+# a train in the way (decision 297): its run left with the next train, five
+# minutes late, all through both peaks (18 runs a day).
+FAR_TURN = 480
 # `run_seconds`: the line's top speed (260 km/h), how fast a train gains
 # and loses it (m/s², an 800 series' in service), and the slack a timetable
 # keeps.
@@ -430,8 +440,25 @@ def merge(staged, pack):
           f"{len(theirs['structures'])} structures")
 
 
+def times(*folders):
+    """SHINKANSEN-SALE (decision 975): the day's trips laid out again in
+    each folder's `kyushushinkansen_times.json`, from the line its
+    `kyushushinkansen.json` holds (the stations and their distances), when
+    only the service changes (`SERVICE`, `FAR_TURN`): neither N02 nor
+    OpenStreetMap is read."""
+    set_up()
+    for folder in folders:
+        with open(os.path.join(folder, f"{SYSTEM}.json"), encoding="utf-8") as f:
+            stored = json.load(f)["lines"][0]
+        line = {"id": LINE_ID, "stations": stored["stations"]}
+        set_day(line)
+        print(f"{folder}: {len(write_times(folder, line))} trips")
+
+
 if __name__ == "__main__":
     if sys.argv[1:2] == ["merge"]:
         merge(*sys.argv[2:])
+    elif sys.argv[1:2] == ["times"]:
+        times(*sys.argv[2:])
     else:
         main(*sys.argv[1:])

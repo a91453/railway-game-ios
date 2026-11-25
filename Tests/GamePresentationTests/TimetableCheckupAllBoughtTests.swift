@@ -165,8 +165,12 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         // FUKUOKA-OPEN: Fukuoka's three lines share Hakata and
         // Nakasu-Kawabata, so they are only ever sold together (decision
         // 862, older than the map's opening: no save holds one alone);
-        // `testFukuokaLines` plays them together.
-        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N"])
+        // `testFukuokaLines` plays them together. SHINKANSEN-SALE (decision
+        // 975): the Kyushu Shinkansen, another system, is sold alone and
+        // shares no track with them (its Hakata platforms stand on its
+        // viaduct over the subway's), so `testFukuokaShinkansen` plays it
+        // alone.
+        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS"])
     }
 
     /// The groups of lines sharing a station on each map, and the worlds

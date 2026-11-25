@@ -88,8 +88,10 @@ public struct DemoRealLines: Sendable {
         switch system {
         case "tra_sched": 8
         case "thsr_sched": 12
-        // SHINKANSEN-SALE (decision 975): the 800 series' six.
-        case "mrt", "kyushushinkansen": 6
+        case "mrt": 6
+        // SHINKANSEN-SALE (decision 975): the N700's eight, as the real
+        // Sakura and Mizuho sets (KYUSHU-SHINKANSEN-TRAINS, decision 977).
+        case "kyushushinkansen": 8
         case "tymc", "afr_sched": 4
         case "krtc", "sanying": 3
         default: 2
