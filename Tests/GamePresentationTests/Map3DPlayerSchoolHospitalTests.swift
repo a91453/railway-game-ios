@@ -10,10 +10,10 @@ final class Map3DPlayerSchoolHospitalTests: XCTestCase {
     typealias Studio = Map3DPlayerSchoolHospital
 
     /// All three decode at the studio's size and triangles (its
-    /// revision-4 README's check), each its middle at its origin.
+    /// revision-5 README's check), each its middle at its origin.
     func testTheModelsDecode() throws {
         let sizes: [(String, Int, Float, Float, Float)] = [
-            (Studio.schoolName, 1_031, 32.92, 36.40, 11.49),
+            (Studio.schoolName, 977, 32.92, 36.40, 11.49),
             (Studio.gymName, 198, 17.16, 27.41, 10.64),
             (Studio.hospitalName, 1_718, 26.79, 21.86, 14.03),
         ]

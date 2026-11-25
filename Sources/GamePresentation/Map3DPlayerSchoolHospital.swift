@@ -4,7 +4,7 @@ import Foundation
 /// old SwiftRailMac 学校 and 病院 meshes with their textures cut into the
 /// game's palette by the local studio
 /// (`a91453/railway-assets-private-2`,
-/// `game-art-previews/docs/art/civic-school-hospital-2026-11/revision-4`; its stair tower
+/// `game-art-previews/docs/art/civic-school-hospital-2026-11/revision-5`; its stair tower
 /// glazed in floor bands, decision 963's sequel),
 /// written here by `tools/train-models/glb_to_swift.py` (``encoded``):
 ///
