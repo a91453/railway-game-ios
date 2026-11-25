@@ -224,6 +224,17 @@ final class Map3DN700STests: XCTestCase {
         let tail = try XCTUnwrap(pack.lights[try XCTUnwrap(pack.index(of: set.tailName))]).lamps(atFront: false)
         XCTAssertFalse(tail.tail.isEmpty)
         XCTAssertTrue(tail.tail.allSatisfy { $0.color == Map3DPalette.lantern && $0.x < -5 })
+        // The nose has both lamps side by side: only the white ones glow
+        // on the first car and only the red ones on the last, as the real
+        // train's do.
+        // (The set's own models: the pack keeps a running car's lamps apart.)
+        let cars = set.build()
+        let first = cars.head.vertices.filter { $0.layer == Map3DVertex.glowing }
+        let last = try XCTUnwrap(cars.tail).vertices.filter { $0.layer == Map3DVertex.glowing }
+        XCTAssertFalse(first.isEmpty)
+        XCTAssertTrue(first.allSatisfy { $0.color == Map3DTrainStyle.headlamp })
+        XCTAssertFalse(last.isEmpty)
+        XCTAssertTrue(last.allSatisfy { $0.color == Map3DPalette.lantern })
     }
 
     /// It has the N700S-G's place: the train pack's set, the odd-numbered
