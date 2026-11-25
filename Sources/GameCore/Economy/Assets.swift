@@ -81,8 +81,9 @@ public struct AssetRecord: Hashable, Sendable {
     }
 
     public let kind: Kind
-    /// The edge's number, the station's or the train's ID.
-    public let owner: Int
+    /// The edge's number, the station's or the train's ID. A tile's number
+    /// changes as the map grows wider (``GameWorld/growMap(to:)``).
+    public internal(set) var owner: Int
     /// How many cars a ``Kind/cars`` record holds; 0 for the others.
     public internal(set) var cars: Int
     /// When it was bought.
