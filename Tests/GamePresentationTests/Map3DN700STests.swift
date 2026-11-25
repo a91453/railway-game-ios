@@ -96,7 +96,7 @@ final class Map3DN700STests: XCTestCase {
     func testTheDoorsHaveTheirFrames() throws {
         for unit in Map3DN700S.Unit.allCases {
             let model = try XCTUnwrap(Map3DN700S.model(unit))
-            let wall = model.vertices.filter { abs($0.y) > 1.67 && $0.x < 4 }
+            let wall = model.vertices.filter { abs($0.y) > 1.67 && $0.x < 4.9 }
             let frame = wall.filter { $0.color == Map3DPalette.steel && $0.z > 1.0 }.map(\.z)
             let glass = wall.filter { $0.color == Map3DTrainStyle.glass }.map(\.z)
             let top = try XCTUnwrap(frame.max(), unit.rawValue), sill = try XCTUnwrap(frame.min(), unit.rawValue)
@@ -170,11 +170,10 @@ final class Map3DN700STests: XCTestCase {
         }
     }
 
-    /// The cab car is the real one's 27.35 m, made longer as a whole car:
-    /// its nose is given no stretch of its own (the owner's rule). The old
-    /// car's nose, 7.41 units from where its full-width side wall ends to
-    /// its tip, times the one factor the whole car's length has
-    /// (13.675 / 10.501); and its windows as many as the old car's.
+    /// The cab car is the real one's 27.35 m, and its nose has no stretch
+    /// of its own (the owner's rule): the tip is at the car's front end,
+    /// and the side walls reach their full width as far behind it as the
+    /// old car's did, times the factor the middle cars' length has.
     func testTheNoseHasNoStretchOfItsOwn() throws {
         let cab = try XCTUnwrap(Map3DN700S.model(.cab))
         XCTAssertEqual(Map3DN700S.cabLength, 27.35)
@@ -182,7 +181,61 @@ final class Map3DN700STests: XCTestCase {
         // (Full width: 1.68 m from the centre line. A cut's new vertex a
         // little way into the nose's taper is not the wall's end.)
         let wall = cab.vertices.filter { abs($0.y) > 1.675 && $0.z > 2.5 }.map(\.x).max() ?? 0
-        XCTAssertEqual(cab.maximum.x - wall, 7.41 * 13.675 / 10.501, accuracy: 0.03)
+        XCTAssertEqual(Map3DN700S.noseLength, 8.82, accuracy: 0.005)
+        XCTAssertEqual(cab.maximum.x - wall, Map3DN700S.noseLength, accuracy: 0.03)
+    }
+
+    /// The cab car's saloon is the real first car's: thirteen windows on
+    /// each side, 1.023 m from one to the next (the cab cars' seat pitch),
+    /// each as wide as a middle car's (0.52 m), and passenger doors as
+    /// wide as a middle car's (0.74 m); the driver's door 8.4 m behind
+    /// the tip (the real car's some 8.0 to 8.3 m, by photographs).
+    func testTheCabCarHasTheRealCarsProportions() throws {
+        func windows(_ unit: Map3DN700S.Unit, side: Float) throws -> [ClosedRange<Float>] {
+            let model = try XCTUnwrap(Map3DN700S.model(unit))
+            let doors = Map3DN700S.doors(unit)
+            var spans: [ClosedRange<Float>] = []
+            for first in stride(from: 0, to: model.vertices.count, by: 3) where model.vertices[first].color == Map3DTrainStyle.glass {
+                let points = model.vertices[first..<first + 3]
+                guard points.allSatisfy({ $0.y * side > 1.5 }),
+                      !doors.contains(where: { door in points.allSatisfy { door.contains(Map3DPoint($0.x, $0.y, $0.z)) } }) else { continue }
+                let xs = points.map(\.x)
+                let low = try XCTUnwrap(xs.min()), high = try XCTUnwrap(xs.max())
+                spans.append(low...high)
+            }
+            var merged: [ClosedRange<Float>] = []
+            for span in spans.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+                if let last = merged.last, span.lowerBound <= last.upperBound + 0.002 {
+                    merged[merged.count - 1] = last.lowerBound...max(last.upperBound, span.upperBound)
+                } else {
+                    merged.append(span)
+                }
+            }
+            return merged
+        }
+        let cab = try XCTUnwrap(Map3DN700S.model(.cab))
+        let doors = Map3DN700S.doors(.cab)
+        for side in [Float(1), -1] {
+            // (Behind the front passenger door: the windscreen and the
+            // cab's side windows are ahead of it.)
+            let saloon = try windows(.cab, side: side).filter { $0.upperBound < doors[1].x.lowerBound }
+            XCTAssertEqual(saloon.count, Map3DN700S.cabWindows)
+            let middle = try windows(.middle, side: side).filter { $0.upperBound - $0.lowerBound > 0.4 }
+            let width = try XCTUnwrap(middle.first.map { $0.upperBound - $0.lowerBound })
+            XCTAssertEqual(width, 0.52, accuracy: 0.005, "a middle car's window")
+            for window in saloon {
+                XCTAssertEqual(window.upperBound - window.lowerBound, width, accuracy: 0.005)
+            }
+            for (window, next) in zip(saloon, saloon.dropFirst()) {
+                XCTAssertEqual(next.lowerBound - window.lowerBound, Map3DN700S.cabWindowPitch, accuracy: 0.003)
+            }
+        }
+        let middleDoor = try XCTUnwrap(Map3DN700S.doors(.middle).first)
+        for door in doors where !door.crew {
+            XCTAssertEqual(door.x.upperBound - door.x.lowerBound, middleDoor.x.upperBound - middleDoor.x.lowerBound, accuracy: 0.01)
+        }
+        let crew = try XCTUnwrap(doors.first { $0.crew })
+        XCTAssertEqual(cab.maximum.x - (crew.x.lowerBound + crew.x.upperBound) / 2, 8.43, accuracy: 0.02)
     }
 
     /// Twelve cars as the N700S-G's were laid (decision 408): the cab at

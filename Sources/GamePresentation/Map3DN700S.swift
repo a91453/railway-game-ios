@@ -17,9 +17,16 @@ import Foundation
 /// The old game drew every car 20.5 m long and 2.80 m wide; here they are
 /// the real cars' size: 25 m from coupling to coupling (the cab car
 /// 27.35 m), 3.36 m wide and 3.60 m to the roof, on the 1,435 mm gauge.
-/// The cab car is made longer as a whole car, its nose given no stretch
-/// of its own and no other shape (the owner's rule). No company mark,
-/// lettering or number is drawn.
+/// The old game made the cab car as long as the others by pressing its
+/// saloon short (twelve windows 0.92 m apart, doors 0.65 m wide, at the
+/// scale that makes the middle cars' the real cars' own: windows 0.52 m
+/// wide and 1.04 m apart, doors 0.74 m). Here the cab car has the middle
+/// cars' scale, so its nose is the old car's in the same proportion, given
+/// no stretch of its own and no other shape (the owner's rule), and the
+/// 2.35 m it lacks is given back to its saloon as the real first car has
+/// it (``cabWindows``, ``cabWindowPitch``): one more window, the windows
+/// and doors as wide as the middle cars'. No company mark, lettering or
+/// number is drawn.
 public enum Map3DN700S {
     /// The cars the game draws: the cab car, the middle car and the car
     /// under the pantograph.
@@ -49,10 +56,24 @@ public enum Map3DN700S {
     /// real car's.
     public static let cabLength: Float = 27.35
 
+    /// The cab car's saloon windows on each side: the real first car's
+    /// thirteen rows of seats.
+    public static let cabWindows = 13
+
+    /// From one of the cab car's windows to the next, metres: the real
+    /// cab cars' seat pitch (1,023 mm; the middle cars' is 1,040 mm).
+    public static let cabWindowPitch: Float = 1.023
+
+    /// The cab car's nose, its tip to where its side walls are the full
+    /// width up to the roof, metres: the old car's 7.41 at the scale the
+    /// middle cars have (25 m for the old 21 m), 0.99 of what the width's
+    /// scale would make it.
+    public static let noseLength: Float = 7.41 * 12.5 / 10.501
+
     /// How far short of its coupling a car's hood ends, metres. The old
-    /// cars' bodies end 0.30 m short of their couplings (the cab car's
-    /// 0.33 m), as the real cars' do, with only a gangway 1.2 m wide
-    /// between them: 0.6 m of open air beside it, where the game's own
+    /// cars' bodies end 0.30 m short of their couplings, as the real cars'
+    /// do, with only a gangway 1.2 m wide between them: 0.6 m of open air
+    /// beside it, where the game's own
     /// cars leave 0.24 m (the owner: the first car and the second too far
     /// apart). The real train covers it with a hood of the body's own
     /// outline, and so does the tool: the end wall's outline drawn out to
@@ -108,8 +129,8 @@ public enum Map3DN700S {
     public static func doors(_ unit: Unit) -> [Door] {
         switch unit {
         case .cab:
-            [Door(x: 4.181...4.729, z: 1.341...2.791, crew: true), Door(x: 3.171...3.886, z: 1.272...2.906, crew: false),
-             Door(x: -10.748 ... -10.033, z: 1.252...2.982, crew: false)]
+            [Door(x: 4.998...5.498, z: 1.341...2.791, crew: true), Door(x: 3.987...4.727, z: 1.272...2.906, crew: false),
+             Door(x: -10.976 ... -10.236, z: 1.252...2.982, crew: false)]
         case .middle:
             [Door(x: 10.141...10.876, z: 1.265...2.954, crew: false), Door(x: -9.155 ... -8.414, z: 1.253...2.980, crew: false)]
         case .pantograph:
@@ -135,8 +156,8 @@ extension Map3DPalette {
 
 extension Map3DN700S {
     /// Decision 782: its set, its showcase row (twelve cars) and its cars'
-    /// triangles (3,646 the cab car, 2,265 the middle car, 2,495 the car
-    /// under the pantograph: a twelve-car train some 30,000, few enough
+    /// triangles (4,166 the cab car, 2,265 the middle car, 2,495 the car
+    /// under the pantograph: a twelve-car train some 31,000, few enough
     /// to be drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(
@@ -145,7 +166,7 @@ extension Map3DN700S {
         showcase: [
             Map3DShowcase.Entry(key, "N700S", "N700S", .highSpeed, cars: cars),
         ],
-        triangles: 2_100...3_800, length: 24.9...27.4)
+        triangles: 2_100...4_300, length: 24.9...27.4)
 }
 
 extension Map3DTrainSet {

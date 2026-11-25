@@ -27,6 +27,8 @@
 - 舊版把車壓成 21 m × 2.80 m；這裡放回真車的 25 m 車距、3.36 m 寬、3.60 m 高
   （車體與通道幌：長 × 12.5/10.501、寬 × 1.2、高 × 3.6/3.625）。轉向架只平移
   不縮放：輪子中心距 1.50 m，就是 1,435 mm 軌距的鋼軌中心。
+- 頭車是真車的 27.35 m：倍率和其他車一樣，車鼻不拉長；舊版壓短的客室照真車
+  排回去（13 格窗、窗距 1.023 m，`real_cab`）。
 - 輸出的軸與 `glb_to_swift.py` 讀的一樣：+y 上、車沿 x、駕駛室在 +x、連結面
   在 ±半車長、軌面 y 0。集電弓車的集電弓在 -x 那一半。
 """
@@ -112,9 +114,19 @@ DOOR_FRAME = 3  # 門框線的寬，像素：車上約 4 cm
 DOOR_SILL = 4   # 門檻
 
 LENGTH = 12.5 / 10.501   # 連結面 ±10.501 → ±12.5（車距 25 m）
-# 頭車：真車 27.35 m。整節沿車長等比例放大，車鼻不另外拉長、不改形（擁有者
-# 2026-11-25 的定案：尺寸照真車，車頭不可單獨拉長）。
-CAB_LENGTH = 13.675 / 10.501
+# 頭車：真車 27.35 m。舊版把頭車和中間車做成一樣長，所以頭車的客室被壓短了：
+# 同一個倍率下，中間車的窗（寬 0.52 m、窗距 1.04 m）和門（0.74 m）正好是真車
+# 的大小，頭車卻是 12 格窗、窗距 0.92 m、門 0.65 m；真車的 1 號車是 13 格、
+# 窗距 1,023 mm（JR 東海：頭車的座位間距）。所以頭車也用中間車的倍率，車鼻
+# （鼻尖到全寬側牆的前緣）和舊版同一個比例，不拉長、不改形（擁有者
+# 2026-11-25 的定案）；差的 2.35 m 還給客室（`real_cab`）：多一格窗，窗距、
+# 窗寬、門寬照真車，其餘的牆照原樣（只差不到 1%）。量法與對照表在決策 979。
+CAB_REAL = 27.35
+BAY = (-4.09, 0.9195)   # 多的那一格：切面（兩側窗間牆共同的中線）與一格的長，25 m 那一版的座標
+CAB_WINDOWS = 13        # 一側的客室窗
+CAB_PITCH = 1.023       # 窗距：真車頭車的座位間距
+CAB_WINDOW = 0.52       # 窗寬：和中間車一樣（側面照片拿窗距當尺量到 0.51–0.52 m）
+CAB_DOOR = 0.74         # 客室門寬：和中間車一樣（照片量到 0.72–0.73 m）
 WIDTH = 3.36 / 2.80      # 側牆 ±1.40 → ±1.68
 HEIGHT = 3.60 / 3.625    # 車頂 3.625 → 3.60
 # 全周幌：舊版車與車之間只有一條 1.2 m 寬的通道幌，車體端面之間空 0.6 m，
@@ -337,7 +349,7 @@ def write_glb(path: Path, triangles):
 
 # ---------------------------------------------------------------- 一節車
 
-def build(path: Path, debug_dir: Path | None, length: float = LENGTH, cab: bool = False):
+def build(path: Path, debug_dir: Path | None, cab: bool = False):
     gltf, blob, digest = cut.read_glb(path)
     pieces = cut.parts(gltf, blob)
     body = max(pieces, key=lambda p: np.ptp(p["world"][:, 2]))
@@ -355,7 +367,7 @@ def build(path: Path, debug_dir: Path | None, length: float = LENGTH, cab: bool 
         Image.fromarray(shown).save(debug_dir / f"{path.stem[:13]}-classes.png")
 
     # 原座標：x 右、y 上、z 沿車身（頭車的車鼻在 -z）。車體照真車尺寸放大。
-    scaled = [(corners * np.array([WIDTH, HEIGHT, length]), kind, door) for corners, kind, door in triangles]
+    scaled = [(corners * np.array([WIDTH, HEIGHT, LENGTH]), kind, door) for corners, kind, door in triangles]
     for piece in pieces:
         if piece is body:
             continue
@@ -365,11 +377,11 @@ def build(path: Path, debug_dir: Path | None, length: float = LENGTH, cab: bool 
         if size[2] > 2.5:
             # 轉向架：位置跟著車體放大，本身不縮放。
             middle = (low[2] + high[2]) / 2
-            moved = world + np.array([0, 0, middle * length - middle])
-            scaled += [(moved[face], DARK, -1) for face in piece["faces"]]
+            moved = world + np.array([0, 0, middle * LENGTH - middle])
+            scaled += [(moved[face], DARK, BOGIE) for face in piece["faces"]]
         elif size[1] > 1.5:
             # 通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在連結面上）。
-            grown = world * np.array([WIDTH, HEIGHT, length])
+            grown = world * np.array([WIDTH, HEIGHT, LENGTH])
             for face in piece["faces"]:
                 corners = grown[face]
                 if np.ptp(corners[:, 2]) < 1e-6:
@@ -391,8 +403,130 @@ def build(path: Path, debug_dir: Path | None, length: float = LENGTH, cab: bool 
             continue
         seen.add(key)
         out.append((corners, kind, door))
+    if cab:
+        out = real_cab(out)
     out += hoods(out, (-1,) if cab else (-1, 1))
     return name_doors(out), digest
+
+
+BOGIE = -2  # 轉向架的面（「門」那一欄）：`real_cab` 整個平移，不切、不拉
+
+
+def split_at(triangles, plane):
+    """把跨過 x = plane 的三角形切成兩邊（轉向架不切）。"""
+    out = []
+    for corners, kind, door in triangles:
+        xs = corners[:, 0]
+        if door == BOGIE or xs.max() <= plane + 1e-6 or xs.min() >= plane - 1e-6:
+            out.append((corners, kind, door))
+            continue
+        for low in (True, False):
+            polygon = []
+            for i in range(3):
+                a, b = corners[i], corners[(i + 1) % 3]
+                a_in = a[0] <= plane if low else a[0] >= plane
+                b_in = b[0] <= plane if low else b[0] >= plane
+                if a_in:
+                    polygon.append(a)
+                if a_in != b_in:
+                    point = a + (b - a) * ((plane - a[0]) / (b[0] - a[0]))
+                    point[0] = plane
+                    polygon.append(point)
+            for i in range(1, len(polygon) - 1):
+                piece = np.array([polygon[0], polygon[i], polygon[i + 1]])
+                if np.linalg.norm(np.cross(piece[1] - piece[0], piece[2] - piece[0])) > 1e-7:
+                    out.append((piece, kind, door))
+    return out
+
+
+def spans(found, gap=1e-3):
+    """一堆 (小, 大) 併成不相連的幾段，由小到大。"""
+    merged = []
+    for low, high in sorted(found):
+        if merged and low <= merged[-1][1] + gap:
+            merged[-1][1] = max(merged[-1][1], high)
+        else:
+            merged.append([low, high])
+    return merged
+
+
+def real_cab(triangles):
+    """頭車的客室照真車排：`BAY` 那一格複製一次（13 格窗），再沿車長分段重排，
+    窗距 `CAB_PITCH`、窗寬 `CAB_WINDOW`、客室門寬 `CAB_DOOR`，其餘的牆同一個
+    倍率補到 `CAB_REAL`。全寬側牆的前緣以前（車鼻、乘務員門）不動。直線段的
+    斷面不變，所以沿車長怎麼排，車體都還是同一個面。"""
+    start, pitch = BAY
+    end = start + pitch
+    bogies = {}
+    for corners, _, door in triangles:
+        if door == BOGIE:
+            bogies.setdefault(bool(corners[:, 0].mean() > 0), []).append(corners[:, 0])
+    centres = {front: (np.concatenate(xs).min() + np.concatenate(xs).max()) / 2 for front, xs in bogies.items()}
+    assert all(not start - 2 < centre < end + 2 for centre in centres.values()), "多的那一格下面不該有轉向架"
+    longer = []
+    for corners, kind, door in split_at(split_at(triangles, start), end):
+        if door == BOGIE:
+            continue
+        middle = corners[:, 0].mean()
+        if middle < start:
+            longer.append((corners, kind, door))
+        elif middle < end:
+            longer += [(corners + np.array([pitch * k, 0, 0]), kind, door) for k in range(2)]
+        else:
+            longer.append((corners + np.array([pitch, 0, 0]), kind, door))
+
+    def side(corners, sign):
+        return (sign * corners[:, 2]).min() > 1.5
+
+    body = np.concatenate([corners for corners, kind, _ in longer if kind != DARK])
+    tip = float(body[:, 0].max())
+    back = float(np.concatenate([corners for corners, _, _ in longer])[:, 0].min())
+    straight = float(body[(np.abs(body[:, 2]) > WIDTH * 1.40 - 0.005) & (body[:, 1] > 2.5)][:, 0].max())
+    doors = spans([(float(c[:, 0].min()), float(c[:, 0].max())) for c, _, door in longer
+                   if door >= 1 and (side(c, 1) or side(c, -1))], gap=0.1)
+    assert len(doors) == 2 and doors[-1][1] < straight, doors
+    glass = [spans([(float(c[:, 0].min()), float(c[:, 0].max())) for c, kind, door in longer
+                    if kind == GLASS and door < 0 and side(c, sign) and c[:, 0].max() < doors[-1][0]]) for sign in (-1, 1)]
+    assert all(len(found) == CAB_WINDOWS for found in glass), [len(found) for found in glass]
+    width = np.mean([high - low for found in glass for low, high in found])
+    windows = spans([tuple(span) for found in glass for span in found])  # 兩側的窗差幾公分：一格取兩側合起來的範圍
+    assert len(windows) == CAB_WINDOWS, windows
+    window = CAB_WINDOW / width
+    # 由後往前的分段：（起點, 終點, 倍率）；倍率 None 的是其餘的牆。
+    marks = sorted([(low, high, window) for low, high in windows]
+                   + [(low, high, CAB_DOOR / (high - low)) for low, high in doors])
+    pieces, at = [], back
+    for number, (low, high, factor) in enumerate(marks):
+        between = None
+        if number and marks[number - 1][2] == window and factor == window:
+            between = (CAB_PITCH - (high - low) * window) / (low - at)  # 兩扇窗之間的牆：補到窗距
+        pieces.append((at, low, between))
+        pieces.append((low, high, factor))
+        at = high
+    pieces.append((at, straight, None))
+    fixed = sum((high - low) * factor for low, high, factor in pieces if factor is not None)
+    plain = sum(high - low for low, high, factor in pieces if factor is None)
+    rest = (CAB_REAL - (tip - straight) - fixed) / plain
+    assert 0.97 < rest < 1.03, f"其餘的牆要改 {rest:.3f} 倍：不是原樣了"
+    knots, values = [back], [0.0]
+    for low, high, factor in pieces:
+        knots.append(high)
+        values.append(values[-1] + (high - low) * (rest if factor is None else factor))
+    knots.append(tip)
+    values.append(values[-1] + tip - straight)
+    assert abs(values[-1] - CAB_REAL) < 1e-6
+    knots, values = np.array(knots), np.array(values) - CAB_REAL / 2
+
+    out = [(np.column_stack([np.interp(corners[:, 0], knots, values), corners[:, 1:]]), kind, door)
+           for corners, kind, door in longer]
+    for corners, kind, door in triangles:
+        if door == BOGIE:
+            centre = centres[bool(corners[:, 0].mean() > 0)]
+            moved = float(np.interp(centre + (pitch if centre > end else 0), knots, values)) - centre
+            out.append((corners + np.array([moved, 0, 0]), kind, door))
+    # 切出來的細片在公釐的格子上沒有面積的不要。
+    return [(corners, kind, door) for corners, kind, door in out
+            if len({tuple(int(round(v * 1000)) for v in corner) for corner in corners}) == 3]
 
 
 def hoods(triangles, ends):
@@ -484,8 +618,7 @@ def main():
     args.out_dir.mkdir(parents=True, exist_ok=True)
     report = {}
     for unit, path in (("cab", args.cab), ("middle", args.middle), ("pantograph", args.pantograph)):
-        (triangles, doors), digest = build(path.expanduser(), args.out_dir if args.debug else None,
-                                           CAB_LENGTH if unit == "cab" else LENGTH, unit == "cab")
+        (triangles, doors), digest = build(path.expanduser(), args.out_dir if args.debug else None, unit == "cab")
         if digest != SHA256[unit]:
             raise SystemExit(f"{path.name}: 不是這個工具認得的原檔（SHA-256 {digest}）")
         name = f"n700s-{unit}"
