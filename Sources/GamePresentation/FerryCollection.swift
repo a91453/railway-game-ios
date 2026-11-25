@@ -1,8 +1,9 @@
 import GameCore
 
 /// The collection's ferry page (decision 585): the two real boats the
-/// game's ferries are drawn from (decision 579's studies) and the two real
-/// crossings its demo lays, in words a player reads.
+/// game's ferries are drawn from (decision 579's studies) and the real
+/// crossings the transit tool lays (Taiwan's two; decision 981: Hong
+/// Kong's two), in words a player reads.
 public enum FerryCollection {
     /// The Gushan–Cijin full fare: NT$30 a rider since 2024-11 (decision
     /// 585: the game charges one fare a mode, Tamsui–Bali's, so this is the
@@ -83,6 +84,30 @@ public enum FerryCollection {
                 language.text(
                     "About 5 minutes across · 5:00 to 2:00 the next day · \(Self.gushanCijinFare.moneyText) a ride",
                     "船程約 5 分 · 5:00 到翌日 2:00 · 每人 \(Self.gushanCijinFare.moneyText)"
+                ),
+            ]),
+            // Decision 981: the Star Ferry's two crossings of Victoria
+            // Harbour, with the company's own hours and adult weekday fares
+            // (starferry.com.hk/en/service, read 2026-11-25; the game
+            // charges one fare a mode, decision 585).
+            Entry(id: "centralTsimShaTsui", title: language.text("Central–Tsim Sha Tsui", "中環—尖沙咀"), lines: [
+                language.text(
+                    "Star Ferry · about \(RealFerry.centralTsimShaTsui.legMetres.reduce(0, +).groupedText) m across Victoria Harbour, 9 minutes",
+                    "天星小輪 · 橫越維多利亞港約 \(RealFerry.centralTsimShaTsui.legMetres.reduce(0, +).groupedText) 公尺，船程約 9 分"
+                ),
+                language.text(
+                    "6:30–23:30, every 6 minutes at the weekday peak · HK$5.0 upper deck, HK$4.0 lower deck on weekdays",
+                    "6:30–23:30，平日尖峰每 6 分一班 · 平日上層 HK$5.0、下層 HK$4.0"
+                ),
+            ]),
+            Entry(id: "wanChaiTsimShaTsui", title: language.text("Wan Chai–Tsim Sha Tsui", "灣仔—尖沙咀"), lines: [
+                language.text(
+                    "Star Ferry · about \(RealFerry.wanChaiTsimShaTsui.legMetres.reduce(0, +).groupedText) m across Victoria Harbour, 8 minutes",
+                    "天星小輪 · 橫越維多利亞港約 \(RealFerry.wanChaiTsimShaTsui.legMetres.reduce(0, +).groupedText) 公尺，船程約 8 分"
+                ),
+                language.text(
+                    "7:20–23:00, every 8 minutes at the peak · HK$5.0 on weekdays, the lower deck for bicycles only",
+                    "7:20–23:00，尖峰每 8 分一班 · 平日 HK$5.0，下層只放單車"
                 ),
             ]),
         ]
