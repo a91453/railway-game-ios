@@ -210,4 +210,18 @@ extension RealLineLaying {
         }.sorted()
         return heights.isEmpty ? nil : Double(heights[heights.count / 2])
     }
+
+    /// SHINKANSEN-SALE (decision 975): whether `station` has platforms and
+    /// every one of them lies under the ground, half a crossing's
+    /// clearance down or more (in a tunnel, as Fukuoka's subway's): a
+    /// station a line on its real viaduct stands over, not beside.
+    func platformsAreUnderTheGround(of station: StationID) -> Bool {
+        let platforms = world.network.platforms(of: station)
+        return !platforms.isEmpty && platforms.allSatisfy { platform in
+            guard let geometry = world.trackGeometry(of: platform.edge) else { return false }
+            let middle = geometry.location(at: (platform.start + platform.end) / 2).position
+            guard let ground = world.groundHeight(at: middle.plan) else { return false }
+            return ground - middle.z >= TrackStructure.clearance / 2
+        }
+    }
 }

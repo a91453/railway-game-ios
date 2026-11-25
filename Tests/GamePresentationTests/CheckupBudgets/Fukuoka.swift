@@ -20,8 +20,15 @@ extension TimetableCheckupBudgets {
     /// that end: no run late under either rules (were 127 and 126), its
     /// worst 3.5 minutes, its longest peak gap 6.5 minutes against 3.2;
     /// the Kuko Line's 7.0 against 3.3 (+3.7) and 6.0 (+2.7).
+    /// SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen bought alone
+    /// (`testFukuokaShinkansen`), its eight trains turning round at
+    /// Hakata in eight minutes on two tracks: no run late under either
+    /// rules (with twelve minutes on one track, 24 and 22), its longest
+    /// peak gap at Kumamoto 16.7 minutes against 15.0.
     static let fukuokaAllBought: [String: TimetableCheckup.Budget] = [
         "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 4),
         "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 4),
+        "fukuoka kyushushinkansen:KS simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 2),
+        "fukuoka kyushushinkansen:KS realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 2),
     ]
 }

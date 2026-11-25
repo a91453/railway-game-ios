@@ -13,6 +13,7 @@
 extension WhatsNew {
     public static let nextItems: [Line] = [
         Line(english: "In the 3D map, each track's rails are as far apart as its gauge: standard gauge is wider, 762 mm narrower.", chinese: "3D 地圖裡，每段軌道的鋼軌照它的軌距畫：標準軌比較寬，762 mm 比較窄。"),
+        Line(english: "The Kyushu Shinkansen from Hakata to Kumamoto is on sale on the Japan map.", chinese: "日本地圖可以買九州新幹線（博多到熊本）。"),
         Line(english: "Hong Kong: the transit tool's ferry mode lays the two harbour crossings, Central and Wan Chai to Tsim Sha Tsui.", chinese: "香港：接駁工具的渡輪模式可以照真實航線開中環、灣仔到尖沙咀的兩條港內渡輪。"),
     ]
 

@@ -43,7 +43,7 @@ final class RealRailwayGameplayTests: XCTestCase {
         let railways = try BundledRealData.railways()
         XCTAssertNotNil(railways.stationData?.overtakeTracks)
         XCTAssertNotNil(railways.transfers)
-        XCTAssertEqual(railways.operations?.systems.count, 13, "TRA, THSR, AFR, the seven metro and light rail systems, Hong Kong's MTR (decision 712), Rovaniemi's VR (decision 818) and Fukuoka's subway (decision 854)")
+        XCTAssertEqual(railways.operations?.systems.count, 14, "TRA, THSR, AFR, the seven metro and light rail systems, Hong Kong's MTR (decision 712), Rovaniemi's VR (decision 818), Fukuoka's subway (decision 854) and the Kyushu Shinkansen (decision 975)")
         XCTAssertEqual(railways.operations?.timetableIssues, [])
     }
 

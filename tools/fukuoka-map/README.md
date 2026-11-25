@@ -82,7 +82,8 @@ swift test --skip-build --filter FukuokaRailwaysTests
 - **新範圍裡有什麼**：筑紫平野（鳥栖、久留米、佐賀東半、大牟田）、有明海、熊本平野與熊本市、阿蘇熊本機場（台地上約 190 m）、佐賀機場；西南角是島原半島東半，最高格 1,457 m 是雲仙的平成新山（1,483 m）。高度 −2 到 1,457 m；陸地 5,607.5 km²（沒有高度的 0.1 km²）、水 1,097.7 km²、陡坡 761.6 km²。有人住的格裡陡坡 0.74 %。
 - **機場**：`airfields.json` 現在有三座（福岡 FUK、佐賀 HSG、熊本 KMJ），只是 3D 地圖上畫出來；航線還是只有福岡。
 - **記憶體**：整張 5 m 像素約 4.5 億點，一次放不進雲端容器的記憶體，`mean_heights` 改成每 8 排圖磚算一次、把每格的總和與點數累加。
-- **還沒做的**：`track_lines.geojson` 等鐵道檔還是只有福岡地鐵三條線；九州新幹線在 `kyushu-shinkansen/`，SHINKANSEN-SALE 搬進來。地圖包的名字與資料來源畫面仍寫「福岡」，KUMAMOTO-OPEN 再決定要不要改。
+- **鐵道檔**：`track_lines.geojson` 等檔有福岡地鐵三條線與九州新幹線（SHINKANSEN-SALE，決策 975，見下面「九州新幹線」）。
+- **還沒做的**：地圖包的名字與資料來源畫面仍寫「福岡」，KUMAMOTO-OPEN 再決定要不要改。
 
 ## 三條線
 
@@ -99,9 +100,24 @@ swift test --skip-build --filter FukuokaRailwaysTests
 - **七隈線整天從橋本端排車**（決策 898，`SERVICE["N"]["depotEnd"]`、`FAR_TURN`）：博多的每一班都是橋本開來的車到站 6 分鐘後折返，夜裡 23 組車都在橋本（4 組在站、19 組在機廠），博多不留夜車。博多離機廠 13.5 km，留在那裡的車夜裡會被收回機廠、清晨再空車開回去，擋住博多的頭幾班。只重排時刻不重讀 OSM：`python3 -I tools/fukuoka-map/build_fukuoka_rail.py times RailwayGameApp/Resources/MapPacks/fukuoka`，再跑 `extract_fukuoka_runs.py`。車組數照遊戲的最短停站 36 秒算（時刻表每站 25 秒），橋本再留 3 分鐘讓晚到的車追回來（`extract_branch_runs.RECOVERY`），所以是 23 組不是 20 組。
 - **建物**：OSM 的外形與用途，樓層或高度有標的照標（福岡約九成有標，是圖友匯入的福岡市 3D 模型），沒標的照羅瓦涅米的規則估（同類、同人口密度、同面積的四分位數）。約 28.5 萬棟、4.5 MB，最高 48 層；統計在 `fukuoka_buildings.json`。PLATEAU 不另外接：OSM 已經帶了它的高度。
 
-## 九州新幹線（博多—熊本，KYUSHU-SHINKANSEN-DATA，暫存）
+## 九州新幹線（博多—熊本，KYUSHU-SHINKANSEN-DATA）
 
-日本的圖要往南長到熊本（決策 969）。九州新幹線博多到熊本的資料先做好、放在 `tools/fukuoka-map/kyushu-shinkansen/`，**還不在地圖包裡，遊戲不讀**；SHINKANSEN-SALE 與 KUMAMOTO-OPEN 開圖時再一次搬進 `MapPacks/fukuoka/`（併進 `track_lines.geojson` 等檔、排 `metro_runs.json`、改 `pack.json`）。格式與福岡地鐵的檔一樣，工具用 `build_fukuoka_rail.py` 的同一套讀法。
+九州新幹線博多到熊本的資料（KYUSHU-SHINKANSEN-DATA，#2667）做好後放在 `tools/fukuoka-map/kyushu-shinkansen/`，**SHINKANSEN-SALE（決策 975）已併進地圖包 `MapPacks/fukuoka/`，遊戲會讀**：日本地圖的第二個系統 `kyushushinkansen`（`OverseasMap.systems`），在收購清單單獨賣。格式與福岡地鐵的檔一樣，工具用 `build_fukuoka_rail.py` 的同一套讀法。
+
+三個步驟，都在 repo 根目錄跑，輸出逐位元可重現（`build_kyushu_shinkansen.py` 一開頭就 import osmium，先 `pip install osmium`）：
+
+```sh
+# 1. 只重排一天的班次（改了班距、折返時間時；不讀 N02 與 OSM）。
+python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py times tools/fukuoka-map/kyushu-shinkansen RailwayGameApp/Resources/MapPacks/fukuoka
+# 2. 併進地圖包：線、站、站名、橋隧併進地鐵的四個檔，複製 kyushushinkansen.json 與 _times.json，改 pack.json。
+python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py merge tools/fukuoka-map/kyushu-shinkansen RailwayGameApp/Resources/MapPacks/fukuoka
+# 3. 排進 metro_runs.json（地鐵三條線與新幹線一起）。
+python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/MapPacks/fukuoka
+```
+
+`build_fukuoka_rail.py` 重寫地鐵的鐵道檔之後，要再跑第 2、3 步。**不要為了新幹線重生地面檔**（高度、水、陡坡、建物；每重做一次 git 多 45 MB）。
+
+從 N02 與 OSM 重做暫存資料夾（線形或車站變了才需要）：
 
 ```sh
 # N02 與 kyushu.pbf 同上；這裡讀整包九州，不用先切（約 15 秒）。
@@ -122,7 +138,9 @@ python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py /tmp/fk/n02/N02-25_GML/U
 - **線形**：OSM 的 `railway=rail`、`highspeed=yes`、名字有「九州新幹線」的正線（博多站與最前面約 8 km 和博多南線共用，OSM 的名字兩個都寫）。量到 **98.15 km**，新幹線自己的長度是 98.2 km（工具差超過 2 % 就停）。隧道 37.0 km（筑紫隧道等）、高架與橋 56.4 km、地面 4.7 km。
 - **車站與日文站名**：N02（九州旅客鉄道的九州新幹線，取博多到熊本 7 站）。中文站名七個都和日文同字；英文是 JR 九州的羅馬字去掉長音（OSM 把新大牟田、新玉名寫成 `New Omuta`、`New Tamana`，沒用）。
 - **班距是估計**：JR 九州沒有公開可再利用的時刻表（沒有 GTFS，官網時刻表不可轉載）。離峰 30 分一班，依據是 2023 年 3 月改點後平日下午博多每小時 01 分、36 分各一班往熊本的「櫻」或「燕」（<https://www.tetsudo.com/news/629/> 的報導）；尖峰 15 分一班、熊本首班 6:00、博多末班 23:10 是本專案的估計。**每一班都各站停**（「燕」的停法），一天 86 班（單向 43）；通過中間站的「瑞穗」「櫻」與直通鹿兒島中央、新大阪的車沒有做（KYUSHU-SHINKANSEN-EXPRESS，之後）。
-- **站間時間是估計**：照距離、最高速 260 km/h、加減速 0.45 m/s² 算，再加一成餘裕；博多到熊本含停站 48 分 20 秒（真實的「燕」約 50 分）。每站停 60 秒，博多折返 12 分。
-- **機廠在熊本那一端**：`depotEnd` 是熊本，整天從熊本排車（決策 898 的排法），博多不留夜車。熊本総合車両所在熊本站南邊：入出庫線在熊本站過去 8.45 km 的 (32.716903, 130.673816) 離開正線，再 1.47 km 到留置線；OSM 畫了 13 股各 288 m。機廠最南到約 32.701N，在新範圍（南緣 32.69N）裡。熊本站到分岔點那 8.45 km 的正線也寫在 `depot.json`（`mainLine`），待售的線只到熊本站。
-- **軌距與限界**：線與機廠都寫了 `gaugeMm: 1435`、`loadingGauge: "shinkansen"`、`electrification`、`maxSpeedKmh: 260`，給之後的 TRACK-GAUGE、TRACK-ELECTRIFICATION 讀，現在沒有東西讀。
+- **站間時間是估計**：照距離、最高速 260 km/h、加減速 0.45 m/s² 算，再加一成餘裕；博多到熊本含停站 48 分 20 秒（真實的「燕」約 50 分）。每站停 60 秒，博多折返 8 分（`FAR_TURN = 480`）。
+- **博多 2 股、折返 8 分**（決策 975）：第一版博多 1 股、折返 12 分，一天晚點 22–24 班：尖峰 15 分一班，下一班在新鳥栖（約 10.5 分前）就要訂博多的進路，前一班還在，遊戲把等著的車趕回熊本的機廠。`extract_fukuoka_runs.py` 用 `TRACKS_AT_LEAST = {"kyushushinkansen:KS": {"博多": 2}}`（`extract_metro_runs.py` 的新參數：某站至少幾股）給博多兩股（真實是 4 面 8 線）。改後 0 班晚點（`CheckupBudgets/Fukuoka.swift`）。
+- **機廠在熊本那一端**：`depotEnd` 是熊本，整天從熊本排車（決策 898 的排法），博多不留夜車。**遊戲裡的機廠鋪在熊本站南邊**（`RealLineDepotSite.kumamoto`，「熊本車輛基地」8 股）：待售的線只到熊本站，真實的分岔點在更南 8.45 km；下面的真實位置只是紀錄，線往南開時再用。熊本総合車両所在熊本站南邊：入出庫線在熊本站過去 8.45 km 的 (32.716903, 130.673816) 離開正線，再 1.47 km 到留置線；OSM 畫了 13 股各 288 m。機廠最南到約 32.701N，在新範圍（南緣 32.69N）裡。熊本站到分岔點那 8.45 km 的正線也寫在 `depot.json`（`mainLine`），待售的線只到熊本站。
+- **軌距與限界**：線與機廠都寫了 `gaugeMm: 1435`、`loadingGauge: "shinkansen"`、`electrification`、`maxSpeedKmh: 260`，給之後的 TRACK-ELECTRIFICATION 讀；軌距遊戲照系統名鋪（`TrackGauge.ofRealLine`，決策 970、975：1,435 mm 新幹線級），不讀這幾個欄位。
+- **節數**：8 節（N700 系「瑞穗」「櫻」的編組，`DemoRealLines.cars(ofSystem:)`），月台 200 m。
 - **顏色** `#C8102E` 是本專案選的（JR 九州的紅，比旁邊空港線的橘紅深）；OSM 的路線關係沒有顏色。

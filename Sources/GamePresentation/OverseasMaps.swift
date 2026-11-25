@@ -35,6 +35,23 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
         }
     }
 
+    /// SHINKANSEN-SALE (decision 975): every system whose lines are on its
+    /// map, ``system`` first: Japan's map has the Fukuoka City Subway's and
+    /// the Kyushu Shinkansen's (`kyushushinkansen.json`), another
+    /// company's, on another gauge.
+    public var systems: [String] {
+        switch self {
+        case .hongKong, .rovaniemi: [system]
+        case .fukuoka: [system, "kyushushinkansen"]
+        }
+    }
+
+    /// The map the lines of the system `id` are on, or `nil` for one of
+    /// Taiwan's.
+    public static func map(ofSystem id: String) -> OverseasMap? {
+        allCases.first { $0.systems.contains(id) }
+    }
+
     /// Its map pack's folder (`MapPacks/hongkong`).
     public var packFolder: String {
         switch self {
@@ -543,7 +560,7 @@ extension RealRailways.System {
     /// Decision 845: whether its stations' own names are written in Latin
     /// letters (``OverseasMap/namesInLatin``); Taiwan's are not.
     var namesInLatin: Bool {
-        OverseasMap.allCases.contains { $0.system == id && $0.namesInLatin }
+        OverseasMap.map(ofSystem: id)?.namesInLatin ?? false
     }
 
     /// The systems of the cities outside Taiwan, which ``all`` (Taiwan's,
@@ -574,6 +591,22 @@ extension RealRailways.System {
             "fksubway|N": RealRailways.RGB(0x008000),
         ]),
     ]
+
+    /// SHINKANSEN-SALE (decision 975): the systems of a map that has more
+    /// than one (``OverseasMap/systems``), after its first: JR Kyushu's
+    /// Kyushu Shinkansen on Japan's map. The colour is this project's
+    /// (`tools/fukuoka-map/build_kyushu_shinkansen.py`'s `COLOUR`;
+    /// OpenStreetMap's relation has none).
+    public static let overseasOthers: [RealRailways.System] = [
+        RealRailways.System(id: "kyushushinkansen", english: "JR Kyushu", chinese: "JR九州", lineColors: [
+            "kyushushinkansen|KS": RealRailways.RGB(0xC8102E),
+        ]),
+    ]
+
+    /// Every system of the cities outside Taiwan.
+    public static var everyOverseas: [RealRailways.System] {
+        OverseasMap.allCases.compactMap { overseas[$0] } + overseasOthers
+    }
 }
 
 extension RealBranchLine {
@@ -611,6 +644,12 @@ extension RealBranchLine {
         ("fksubway", "K", "Kuko Line", "空港線", nil, .metro, false),
         ("fksubway", "H", "Hakozaki Line", "箱崎線", nil, .metro, false),
         ("fksubway", "N", "Nanakuma Line", "七隈線", nil, .metro, false),
+        // SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen, Hakata to
+        // Kumamoto (the map's south edge is just past Kumamoto), every
+        // train calling at every station (`build_kyushu_shinkansen.py`).
+        // Another system than the subway's, so sold on its own
+        // (``RealLineBundle/groups(of:)``).
+        ("kyushushinkansen", "KS", "Kyushu Shinkansen", "九州新幹線", nil, .metro, false),
     ]
 
     /// Decision 753: the lines of the cities outside Taiwan drawn along
