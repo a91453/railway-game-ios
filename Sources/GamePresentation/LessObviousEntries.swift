@@ -70,12 +70,13 @@ public enum StoppingPatternEntry {
     }
 }
 
-/// Decision 383: the build tool's folded options, named by what they
-/// hold (the structure, the grade and the curves) rather than "Advanced";
-/// snapping to track stands beside Double instead.
+/// Decision 383: the build tool's folded options. Named by what they
+/// held (the structure, the grade and the curves) until NETWORK-PANEL-
+/// SIMPLE (2026-11-26) folded snapping in with them: four things do not
+/// fit a button, and the long name crowded the card.
 public enum NetworkOptionsEntry {
     public static func title(in language: DisplayLanguage) -> String {
-        language.text("Elevated, grade, curves", "高架、坡度、曲線")
+        language.text("More options", "更多選項")
     }
 }
 

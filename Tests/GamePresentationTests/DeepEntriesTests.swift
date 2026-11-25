@@ -60,8 +60,8 @@ final class DeepEntriesTests: XCTestCase {
         XCTAssertEqual(TrackHoldHint.openTitle("Main", in: .english), "Open Main")
         XCTAssertEqual(StoppingPatternEntry.title(in: .traditionalChinese), "加快車（停車模式）")
         XCTAssertEqual(NetworkSwitches.title(in: .traditionalChinese), "整個路網")
-        XCTAssertEqual(NetworkOptionsEntry.title(in: .traditionalChinese), "高架、坡度、曲線")
-        XCTAssertEqual(NetworkOptionsEntry.title(in: .english), "Elevated, grade, curves")
+        XCTAssertEqual(NetworkOptionsEntry.title(in: .traditionalChinese), "更多選項")
+        XCTAssertEqual(NetworkOptionsEntry.title(in: .english), "More options")
     }
 
     /// Help says the ways in as they are now: no Advanced for the express
@@ -78,6 +78,10 @@ final class DeepEntriesTests: XCTestCase {
                 XCTAssertTrue(text.contains(NetworkSwitches.title(in: language)), "\(id) in \(language)")
                 XCTAssertFalse(text.contains(language.text("Advanced", "進階")), "\(id) in \(language)")
             }
+        }
+        // NETWORK-PANEL-SIMPLE: snapping is under the build tool's folded options.
+        for language in [DisplayLanguage.english, .traditionalChinese] {
+            XCTAssertTrue(try answer("oneTrain", language).contains(NetworkOptionsEntry.title(in: language)), "\(language)")
         }
         XCTAssertFalse(try answer("reportProblem", .traditionalChinese).contains("更多"))
         XCTAssertFalse(try answer("reportProblem", .english).contains("More"))
