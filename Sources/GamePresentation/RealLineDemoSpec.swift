@@ -41,6 +41,10 @@ struct RealLineDemoSpec: Sendable {
     /// The system its line is of (`thsr_sched`), as its stations' ids name
     /// it.
     var system: String { String(stationIDPrefix.dropLast()) }
+    /// Decision 970: the gauge its track is laid at, the real line's
+    /// (``TrackGauge/ofRealLine(_:)``); `nil` for a system that has none
+    /// there, laid at the default.
+    var gauge: TrackGauge? { TrackGauge.ofRealLine(system) }
     /// The scheduled system whose day it runs (`thsr`).
     let schedule: String
     let kinds: [Kind]

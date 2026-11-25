@@ -75,9 +75,10 @@ extension GameSession {
 extension GameWorld {
     /// Decision 955: whether a train of `type` may run line `id`'s track
     /// (``TrackCompatibility``): every kind of track it runs on carries
-    /// it. A line with no way through yet has no track to say no.
+    /// it, and (decision 970) its wheels fit every gauge there. A line
+    /// with no way through yet has no track to say no.
     public func runsOnTrack(_ type: TrainType?, ofLine id: LineID) -> Bool {
-        trackKinds(ofLine: id).allSatisfy { TrackCompatibility.runs(type, on: $0) }
+        trackKinds(ofLine: id).allSatisfy { TrackCompatibility.runs(type, on: $0) } && fitsGauge(type, ofLine: id)
     }
 
     /// Decision 955: the offered type line `id`'s guideway carries, when

@@ -7,6 +7,9 @@ import XCTest
 /// and no faster than its grade allows.
 final class MountainTrackTests: XCTestCase {
     private let line = LineID(rawValue: 1)
+    /// Rails of 762 and 1,067 mm on one track (decision 970), so a mountain
+    /// train and an ordinary one may both stand on it.
+    private static let threeRail = TrackGauge(rails: [.forest, .cape])
 
     private func makeWorld() throws -> GameWorld {
         try GameWorld(
@@ -29,8 +32,10 @@ final class MountainTrackTests: XCTestCase {
     /// Station A on 64 m of level track, 64 m climbing 4 m (62.5 in 1000,
     /// the Alishan Forest Railway's ruling grade) on a viaduct, station B
     /// on 64 m of level viaduct at the top, and line A–B all day. As
-    /// ordinary track, the climb is 2.5 m (39 in 1000).
-    private func build(mountain: Bool = true) throws -> (world: GameWorld, climb: TrackEdgeID, first: TrackEdgeID) {
+    /// ordinary track, the climb is 2.5 m (39 in 1000). The level track is
+    /// `gauge` (decision 970): 762 mm, the forest railway's own, unless a
+    /// test lays a third rail for trains of 1,067 mm too.
+    private func build(mountain: Bool = true, gauge: TrackGauge? = nil) throws -> (world: GameWorld, climb: TrackEdgeID, first: TrackEdgeID) {
         var world = try makeWorld()
         let top: Int64 = mountain ? 256 : 160
         let points = [
@@ -38,9 +43,10 @@ final class MountainTrackTests: XCTestCase {
             WorldCoordinate(x: 10_240, y: 2_048, z: top), WorldCoordinate(x: 14_336, y: 2_048, z: top),
         ]
         let nodes = try points.map { try world.buildTrackNode(at: $0) }
-        let first = try world.buildTrackEdge(from: nodes[0], to: nodes[1])
+        let level = gauge ?? (mountain ? .forest : .default)
+        let first = try world.buildTrackEdge(from: nodes[0], to: nodes[1], gauge: level)
         let climb = try world.buildTrackEdge(from: nodes[1], to: nodes[2], structure: .elevated, mountain: mountain)
-        let last = try world.buildTrackEdge(from: nodes[2], to: nodes[3], structure: .elevated)
+        let last = try world.buildTrackEdge(from: nodes[2], to: nodes[3], structure: .elevated, gauge: level)
         let a = try world.buildStation(named: "A", at: PlanPoint(x: 4_096, y: 2_560)).id
         try world.addTrackPlatform(a, on: first, from: 0, to: 4_096)
         let b = try world.buildStation(named: "B", at: PlanPoint(x: 12_288, y: 2_560)).id
@@ -110,7 +116,7 @@ final class MountainTrackTests: XCTestCase {
     // MARK: - Trains
 
     func testOnlyAMountainTrainRunsOnTheLine() throws {
-        var (world, _, first) = try build()
+        var (world, _, first) = try build(gauge: Self.threeRail)
         let ordinary = try world.purchaseTrain(named: "Blue").id
         try world.placeTrain(ordinary, at: .onEdge(TrackTraversal(edge: first, direction: .forward), offset: 4_096))
         refused(.trainCannotClimb(ordinary), in: world) { try $0.assignTrain(ordinary, to: line) }
@@ -151,7 +157,7 @@ final class MountainTrackTests: XCTestCase {
     }
 
     func testATrainThatCannotClimbIsNotSentOntoMountainTrack() throws {
-        var (world, climb, first) = try build()
+        var (world, climb, first) = try build(gauge: Self.threeRail)
         let ordinary = try world.purchaseTrain(named: "Blue").id
         let alishan = try world.purchaseTrain(named: "Alishan", as: .alishan).id
         try world.placeTrain(ordinary, at: .onEdge(TrackTraversal(edge: first, direction: .forward), offset: 2_048))
@@ -169,8 +175,8 @@ final class MountainTrackTests: XCTestCase {
             WorldCoordinate(x: 10_240, y: 2_048, z: 256), WorldCoordinate(x: 14_336, y: 2_048, z: 256),
         ]
         let nodes = try points.map { try world.buildTrackNode(at: $0) }
-        let first = try world.buildTrackEdge(from: nodes[0], to: nodes[1])
-        let last = try world.buildTrackEdge(from: nodes[2], to: nodes[3], structure: .elevated)
+        let first = try world.buildTrackEdge(from: nodes[0], to: nodes[1], gauge: Self.threeRail)
+        let last = try world.buildTrackEdge(from: nodes[2], to: nodes[3], structure: .elevated, gauge: Self.threeRail)
         let a = try world.buildStation(named: "A", at: PlanPoint(x: 4_096, y: 2_560)).id
         try world.addTrackPlatform(a, on: first, from: 0, to: 4_096)
         let b = try world.buildStation(named: "B", at: PlanPoint(x: 12_288, y: 2_560)).id
@@ -234,7 +240,10 @@ final class MountainTrackTests: XCTestCase {
         XCTAssertEqual(loaded.network.edge(climb)?.mountain, true)
         XCTAssertEqual(loaded.network.edge(climb)?.speedLimits.map(\.speed), [20])
         XCTAssertEqual(loaded.train(id: train)?.type, .alishan)
-        XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 77,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        // Decision 970: a version-77 save's forest line is read as 762 mm
+        // track, which a save now writes beside each edge.
+        let again = try encoder.encode(SavedGame(world: loaded))
+        XCTAssertEqual(try JSONDecoder().decode(SavedGame.self, from: again).world, loaded)
+        XCTAssertEqual(String(decoding: again, as: UTF8.self).components(separatedBy: #""rails" : ["#).count - 1, loaded.network.edges.count)
     }
 }

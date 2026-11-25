@@ -66,6 +66,9 @@ struct NetworkControls: View {
             // words: one row where they fit, else two, else more.
             ChipFlow(spacing: 8) {
                 systemPicker
+                if session.networkSystem == .conventional {
+                    gaugePicker
+                }
                 advancedButton
                 doubleToggle
                 snapToggle
@@ -205,6 +208,24 @@ struct NetworkControls: View {
             .pickerStyle(.menu)
         }
         .accessibilityIdentifier("network.system")
+    }
+
+    /// Decision 970: the gauge of the next ordinary track; automatic
+    /// follows the track it joins.
+    private var gaugePicker: some View {
+        let language = session.language
+        return TickStable(StableKey(session.networkGauge, language)) {
+            Picker(selection: Binding(get: { session.networkGauge }, set: { session.chooseNetworkGauge($0) })) {
+                Text(verbatim: TrackGauge.automaticName(in: language)).tag(TrackGauge?.none)
+                ForEach(TrackGauge.offered, id: \.self) { gauge in
+                    Text(verbatim: gauge.name(in: language)).tag(TrackGauge?.some(gauge))
+                }
+            } label: {
+                Text(verbatim: language.text("Gauge", "軌距"))
+            }
+            .pickerStyle(.menu)
+        }
+        .accessibilityIdentifier("network.gauge")
     }
 
     // Decision 107: how the track is built is chosen for the player

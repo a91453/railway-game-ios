@@ -125,8 +125,10 @@ extension TrackEdge {
 /// | `MAGLEV`                   | no           | no       | no       | yes    | no        |
 /// | `SKYRAIL`                  | no           | no       | no       | no     | yes       |
 ///
-/// A mountain train on ordinary track is decision 515's, kept (gauges are
-/// not modelled). A guideway train a save from before version 112 has on
+/// Ordinary and mountain track also have a gauge (decision 970,
+/// ``runs(_:onGauge:)``), checked beside this table: the mountain train
+/// runs only on the forest railway's 762 mm track, so no longer on other
+/// ordinary track. A guideway train a save from before version 112 has on
 /// a line that runs on ordinary track stays on it (``GameWorld/layGuideways()``
 /// says when); no command puts one there.
 public enum TrackCompatibility {

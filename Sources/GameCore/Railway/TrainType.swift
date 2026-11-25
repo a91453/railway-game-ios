@@ -177,6 +177,13 @@ public struct TrainType: RawRepresentable, Hashable, Codable, CaseIterable, Send
     /// `SKYRAIL`, ordinary track for the rest.
     public var trackSystem: TrackSystem { TrainTypeCatalog.builtIn[row].trackSystem }
 
+    /// The wheels and body of the real train it is (decision 970): the
+    /// Taiwan Railway's models 1,067 mm, the high-speed set a Shinkansen
+    /// train's, the forest railway's 762 mm, Taipei Metro's C381 standard
+    /// gauge; `nil` for the reference's types, which run on any ordinary
+    /// track but the forest railway's, and the guideway trains.
+    public var gauge: TrainGauge? { TrainTypeCatalog.builtIn[row].gauge }
+
     /// Reads a code; a code no type has does not read, as the type's codes
     /// did when they were an enum's raw values.
     public init(from decoder: any Decoder) throws {

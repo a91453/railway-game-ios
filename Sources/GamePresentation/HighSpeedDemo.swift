@@ -945,7 +945,7 @@ public enum HighSpeedDemo {
         /// their platforms, the depots, and the lines.
         @discardableResult
         func build(in world: inout GameWorld, language: DisplayLanguage) throws(GameError) -> Built {
-            let down = try plan.build(in: &world)
+            let down = try plan.build(in: &world, gauge: spec.gauge)
             func node(_ track: RealWorldDemo.Track, _ distance: Double) -> TrackNodeID {
                 guard let node = track.node(at: distance) else { preconditionFailure("No node at \(distance)") }
                 return node

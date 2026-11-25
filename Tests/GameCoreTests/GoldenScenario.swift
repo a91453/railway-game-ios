@@ -1769,6 +1769,10 @@ extension StepOutcome: Codable {
         // schema reads neither of these back.
         case .rejected(.trackSystemMismatch), .rejected(.trainTrackMismatch):
             try container.encode("trackSystemRefused", forKey: .result)
+        // Decision 970: no golden scenario lays track of another gauge, and
+        // the golden schema does not read this back.
+        case .rejected(.trainGaugeMismatch):
+            try container.encode("trainGaugeRefused", forKey: .result)
         case .rejected(.freightNotEnabled):
             try container.encode("freightNotEnabled", forKey: .result)
         case .rejected(.freightFacilityExists(let id)):

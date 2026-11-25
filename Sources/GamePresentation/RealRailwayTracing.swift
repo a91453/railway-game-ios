@@ -756,6 +756,10 @@ extension GameSession {
             rise: rise, structure: networkStructure
         )
         let last = plan.nodes.count - 1
+        // Decision 970: the real line's own gauge (the forest railway's
+        // 762 mm, the high-speed railway's 1,435), unless the player chose
+        // one.
+        let gauge = networkGauge ?? lineSystem.flatMap(TrackGauge.ofRealLine)
         var stretches: [PlayerCommand.TrackStretch] = []
         // Decision 973: on a mountain line the heights are laid at
         // ``mountainTraceGrade`` along the way, but an edge's curve is a
@@ -789,7 +793,7 @@ extension GameSession {
             stretches.append(PlayerCommand.TrackStretch(
                 start: index == 0 ? start : .point(a.plan), end: index + 1 == last ? end : .point(b.plan),
                 from: a, to: b, curve: curve, profile: .uniform, structure: networkStructure,
-                ground: [a.plan, b.plan] + surveyed, mountain: steep
+                ground: [a.plan, b.plan] + surveyed, mountain: steep, gauge: gauge
             ))
         }
 
@@ -1237,7 +1241,7 @@ extension PlayerCommand.TrackStretch {
         if case .node = start { return self }
         return PlayerCommand.TrackStretch(
             start: .node(node), end: end, from: from, to: to, curve: curve, profile: profile, structure: structure, ground: ground,
-            mountain: mountain
+            mountain: mountain, system: system, gauge: gauge
         )
     }
 }

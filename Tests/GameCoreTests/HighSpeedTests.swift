@@ -203,8 +203,21 @@ final class HighSpeedTests: XCTestCase {
         XCTAssertEqual(world.trains.first?.capacity, 640, "eight cars of 80, not overloaded")
         XCTAssertEqual([a, n, b].map { world.stationDemand(of: $0)?.hinterland }, [2_000_000, 500_000, 1_000_000])
         XCTAssertTrue(world.passengers.contains { !$0.waiting.isEmpty }, "passengers wait for it")
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
-            .replacingOccurrences(of: #""saveVersion" : 43,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
+        XCTAssertEqual(try Self.withoutGauges(encoder.encode(SavedGame(world: world)), of: world), newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
+            .replacingOccurrences(of: #""saveVersion" : 43,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)))
+    }
+
+    /// `data`, a save of `world` written pretty-printed, without the
+    /// `"gauge"` of each edge, after checking that every edge says it:
+    /// decision 970 reads an older save's high-speed line as track of
+    /// 1,435 mm at the Shinkansen's loading gauge, which the save then
+    /// writes beside each edge.
+    static func withoutGauges(_ data: Data, of world: GameWorld, file: StaticString = #filePath, line: UInt = #line) throws -> String {
+        let text = String(decoding: data, as: UTF8.self)
+        let pattern = try NSRegularExpression(pattern: #"\n *"gauge" : \{[^{}]*\},"#)
+        let range = NSRange(text.startIndex..., in: text)
+        XCTAssertEqual(pattern.numberOfMatches(in: text, range: range), world.network.edges.count, file: file, line: line)
+        return pattern.stringByReplacingMatches(in: text, range: range, withTemplate: "")
     }
 
     // MARK: - The hinterland
@@ -331,7 +344,7 @@ final class HighSpeedTests: XCTestCase {
         let nodes = try x.map { try world.buildTrackNode(at: WorldCoordinate(x: $0, y: corridorY)) }
         var edges: [TrackEdgeID] = []
         for index in 1..<nodes.count {
-            edges.append(try world.buildTrackEdge(from: nodes[index - 1], to: nodes[index]))
+            edges.append(try world.buildTrackEdge(from: nodes[index - 1], to: nodes[index], gauge: .shinkansen))
         }
         let position: [StationID: Int64] = Dictionary(uniqueKeysWithValues: zip(along.map(\.station), x))
         for (id, name) in [(a, "A"), (b, "B"), (n, "N")] {
@@ -570,8 +583,8 @@ final class HighSpeedTests: XCTestCase {
         XCTAssertEqual(world, made)
         XCTAssertEqual(world.tripFare(from: b, to: a, highSpeed: true), 49_000)
         let text = newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self))
-        XCTAssertEqual(try encoder.encode(SavedGame(world: world)), Data(text
-            .replacingOccurrences(of: #""saveVersion" : 69,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#).utf8))
+        XCTAssertEqual(try Self.withoutGauges(encoder.encode(SavedGame(world: world)), of: world), text
+            .replacingOccurrences(of: #""saveVersion" : 69,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#))
 
         func accounts(_ change: (inout [String: Any]) -> Void) throws -> Data {
             var plain = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])

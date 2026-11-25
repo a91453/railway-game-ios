@@ -2619,12 +2619,13 @@ extension RealLineLaying {
                 }
                 if piece.together {
                     edges.append(try world.buildTrackEdges(piece.curves.enumerated().map { index, curve in
-                        TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure(ofEdge: index))
+                        TrackEdgePlan(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure(ofEdge: index), gauge: TrackGauge.ofRealLine(acquisition.realLine))
                     }))
                 } else {
                     var built: [TrackEdgeID] = []
                     for (index, curve) in piece.curves.enumerated() {
-                        built.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure(ofEdge: index)))
+                        built.append(try world.buildTrackEdge(from: ids[index], to: ids[index + 1], curve: curve, structure: piece.structure(ofEdge: index),
+                                                             gauge: TrackGauge.ofRealLine(acquisition.realLine)))
                     }
                     edges.append(built)
                 }

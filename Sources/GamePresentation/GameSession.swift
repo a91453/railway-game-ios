@@ -814,6 +814,10 @@ public final class GameSession {
     /// ordinary track, or a monorail's or maglev's guideway
     /// (``chooseNetworkSystem(_:)``).
     public internal(set) var networkSystem: TrackSystem = .conventional
+    /// Decision 970: the gauge the next stretch of ordinary track is laid
+    /// at; `nil` (the tool's first choice) for that of the ordinary track it
+    /// joins, the default gauge where it joins none (``chooseNetworkGauge(_:)``).
+    public internal(set) var networkGauge: TrackGauge?
     /// Whether choosing a guideway made the structure elevated, so that
     /// choosing ordinary track again gives the automatic one back.
     @ObservationIgnored var networkStructureRaisedForGuideway = false
@@ -3083,6 +3087,7 @@ public final class GameSession {
             }
             // Decision 955: a guideway train with no guideway to run on yet.
             said += world.guidewayFirstHint(for: type, in: language) ?? ""
+            said += world.gaugeFirstHint(for: type, in: language) ?? ""
             return said
         }
     }

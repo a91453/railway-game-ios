@@ -103,7 +103,8 @@ final class HighSpeedSessionTests: XCTestCase {
 
     /// "Run every five minutes" on a high-speed line buys high-speed sets.
     func testStaffingAHighSpeedLineBuysHighSpeedSets() throws {
-        let track = TestLine(tiles: 9, row: 1)
+        // Decision 970: on track the high-speed set runs on.
+        let track = TestLine(tiles: 9, row: 1, gauge: .shinkansen)
         var world = try makeWorld(width: 9_216, height: 4_096, balance: 100_000_000, speed: .normal)
         try track.build(in: &world)
         var stops: [StationID] = []

@@ -126,10 +126,15 @@ public enum PlayerCommand: Hashable, Sendable {
         /// (``TrackEdge/system``); `nil` follows the track it joins
         /// (decision 951), as every stretch did before.
         public let system: TrackSystem?
+        /// Decision 970: the gauge the player chose (``TrackEdge/gauge``);
+        /// `nil` follows the ordinary track it joins, as every stretch did
+        /// before.
+        public let gauge: TrackGauge?
 
         public init(
             start: NetworkAnchor, end: NetworkAnchor, from: WorldCoordinate, to: WorldCoordinate, curve: TrackCurve,
-            profile: TrackProfile, structure: TrackStructure, ground: [PlanPoint], mountain: Bool = false, system: TrackSystem? = nil
+            profile: TrackProfile, structure: TrackStructure, ground: [PlanPoint], mountain: Bool = false, system: TrackSystem? = nil,
+            gauge: TrackGauge? = nil
         ) {
             self.start = start
             self.end = end
@@ -141,6 +146,7 @@ public enum PlayerCommand: Hashable, Sendable {
             self.ground = ground
             self.mountain = mountain
             self.system = system
+            self.gauge = gauge
         }
 
         /// Builds it in `world`, reading ground from `heights`: the edge,
@@ -150,7 +156,7 @@ public enum PlayerCommand: Hashable, Sendable {
             let first = try node(for: start, at: from, in: &world)
             let last = try node(for: end, at: to, in: &world)
             let edge = try world.buildTrackEdge(from: first, to: last, curve: curve, profile: profile, structure: structure, mountain: mountain,
-                                            system: system)
+                                            system: system, gauge: gauge)
             return (edge, last)
         }
 
@@ -374,7 +380,7 @@ extension GameSession {
         case .buildTrackChain(let stretches):
             guard !stretches.isEmpty else { throw .invalidTrackGeometry }
             var previous: TrackNodeID?
-            for stretch in stretches {
+            for stretch in stretches.joiningGauge(in: world) {
                 let built = try stretch.starting(at: previous).build(in: &world, heights: heights)
                 outcome.track = built
                 previous = built.to
@@ -482,6 +488,9 @@ extension PlayerCommand: Codable {
         /// Decision 955: the track system chosen; absent when it follows
         /// the track it joins (and in logs from before it).
         var system: String?
+        /// Decision 970: the gauge chosen (``TrackGauge/code``); absent
+        /// when it follows the track it joins (and in logs from before it).
+        var gauge: String?
         /// Plan points, x and y each.
         var ground: [Int64]?
         var edge: Int?
@@ -587,11 +596,16 @@ extension PlayerCommand: Codable {
                 guard let known = TrackSystem(rawValue: raw) else { throw invalid("unknown track system") }
                 system = known
             }
+            var gauge: TrackGauge?
+            if let code = record.gauge {
+                guard let known = TrackGauge(code: code) else { throw invalid("unknown track gauge") }
+                gauge = known
+            }
             return TrackStretch(
                 start: try anchor(record.start), end: try anchor(record.end), from: try coordinate(record.from), to: try coordinate(record.to),
                 curve: curve, profile: TrackProfile(startTransition: transitions[0], endTransition: transitions[1]),
                 structure: structure, ground: try points(record.ground), mountain: record.mountain ?? false,
-                system: system
+                system: system, gauge: gauge
             )
         }
         switch record.kind {
@@ -799,6 +813,7 @@ extension PlayerCommand: Codable {
             record.ground = stretch.ground.flatMap { [$0.x, $0.y] }
             record.mountain = stretch.mountain ? true : nil
             record.system = stretch.system?.rawValue
+            record.gauge = stretch.gauge?.code
         }
         switch self {
         case .buildTrack(let stretch):
