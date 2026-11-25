@@ -20,7 +20,7 @@
 /// next one.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 112
+    public static let currentVersion = 113
 
     public let world: GameWorld
 
@@ -305,6 +305,10 @@ extension SavedGame: Codable {
         // Version 111 or earlier to 112: the track only guideway trains
         // run on becomes their guideway (decision 951).
         if version < 112 { world.layGuideways() }
+        // Version 112 to 113: a map that grew says which part of the world
+        // its anchor is the middle of, and a map bought tile by tile how
+        // many tiles it was given (decision 969). Earlier saves hold
+        // neither and read as before: nothing to turn.
         self.world = world
     }
 

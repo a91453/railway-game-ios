@@ -168,6 +168,36 @@ public struct Terrain: Hashable, Sendable {
         steep = Self.union(steep, Self.runs(of: cells.sorted()))
     }
 
+    /// Decision 969: forgets the water and the steep slopes in `blocks`,
+    /// which are to be read again.
+    mutating func forget(in blocks: Set<LandBlock>) {
+        guard !blocks.isEmpty else { return }
+        water = Self.runs(water, outside: blocks)
+        steep = Self.runs(steep, outside: blocks)
+    }
+
+    /// The parts of `runs` outside `blocks`.
+    static func runs(_ runs: [WaterRun], outside blocks: Set<LandBlock>) -> [WaterRun] {
+        let side = Land.blockCells
+        var kept: [WaterRun] = []
+        kept.reserveCapacity(runs.count)
+        for run in runs {
+            var column = run.column
+            while column < run.end {
+                let stop = min(run.end, (column / side + 1) * side)
+                if !blocks.contains(LandBlock(cellRow: run.row, column: column)) {
+                    if let last = kept.last, last.row == run.row, last.end == column {
+                        kept[kept.count - 1] = WaterRun(row: run.row, column: last.column, count: stop - last.column)
+                    } else {
+                        kept.append(WaterRun(row: run.row, column: column, count: stop - column))
+                    }
+                }
+                column = stop
+            }
+        }
+        return kept
+    }
+
     /// The runs of `cells`, sorted (a cell listed twice counts once).
     static func runs(of cells: [CellPosition]) -> [WaterRun] {
         var runs: [WaterRun] = []

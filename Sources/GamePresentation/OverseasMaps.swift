@@ -261,10 +261,31 @@ extension MapPack {
 
     /// The `extent` a `pack.json` (`manifest`) gives.
     public static func extent(ofManifest manifest: Data) throws -> Extent {
+        try extents(ofManifest: manifest).extent
+    }
+
+    /// Decision 969: the `extent` a `pack.json` (`manifest`) gives and,
+    /// oldest first, the extents its map had before it grew (`earlier`;
+    /// none for a map that never did). A map grows to the south and the
+    /// east only: each earlier extent has the map's north and west edges
+    /// and lies within the one after it, so a world laid over one keeps
+    /// its north-west corner, and everything in it its place, as the map
+    /// grows. Throws for an `earlier` that does not.
+    public static func extents(ofManifest manifest: Data) throws -> (extent: Extent, earlier: [Extent]) {
         struct Manifest: Decodable {
             let extent: Extent
+            let earlier: [Extent]?
         }
-        return try JSONDecoder().decode(Manifest.self, from: manifest).extent
+        let read = try JSONDecoder().decode(Manifest.self, from: manifest)
+        let stages = (read.earlier ?? []) + [read.extent]
+        for (before, after) in zip(stages, stages.dropFirst()) {
+            guard before.north == after.north, before.west == after.west, before.south >= after.south, before.east <= after.east,
+                  before != after
+            else {
+                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "pack.json: an earlier extent is not the map's north-west part"))
+            }
+        }
+        return (read.extent, read.earlier ?? [])
     }
 }
 

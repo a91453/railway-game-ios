@@ -84,12 +84,25 @@ public struct MapExpansion: Hashable, Sendable {
     /// round Taitung has some 114,000 residents, whose trips a day are some
     /// 46,000 at most). The tiles' price follows it (``nextPrice``).
     public let ridersStep: Int64
+    /// Decision 969: how many tiles the company was given as the map began
+    /// to be bought, which ask no riders and add nothing to the price of
+    /// the next: 1, the tile a new game owns, unless the map was bought
+    /// from a game already played over several
+    /// (``GameWorld/enableMapExpansion(owning:townSeed:ridersStep:)``).
+    public let granted: Int
 
-    public init(owned: [MapTile], bestDayRiders: Int64 = 0, townSeed: UInt32?, ridersStep: Int64 = standardRidersStep) {
+    public init(owned: [MapTile], bestDayRiders: Int64 = 0, townSeed: UInt32?, ridersStep: Int64 = standardRidersStep, granted: Int = 1) {
         self.owned = owned.sorted()
         self.bestDayRiders = bestDayRiders
         self.townSeed = townSeed
         self.ridersStep = min(max(ridersStep, 1), Self.maximumRidersStep)
+        self.granted = max(1, granted)
+    }
+
+    /// How many tiles the company bought: those owned beyond the ones it
+    /// was given (``granted``).
+    public var bought: Int {
+        max(0, owned.count - granted)
     }
 
     /// Whether `tile` is owned.
@@ -103,26 +116,29 @@ public struct MapExpansion: Hashable, Sendable {
         return false
     }
 
-    /// How many tiles the company may own with its best day: one, and one
-    /// more for every ``ridersStep`` riders.
+    /// How many tiles the company may own with its best day: those it was
+    /// given (``granted``, one), and one more for every ``ridersStep``
+    /// riders.
     public var allowance: Int {
-        1 + Int(min(bestDayRiders / ridersStep, Int64(Int32.max)))
+        granted + Int(min(bestDayRiders / ridersStep, Int64(Int32.max)))
     }
 
     /// The riders of a day a company needs to own `count` tiles, a step of
-    /// `step` riders for each beyond the first.
-    public static func ridersNeeded(toOwn count: Int, step: Int64 = standardRidersStep) -> Int64 {
-        Int64(max(0, count - 1)) * step
+    /// `step` riders for each beyond the `granted` it was given (the
+    /// first).
+    public static func ridersNeeded(toOwn count: Int, step: Int64 = standardRidersStep, granted: Int = 1) -> Int64 {
+        Int64(max(0, count - granted)) * step
     }
 
     /// The riders of a day this map's company needs to own `count` tiles.
     public func ridersNeeded(toOwn count: Int) -> Int64 {
-        Self.ridersNeeded(toOwn: count, step: ridersStep)
+        Self.ridersNeeded(toOwn: count, step: ridersStep, granted: granted)
     }
 
     /// What the next tile costs: $50 for every rider a day the milestone
-    /// asks (``ridersStep``) for each tile owned, which is ``priceStep``
-    /// for each on a map with the standard step. A place whose first tile
+    /// asks (``ridersStep``) for each tile owned (those it was given,
+    /// ``granted``, count as the one a new game owns: decision 969), which
+    /// is ``priceStep`` for each on a map with the standard step. A place whose first tile
     /// asks fewer riders (decision 167) sells its land cheaper in step, so
     /// that the money for the next tile comes about when the riders do
     /// (`RealWorldExpansionReportTests.testBuyingARealMap`): round Taitung
@@ -130,7 +146,7 @@ public struct MapExpansion: Hashable, Sendable {
     /// ``maximumRidersStep`` and the 1,024 tiles of a largest world stay far
     /// from overflowing.
     public var nextPrice: Money {
-        Money(Int64(owned.count) * ridersStep * (Self.priceStep.amount / Self.standardRidersStep))
+        Money(Int64(bought + 1) * ridersStep * (Self.priceStep.amount / Self.standardRidersStep))
     }
 
     /// The seed of the towns of `tile`, from the map's `seed`: a hash of
@@ -209,10 +225,29 @@ extension GameWorld {
     public mutating func enableMapExpansion(
         owning tile: MapTile, townSeed: UInt32?, ridersStep: Int64 = MapExpansion.standardRidersStep
     ) throws(GameError) {
+        try enableMapExpansion(owning: [tile], townSeed: townSeed, ridersStep: ridersStep)
+    }
+
+    /// Decision 969: as ``enableMapExpansion(owning:townSeed:ridersStep:)``
+    /// of one tile, the company owning all of `tiles` from the start
+    /// (``MapExpansion/granted``): a game already played over a map that
+    /// was whole, which keeps the ground it had as the map grows
+    /// (``growMap(to:)``) and buys the rest. They ask no riders and are
+    /// free; the first it buys costs and asks what a new game's second
+    /// does.
+    ///
+    /// - Throws, checked in this order: ``GameError/mapExpansionEnabled``;
+    ///   ``GameError/invalidRidersStep``; ``GameError/invalidMapTile`` for
+    ///   no tile, one listed twice or outside the world, tiles not each
+    ///   beside another, or when a station, a track node, one of the
+    ///   company's buildings or a zone lies outside them.
+    public mutating func enableMapExpansion(
+        owning tiles: [MapTile], townSeed: UInt32?, ridersStep: Int64 = MapExpansion.standardRidersStep
+    ) throws(GameError) {
         guard mapExpansion == nil else { throw .mapExpansionEnabled }
         guard (1...MapExpansion.maximumRidersStep).contains(ridersStep) else { throw .invalidRidersStep }
-        let expansion = MapExpansion(owned: [tile], townSeed: townSeed, ridersStep: ridersStep)
-        guard isOnMap(tile), mapExpansionProblem(expansion) == nil else { throw .invalidMapTile }
+        let expansion = MapExpansion(owned: tiles, townSeed: townSeed, ridersStep: ridersStep, granted: tiles.count)
+        guard !tiles.isEmpty, mapExpansionProblem(expansion) == nil else { throw .invalidMapTile }
         mapExpansion = expansion
         passengerPlan = PassengerPlanCache()
         refreshLandDemand()
@@ -457,6 +492,9 @@ extension GameWorld {
         guard (1...MapExpansion.maximumRidersStep).contains(expansion.ridersStep) else {
             return "The riders each tile needs must be from 1 to \(MapExpansion.maximumRidersStep)."
         }
+        guard (1...owned.count).contains(expansion.granted) else {
+            return "The tiles the company was given must be from 1 to those it owns."
+        }
         func owns(_ point: PlanPoint) -> Bool { expansion.owns(MapExpansion.tile(at: point)) }
         // A curve's control points may lie beyond the tiles its centre
         // line keeps to (a Bézier curve goes only part of the way to them).
@@ -499,13 +537,15 @@ extension MapTile: Codable {
 
 extension MapExpansion: Codable {
     private enum CodingKeys: String, CodingKey {
-        case owned, bestDayRiders, townSeed, ridersStep
+        case owned, bestDayRiders, townSeed, ridersStep, granted
     }
 
     /// `{"owned": [[row, column], …], "bestDayRiders", "townSeed",
-    /// "ridersStep"}`, the best day left out at 0, the seed without one and
-    /// the step (decision 167) at ``standardRidersStep``, as before it. The
-    /// world checks the tiles fit it; a step out of range is refused here.
+    /// "ridersStep", "granted"}`, the best day left out at 0, the seed
+    /// without one, the step (decision 167) at ``standardRidersStep``, as
+    /// before it, and the tiles given (decision 969) at 1, as before it. The
+    /// world checks the tiles fit it; a step out of range is refused here,
+    /// and fewer than one tile given.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         owned = try container.decode([MapTile].self, forKey: .owned)
@@ -518,6 +558,11 @@ extension MapExpansion: Codable {
             )
         }
         ridersStep = step
+        let given = try container.decodeIfPresent(Int.self, forKey: .granted) ?? 1
+        guard given >= 1 else {
+            throw DecodingError.dataCorruptedError(forKey: .granted, in: container, debugDescription: "The company was given at least one tile.")
+        }
+        granted = given
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -529,6 +574,9 @@ extension MapExpansion: Codable {
         try container.encodeIfPresent(townSeed, forKey: .townSeed)
         if ridersStep != Self.standardRidersStep {
             try container.encode(ridersStep, forKey: .ridersStep)
+        }
+        if granted != 1 {
+            try container.encode(granted, forKey: .granted)
         }
     }
 }
