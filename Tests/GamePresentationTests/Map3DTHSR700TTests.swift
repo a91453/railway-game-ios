@@ -86,6 +86,17 @@ final class Map3DTHSR700TTests: XCTestCase {
         XCTAssertFalse(wall.contains { $0.color == orange && $0.x < door.x.lowerBound - 1.1 && $0.z < 1.57 }, "the band alone behind it")
         XCTAssertTrue(cab.vertices.contains { $0.color == orange && $0.x > 13 && abs($0.y) < 0.3 }, "round the tip")
         XCTAssertTrue(cab.vertices.contains { $0.color == white && $0.x > 10 && abs($0.y) < 0.3 && $0.z > 1.8 }, "the nose's top white")
+        // The owner, 2026-11-25: the nose's faces that look up are white,
+        // its shoulders too (the real train's nose is white on top, the
+        // band on its flanks and round the edge of its tip).
+        for start in stride(from: 0, to: cab.vertices.count, by: 3) where cab.vertices[start].color == orange && cab.vertices[start].x > 6 {
+            let a = cab.vertices[start], b = cab.vertices[start + 1], c = cab.vertices[start + 2]
+            let u = (b.x - a.x, b.y - a.y, b.z - a.z), v = (c.x - a.x, c.y - a.y, c.z - a.z)
+            let n = (u.1 * v.2 - u.2 * v.1, u.2 * v.0 - u.0 * v.2, u.0 * v.1 - u.1 * v.0)
+            let size = (n.0 * n.0 + n.1 * n.1 + n.2 * n.2).squareRoot()
+            guard size > 0.002 else { continue }  // a sliver
+            XCTAssertLessThan(abs(n.2) / size, 0.7, "an orange face looking up at \(a.x), \(a.y)")
+        }
         let line = wall.filter { $0.color == Map3DPalette.dark && $0.z > 1.87 && $0.z < 2.0 }.map(\.x)
         XCTAssertEqual(try XCTUnwrap(line.max()), door.x.lowerBound - 2.3, accuracy: 0.05, "the line's point")
         let piece = wall.filter { $0.color == Map3DPalette.dark && $0.z < 1.57 && $0.z > 1.0 }.map(\.x)

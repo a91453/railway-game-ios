@@ -25,7 +25,8 @@ import Foundation
 /// 700T's, measured on photographs (Wikimedia Commons): a white body, a
 /// black line over an orange band under the windows, the band running
 /// through the doors to the nose, deep from the skirt up before the front
-/// door, its top falling toward the nose's tip and round it; a black
+/// door, its top falling toward the nose's tip and round it, the nose's
+/// faces that look up all white (the owner, 2026-11-25); a black
 /// piece leaning back over the skirt behind the front door, and the black
 /// line starting in a point two metres behind it; and on the nose a black
 /// mask over the windscreen and the lamps, from the lamps up to the
@@ -78,9 +79,9 @@ public enum Map3DTHSR700T {
     /// and the line not carried across it.
     public static let hoodGap: Float = 0.02
 
-    /// What a car may have, triangles (1,999 the cab car, 1,360 the middle
+    /// What a car may have, triangles (1,873 the cab car, 1,360 the middle
     /// car, 1,444 the car under the pantograph: a twelve-car train some
-    /// 17,800, few enough to be drawn at any distance a train's model is,
+    /// 17,500, few enough to be drawn at any distance a train's model is,
     /// so no far set).
     static let triangles = 1_200...2_000
 
