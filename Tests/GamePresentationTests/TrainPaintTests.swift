@@ -129,11 +129,11 @@ final class TrainPaintTests: XCTestCase {
 
     /// The 700T: built in its real orange band; "teal" turns every orange
     /// triangle the game's earlier teal and leaves its white body, its
-    /// black line and its glass alone, near and far.
+    /// black line and its glass alone, on every car (decision 988: the
+    /// owner's old cars, with no far set).
     func testThe700TsOrangeBandTurnsTeal() throws {
         let pack = Map3DModelPack.standard
         let family = try XCTUnwrap(TrainPaintFamily.named(set: "highSpeed"))
-        XCTAssertEqual(TrainPaintFamily.named(set: "highSpeedFar")?.id, family.id)
         XCTAssertEqual(family.ownSwatchRGB, 0xEA6A1E, "the 2D map's orange (TrainLivery.highSpeed)")
         XCTAssertEqual(family.ownSwatchRGB, TrainLivery.highSpeed.stripe)
         let teal = try XCTUnwrap(family.paint("teal"))
@@ -142,7 +142,7 @@ final class TrainPaintTests: XCTestCase {
             vertices.filter { $0.color >> 24 == 0xFF && !$0.glows && $0.layer == Map3DVertex.plain && TrainPaint.shade(of: $0.color, in: colour) != nil }.count
         }
         for name in ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-panto", "set-highSpeed-tail",
-                     "set-highSpeedFar-head", "set-highSpeedFar-car", "set-highSpeedFar-panto", "set-highSpeedFar-tail"] {
+                     "set-highSpeed-carBack", "set-highSpeed-pantoBack"] {
             let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
             let banded = count(model.vertices, shadesOf: orange)
             XCTAssertGreaterThan(banded, 0, "\(name): an orange band")
@@ -191,7 +191,7 @@ final class TrainPaintTests: XCTestCase {
         let scene = Map3DScene(world: world), motion = TrainMotion(world: world, time: 0), heights = Map3DTrains.Heights(world: world)
         var pack = Map3DModelPack.standard
         // Every high-speed set a 700T, as while the train pack is locked.
-        pack.locked = ["n700sG"]
+        pack.locked = [Map3DN700S.key]
         let boxes = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: nil, eye: nil)
         let eye = try XCTUnwrap(boxes.boxes.vertices.first?.position) + Map3DPoint(0, 100, 0)
         let own = Map3DTrains.frame(motion, progress: 1, heights: heights, in: scene, models: pack, eye: eye)
@@ -223,7 +223,7 @@ final class TrainPaintTests: XCTestCase {
     @MainActor
     func testTheLinePagesMenuAndTheChoice() throws {
         let (session, fast, second, plain) = try session()
-        let locked: Set<String> = ["n700sG"]
+        let locked: Set<String> = [Map3DN700S.key]
         XCTAssertEqual(session.trainPaintMenus(on: plain, locked: locked), [])
         XCTAssertEqual(session.trainPaintMenus(on: LineID(rawValue: 999), locked: locked), [])
         let menu = try XCTUnwrap(session.trainPaintMenus(on: fast, locked: locked).first)
@@ -273,7 +273,7 @@ final class TrainPaintTests: XCTestCase {
     @MainActor
     func testEveryLineRunningTheModelAtOnce() throws {
         let (session, fast, second, plain) = try session()
-        let locked: Set<String> = ["n700sG"]
+        let locked: Set<String> = [Map3DN700S.key]
         let family = try XCTUnwrap(TrainPaintFamily.named(set: "highSpeed"))
         XCTAssertEqual(Set(session.lines(running: family, locked: locked)), [fast, second])
         var told = 0

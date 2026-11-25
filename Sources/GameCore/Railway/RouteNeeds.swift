@@ -161,7 +161,7 @@ extension GameWorld {
     /// Decision 57: a service's departure takes its default route whole,
     /// or follows the trains ahead on it (Stage U2) where it may; failing
     /// both, it takes the shortest unblocked route to any berth of the same
-    /// station whole (see ``alternativeRoute(of:to:avoiding:memo:)``);
+    /// station whole (see ``alternativeRoute(of:to:avoiding:keepingNoWay:memo:)``);
     /// failing that, it waits. Manual commands keep using `reserving`
     /// directly. No route or reservation is committed until the final
     /// candidate has been admitted.
@@ -207,17 +207,25 @@ extension GameWorld {
         guard isTrafficControlEnabled, case .held = planned,
               case .travellingToStop(let stop, let cycle)? = candidate.execution
         else { return planned }
-        if let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station,
-                                              avoiding: blockedTrack(except: candidate.id, holders: trackHolders(memo: &memo)), memo: &memo),
-           goesOn(candidate, along: alternative, stop: stop, paths: &memo.paths),
-           case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), memo: &memo) {
-            return .granted(granted)
-        }
-        // Decision 571, continued again: without block sections, a free
-        // berth against the planned way at once where the train in the
-        // way would otherwise only be moved by the dispatcher's next look.
-        if !blockSections, let granted = takingFreeBerthPastStandingTrain(candidate, stop: stop, cycle: cycle, memo: &memo) {
-            return .granted(granted)
+        let station = candidate.timetable[stop].station
+        // Decision 980: no way round is searched for again, nor one
+        // against the planned way, while every step the last search was
+        // kept from it is kept from still: there is none then.
+        if !stillHasNoDetour(candidate, to: station, memo: &memo) {
+            Self.answerAudit?.detoursSearched += 1
+            if let alternative = alternativeRoute(of: candidate, to: station,
+                                                  avoiding: blockedTrack(except: candidate.id, holders: trackHolders(memo: &memo)),
+                                                  keepingNoWay: true, memo: &memo),
+               goesOn(candidate, along: alternative, stop: stop, paths: &memo.paths),
+               case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), memo: &memo) {
+                return .granted(granted)
+            }
+            // Decision 571, continued again: without block sections, a free
+            // berth against the planned way at once where the train in the
+            // way would otherwise only be moved by the dispatcher's next look.
+            if !blockSections, let granted = takingFreeBerthPastStandingTrain(candidate, stop: stop, cycle: cycle, memo: &memo) {
+                return .granted(granted)
+            }
         }
         // With block sections (decision 212): when trains standing (those
         // it may never follow) keep it from its route, the shortest route to
@@ -230,7 +238,7 @@ extension GameWorld {
         }.map(\.id))
         let standingBlocked = blockedTrack(except: candidate.id, among: standing, holders: trackHolders(memo: &memo))
         guard standingBlocked.blocks(envelopeCover(of: candidate), in: network),
-              let alternative = alternativeRoute(of: candidate, to: candidate.timetable[stop].station, avoiding: standingBlocked, memo: &memo),
+              let alternative = alternativeRoute(of: candidate, to: station, avoiding: standingBlocked, memo: &memo),
               goesOn(candidate, along: alternative, stop: stop, paths: &memo.paths),
               case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), following: true, memo: &memo)
         else { return planned }
@@ -288,7 +296,14 @@ extension GameWorld {
     /// that never borrows track against another train's planned direction
     /// (see ``opposingServiceTraversals(for:memo:)``), and that is at most
     /// ``detourAllowance`` longer than the default route; or `nil`.
-    func alternativeRoute(of candidate: Train, to station: StationID, avoiding blocked: BlockedTrack, memo: inout DirectionMemo) -> TrainPath? {
+    ///
+    /// `keepingNoWay` (decision 980), only where `blocked` is all the
+    /// other trains keep `candidate` from (see
+    /// ``blockedTrack(except:among:holders:)`` of every train): when no
+    /// way avoids it at all, that is kept in `memo` with the steps the
+    /// search was kept from (see ``stillHasNoDetour(_:to:memo:)``).
+    func alternativeRoute(of candidate: Train, to station: StationID, avoiding blocked: BlockedTrack, keepingNoWay: Bool = false,
+                          memo: inout DirectionMemo) -> TrainPath? {
         guard let position = candidate.position else { return nil }
         let (limit, overflow) = routeLength(of: candidate).addingReportingOverflow(Self.detourAllowance)
         // Without the other trains' directions first: with them the
@@ -297,9 +312,17 @@ extension GameWorld {
         // them, and they need not be worked out.
         // Decision 278: with block sections the way into a terminus is run
         // both ways by every train there, so it is not forbidden.
-        guard let free = path(from: position, toStation: station, length: candidate.length, avoiding: blocked),
-              overflow || free.distance <= limit
-        else { return nil }
+        let unblocked: TrainPath?
+        if keepingNoWay {
+            var refused: [TrackCover] = []
+            unblocked = path(from: position, toStation: station, length: candidate.length, avoiding: blocked, refused: &refused)
+            if unblocked == nil {
+                memo.noDetours[candidate.id] = DirectionMemo.NoDetour(start: position, station: station, length: candidate.length, refused: refused)
+            }
+        } else {
+            unblocked = path(from: position, toStation: station, length: candidate.length, avoiding: blocked)
+        }
+        guard let free = unblocked, overflow || free.distance <= limit else { return nil }
         // The other trains' directions asked of a traversal at a time
         // (see ``opposingParts(for:memo:)``): the same as asking the set
         // of them, without gathering it.
@@ -320,7 +343,59 @@ extension GameWorld {
         return overflow || path.distance <= limit ? path : nil
     }
 
-    /// Decision 571, continued: ``alternativeRoute(of:to:avoiding:memo:)``
+    /// Decision 980 (TICK-HELD-ASK-ONCE): whether `candidate`, a service
+    /// kept from its way to `station`, is known to have no way to a berth
+    /// there that avoids everything the other trains keep it from, without
+    /// searching for one: neither ``alternativeRoute(of:to:avoiding:keepingNoWay:memo:)``
+    /// avoiding ``blockedTrack(except:among:holders:)`` of every train
+    /// nor ``counterflowRoute(of:to:avoiding:)`` finds one then.
+    ///
+    /// A held departure is asked again every second, and nearly always
+    /// nothing in its way has moved (the Taoyuan Airport MRT's 1,500 runs
+    /// a day asked 198,803 times, 98.7 % of them answered as the second
+    /// before), yet each asking searched all the track the train could
+    /// reach. The last search that found none, from where `candidate`
+    /// stands, to `station`, for its length, kept every step the other
+    /// trains kept it from (``DirectionMemo/NoDetour``). While each of
+    /// those is kept from it still, a search now finds none either: it
+    /// starts at the same place, and every step it may take from a place
+    /// the last search reached is one the last search took too (the steps
+    /// tried from a place are the network's and the station's, the same
+    /// within a memo; one it was kept from then it is kept from now), so
+    /// it reaches only places that search reached, and that search, which
+    /// found no berth, reached every place it could
+    /// (``TrainRoute/shortest(from:isDestination:next:)`` stops early only
+    /// at a destination). Steps it took then may be kept from it now:
+    /// that only takes places away. Which trains keep it from them is
+    /// asked of this world's holders, so the answer is as good for a world
+    /// tried ahead with the same memo (`secondsUntilARouteFrees`).
+    func stillHasNoDetour(_ candidate: Train, to station: StationID, memo: inout DirectionMemo) -> Bool {
+        guard let known = memo.noDetours[candidate.id], known.start == candidate.position,
+              known.station == station, known.length == candidate.length
+        else { return false }
+        let holders = trackHolders(memo: &memo)
+        var blocked: BlockedTrack?
+        for cover in known.refused {
+            // Nearly always held by a train as before; else what
+            // ``BlockedTrack/blocks(_:in:)`` asks besides.
+            if holders.firstHolding(cover, except: candidate.id, among: nil, fouling: false, in: network) != nil { continue }
+            let unheld = blocked ?? blockedTrack(except: candidate.id, holders: holders)
+            blocked = unheld
+            guard unheld.blocksUnheld(cover, in: network) else {
+                memo.noDetours[candidate.id] = nil
+                return false
+            }
+        }
+        if let audit = Self.answerAudit {
+            audit.detoursNotSearched += 1
+            precondition(path(from: known.start, toStation: station, length: candidate.length,
+                              avoiding: blocked ?? blockedTrack(except: candidate.id, holders: holders)) == nil,
+                         "a way round was not searched for where the search finds one")
+        }
+        return true
+    }
+
+    /// Decision 571, continued: ``alternativeRoute(of:to:avoiding:keepingNoWay:memo:)``
     /// without decision 57's direction protection, for a service the
     /// dispatcher finds in a deadlock (see `resolveDeadlock(memo:)`): the
     /// shortest route to any berth of `station` that avoids `blocked`, at
@@ -1536,7 +1611,13 @@ extension GameWorld {
         /// Whether any of the track `cover` covers is blocked, or fouls
         /// track that is (see ``RailwayNetwork/fouls(_:_:)``).
         func blocks(_ cover: TrackCover, in network: RailwayNetwork) -> Bool {
-            if holders.firstHolding(cover, except: id, among: among, fouling: false, in: network) != nil { return true }
+            holders.firstHolding(cover, except: id, among: among, fouling: false, in: network) != nil || blocksUnheld(cover, in: network)
+        }
+
+        /// ``blocks(_:in:)`` of track none of the trains holds: whether one
+        /// that follows a train ahead waits for any of it, or it fouls
+        /// track that is blocked.
+        func blocksUnheld(_ cover: TrackCover, in network: RailwayNetwork) -> Bool {
             if waiting.contains(where: { holders.waits($0, forAnyIn: cover) }) { return true }
             // Its spans that foul others'.
             for edge in cover.edges {

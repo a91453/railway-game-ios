@@ -27,5 +27,7 @@ extension Map3DTrainRegistry {
         Map3DSteamCoach.registration,
         Map3DKeikyuNew1000.registration,
         Map3DKyushuN700.registration,
+        Map3DN700S.registration,
+        Map3DSeries700.registration,
     ]
 }

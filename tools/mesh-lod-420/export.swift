@@ -58,7 +58,8 @@ var subjects: [(String, Map3DModelPack.Model, Map3DModelPack.Model?)] = [
     ("set-emu800", head("emu800"), head("emu800Far")),
     ("set-emu3000", head("emu3000"), head("emu3000Far")),
     ("set-E500CK", head("E500CK"), head("E500CKFar")),
-    ("set-highSpeed", head("highSpeed"), head("highSpeedFar")),
+    // Decision 988: the 700T has no far set (the owner's old cars, under 2,000 triangles each).
+    ("set-highSpeed", head("highSpeed"), nil),
 ]
 subjects.append(("bus-route", Map3DLowFloorBus.routeModel(), nil))
 var report: [String] = []
@@ -79,7 +80,7 @@ print(report.joined(separator: "\n"))
 
 // How long each set takes to build, near and far (the far set made in
 // code), against the simplifier's time above.
-for key in ["taroko", "tarokoFar", "emu800", "emu800Far", "emu3000", "emu3000Far", "E500CK", "E500CKFar", "highSpeed", "highSpeedFar"] {
+for key in ["taroko", "tarokoFar", "emu800", "emu800Far", "emu3000", "emu3000Far", "E500CK", "E500CKFar", "highSpeed"] {
     let started = Date()
     let cars = Map3DTrainSet.byKey[key]!.build()
     let took = Date().timeIntervalSince(started)

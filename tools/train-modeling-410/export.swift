@@ -56,7 +56,7 @@ for style in Map3DTrainStyle.all {
     let cab = named(style.name + "-cab")!, car = named(style.name + "-car")!
     subjects.append(("style-" + style.name, [cab, car, cab.turned]))
 }
-for key in ["emu3000", "puyuma", "taroko", "emu800", "metroC381", "wenhu", "dieselExpress", "highSpeedFar", "E200CK", "BLUE", "MINGRI", "STAR", "pushPull"] {
+for key in ["emu3000", "puyuma", "taroko", "emu800", "metroC381", "wenhu", "dieselExpress", "highSpeed", "E200CK", "BLUE", "MINGRI", "STAR", "pushPull"] {
     let set = Map3DTrainSet.byKey[key]!
     let head = named(set.headName)!, middle = named(set.middleName)!
     let tail = named(set.tailName) ?? head.turned
