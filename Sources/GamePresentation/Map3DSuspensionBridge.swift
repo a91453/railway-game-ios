@@ -249,10 +249,18 @@ extension Map3DMesh {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the suspension bridges, kept while the scene is built
+    /// (``LayerStates/suspensionBridges``).
+    struct SuspensionBridgeState {
+        /// Decision 869: the suspension bridges round the scene, once found
+        /// (``suspensionBridges()``).
+        var placedSuspensionBridges: [Map3DSuspensionBridge.Placed]?
+    }
+
     /// Decision 869: the suspension bridges whose towers or anchorages
     /// stand within 2 km of what the scene covers.
     mutating func suspensionBridges() -> [Map3DSuspensionBridge.Placed] {
-        if let placedSuspensionBridges { return placedSuspensionBridges }
+        if let placedSuspensionBridges = state.suspensionBridges.placedSuspensionBridges { return placedSuspensionBridges }
         var found: [Map3DSuspensionBridge.Placed] = []
         if let frame = RealWorldFrame(world: world) {
             let reach = 2_000 * Self.metre
@@ -266,7 +274,7 @@ extension Map3DScene.Builder {
                 found.append(placed)
             }
         }
-        placedSuspensionBridges = found
+        state.suspensionBridges.placedSuspensionBridges = found
         return found
     }
 

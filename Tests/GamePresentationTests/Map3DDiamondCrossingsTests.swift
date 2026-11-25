@@ -40,8 +40,8 @@ final class Map3DDiamondCrossingsTests: XCTestCase {
         let square = try crossed(from: PlanPoint(x: 8_192, y: 8_192), to: PlanPoint(x: 24_576, y: 8_192))
         var b = builder(square)
         _ = b.addTrack(square.railwaySnapshot())
-        XCTAssertEqual(b.diamonds.count, 1)
-        let diamond = try XCTUnwrap(b.diamonds.first)
+        XCTAssertEqual(b.state.track.diamonds.count, 1)
+        let diamond = try XCTUnwrap(b.state.track.diamonds.first)
         XCTAssertEqual(diamond.sine, 1, accuracy: 0.001)
         XCTAssertEqual((diamond.point - node).length, 0, accuracy: 0.01)
 
@@ -70,7 +70,7 @@ final class Map3DDiamondCrossingsTests: XCTestCase {
         var b = builder(world)
         _ = b.addTrack(world.railwaySnapshot())
         let offset = (b.look.gauge + Builder.railWidth) / 2
-        let lines = b.trackLines.map(\.points).filter { line in
+        let lines = b.state.track.trackLines.map(\.points).filter { line in
             [line[0], line[line.count - 1]].contains { Map3DPoint($0.x - node.x, 0, $0.z - node.z).length < 0.05 }
         }
         XCTAssertEqual(lines.count, 4)
@@ -136,7 +136,7 @@ final class Map3DDiamondCrossingsTests: XCTestCase {
             var b = builder(world)
             _ = b.addTrack(world.railwaySnapshot())
             b.addOverheadLine()
-            let diamond = try XCTUnwrap(b.diamonds.first)
+            let diamond = try XCTUnwrap(b.state.track.diamonds.first)
             let tops = b.closeMeshes.values.flatMap(\.vertices)
                 .filter { $0.color == Map3DPalette.mastSteel && abs($0.y - (Map3DScene.railLift + Builder.mastTop)) < 0.01 }
                 .map { Map3DPoint($0.x - node.x, 0, $0.z - node.z) }

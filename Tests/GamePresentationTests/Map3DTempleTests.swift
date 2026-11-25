@@ -20,13 +20,13 @@ final class Map3DTempleTests: XCTestCase {
         XCTAssertNil(b.templeFront(column: 3, row: 5))
         // A lane on the south, a main road on the east: toward the road,
         // its pavement half the lot less the road's width and pavement.
-        b.streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: 6, along: 3)] = .minor
-        b.streetEdges[Map3DSeededStreets.Edge(horizontal: false, line: 4, along: 5)] = .primary
+        b.state.streets.streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: 6, along: 3)] = .minor
+        b.state.streets.streetEdges[Map3DSeededStreets.Edge(horizontal: false, line: 4, along: 5)] = .primary
         let front = b.templeFront(column: 3, row: 5)
         XCTAssertEqual(front?.forward, Map3DPoint(1, 0, 0))
         XCTAssertEqual(front?.distance ?? 0, 32 - Map3DSeededStreets.clearance(.primary) - 0.3, accuracy: 1e-4)
         // Two alike: south.
-        b.streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: 6, along: 3)] = .primary
+        b.state.streets.streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: 6, along: 3)] = .primary
         XCTAssertEqual(b.templeFront(column: 3, row: 5)?.forward, Map3DPoint(0, 0, 1))
     }
 

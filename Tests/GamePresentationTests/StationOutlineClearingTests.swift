@@ -49,9 +49,9 @@ final class StationOutlineClearingTests: XCTestCase {
         builder.addPlatforms(snapshot)
         let stationCells = builder.addStations(snapshot, frame: frame, shops: false)
         let stations = cleared.union(stationCells)
-        XCTAssertEqual(builder.stationOutlines.count, 1, "its shell")
-        XCTAssertFalse(builder.outlineOnlyCells.isEmpty)
-        let realClear = stationCells.subtracting(builder.outlineOnlyCells)
+        XCTAssertEqual(builder.state.stations.stationOutlines.count, 1, "its shell")
+        XCTAssertFalse(builder.state.stations.outlineOnlyCells.isEmpty)
+        let realClear = stationCells.subtracting(builder.state.stations.outlineOnlyCells)
         builder.indexTrackOutline()
         // The real buildings on the cells the track and the shell take.
         let tiles = try FootprintTiles(data: Data(contentsOf: HongKongBuildingsTests.taiwan, options: .alwaysMapped))

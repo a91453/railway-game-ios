@@ -176,7 +176,7 @@ extension Map3DScene.Builder {
         func near(_ p: Map3DPoint) -> Bool {
             boxes.contains { p.x >= $0.min.x - 40 && p.x <= $0.max.x + 40 && p.z >= $0.min.z - 40 && p.z <= $0.max.z + 40 }
         }
-        for road in roadLines {
+        for road in state.baseMap.roadLines {
             for (a, b) in zip(road.points, road.points.dropFirst()) where near(a) || near(b) {
                 let span = Map3DPoint(b.x - a.x, 0, b.z - a.z), steps = max(1, Int((span.length / 2).rounded(.up)))
                 let cell = Self.streetCell, reach = Int((road.half / cell).rounded(.down))

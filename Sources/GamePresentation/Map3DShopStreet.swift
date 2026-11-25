@@ -20,6 +20,14 @@ extension Map3DPalette {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the station shops, kept while the scene is built
+    /// (``LayerStates/shops``).
+    struct ShopState {
+        /// XMAS-TREE-SIZE: the ground each station shop takes (its slab
+        /// and awning), so a station's Christmas tree keeps off it.
+        var shopFootprints: [[Map3DPoint]] = []
+    }
+
     /// Decision 322: a shop's frontage and the pitch of a row of them (the
     /// slabs touching), metres.
     static let shopFrontage: Float = 7.5
@@ -84,7 +92,7 @@ extension Map3DScene.Builder {
             let shop = Self.shop(seed: seed, index: Int32(slot.order), lane: slot.lane, tall: tall)
             let footprint = Self.shopFootprint(slot, depth: shop.depth)
             guard footprint.allSatisfy({ cells.contains(chunk(of: $0)) }), isClear(footprint, facing: slot.facing) else { continue }
-            shopFootprints.append(footprint)
+            state.shops.shopFootprints.append(footprint)
             let foot = Map3DPoint(slot.front.x, footprint.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0, slot.front.z)
             let middle = foot - slot.facing * (shop.depth / 2)
             target = .near
@@ -130,11 +138,11 @@ extension Map3DScene.Builder {
             return abs(d.dot(facing)) < length + margin && abs(d.dot(side)) < width + margin
         }
         let reach = length + width
-        if trackLines.contains(where: { $0.points.contains { near($0, 4) } }) { return false }
-        if laidPlatforms.contains(where: { platform in platform.line.contains { near($0, abs(platform.offset) + platform.width / 2 + 1) } }) {
+        if state.track.trackLines.contains(where: { $0.points.contains { near($0, 4) } }) { return false }
+        if state.platforms.laidPlatforms.contains(where: { platform in platform.line.contains { near($0, abs(platform.offset) + platform.width / 2 + 1) } }) {
             return false
         }
-        for road in roadLines {
+        for road in state.baseMap.roadLines {
             for (a, b) in zip(road.points, road.points.dropFirst()) {
                 let span = Map3DPoint(b.x - a.x, 0, b.z - a.z), steps = max(1, Int((span.length / 2).rounded(.up)))
                 guard (a - middle).length < span.length + reach + road.half + 4 else { continue }

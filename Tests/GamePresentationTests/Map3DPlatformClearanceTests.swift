@@ -34,8 +34,8 @@ final class Map3DPlatformClearanceTests: XCTestCase {
         _ = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
         var deepest: [StationID: Float] = [:]
-        let laid = Dictionary(grouping: builder.laidPlatforms, by: \.station).mapValues(\.count)
-        for platform in builder.laidPlatforms {
+        let laid = Dictionary(grouping: builder.state.platforms.laidPlatforms, by: \.station).mapValues(\.count)
+        for platform in builder.state.platforms.laidPlatforms {
             let edge = world.isHighSpeedStation(platform.station) ? Map3DScene.Builder.highSpeedPlatformEdge : Map3DScene.Builder.platformEdge
             let line = platform.line, across = Map3DMesh.acrossDirections(line)
             let inner = platform.offset - platform.width / 2, outer = platform.offset + platform.width / 2
@@ -44,7 +44,7 @@ final class Map3DPlatformClearanceTests: XCTestCase {
             let length = along.last ?? 0
             let minX = line.map(\.x).min()! - 20, maxX = line.map(\.x).max()! + 20
             let minZ = line.map(\.z).min()! - 20, maxZ = line.map(\.z).max()! + 20
-            for track in builder.trackLines {
+            for track in builder.state.track.trackLines {
                 for point in track.points where point.x > minX && point.x < maxX && point.z > minZ && point.z < maxZ {
                     // The nearest sample of the platform's line, and how
                     // far across it the track's middle lies there.

@@ -198,7 +198,8 @@ public enum Map3DTrains {
     public static func frame(
         _ motion: TrainMotion, progress: Double, heights: Heights, in scene: Map3DScene,
         models: Map3DModelPack?, eye: Map3DPoint?, palette: LinePalette = .standard, ringed: TrainID? = nil,
-        reach: Map3DModelReach = .standard, buried: Bool = false, headlamp: TrainID? = nil, christmas: Set<LineID> = []
+        reach: Map3DModelReach = .standard, buried: Bool = false, headlamp: TrainID? = nil, christmas: Set<LineID> = [],
+        paints: [LineID: [String: String]] = [:]
     ) -> Frame {
         var frame = Frame()
         for run in motion.runs {
@@ -212,6 +213,8 @@ public enum Map3DTrains {
             // Decision 806: a line in the Christmas livery, its boxes'
             // roofs under snow, its models dressed.
             let liveried = if case .line(let id, _) = run.look { christmas.contains(id) } else { false }
+            // Decision 983: the paints its line's player chose, by family.
+            let chosen: [String: String]? = if case .line(let id, _) = run.look { paints[id] } else { nil }
             let (side, stripe) = colours(of: run.look, palette: palette)
             let (trainType, hasModels, layout, cars) = Self.cars(of: run, progress: progress, heights: heights, models: models)
             // Decision 334: the rails under the train, front to back, for
@@ -298,6 +301,7 @@ public enum Map3DTrains {
                     var car = instance(of: models.models[model], index: model, from: turned ? a : b, to: turned ? b : a,
                                        stripe: stripe ?? band)
                     car.christmas = liveried && models.christmas[model] != nil
+                    if let chosen, let family = models.paintFamily(of: model) { car.paint = family.slot(of: chosen[family.id]) }
                     frame.instances.append(car)
                     frame.addEnds(ofCar: index, count: cars.count, turned: turned)
                     continue

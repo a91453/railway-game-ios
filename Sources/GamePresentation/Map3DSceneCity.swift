@@ -20,19 +20,19 @@ extension Map3DScene.Builder {
         let pieces = roadPieces(near: besideRoads)
         // Decision 385: on a real-world map, the houses along its roads,
         // laid in the first pass and drawn again in the second.
-        if streetFrontage, frontage.pieces.isEmpty { prepareFrontage() }
+        if state.roadside.streetFrontage, state.roadside.frontage.pieces.isEmpty { prepareFrontage() }
         // Decision 723: but on the cells of `thinlyBuilt`, whose
         // footprints each house keeps off by itself.
-        let blocked = streetFrontage ? cleared.union(taken.subtracting(thinlyBuilt)) : []
+        let blocked = state.roadside.streetFrontage ? cleared.union(taken.subtracting(thinlyBuilt)) : []
         for lot in skyline.lots(in: region) {
             var x = (Double(lot.column) + 0.5) * cell, y = (Double(lot.row) + 0.5) * cell
             // Decision 234: no lot where the real map has water or a
             // park.
             let key = ChunkKey(column: lot.column, row: lot.row)
-            let thin = streetFrontage && thinlyBuilt.contains(key)
+            let thin = state.roadside.streetFrontage && thinlyBuilt.contains(key)
             // Decision 767: among the real buildings, no factory of the
             // game's, but now and then a coal bunker in the yard.
-            if streetFrontage, taken.contains(key), lot.use == .industrial, !lot.isOpenGround, !cleared.contains(key), contains(x: x, y: y) {
+            if state.roadside.streetFrontage, taken.contains(key), lot.use == .industrial, !lot.isOpenGround, !cleared.contains(key), contains(x: x, y: y) {
                 addRealYardCoalBunker(key, blocked: cleared)
                 continue
             }
@@ -43,7 +43,7 @@ extension Map3DScene.Builder {
             // civic and leisure lots too, not one building in the
             // cell's middle (the real schools and temples stand where
             // they are, from the footprints and the temples).
-            if streetFrontage, !lot.isOpenGround, !cleared.contains(key), Self.frontedUses.contains(lot.use), lot.density <= 2 {
+            if state.roadside.streetFrontage, !lot.isOpenGround, !cleared.contains(key), Self.frontedUses.contains(lot.use), lot.density <= 2 {
                 addFrontage(column: lot.column, row: lot.row, density: lot.density, shops: lot.use == .commercial || lot.use == .office,
                             blocked: blocked)
                 continue
@@ -74,7 +74,7 @@ extension Map3DScene.Builder {
                 // paving over them read as a bare khaki patch (four
                 // round Hong Kong's Kowloon Station), over a cutting
                 // with the platforms' canopies poking through it.
-                if streetFrontage { continue }
+                if state.roadside.streetFrontage { continue }
                 // A plaza where the track passes, none of it over a
                 // trench (decision 375).
                 let square = groundSquare(round: base, half: Float(cell / Self.metre / 2) - 1, lift: 0.03)
@@ -190,15 +190,15 @@ extension Map3DScene.Builder {
     /// The fronts on the seeded streets round cell (`column`, `row`), or
     /// `nil` on a map without them.
     func streetFronts(column: Int, row: Int) -> RowFronts? {
-        guard !streetEdges.isEmpty else { return nil }
+        guard !state.streets.streetEdges.isEmpty else { return nil }
         let half = Float(Double(Land.cellLength) / Self.metre / 2)
         func clear(_ horizontal: Bool, _ line: Int, _ along: Int) -> Float? {
-            streetEdges[Map3DSeededStreets.Edge(horizontal: horizontal, line: line, along: along)].map { Map3DSeededStreets.clearance($0) + 0.3 }
+            state.streets.streetEdges[Map3DSeededStreets.Edge(horizontal: horizontal, line: line, along: along)].map { Map3DSeededStreets.clearance($0) + 0.3 }
         }
         return RowFronts(north: clear(true, row, column).map { half - $0 }, south: clear(true, row + 1, column).map { half - $0 },
                          west: -half + (clear(false, column, row) ?? 2), east: half - (clear(false, column + 1, row) ?? 2),
-                         northKind: streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: row, along: column)],
-                         southKind: streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: row + 1, along: column)])
+                         northKind: state.streets.streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: row, along: column)],
+                         southKind: state.streets.streetEdges[Map3DSeededStreets.Edge(horizontal: true, line: row + 1, along: column)])
     }
 
     /// Decision 268: the way a temple on cell (`column`, `row`) faces,
@@ -216,7 +216,7 @@ extension Map3DScene.Builder {
         ]
         var best: (forward: Map3DPoint, distance: Float, kind: Map3DBaseMap.RoadKind)?
         for (forward, edge) in sides {
-            guard let kind = streetEdges[edge], kind.rawValue > (best?.kind.rawValue ?? -1) else { continue }
+            guard let kind = state.streets.streetEdges[edge], kind.rawValue > (best?.kind.rawValue ?? -1) else { continue }
             best = (forward, half - Map3DSeededStreets.clearance(kind) - 0.3, kind)
         }
         return best.map { ($0.forward, $0.distance) }

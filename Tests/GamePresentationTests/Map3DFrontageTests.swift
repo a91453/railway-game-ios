@@ -72,10 +72,10 @@ final class Map3DFrontageTests: XCTestCase {
                                        row: Int(world.bounds.height / 2 / Land.cellLength))
         let west = Float(builder.gridLine(cell.column, origin: 0)), north = Float(builder.gridLine(cell.row, origin: 0))
         for road in roads {
-            builder.roadLines.append((road.points.map { $0 + Map3DPoint(west, 0, north) }, road.half))
-            builder.roadKinds.append((road.kind, false))
+            builder.state.baseMap.roadLines.append((road.points.map { $0 + Map3DPoint(west, 0, north) }, road.half))
+            builder.state.baseMap.roadKinds.append((road.kind, false))
         }
-        builder.streetFrontage = true
+        builder.state.roadside.streetFrontage = true
         builder.prepareFrontage()
         return (builder, cell, west, north)
     }
@@ -95,11 +95,11 @@ final class Map3DFrontageTests: XCTestCase {
             // In the cell.
             XCTAssertTrue((west..<west + 64).contains(house.middle.x) && (north..<north + 64).contains(house.middle.z), "\(index)")
             // Clear of both roads and their pavements.
-            for line in builder.roadLines {
+            for line in builder.state.baseMap.roadLines {
                 XCTAssertGreaterThanOrEqual(house.distance(from: line.points[0], to: line.points[1]), line.half + 0.19, "\(index)")
             }
             // Along a road, facing it: the nearest road lies ahead.
-            let nearest = try XCTUnwrap(builder.roadLines.min { a, b in
+            let nearest = try XCTUnwrap(builder.state.baseMap.roadLines.min { a, b in
                 house.distance(from: a.points[0], to: a.points[1]) - a.half < house.distance(from: b.points[0], to: b.points[1]) - b.half
             })
             let direction = try XCTUnwrap((nearest.points[1] - nearest.points[0]).normalized)
@@ -159,7 +159,7 @@ final class Map3DFrontageTests: XCTestCase {
             builder.target = target
             let standing = builder.addFootprints(footprints, clearOf: [], takenBy: [])
             builder.addCity(city, clearOf: [], takenBy: standing, thinlyBuilt: thin ? builder.thinlyBuilt(but: []) : [])
-            laid.append(builder.frontage.laid[cell]?.houses.map(\.house) ?? [])
+            laid.append(builder.state.roadside.frontage.laid[cell]?.houses.map(\.house) ?? [])
         }
         XCTAssertEqual(laid[0].map(\.middle), laid[1].map(\.middle))
         return (laid[0], builder)
@@ -178,7 +178,7 @@ final class Map3DFrontageTests: XCTestCase {
         let (houses, builder) = cityHouses(round: [real])
         XCTAssertEqual(builder.thinlyBuilt(but: []), [cell])
         XCTAssertTrue(builder.thinlyBuilt(but: [cell]).isEmpty)
-        XCTAssertEqual(try XCTUnwrap(builder.footprintCover.share[cell]), 64.0 / 4096, accuracy: 1e-6)
+        XCTAssertEqual(try XCTUnwrap(builder.state.realCover.footprintCover.share[cell]), 64.0 / 4096, accuracy: 1e-6)
         // The rest of the cell's streets keep their houses, none of them
         // within a metre of the real one.
         XCTAssertGreaterThan(houses.count, bare.count / 2)
@@ -202,7 +202,7 @@ final class Map3DFrontageTests: XCTestCase {
         let (_, cell, west, north) = builder(roads: roads)
         let (houses, builder) = cityHouses(round: [footprint(round: Map3DPoint(west + 32, 0, north + 30), wide: 36, deep: 36)])
         XCTAssertTrue(builder.thinlyBuilt(but: []).isEmpty)
-        XCTAssertGreaterThan(builder.footprintCover.share[cell] ?? 0, Map3DScene.Builder.RealCover.thinShare)
+        XCTAssertGreaterThan(builder.state.realCover.footprintCover.share[cell] ?? 0, Map3DScene.Builder.RealCover.thinShare)
         XCTAssertTrue(houses.isEmpty)
     }
 
@@ -222,10 +222,10 @@ final class Map3DFrontageTests: XCTestCase {
     func testNoHouseOnNoBuildLandNorOnABlockedCell() {
         var (builder, cell, west, north) = builder(roads: roads)
         // The cell's west half no-build land.
-        builder.noBuild.rings = [[(west - 50, north - 50), (west + 32, north - 50), (west + 32, north + 120), (west - 50, north + 120)]]
+        builder.state.roadside.noBuild.rings = [[(west - 50, north - 50), (west + 32, north - 50), (west + 32, north + 120), (west - 50, north + 120)]]
         for row in cell.row - 2...cell.row + 2 {
             for column in cell.column - 2...cell.column + 2 {
-                builder.noBuild.byCell[Map3DScene.ChunkKey(column: column, row: row), default: []].append(0)
+                builder.state.roadside.noBuild.byCell[Map3DScene.ChunkKey(column: column, row: row), default: []].append(0)
             }
         }
         let houses = builder.layFrontage(cell, density: 1, shops: false, blocked: []).houses.map(\.house)

@@ -267,7 +267,7 @@ extension Map3DScene.Builder {
     /// bed (``Map3DRoadBed/level(at:along:onDeck:beyond:)``), and the drawn
     /// ground where no road's bed reaches.
     mutating func roadGround(at p: Map3DBaseMap.Point, along: (x: Double, z: Double)? = nil, onDeck: Bool, beyond: Double = 0.5) -> Float {
-        if let bed = roadBed.level(at: p, along: along, onDeck: onDeck, beyond: beyond) { return bed }
+        if let bed = state.roadBed.level(at: p, along: along, onDeck: onDeck, beyond: beyond) { return bed }
         return drawnGround(x: Float(p.x), z: Float(p.z))
     }
 
@@ -465,7 +465,7 @@ extension Map3DScene.Builder {
     /// The same places for everything along the same line, and for a
     /// chunk built apart as for the whole scene.
     func bedCuts(from first: Map3DBaseMap.Point, to last: Map3DBaseMap.Point, along: (x: Double, z: Double), onDeck: Bool, turning: Bool = false) -> [Double] {
-        guard !roadBed.isEmpty else { return [] }
+        guard !state.roadBed.isEmpty else { return [] }
         let step = Map3DRoadBed.step
         let start = (originX / Self.metre + first.x) * along.x + (originY / Self.metre + first.z) * along.z
         let end = start + (last.x - first.x) * along.x + (last.z - first.z) * along.z
@@ -477,7 +477,7 @@ extension Map3DScene.Builder {
         while Double(number) * step < end + step {
             defer { number += 1 }
             let travelled = Double(number) * step - start
-            for bend in roadBed.bends(at: Map3DBaseMap.Point(x: first.x + along.x * travelled, z: first.z + along.z * travelled), along: along,
+            for bend in state.roadBed.bends(at: Map3DBaseMap.Point(x: first.x + along.x * travelled, z: first.z + along.z * travelled), along: along,
                                       onDeck: onDeck, turning: turning) {
                 // Where the bend lies along the way.
                 let at = ((bend.x - first.x) * along.x + (bend.z - first.z) * along.z) / (end - start)
@@ -499,7 +499,7 @@ extension Map3DScene.Builder {
     /// where a wall begins or ends, no piece longer than 64 m, so a chunk
     /// built apart draws what the whole scene does.
     mutating func addRoadBedWalls(_ roads: [Map3DBaseMap.Road], look: Map3DElevatedLook = .roadBridge) {
-        guard !roadBed.isEmpty else { return }
+        guard !state.roadBed.isEmpty else { return }
         typealias Point = Map3DBaseMap.Point
         let step = Map3DRoadBed.step
         let east = originX / Self.metre, south = originY / Self.metre
@@ -582,7 +582,7 @@ extension Map3DScene.Builder {
                 var edges: [[Edge?]] = []
                 for (place, station) in stations.enumerated() {
                     let p = Point(x: a.x + along.x * station.travelled, z: a.z + along.z * station.travelled)
-                    guard let bed = roadBed.level(at: p, along: along, onDeck: false) else {
+                    guard let bed = state.roadBed.level(at: p, along: along, onDeck: false) else {
                         edges.append([nil, nil])
                         continue
                     }
@@ -598,7 +598,7 @@ extension Map3DScene.Builder {
                         let ground = drawnGround(x: Float(edge.x), z: Float(edge.z))
                         // Another road's bed beside it, at its height: no
                         // wall between them.
-                        let beside = max(ground, roadBed.level(at: probe, along: nil, onDeck: false, beyond: 0) ?? ground)
+                        let beside = max(ground, state.roadBed.level(at: probe, along: nil, onDeck: false, beyond: 0) ?? ground)
                         // The bed's own standing over the ground, not a
                         // ramp's rise: a road rising to a deck has no
                         // wall under a parapet's height (decision 391).

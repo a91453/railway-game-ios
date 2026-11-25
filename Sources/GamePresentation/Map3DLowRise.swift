@@ -66,6 +66,17 @@ struct Map3DLowRise {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: how high the game's houses may stand, and the
+    /// airfields' ground, kept while the scene is built
+    /// (``LayerStates/lowRise``).
+    struct LowRiseState {
+        /// Decision 707: the airfields' runway strips, taxiways and aprons.
+        var airfieldClear = AirfieldClear()
+        /// Decision 707: the tallest real building round each place, which
+        /// the game's own houses do not pass; `nil` without footprints.
+        var lowRise: Map3DLowRise?
+    }
+
     /// Decision 707: the land round the airfields no house of the game's
     /// stands on: each runway's strip, the taxiways and the aprons.
     struct AirfieldClear {

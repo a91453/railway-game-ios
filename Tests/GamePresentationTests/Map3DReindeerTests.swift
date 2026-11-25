@@ -55,9 +55,9 @@ final class Map3DReindeerTests: XCTestCase {
     /// it; by Banqiao's plaza there is none.
     func testTheHerdStandsByTheSantaClausVillage() throws {
         let builder = try laid(GameWorld.newOverseasGame(try RovaniemiRailwaysTests.ground()), round: "santa-claus-village")
-        let herd = builder.reindeerHerd
+        let herd = builder.state.reindeer.reindeerHerd
         XCTAssertEqual(herd.map(\.unit), Map3DReindeerHerd.members.map(\.unit))
-        let tree = try XCTUnwrap(builder.winterDecor.first { $0.decor == .treeLarge })
+        let tree = try XCTUnwrap(builder.state.winter.winterDecor.first { $0.decor == .treeLarge })
         for reindeer in herd {
             let flat = Map3DPoint(reindeer.point.x, 0, reindeer.point.z)
             XCTAssertLessThanOrEqual(flat.length, Map3DReindeerHerd.farthest + Map3DReindeerHerd.foot)
@@ -66,7 +66,7 @@ final class Map3DReindeerTests: XCTestCase {
             XCTAssertTrue(builder.isClearOfBuildings(reindeer.point, radius: 2))
         }
         let banqiao = try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0141, longitudeDegrees: 121.4637))
-        XCTAssertTrue(try laid(GameWorld.newGame(anchor: banqiao), round: "banqiao").reindeerHerd.isEmpty)
+        XCTAssertTrue(try laid(GameWorld.newGame(anchor: banqiao), round: "banqiao").state.reindeer.reindeerHerd.isEmpty)
     }
 
     /// Near the camera the near models, past ``Map3DReindeerHerd/nearReach``

@@ -29,7 +29,7 @@ final class Map3DFarSets422Tests: XCTestCase {
                 // In the near car's own colours, the line among them.
                 let colours = Set(far.vertices.map(\.color))
                 XCTAssertTrue(colours.isSubset(of: Set(near.vertices.map(\.color))), "\(key) \(unit)")
-                XCTAssertTrue(colours.contains(Map3DPalette.shopAwnings[0]), "\(key) \(unit): the line")
+                XCTAssertTrue(colours.contains(Map3DTrainShapeRefresh.highSpeedBandColor), "\(key) \(unit): the line")
                 // About 1,000 to 1,500 triangles a car at most, a third of the near car's or fewer.
                 XCTAssertLessThanOrEqual(far.triangleCount, 1_500, "\(key) \(unit)")
                 XCTAssertLessThan(far.triangleCount * 3, near.triangleCount, "\(key) \(unit): \(far.triangleCount) of \(near.triangleCount)")
@@ -53,9 +53,11 @@ final class Map3DFarSets422Tests: XCTestCase {
         }
     }
 
-    /// Measured on main before decision 422.
+    /// Measured on main before decision 422; the 700T's again with
+    /// decision 983, which built its band in the real orange (the same
+    /// triangles, only the band's colour: 15067286180718250026 in teal).
     private static let mainNear: [String: ([Int], UInt64)] = [
-        "highSpeed": ([9126, 5602, 9126, 5730], 15067286180718250026),
+        "highSpeed": ([9126, 5602, 9126, 5730], 2994361683494618406),
     ]
 
     /// FNV-1a over every vertex's bits, the same on every run.

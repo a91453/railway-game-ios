@@ -4,6 +4,20 @@ import GameCore
 /// clears, its bed, viaducts, tunnels and their shadows. Moved as it was
 /// out of `Map3DScene.swift` (TRACK-SPLIT), whose builder these belong to.
 extension Map3DScene.Builder {
+    /// Decision 976: the player's track as laid, kept while the scene is
+    /// built (``LayerStates/track``).
+    struct TrackState {
+        /// Decision 263: the track as laid (its centre line at the rails'
+        /// height, by section).
+        var trackLines: [(points: [Map3DPoint], kind: TrackSectionKind)] = []
+        /// Decision 947: which of ``trackLines`` are guideways (no overhead
+        /// line over them).
+        var guidedTrackLines: Set<Int> = []
+        /// Decision 888: the track network's diamond crossings
+        /// (``addTrack(_:)``'s).
+        var diamonds: [Map3DDiamondCrossing] = []
+    }
+
     // MARK: Track
 
     /// Decision 720: the 64 m cells the player's track runs through
@@ -45,7 +59,7 @@ extension Map3DScene.Builder {
         let samples = shared.samples(of: snapshot)
         // Decision 888: the diamonds, their rails cut and their wing
         // rails laid.
-        diamonds = Map3DDiamondCrossings.find(snapshot) { point($0) + Self.lifted }
+        state.track.diamonds = Map3DDiamondCrossings.find(snapshot) { point($0) + Self.lifted }
         // Decision 947: the guideway trains' lines' track, their beams.
         let guided = guideways(of: snapshot).edges
         // Decision 964: the kinds of the rest, from the trains run on it.
@@ -65,8 +79,8 @@ extension Map3DScene.Builder {
                 guard line.contains(where: inside) else { continue }
                 let points = line.map { point($0) + Self.lifted }
                 // Decision 964: nor over a third rail or a rubber-tyred track.
-                if guideway != nil || !track.hasOverheadLine { guidedTrackLines.insert(trackLines.count) }
-                trackLines.append((points, span.kind))
+                if guideway != nil || !track.hasOverheadLine { state.track.guidedTrackLines.insert(state.track.trackLines.count) }
+                state.track.trackLines.append((points, span.kind))
                 for piece in Self.pieces(of: points) {
                     addTrackPiece(piece, kind: span.kind, viaduct: viaduct, guideway: guideway, track: track)
                 }
@@ -191,7 +205,7 @@ extension Map3DScene.Builder {
             var bore = Map3DMesh()
             // Decision 860: none along an underground station, its
             // box there instead.
-            for piece in undergroundStations.outside(line) { addBore(piece, into: &bore) }
+            for piece in state.underground.undergroundStations.outside(line) { addBore(piece, into: &bore) }
             mesh(at: middle) { mesh in
                 mesh.append(bore)
                 guard track == .ballast else {
@@ -205,7 +219,7 @@ extension Map3DScene.Builder {
             // Decision 407: drawn with the rest (addViaducts()).
             let grounds = line.map { ground(at: $0) }
             addDeckShadow(line, grounds: grounds, width: viaduct.look(over: kind).deckWidth)
-            viaducts.add(line, grounds: grounds, kind: kind, viaduct: viaduct, from: along)
+            state.elevated.viaducts.add(line, grounds: grounds, kind: kind, viaduct: viaduct, from: along)
             // Decision 964: an embedded track's paving on the deck.
             if track == .embedded { mesh(at: middle) { Map3DTrackKind.addEmbeddedSurface(along: line, green: false, into: &$0) } }
         case .surface, .embankment, .cutting:
@@ -282,7 +296,7 @@ extension Map3DScene.Builder {
         for index in 1..<line.count { travelled.append(travelled[index - 1] + Map3DPoint(line[index].x - line[index - 1].x, 0, line[index].z - line[index - 1].z).length) }
         // The open stretches, by the way along the line.
         var open: [ClosedRange<Float>] = []
-        for opening in roadBridges.openings {
+        for opening in state.roadBridges.openings {
             for index in 1..<line.count {
                 let a = Map3DBaseMap.Point(x: Double(line[index - 1].x), z: Double(line[index - 1].z)), b = Map3DBaseMap.Point(x: Double(line[index].x), z: Double(line[index].z))
                 let on = Map3DRoadBridges.nearest(opening.point, a, b)
