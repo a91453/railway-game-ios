@@ -35,6 +35,15 @@
   導風板（真車第 4、9 節）。
 - 輸出的軸：+y 上、車沿 x、駕駛室在 +x、連結面在 ±半車長、軌面 y 0。集電弓
   車的集電弓在 -x 那一半。
+
+同一套幾何也出舊版原本的塗裝（`--train series700`，決策 989）：白車身，窗下
+一條寬藍帶、再下面一條細藍線，藍帶在頭車乘務員門前面斜著起頭；高度與位置
+照舊版的貼圖量。這一款畫乘務員門，另外多兩節車：另一端的頭車（`--tail`，
+舊版 14 扇窗、後門在車尾）與一扇門的寬窗車（`--green`，17 扇寬窗、車端一扇
+小窗；車上的標誌不畫）。
+
+    uv run --with pillow --with numpy python tools/texture-palette/thsr_700t.py \
+        --train series700 --cab … --tail … --middle … --green … --out-dir OUT
 """
 
 from __future__ import annotations
@@ -58,7 +67,25 @@ PREVIEW = [(0xF2, 0xF0, 0xEA), (0xEA, 0x6A, 0x1E), (0x2B, 0x2F, 0x36), (0x6E, 0x
 
 SHA256 = {
     "cab": "50d5b0f57980943f5e36a6ede8ad0c35f57323f8c64c17c9a4fbec0c33dd8621",
+    "tail": "6038b19def0ec9bbd7a80f9b23b7154be698766d0a85f2ee1e4dbf33d68d817e",
     "middle": "1471d2d6df2cb7643ce859abf4fb3d5991defeaa9b928a9586509107dabfdc2d",
+    "green": "30f038cc9564a5f577b4b84447f52aef24db102977ea31b8c7ed98061ee2cb74",
+}
+
+# 兩款車：台灣高鐵的 700T（決策 988）與舊版原本塗裝的 700 系（決策 989）。
+# `materials` 是輸出材質的名字（順序就是類別的編號），`units` 是（輸出的名字,
+# 原檔是哪一節, 幾何照哪一節）。
+TRAINS = {
+    "thsr": {
+        "prefix": "thsr-700t",
+        "materials": ["white", "orange", "black", "skirt", "glass", "dark", "headlamp", "taillamp", "frame"],
+        "units": [("cab", "cab"), ("middle", "middle"), ("pantograph", "middle")],
+    },
+    "series700": {
+        "prefix": "series-700",
+        "materials": ["white", "band", "line", "skirt", "glass", "dark", "headlamp", "taillamp", "frame"],
+        "units": [("cab", "cab"), ("tail", "tail"), ("middle", "middle"), ("green", "green"), ("pantograph", "middle")],
+    },
 }
 
 # ---------------------------------------------------------------- 尺寸
@@ -70,8 +97,10 @@ HEIGHT = 3.65 / 3.818    # 車頂整流罩 3.818 → 3.65
 CAB = 27.0               # 頭車全長（鼻尖到連結面）
 CAB_OLD = (-10.5, 10.501)
 # 頭車多出來的長度加在這一段（原座標的 z）：只有等斷面的車身，沒有門、沒有
-# 轉向架的凹槽，車頂整流罩也是等斷面。
-STRETCH = (-1.9, 5.4)
+# 轉向架的凹槽（車底的凹槽從 4.825 開始），車頂整流罩也是等斷面。`build`
+# 會量這一段兩端與中間的斷面（`same_section`），不一樣就停。
+STRETCH = (-1.9, 4.8)
+SECTION = 0.02           # 斷面外形最多差這麼多（公尺）
 WALL = 1.40              # 側牆的 |x|（原座標）
 TOP = 0.6                # 法線的 y 大於這個數的面算朝上（車鼻的上面與兩肩）
 
@@ -101,13 +130,39 @@ DOOR_LINE = 0.035
 SIGN = (2.84, 3.00)       # 行先表示器
 SIGN_FROM, SIGN_WIDTH = 0.95, 0.50
 
-# 門（原座標的 z）。頭車另有一扇乘務員門（-4.423…-3.976），不畫。
+# 門（原座標的 z）。頭車另有一扇乘務員門（-4.423…-3.976），700T 不畫。
 CAB_DOORS = [(-3.764, -3.129), (7.591, 8.214)]
 MIDDLE_DOORS = [(-9.959, -9.336), (9.333, 9.956)]
 # 窗：舊版每扇 0.635 寬、間距 0.8155；頭車 12 扇、中間車 20 扇。這裡記第一扇
 # 與最後一扇的中心。
 CAB_WINDOWS = (-2.2715, 6.6685)
 MIDDLE_WINDOWS = (-8.0065, 7.444, 20)
+# 另一端的頭車：14 扇窗，後門在車尾。寬窗車：一扇門，17 扇 0.761 寬的窗
+# （間距 0.979），另一端一扇小窗（z0, z1, y0, y1）。
+TAIL_DOORS = [(-3.764, -3.129), (9.497, 10.12)]
+TAIL_WINDOWS = (-2.2715, 8.315)
+GREEN_DOORS = [(9.333, 9.956)]
+GREEN_WINDOWS = (-7.9495, 7.653, 17)
+GREEN_WINDOW_WIDTH = 0.761
+GREEN_SMALL = (-9.752, -9.195, 2.151, 2.837)
+
+# 舊版原本的塗裝（原座標，量舊版的貼圖）：寬藍帶、細藍線的高度；藍帶在頭車
+# 上由 BAND_TIP 斜到 BAND_FULL 才是整條寬，細線從 LINE_FROM 起；窗寬、門窗；
+# 乘務員門與它的窗。
+OLD_BAND = (1.866, 2.080)
+OLD_LINE = (1.748, 1.795)
+BAND_TIP, BAND_FULL, LINE_FROM = -6.082, -5.102, -5.06
+OLD_WINDOW_WIDTH = 0.635
+OLD_DOOR_WINDOW = (2.409, 2.951, 0.353)
+CREW_DOOR = (-4.423, -3.976, 1.537, 3.029)
+CREW_WINDOW = (-4.329, -4.07, 2.399, 2.819)
+
+# 全周幌（做法與 N700S 的相同，`n700s.py`，決策 979）：舊版的車體端面離連結面
+# 0.30 m，兩節車體之間空 0.6 m，中間只有一條 1.2 m 寬的通道幌，看得穿。真車
+# （Commons 的照片）連結處是和車體同外形的一圈幌，只留一條細縫：照端面的外形
+# 往連結面拉一圈，離連結面留這麼多；裙板的高度以下是裙板的灰，以上是車體的
+# 白（色帶不接過去）。
+HOOD_GAP = 0.02           # `Map3DTHSR700T.hoodGap`
 
 PANTOGRAPH_AT = 6.0       # 集電弓車：集電弓的位置（中間車的 +z 那一半）
 PLATE = 0.025             # 天線鰭的厚度
@@ -202,27 +257,58 @@ def grid(polygon, rectangles):
 class Paint:
     """一節車的塗裝：`z` 是原座標 → 放大後的沿車位置。"""
 
-    def __init__(self, unit: str):
-        self.cab = unit == "cab"
+    def __init__(self, unit: str, train: str = "thsr"):
+        self.cab = unit in ("cab", "tail")
+        own = train == "series700"
         if self.cab:
             a, b = STRETCH
             extra = CAB - (CAB_OLD[1] - CAB_OLD[0]) * LENGTH
             inside = LENGTH + extra / (b - a)
             self.z = lambda z: z * LENGTH if z <= a else (a * LENGTH + (z - a) * inside if z <= b else z * LENGTH + extra)
-            doors = CAB_DOORS
+            doors = CAB_DOORS if unit == "cab" else TAIL_DOORS
             # 窗距與中間車相同：照這個窗距排得下幾扇就排幾扇，整排置中。
-            first, last = (self.z(v) for v in CAB_WINDOWS)
+            first, last = (self.z(v) for v in (CAB_WINDOWS if unit == "cab" else TAIL_WINDOWS))
             pitch = (MIDDLE_WINDOWS[1] - MIDDLE_WINDOWS[0]) * LENGTH / (MIDDLE_WINDOWS[2] - 1)
             count = round((last - first) / pitch) + 1
             spare = (last - first) - pitch * (count - 1)
             first, last = first + spare / 2, last - spare / 2
         else:
             self.z = lambda z: z * LENGTH
-            doors = MIDDLE_DOORS
-            first, last, count = MIDDLE_WINDOWS[0] * LENGTH, MIDDLE_WINDOWS[1] * LENGTH, MIDDLE_WINDOWS[2]
+            doors = GREEN_DOORS if unit == "green" else MIDDLE_DOORS
+            first, last, count = (v if n == 2 else v * LENGTH for n, v in enumerate(GREEN_WINDOWS if unit == "green" else MIDDLE_WINDOWS))
         self.doors = [(self.z(z0), self.z(z1)) for z0, z1 in doors]
+        # 每扇門的高度與門窗（y0, y1, 寬）；乘務員門（只有舊版原本的塗裝畫）排在
+        # 最前面，是第 1 扇。
+        self.door_height = [DOOR] * len(self.doors)
+        self.door_window = [(*DOOR_WINDOW, DOOR_WINDOW_WIDTH)] * len(self.doors)
+        self.crew = 0
+        window_width = WINDOW_WIDTH
+        if own:
+            window_width = (GREEN_WINDOW_WIDTH if unit == "green" else OLD_WINDOW_WIDTH) * LENGTH
+            self.door_window = [(OLD_DOOR_WINDOW[0] * HEIGHT, OLD_DOOR_WINDOW[1] * HEIGHT, OLD_DOOR_WINDOW[2] * LENGTH)] * len(self.doors)
+            if self.cab:
+                self.crew = 1
+                self.doors.insert(0, (self.z(CREW_DOOR[0]), self.z(CREW_DOOR[1])))
+                self.door_height.insert(0, (CREW_DOOR[2] * HEIGHT, CREW_DOOR[3] * HEIGHT))
+                self.door_window.insert(0, (CREW_WINDOW[2] * HEIGHT, CREW_WINDOW[3] * HEIGHT, (CREW_WINDOW[1] - CREW_WINDOW[0]) * LENGTH))
         self.windows = [float(c) for c in np.linspace(first, last, count)]
         far = 99.0
+        if own:
+            # 舊版原本的塗裝：寬藍帶與細藍線；頭車上藍帶斜著起頭。車鼻上面全白。
+            band = (OLD_BAND[0] * HEIGHT, OLD_BAND[1] * HEIGHT)
+            line = (OLD_LINE[0] * HEIGHT, OLD_LINE[1] * HEIGHT)
+            self.slanted, self.tongue = [], None
+            if self.cab:
+                tip, full = self.z(BAND_TIP), self.z(BAND_FULL)
+                self.slanted.append(([(tip, band[1]), (full, band[1]), (full, band[0])], ORANGE_KIND))
+                self.bands = [(full, band[0], far, band[1], ORANGE_KIND), (self.z(LINE_FROM), line[0], far, line[1], BLACK)]
+            else:
+                self.bands = [(-far, band[0], far, band[1], ORANGE_KIND), (-far, line[0], far, line[1], BLACK)]
+            self.walls(window_width)
+            if unit == "green":
+                z0, z1, y0, y1 = GREEN_SMALL
+                self.wall.append((z0 * LENGTH, y0 * HEIGHT, z1 * LENGTH, y1 * HEIGHT, GLASS))
+            return
 
         # 斜的幾塊（凸多邊形），排在前面的先切。
         self.slanted = []
@@ -252,28 +338,37 @@ class Paint:
         else:
             self.bands = [(-far, ORANGE[0], far, ORANGE[1], ORANGE_KIND), (-far, BLACK_LINE[0], far, BLACK_LINE[1], BLACK)]
 
-        # 只畫在側牆上的長方形：車窗、行先表示器。
-        self.wall = [(c - WINDOW_WIDTH / 2, WINDOW[0], c + WINDOW_WIDTH / 2, WINDOW[1], GLASS) for c in self.windows]
-        middle = (self.doors[0][0] + self.doors[-1][1]) / 2
-        for z0, z1 in self.doors:
+        self.walls(WINDOW_WIDTH)
+
+    def walls(self, window_width):
+        """只畫在側牆上的長方形：車窗、客用門旁的行先表示器。"""
+        self.wall = [(c - window_width / 2, WINDOW[0], c + window_width / 2, WINDOW[1], GLASS) for c in self.windows]
+        doors = self.doors[self.crew:]
+        middle = (doors[0][0] + doors[-1][1]) / 2
+        for z0, z1 in doors:
             if (z0 + z1) / 2 < middle:
                 self.wall.append((z1 + SIGN_FROM, SIGN[0], z1 + SIGN_FROM + SIGN_WIDTH, SIGN[1], DARK))
             else:
                 self.wall.append((z0 - SIGN_FROM - SIGN_WIDTH, SIGN[0], z0 - SIGN_FROM, SIGN[1], DARK))
 
-    def door_parts(self, z0, z1):
+    def door_parts(self, number):
         """一扇門裡的長方形：門縫線一圈、門窗。"""
+        (z0, z1), (y0, y1), (w0, w1, width) = self.doors[number], self.door_height[number], self.door_window[number]
         middle = (z0 + z1) / 2
-        return [(z0, DOOR[0], z0 + DOOR_LINE, DOOR[1], FRAME), (z1 - DOOR_LINE, DOOR[0], z1, DOOR[1], FRAME),
-                (z0, DOOR[0], z1, DOOR[0] + DOOR_LINE, FRAME), (z0, DOOR[1] - DOOR_LINE, z1, DOOR[1], FRAME),
-                (middle - DOOR_WINDOW_WIDTH / 2, DOOR_WINDOW[0], middle + DOOR_WINDOW_WIDTH / 2, DOOR_WINDOW[1], GLASS)]
+        return [(z0, y0, z0 + DOOR_LINE, y1, FRAME), (z1 - DOOR_LINE, y0, z1, y1, FRAME),
+                (z0, y0, z1, y0 + DOOR_LINE, FRAME), (z0, y1 - DOOR_LINE, z1, y1, FRAME),
+                (middle - width / 2, w0, middle + width / 2, w1, GLASS)]
 
-    def body(self, polygon, wall: bool):
-        """車身上的一塊（放大後的座標）→（多邊形, 類別, 第幾扇門或 -1）。"""
+    def body(self, polygon, wall: bool, side: bool = False):
+        """車身上的一塊（放大後的座標）→（多邊形, 類別, 第幾扇門或 -1）。`side`：
+        朝側面但不在平的側牆上的面（車鼻收窄的地方），只有乘務員門畫在上面。"""
         pieces = [(polygon, -1)]
-        if wall:
+        if wall or side:
             for number, (z0, z1) in enumerate(self.doors):
-                region = [(z0, DOOR[0]), (z1, DOOR[0]), (z1, DOOR[1]), (z0, DOOR[1])]
+                if not wall and number >= self.crew:
+                    continue
+                y0, y1 = self.door_height[number]
+                region = [(z0, y0), (z1, y0), (z1, y1), (z0, y1)]
                 after = []
                 for piece, door in pieces:
                     if door >= 0:
@@ -286,7 +381,7 @@ class Paint:
                 pieces = after
         out = []
         for piece, door in pieces:
-            first = self.door_parts(*self.doors[door]) if door >= 0 else (self.wall if wall else [])
+            first = self.door_parts(door) if door >= 0 else (self.wall if wall else [])
             for cell, kind in grid(piece, first):
                 if kind is not None:
                     out.append((cell, kind, door))
@@ -341,7 +436,7 @@ def cut_body(part, paint: Paint):
 
     def tongue(polygon):
         """朝上的面：白色舌頭裡的部分直接記成白的，回傳外面剩下的幾塊。"""
-        if not top:
+        if not top or paint.tongue is None:
             return [polygon]
         inside, outside = carve(polygon, paint.tongue, across=0)
         if inside:
@@ -383,6 +478,8 @@ def cut_body(part, paint: Paint):
             continue
 
         wall = abs(normal[0]) > 0.99 and np.abs(old[:, 0]).min() > WALL - 0.02
+        # 乘務員門在車鼻剛開始收窄的地方：朝側面的面都算。
+        side = paint.crew > 0 and abs(normal[0]) > 0.9
         # 車鼻朝上的面：中間那條「舌頭」是白的，其餘照橘色的頂緣畫。
         top = paint.cab and normal[1] > TOP
         uv = [(float(u[i]), float(v[i])) for i in range(3)]
@@ -407,9 +504,38 @@ def cut_body(part, paint: Paint):
             continue
         for piece in pieces:
             for rest in tongue(piece):
-                for cell, colour, door in paint.body(rest, wall):
+                for cell, colour, door in paint.body(rest, wall, side):
                     add(cell, colour, door)
     return out, fin, stretched
+
+
+def same_section(part):
+    """頭車加長的那一段是不是等斷面：兩端與中間各切一刀，外形（取樣）離第一刀
+    最遠多少公尺。加長是把這一段沿車長拉開，斷面不一樣的話拉出來的面會歪。"""
+    def outline(z):
+        points = []
+        for face in part["faces"]:
+            corners = part["world"][face]
+            ends = []
+            for i in range(3):
+                p, q = corners[i], corners[(i + 1) % 3]
+                if (p[2] - z) * (q[2] - z) < 0:
+                    ends.append((p + (q - p) * ((z - p[2]) / (q[2] - p[2])))[:2])
+            if len(ends) == 2:
+                steps = max(2, int(np.linalg.norm(ends[1] - ends[0]) / 0.01) + 1)
+                points.append(ends[0] + (ends[1] - ends[0]) * np.linspace(0, 1, steps)[:, None])
+        return np.concatenate(points)
+
+    def apart(one, other):
+        return max(float(np.min(np.linalg.norm(other - p, axis=1))) for p in one)
+
+    a, b = STRETCH
+    first = outline(a + 1e-3)
+    worst = 0.0
+    for z in np.linspace(a + 1e-3, b - 1e-3, 9)[1:]:
+        cut_here = outline(float(z))
+        worst = max(worst, apart(first, cut_here), apart(cut_here, first))
+    return worst
 
 
 # ---------------------------------------------------------------- 集電弓
@@ -490,13 +616,14 @@ def solid_plate(plate, point, normal):
 
 # ---------------------------------------------------------------- GLB
 
-def write_glb(path: Path, triangles):
+def write_glb(path: Path, triangles, materials=None):
     """`triangles`：（3 × 3 的頂點, 材質, 門名或 None）。車身一個 mesh、一個
     node，每扇門各自一個 mesh、一個 node；一個材質一個 primitive，頂點併起來。"""
+    materials = materials or MATERIALS
     binary = bytearray()
     views, accessors, meshes = [], [], []
     parts = [None] + sorted({part for _, _, part in triangles if part})
-    for part, material in [(part, material) for part in parts for material in range(len(MATERIALS))]:
+    for part, material in [(part, material) for part in parts for material in range(len(materials))]:
         if material == 0:
             primitives = []
             meshes.append({"name": path.stem + (f"-{part}" if part else ""), "primitives": primitives})
@@ -531,7 +658,7 @@ def write_glb(path: Path, triangles):
         "meshes": meshes,
         "materials": [{"name": name, "pbrMetallicRoughness": {
             "baseColorFactor": [((c / 255) ** 2.2) for c in PREVIEW[i]] + [1.0], "metallicFactor": 0.0, "roughnessFactor": 1.0}}
-            for i, name in enumerate(MATERIALS)],
+            for i, name in enumerate(materials)],
         "buffers": [{"byteLength": len(binary)}], "bufferViews": views, "accessors": accessors,
     }
     text = json.dumps(gltf, separators=(",", ":")).encode()
@@ -543,11 +670,14 @@ def write_glb(path: Path, triangles):
 
 # ---------------------------------------------------------------- 一節車
 
-def build(path: Path, unit: str):
+def build(path: Path, unit: str, train: str = "thsr"):
     gltf, blob, digest = cut.read_glb(path)
     pieces = cut.parts(gltf, blob)
     body = max(pieces, key=lambda p: np.ptp(p["world"][:, 2]))
-    paint = Paint("cab" if unit == "cab" else "middle")
+    paint = Paint("middle" if unit == "pantograph" else unit, train)
+    section = same_section(body) if paint.cab else 0.0
+    if section > SECTION:
+        raise SystemExit(f"{path.name}: 加長的那一段不是等斷面（外形差 {section:.3f} m）")
     scaled, fin, stretched = cut_body(body, paint)
     for piece in pieces:
         if piece is body:
@@ -601,8 +731,55 @@ def build(path: Path, unit: str):
             continue
         seen.add(key)
         out.append((corners, kind, door))
+    out += hoods(out, (-1,) if paint.cab else (-1, 1))
     return name_doors(out), digest, {"stretched": stretched, "windows": len(paint.windows),
-                                     "window_pitch": round(paint.windows[1] - paint.windows[0], 4)}
+                                     "window_pitch": round(paint.windows[1] - paint.windows[0], 4),
+                                     "section": round(section, 4), "crew_doors": paint.crew}
+
+
+def hoods(triangles, ends):
+    """每個連結端的全周幌（輸出的軸）：端面外形（凸包）拉到離連結面 HOOD_GAP 的
+    一圈。"""
+    points = np.concatenate([corners for corners, _, _ in triangles])
+    half = float(np.abs(points[:, 0]).max())
+    body = [(corners, kind) for corners, kind, _ in triangles if kind != DARK]
+    # 既有的面朝外的那一面是哪一種繞法：拿側牆的面量。
+    walls = [c for c, _ in body if np.abs(c[:, 2]).min() > 1.6]
+    turn = np.sign(sum(float(np.cross(c[1] - c[0], c[2] - c[0])[2] * c[:, 2].mean()) for c in walls))
+    out = []
+    for end in ends:
+        wall = max(float((end * corners[:, 0]).max()) for corners, _ in body)
+        cap = [(corners, kind) for corners, kind in body if np.abs(end * corners[:, 0] - wall).max() < 1e-3]
+        skirt = max((float(corners[:, 1].max()) for corners, kind in cap if kind == SKIRT), default=SKIRT_TOP)
+        ring = sorted({(round(float(y), 4), round(float(z), 4)) for corners, _ in cap for _, y, z in corners})
+
+        def hull(sequence):
+            chain = []
+            for q in sequence:
+                while len(chain) >= 2 and ((chain[-1][0] - chain[-2][0]) * (q[1] - chain[-2][1])
+                                            - (chain[-1][1] - chain[-2][1]) * (q[0] - chain[-2][0])) <= 1e-9:
+                    chain.pop()
+                chain.append(q)
+            return chain[:-1]
+        outline = hull(ring) + hull(ring[::-1])
+        centre = np.mean(outline, 0)
+        x0, x1 = end * wall, end * (half - HOOD_GAP)
+        for a, b in zip(outline, outline[1:] + outline[:1]):
+            pieces = [(a, b)]
+            if min(a[0], b[0]) < skirt - 1e-4 and max(a[0], b[0]) > skirt + 1e-4:
+                t = (skirt - a[0]) / (b[0] - a[0])
+                m = (skirt, a[1] + (b[1] - a[1]) * t)
+                pieces = [(a, m), (m, b)]
+            for p, q in pieces:
+                kind = SKIRT if (p[0] + q[0]) / 2 < skirt else WHITE
+                quad = [np.array([x0, *p]), np.array([x1, *p]), np.array([x1, *q]), np.array([x0, *q])]
+                for corners in (np.array(quad[:3]), np.array([quad[0], quad[2], quad[3]])):
+                    normal = np.cross(corners[1] - corners[0], corners[2] - corners[0])
+                    outward = np.array([0, (p[0] + q[0]) / 2 - centre[0], (p[1] + q[1]) / 2 - centre[1]])
+                    if np.sign(np.dot(normal, outward)) != turn:
+                        corners = corners[::-1]
+                    out.append((corners, kind, -1))
+    return out
 
 
 def name_doors(triangles):
@@ -626,20 +803,28 @@ def name_doors(triangles):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    parser.add_argument("--train", choices=sorted(TRAINS), default="thsr")
     parser.add_argument("--cab", type=Path, required=True)
     parser.add_argument("--middle", type=Path, required=True)
+    parser.add_argument("--tail", type=Path, help="另一端的頭車（series700）")
+    parser.add_argument("--green", type=Path, help="一扇門的寬窗車（series700）")
     parser.add_argument("--out-dir", type=Path, required=True)
     args = parser.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
+    train = TRAINS[args.train]
+    materials = train["materials"]
     report = {}
-    for unit, path in (("cab", args.cab), ("middle", args.middle), ("pantograph", args.middle)):
-        (triangles, doors), digest, notes = build(path.expanduser(), unit)
-        if digest != SHA256["cab" if unit == "cab" else "middle"]:
+    for unit, source in train["units"]:
+        path = getattr(args, source)
+        if path is None:
+            raise SystemExit(f"--train {args.train} 要 --{source}")
+        (triangles, doors), digest, notes = build(path.expanduser(), unit, args.train)
+        if digest != SHA256[source]:
             raise SystemExit(f"{path.name}: 不是這個工具認得的原檔（SHA-256 {digest}）")
-        name = f"thsr-700t-{unit}"
-        write_glb(args.out_dir / f"{name}.glb", triangles)
+        name = f"{train['prefix']}-{unit}"
+        write_glb(args.out_dir / f"{name}.glb", triangles, materials)
         points = np.concatenate([c for c, _, _ in triangles])
-        counts = {MATERIALS[k]: sum(1 for _, kind, _ in triangles if kind == k) for k in range(len(MATERIALS))}
+        counts = {materials[k]: sum(1 for _, kind, _ in triangles if kind == k) for k in range(len(materials))}
         report[name] = {"sha256": digest, "triangles": len(triangles), "materials": counts,
                         "min": [round(float(v), 3) for v in points.min(0)], "max": [round(float(v), 3) for v in points.max(0)],
                         "doors": doors, **notes}

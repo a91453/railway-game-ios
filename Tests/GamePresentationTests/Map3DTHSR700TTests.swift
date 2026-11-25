@@ -15,10 +15,11 @@ final class Map3DTHSR700TTests: XCTestCase {
             XCTAssertEqual(model.minimum.z, 0, accuracy: 0.03, unit.rawValue)
             XCTAssertTrue(Map3DTHSR700T.triangles.contains(model.triangleCount), unit.rawValue)
             // The roof 3.65 m up, where nothing stands on it: the middle
-            // car's middle, the pantograph car's front half (its
+            // car's whole length, the pantograph car's front half (its
             // pantograph is over its back) and the cab car's back (its
-            // roof comes down toward the nose).
-            let plain: ClosedRange<Float> = unit == .cab ? -11 ... -7 : unit == .pantograph ? 2...8 : -2...2
+            // roof comes down toward the nose). (The roof's faces run the
+            // car's length, so its corners are at the car's ends.)
+            let plain: ClosedRange<Float> = unit == .cab ? -13.5 ... -7 : unit == .pantograph ? 2...12.5 : -12.5...12.5
             let roof = model.vertices.filter { plain.contains($0.x) && $0.color == white }.map(\.z).max()
             XCTAssertEqual(try XCTUnwrap(roof), 3.65, accuracy: 0.01, unit.rawValue)
         }
@@ -149,6 +150,29 @@ final class Map3DTHSR700TTests: XCTestCase {
         }
     }
 
+    /// Each coupled end has its hood, as the real train's joints have:
+    /// the body's outline (its white over its skirt's grey, the full width
+    /// and height) drawn out to 2 cm from the coupling, so two cars are
+    /// 4 cm apart and not 0.6 m of open air beside a narrow gangway. The
+    /// band and the line are not carried across it.
+    func testTheHoodsCloseTheGapBetweenCars() throws {
+        for unit in Map3DTHSR700T.Unit.allCases {
+            let model = try XCTUnwrap(Map3DTHSR700T.model(unit))
+            let half = Map3DTHSR700T.length(unit) / 2
+            for end: Float in unit.isCab ? [-1] : [-1, 1] {
+                let rim = model.vertices.filter { abs($0.x * end - (half - Map3DTHSR700T.hoodGap)) < 0.002 && $0.color != Map3DPalette.dark }
+                let name = "\(unit.rawValue) \(end)"
+                XCTAssertEqual(rim.map { abs($0.y) }.max() ?? 0, 1.69, accuracy: 0.01, "\(name): as wide as the body")
+                XCTAssertEqual(rim.map(\.z).max() ?? 0, 3.65, accuracy: 0.01, "\(name): to the roof")
+                XCTAssertLessThan(rim.map(\.z).min() ?? 9, 0.8, "\(name): down the skirt")
+                XCTAssertTrue(rim.allSatisfy { $0.color == white || $0.color == Map3DPalette.tankStand }, "\(name): no band on it")
+                XCTAssertTrue(rim.contains { $0.color == white } && rim.contains { $0.color == Map3DPalette.tankStand }, name)
+                // Nothing of the body's reaches past it but the gangway.
+                XCTAssertTrue(model.vertices.allSatisfy { $0.x * end <= half - Map3DTHSR700T.hoodGap + 0.002 || $0.color == Map3DPalette.dark }, name)
+            }
+        }
+    }
+
     /// The glass is marked as the windows; the cab's lamps are on its
     /// nose, a white one and a red one on each side of the centre line,
     /// and the other cars have none.
@@ -184,11 +208,26 @@ final class Map3DTHSR700TTests: XCTestCase {
         XCTAssertEqual(Map3DTHSR700T.cabLength, 27)
         XCTAssertEqual(cab.maximum.x, 13.5, accuracy: 0.01, "the tip at the car's front end")
         XCTAssertEqual(cab.maximum.x - Map3DTHSR700T.doors(.cab)[0].x.upperBound, 6.736 * 12.5 / 10.501, accuracy: 0.01)
-        // A side's windows: the glass on the wall at the windows' height,
-        // each window's two edges.
+        // A side's windows: the glass on the wall at the windows' height
+        // (its triangles, joined where they touch: a wall's own edge
+        // crossing a window cuts its glass in pieces), each window's two
+        // edges. The doors' windows are taller and not counted.
         func windows(_ model: Map3DModelPack.Model) -> [Float] {
-            let edges = model.vertices.filter { $0.y > 1.68 && $0.color == Map3DTrainStyle.glass && $0.z > 2.05 && $0.z < 2.57 && abs($0.z - 2.3) > 0.2 }
-            return Set(edges.map { ($0.x * 1000).rounded() / 1000 }).sorted()
+            var spans: [ClosedRange<Float>] = []
+            for first in stride(from: 0, to: model.vertices.count, by: 3) {
+                let corners = model.vertices[first..<first + 3]
+                guard corners.allSatisfy({ $0.y > 1.68 && $0.color == Map3DTrainStyle.glass && $0.z > 2.055 && $0.z < 2.565 }) else { continue }
+                spans.append((corners.map(\.x).min() ?? 0)...(corners.map(\.x).max() ?? 0))
+            }
+            var merged: [ClosedRange<Float>] = []
+            for span in spans.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+                if let last = merged.last, span.lowerBound <= last.upperBound + 0.002 {
+                    merged[merged.count - 1] = last.lowerBound...max(last.upperBound, span.upperBound)
+                } else {
+                    merged.append(span)
+                }
+            }
+            return merged.flatMap { [$0.lowerBound, $0.upperBound] }
         }
         // (The doors' windows are higher and narrower: left out by their height.)
         func cabin(_ model: Map3DModelPack.Model) -> [Float] {

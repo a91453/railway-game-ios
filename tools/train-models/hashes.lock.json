@@ -1506,36 +1506,28 @@
       "triangles" : 128
     },
     "light-set-highSpeed-car" : {
-      "hash" : "16b432cae468df9c",
-      "triangles" : 800
+      "hash" : "c79a0a38af8c4958",
+      "triangles" : 128
+    },
+    "light-set-highSpeed-carBack" : {
+      "hash" : "47e34395e6daff58",
+      "triangles" : 128
     },
     "light-set-highSpeed-head" : {
-      "hash" : "cc43faf5cca5413a",
-      "triangles" : 1096
+      "hash" : "2ebea8e7266fd725",
+      "triangles" : 96
     },
     "light-set-highSpeed-panto" : {
-      "hash" : "16b432cae468df9c",
-      "triangles" : 800
+      "hash" : "c79a0a38af8c4958",
+      "triangles" : 128
+    },
+    "light-set-highSpeed-pantoBack" : {
+      "hash" : "47e34395e6daff58",
+      "triangles" : 128
     },
     "light-set-highSpeed-tail" : {
-      "hash" : "80f6ff43bdc732ce",
-      "triangles" : 1096
-    },
-    "light-set-highSpeedFar-car" : {
-      "hash" : "5b4d588168b04f49",
-      "triangles" : 80
-    },
-    "light-set-highSpeedFar-head" : {
-      "hash" : "d8cb9426b9bc095",
-      "triangles" : 56
-    },
-    "light-set-highSpeedFar-panto" : {
-      "hash" : "5b4d588168b04f49",
-      "triangles" : 80
-    },
-    "light-set-highSpeedFar-tail" : {
-      "hash" : "b9c7c2cce134ba65",
-      "triangles" : 56
+      "hash" : "4cdfa357164c7325",
+      "triangles" : 96
     },
     "light-set-kaohsiung-car" : {
       "hash" : "bf2f15b7a50a4971",
@@ -2702,36 +2694,28 @@
       "triangles" : 2984
     },
     "set-highSpeed-car" : {
-      "hash" : "5471deae9448623a",
-      "triangles" : 5602
+      "hash" : "beb82257ef4f560c",
+      "triangles" : 1360
+    },
+    "set-highSpeed-carBack" : {
+      "hash" : "1731a0bb7e58156",
+      "triangles" : 1360
     },
     "set-highSpeed-head" : {
-      "hash" : "3c8b2faa1969b4df",
-      "triangles" : 9126
+      "hash" : "762a12b501811b00",
+      "triangles" : 1927
     },
     "set-highSpeed-panto" : {
-      "hash" : "3e66402e2db7e932",
-      "triangles" : 5730
+      "hash" : "50d37fb6b80d79b",
+      "triangles" : 1444
+    },
+    "set-highSpeed-pantoBack" : {
+      "hash" : "4838bd1403b41d8b",
+      "triangles" : 1444
     },
     "set-highSpeed-tail" : {
-      "hash" : "7ecec7d9d041bbea",
-      "triangles" : 9126
-    },
-    "set-highSpeedFar-car" : {
-      "hash" : "41878d357e93373c",
-      "triangles" : 514
-    },
-    "set-highSpeedFar-head" : {
-      "hash" : "730649fd2a02b786",
-      "triangles" : 1208
-    },
-    "set-highSpeedFar-panto" : {
-      "hash" : "2411e7bcae132a92",
-      "triangles" : 562
-    },
-    "set-highSpeedFar-tail" : {
-      "hash" : "bd3b7062a9905c93",
-      "triangles" : 1208
+      "hash" : "fc5c019d0ca4a1a6",
+      "triangles" : 1927
     },
     "set-kaohsiung-car" : {
       "hash" : "3b2bd1b30358d963",

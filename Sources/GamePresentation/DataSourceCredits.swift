@@ -1250,6 +1250,24 @@ public enum DataSourceCredits {
                         ),
                         links: []
                     ),
+                    // Decisions 988 and 989: the 700T (Map3DTHSR700T) and
+                    // the 700 series in its own paint (Map3DSeries700),
+                    // the author's own 700 series cars of the earlier
+                    // version, their texture cut into faces of the game's
+                    // colours.
+                    DataSourceCredit(
+                        id: "highSpeed700Model",
+                        title: language.text("High-speed 700T and 700 Series", "高鐵 700T 與 700 系"),
+                        detail: language.text(
+                            "The high-speed line’s 700T on the 3D map, white with an orange band, and the white and blue 700 Series in the garage: models the game’s author made.",
+                            "3D 地圖上高鐵的 700T（白色車身配橘色帶）和車庫裡白色車身配藍帶的 700 系：遊戲作者自己做的模型。"
+                        ),
+                        notice: language.text(
+                            "The game author’s own models from the game’s earlier version, in the game’s colours, used with the author’s permission.",
+                            "遊戲作者在舊版遊戲裡自己做的模型，換成遊戲的配色，經作者同意使用。"
+                        ),
+                        links: []
+                    ),
                     // Decision 767: the coal bunker in the old brick plants'
                     // yards (Map3DSceneryProp.coalBunker), the author's own
                     // model from the earlier version, recoloured

@@ -360,13 +360,11 @@ light-set-greenTram-head
 light-set-greenTram-single
 light-set-greenTram-tail
 light-set-highSpeed-car
+light-set-highSpeed-carBack
 light-set-highSpeed-head
 light-set-highSpeed-panto
+light-set-highSpeed-pantoBack
 light-set-highSpeed-tail
-light-set-highSpeedFar-car
-light-set-highSpeedFar-head
-light-set-highSpeedFar-panto
-light-set-highSpeedFar-tail
 light-set-kaohsiung-car
 light-set-kaohsiung-head
 light-set-kaohsiung-tail
@@ -766,14 +764,12 @@ set-greenTram-car lamps light-set-greenTram-car cbf29ce484222325
 set-greenTram-head lamps light-set-greenTram-head 3d82fc72f631f06d
 set-greenTram-single lamps light-set-greenTram-single 128598e5b9011519
 set-greenTram-tail lamps light-set-greenTram-tail a69d4aab27201eb1
-set-highSpeed-car lamps light-set-highSpeed-car f756fe3759f5cc35
-set-highSpeed-head lamps light-set-highSpeed-head 8810e7b0d57be709
+set-highSpeed-car lamps light-set-highSpeed-car 87d2b132e5326695
+set-highSpeed-carBack lamps light-set-highSpeed-carBack 87d2b132e5326695
+set-highSpeed-head lamps light-set-highSpeed-head cf25c5776cfcb376
 set-highSpeed-panto lamps light-set-highSpeed-panto cbf29ce484222325
-set-highSpeed-tail lamps light-set-highSpeed-tail 4a4948e9fbb14bb5
-set-highSpeedFar-car lamps light-set-highSpeedFar-car cbf29ce484222325
-set-highSpeedFar-head lamps light-set-highSpeedFar-head dd992ccc8bd554a1
-set-highSpeedFar-panto lamps light-set-highSpeedFar-panto cbf29ce484222325
-set-highSpeedFar-tail lamps light-set-highSpeedFar-tail 52ee0a009a2cd045
+set-highSpeed-pantoBack lamps light-set-highSpeed-pantoBack cbf29ce484222325
+set-highSpeed-tail lamps light-set-highSpeed-tail 1dc775b5fdd0b5ee
 set-kaohsiung-car lamps light-set-kaohsiung-car 65507ba9710a09d5
 set-kaohsiung-head lamps light-set-kaohsiung-head a4faa34f4ae330d2
 set-kaohsiung-tail lamps light-set-kaohsiung-tail 885fe00b774a5b1a

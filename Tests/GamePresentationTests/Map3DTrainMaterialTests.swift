@@ -80,7 +80,9 @@ final class Map3DTrainMaterialTests: XCTestCase {
                                             // Decision 979: the N700S.
                                             "set-n700s-",
                                             // Decision 988: the 700T, the owner's old 700 series.
-                                            "set-highSpeed-"].contains { recipe.name.hasPrefix($0) },
+                                            "set-highSpeed-",
+                                            // Decision 989: the 700 series in its own paint.
+                                            "set-series700-"].contains { recipe.name.hasPrefix($0) },
                                   "\(recipe.name): only a cabin or a studio train marks its own glass")
                     continue
                 }

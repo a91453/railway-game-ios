@@ -79,8 +79,8 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu700" ? ([set.headName, set.tailName].contains(name) ? 13_500...14_000 : 5_900...6_200)
                     : set.key == "emu700Far" && [set.headName, set.tailName].contains(name) ? 6_600...6_800
                     : set.key == "emu500" ? (name == set.middleName || name == set.middleBackName || [set.headName, set.tailName].contains(name) ? 4_400...4_700 : 2_800...2_950)
-                    // Decision 988: the 700T is the owner's old 700 series, 1,903
-                    // a cab car and 1,308 to 1,392 the others.
+                    // Decision 988: the 700T is the owner's old 700 series, 1,927
+                    // a cab car and 1,360 to 1,444 the others.
                     : set.key == "highSpeed" ? 1_200...2_000
                     // Decision 461: #1323's C371 and C381 cabs, 5,358 and 6,976.
                     : ["metroC371", "metroC381"].contains(set.key) && [set.headName, set.tailName].contains(name) ? 5_300...7_000
@@ -175,8 +175,9 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["greenTram", "fiveSectionLRT", "sevenSectionLRT"].contains(set.key) ? 3.2...4.6
                     // Decision 957: and its wooden coaches 3.40 m to their ventilators.
                     : ["STEAM", "STEAMFar"].contains(set.key) ? 3.38...4.7
-                    // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too).
-                    : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "n700s", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
+                    // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too;
+                    // decision 989: the 700 series', the 700T's own).
+                    : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "n700s", Map3DSeries700.key, "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
                     // Decision 554: and #1539's EP's, 5.0 m.

@@ -65,9 +65,19 @@ public enum Map3DTHSR700T {
     /// `unit`'s length, metres.
     public static func length(_ unit: Unit) -> Float { unit.isCab ? cabLength : pitch }
 
-    /// What a car may have, triangles (1,903 the cab car, 1,308 the middle
-    /// car, 1,392 the car under the pantograph: a twelve-car train some
-    /// 17,000, few enough to be drawn at any distance a train's model is,
+    /// How far short of its coupling a car's hood ends, metres. The old
+    /// cars' bodies end 0.30 m short of their couplings, as the real cars'
+    /// do, with only a gangway 1.2 m wide between them: 0.6 m of open air
+    /// beside it. The real train covers it with a hood of the body's own
+    /// outline (photographs), and so does the tool, as the N700S's does
+    /// (``Map3DN700S``, decision 979): the end wall's outline drawn out to
+    /// this far from the coupling, white over the skirt's grey, the band
+    /// and the line not carried across it.
+    public static let hoodGap: Float = 0.02
+
+    /// What a car may have, triangles (1,927 the cab car, 1,360 the middle
+    /// car, 1,444 the car under the pantograph: a twelve-car train some
+    /// 17,600, few enough to be drawn at any distance a train's model is,
     /// so no far set).
     static let triangles = 1_200...2_000
 
@@ -134,7 +144,7 @@ extension Map3DTrainSet {
     /// the back, middle cars between, the pantograph car fourth and ninth
     /// of twelve (as the real train's, and decision 408's), the back
     /// half's cars turned round so the two pantographs face each other.
-    /// The ends' lamp lenses lit.
+    /// The front's white lamps and the back's red ones lit (``litEnd(_:leading:)``).
     static func highSpeed700T() -> Map3DTrainSet {
         Map3DTrainSet(key: Map3DTHSR700T.key, pantographCars: [3, 8], ownLengths: true) {
             func model(_ unit: Map3DTHSR700T.Unit) -> Map3DModelPack.Model {
@@ -144,8 +154,21 @@ extension Map3DTrainSet {
                     ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: unit.isCab).model(named: unit.rawValue)
             }
             let cab = model(.cab), middle = model(.middle), pantograph = model(.pantograph)
-            return Cars(head: litLenses(cab, front: true), middle: middle, tail: litLenses(cab.turned, front: false), single: nil,
+            return Cars(head: litEnd(cab, leading: true), middle: middle, tail: litEnd(cab.turned, leading: false), single: nil,
                         pantograph: pantograph, middleBack: middle.turned, pantographBack: pantograph.turned)
         }
+    }
+
+    /// A cab car whose nose has a white lamp and a red one side by side
+    /// (the old 700 series cars'), with the lamps a train shows at that
+    /// end lit: the white ones when the car leads, the red ones when it
+    /// is last. The others stay as unlit lenses.
+    static func litEnd(_ model: Map3DModelPack.Model, leading: Bool) -> Map3DModelPack.Model {
+        let lamp = leading ? Map3DTrainStyle.headlamp : Map3DPalette.lantern
+        var vertices = model.vertices
+        for start in stride(from: 0, to: vertices.count, by: 3) where vertices[start].color == lamp {
+            for i in start..<start + 3 { vertices[i].layer = Map3DVertex.glowing }
+        }
+        return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum, maximum: model.maximum)
     }
 }
