@@ -22,7 +22,7 @@ import Foundation
 /// (the owner, 2026-11-25: judge by the real train). The middle car's
 /// row of windows is drawn closer, sixteen a side where the old car has
 /// fourteen, so that they are as wide and as far apart as the cab car's
-/// and about the real train's; the door behind the row stands half a
+/// and about the real train's (0.7 m wide, as the real ones measure); the door behind the row stands half a
 /// metre nearer the car's end for it, taken out of the plain wall there
 /// (the owner, 2026-11-25). Each coupled end has a dark hood
 /// all the way round, the end's outline run on to 2 cm short of the
@@ -112,7 +112,7 @@ public enum Map3DKyushu800 {
 
 extension Map3DKyushu800 {
     /// Decision 782: its set, its showcase row (six cars) and its cars'
-    /// triangles (1,825 the cab car, 1,523 the middle car: few enough to be
+    /// triangles (1,825 the cab car, 1,573 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(

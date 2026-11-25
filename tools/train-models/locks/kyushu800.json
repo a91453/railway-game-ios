@@ -4,27 +4,27 @@
   "lamps" : "3c1db05e83ffdffe",
   "models" : {
     "light-set-kyushu800-car" : {
-      "hash" : "3f2eb990468bb245",
-      "triangles" : 92
+      "hash" : "ba6d5c137b505085",
+      "triangles" : 104
     },
     "light-set-kyushu800-head" : {
-      "hash" : "47a321e990234f26",
+      "hash" : "97441ed4442e6607",
       "triangles" : 86
     },
     "light-set-kyushu800-tail" : {
-      "hash" : "71a0d402e6026926",
+      "hash" : "449f36d0a2e70c07",
       "triangles" : 86
     },
     "set-kyushu800-car" : {
-      "hash" : "ecc508f5492c0076",
-      "triangles" : 1523
+      "hash" : "6eb1158fd3ab21e1",
+      "triangles" : 1573
     },
     "set-kyushu800-head" : {
-      "hash" : "c454b9d7e725742e",
+      "hash" : "9b6f5d37e790e96e",
       "triangles" : 1825
     },
     "set-kyushu800-tail" : {
-      "hash" : "f9196a61f793e959",
+      "hash" : "792487f3ccca7121",
       "triangles" : 1825
     }
   }

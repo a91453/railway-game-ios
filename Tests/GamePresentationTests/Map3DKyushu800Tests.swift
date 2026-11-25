@@ -68,8 +68,9 @@ final class Map3DKyushu800Tests: XCTestCase {
             XCTAssertTrue(apart.allSatisfy { $0 > 1.0 && $0 < 1.11 }, "\(unit.rawValue): \(apart)")
             let wide = row.map { $0.upperBound - $0.lowerBound }
             widths[unit] = try XCTUnwrap(wide.min())...(try XCTUnwrap(wide.max()))
-            // Upright windows, narrower than they are high (0.65 m).
-            XCTAssertTrue(wide.allSatisfy { $0 > 0.47 && $0 < 0.52 }, "\(unit.rawValue): \(wide)")
+            // As wide as the real train's, measured on photographs: 0.71 m,
+            // about as wide as they are high.
+            XCTAssertTrue(wide.allSatisfy { $0 > 0.67 && $0 < 0.74 }, "\(unit.rawValue): \(wide)")
         }
         // The middle car's row stays between its two doors.
         let doors = Map3DKyushu800.doors(.middle)
