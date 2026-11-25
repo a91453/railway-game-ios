@@ -586,6 +586,9 @@ public enum RealWorldDemo {
             }
             let structures = edgeStructures(in: world)
             func carrier(ofEdge index: Int) -> TrackStructure { structures?[index] ?? self.structure }
+            // Decision 970: built from its start, so track it ends at gives
+            // its gauge too.
+            let gauge = gauge ?? start.flatMap(world.network.gauge(at:)) ?? end.flatMap(world.network.gauge(at:))
             var edges: [TrackEdgeID] = []
             if together {
                 edges = try world.buildTrackEdges(curves.enumerated().map { index, curve in

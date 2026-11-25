@@ -615,7 +615,7 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// The gauge of the ordinary track that ends at node `id`, the lowest
     /// numbered edge's (decision 970), or `nil` at a node no ordinary track
     /// ends at.
-    func gauge(at id: TrackNodeID) -> TrackGauge? {
+    public func gauge(at id: TrackNodeID) -> TrackGauge? {
         node(id)?.ends.map(\.edge).sorted().lazy.compactMap { self.edge($0) }.first { !$0.system.isGuideway }?.gauge
     }
 

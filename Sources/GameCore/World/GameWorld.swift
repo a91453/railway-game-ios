@@ -520,10 +520,15 @@ public struct GameWorld: Equatable, Sendable {
     public mutating func buildTrackEdges(_ plans: [TrackEdgePlan]) throws(GameError) -> [TrackEdgeID] {
         var after = self
         var built: [TrackEdgeID] = []
+        // Decision 970: edges of no gauge of their own take that of the
+        // ordinary track the batch joins, wherever along it it joins, so a
+        // chain laid towards track it ends at is laid at its gauge.
+        let network = self.network
+        let joined = plans.lazy.flatMap { [$0.from, $0.to] }.compactMap { network.gauge(at: $0) }.first
         for plan in plans {
             built.append(try after.buildTrackEdge(from: plan.from, to: plan.to, curve: plan.curve, profile: plan.profile,
                                                   structure: plan.structure, mountain: plan.mountain, system: plan.system,
-                                                  gauge: plan.gauge, checksSpacing: false))
+                                                  gauge: plan.gauge ?? (plan.mountain ? nil : joined), checksSpacing: false))
         }
         for id in built {
             if let other = after.network.firstTooClose(existing: id, besides: []) {

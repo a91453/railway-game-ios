@@ -65,3 +65,32 @@ extension GameWorld {
         )
     }
 }
+
+extension Array where Element == PlayerCommand.TrackStretch {
+    /// Decision 970: a chain of stretches none of which has a gauge of its
+    /// own, each given that of the ordinary track the chain starts or ends
+    /// at in `world`: laid one after another from its start, the edges
+    /// before the last would otherwise join nothing and be laid at the
+    /// default. Mountain track keeps its own; unchanged when it joins no
+    /// ordinary track or a stretch has a gauge.
+    func joiningGauge(in world: GameWorld) -> [PlayerCommand.TrackStretch] {
+        guard allSatisfy({ $0.gauge == nil }) else { return self }
+        func gauge(at anchor: NetworkAnchor?) -> TrackGauge? {
+            switch anchor {
+            case .node(let id)?: return world.network.gauge(at: id)
+            case .track(let point)?:
+                guard let edge = world.network.edge(point.edge), !edge.system.isGuideway else { return nil }
+                return edge.gauge
+            case .point?, nil: return nil
+            }
+        }
+        guard let joined = gauge(at: first?.start) ?? gauge(at: last?.end) else { return self }
+        return map { stretch in
+            guard !stretch.mountain else { return stretch }
+            return PlayerCommand.TrackStretch(
+                start: stretch.start, end: stretch.end, from: stretch.from, to: stretch.to, curve: stretch.curve, profile: stretch.profile,
+                structure: stretch.structure, ground: stretch.ground, mountain: stretch.mountain, system: stretch.system, gauge: joined
+            )
+        }
+    }
+}

@@ -380,7 +380,7 @@ extension GameSession {
         case .buildTrackChain(let stretches):
             guard !stretches.isEmpty else { throw .invalidTrackGeometry }
             var previous: TrackNodeID?
-            for stretch in stretches {
+            for stretch in stretches.joiningGauge(in: world) {
                 let built = try stretch.starting(at: previous).build(in: &world, heights: heights)
                 outcome.track = built
                 previous = built.to
