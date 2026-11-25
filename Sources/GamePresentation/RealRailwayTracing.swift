@@ -153,6 +153,13 @@ struct RealRailwayTraces: Sendable {
     /// lines and across the links between them; `nil` where no way joins
     /// them.
     func path(from start: Place, to end: Place) -> [WorldVector]? {
+        route(from: start, to: end)?.points
+    }
+
+    /// ``path(from:to:)`` with its `hops`: each the index of a point the
+    /// way leaves across a link, the next point on the other line, the
+    /// link's gap to the side of it.
+    func route(from start: Place, to end: Place) -> (points: [WorldVector], hops: [Int])? {
         // The places the way may turn at: each line's ends, the links'
         // places and the two ends asked for.
         var stops: [Place] = [start, end]
@@ -206,6 +213,7 @@ struct RealRailwayTraces: Sendable {
         route.reverse()
 
         var points: [WorldVector] = [lines[start.line].path.point(at: start.along)]
+        var hops: [Int] = []
         for (a, b) in zip(route, route.dropFirst()) {
             let p = unique[a], q = unique[b]
             if p.line == q.line {
@@ -213,10 +221,93 @@ struct RealRailwayTraces: Sendable {
                 let along = line.points(from: min(p.along, q.along), to: max(p.along, q.along))
                 points += p.along <= q.along ? along : along.reversed()
             } else {
+                hops.append(points.count - 1)
                 points.append(lines[q.line].path.point(at: q.along))
             }
         }
-        return points
+        return (points, hops)
+    }
+
+    /// The gentlest a way moves over from one line to the one beside it
+    /// (``eased(_:hops:)``): as a curve of 300 m either way.
+    static let easedRadius = 300 * metre
+    /// A step to the side shorter than this is left as it is: the way's
+    /// smoothing takes it up.
+    static let easedGap = 2 * metre
+
+    /// `points` with each step to the side at `hops` (the index of the
+    /// point before it) laid slanting, as a crossover is: where the way
+    /// leaves one line for another drawn beside it (a link's gap, or an
+    /// end on track or on a line a few metres from the one it follows),
+    /// the points either side of the step are left out over the length a
+    /// crossover of ``easedRadius`` takes, √(4 × radius × gap), half
+    /// before it and half after, or what the way has there, and a curve
+    /// joins the two, leaving the one line along it and reaching the other
+    /// along it. Straight across, 12 m to the side in 12 m, no track could
+    /// follow it.
+    ///
+    /// `leaving` and `arriving` are the ways the track runs at the first
+    /// and the last point, where they stand on track: the curve from the
+    /// first, and to the last, runs along them there.
+    static func eased(_ points: [WorldVector], hops: [Int], leaving: WorldVector? = nil, arriving: WorldVector? = nil) -> [WorldVector] {
+        let hops = hops.filter { $0 >= 0 && $0 + 1 < points.count }.sorted()
+        guard !hops.isEmpty else { return points }
+        var runs: [[WorldVector]] = []
+        var first = 0
+        for hop in hops {
+            runs.append(Array(points[first...hop]))
+            first = hop + 1
+        }
+        runs.append(Array(points[first...]))
+        func length(_ run: [WorldVector]) -> Double {
+            zip(run, run.dropFirst()).reduce(0) { $0 + ($1.1 - $1.0).length }
+        }
+        // A run between two steps gives each half of itself.
+        let room = runs.indices.map { index in
+            length(runs[index]) * (index == 0 || index == runs.count - 1 ? 1 : 0.5)
+        }
+        // `run` without its first `cut` along it.
+        func trimmed(_ run: [WorldVector], by cut: Double) -> [WorldVector] {
+            guard cut > 0 else { return run }
+            var left = cut
+            for index in run.indices.dropLast() {
+                let piece = (run[index + 1] - run[index]).length
+                if piece > left {
+                    return [run[index] + (run[index + 1] - run[index]) * (left / piece)] + run[(index + 1)...]
+                }
+                left -= piece
+            }
+            return [run[run.count - 1]]
+        }
+        var eased: [WorldVector] = []
+        for index in runs.indices {
+            eased += runs[index]
+            guard index + 1 < runs.count, let a = runs[index].last, let b = runs[index + 1].first else { continue }
+            let gap = (b - a).length
+            guard gap >= easedGap else { continue }
+            let whole = (4 * easedRadius * gap).squareRoot()
+            var before = min(whole / 2, room[index])
+            let after = min(whole - before, room[index + 1])
+            before = min(whole - after, room[index])
+            let left = Array(trimmed(runs[index].reversed(), by: before).reversed())
+            eased.removeLast(runs[index].count)
+            eased += left
+            runs[index + 1] = trimmed(runs[index + 1], by: after)
+            // The curve between: a cubic from the one line's end along it
+            // to the other's start along it, a point every 10 m.
+            guard let from = left.last, let to = runs[index + 1].first else { continue }
+            let chord = to - from
+            guard chord.length >= easedGap else { continue }
+            let away = left.count > 1 ? (from - left[left.count - 2]).unit : (index == 0 ? leaving : nil) ?? chord.unit
+            let toward = runs[index + 1].count > 1 ? (runs[index + 1][1] - to).unit : (index + 2 == runs.count ? arriving : nil) ?? chord.unit
+            let c1 = from + away * (chord.length / 3), c2 = to - toward * (chord.length / 3)
+            let steps = Int((chord.length / (10 * metre)).rounded(.up))
+            for step in 1..<max(steps, 1) {
+                let t = Double(step) / Double(steps), u = 1 - t
+                eased.append(from * (u * u * u) + c1 * (3 * u * u * t) + c2 * (3 * u * t * t) + to * (t * t * t))
+            }
+        }
+        return eased
     }
 
     /// How far along `line` its point nearest `point` is, if it is within
@@ -364,13 +455,61 @@ extension GameSession {
     /// real lines that join, as plan points from one end to the other;
     /// `nil` where either is too far from a real line or no line joins
     /// them.
-    func tracedWay(from start: WorldCoordinate, to end: WorldCoordinate, reach: Double) -> [WorldVector]? {
+    ///
+    /// Decision 972: `leaving` and `arriving` are the ends where they are
+    /// on track: the way leaves the track there, and reaches it, along it.
+    func tracedWay(
+        from start: WorldCoordinate, to end: WorldCoordinate, reach: Double, leaving: NetworkAnchor? = nil, arriving: NetworkAnchor? = nil
+    ) -> [WorldVector]? {
         guard let traces = realRailwayTraces else { return nil }
         let from = WorldVector(start.plan), to = WorldVector(end.plan)
-        guard let first = traces.snap(from, within: reach),
-              let last = traces.snap(to, within: reach, group: traces.groups[first.place.line]),
-              let way = traces.path(from: first.place, to: last.place) else { return nil }
-        return [from] + way + [to]
+        guard let nearest = traces.snap(from, within: reach) else { return nil }
+        // Decision 972: where lines of the system are drawn side by side
+        // (the North-Link Line beside the Yilan Line through Su'aoxin's
+        // yard, 9 to 14 m apart for 450 m), each end may be on any of them
+        // within reach, and the way is the shortest of those, an end's
+        // distance from its line counted twice; the nearest line at each
+        // end where none is shorter. Held to the nearest, a trace from
+        // beside the junction to Su'ao ran up the North-Link Line to its
+        // end in the station, stepped 12.7 m across and came back.
+        var best: (points: [WorldVector], hops: [Int], cost: Double)?
+        for first in traces.snaps(from, within: reach, system: traces.lines[nearest.place.line].system) {
+            for last in traces.snaps(to, within: reach, group: traces.groups[first.place.line]) {
+                guard let route = traces.route(from: first.place, to: last.place) else { continue }
+                let points = [from] + route.points + [to]
+                let cost = zip(points, points.dropFirst()).reduce(first.distance + last.distance) { $0 + ($1.1 - $1.0).length }
+                if best.map({ cost < $0.cost - RealRailwayTraces.metre }) ?? true {
+                    best = (points, [0] + route.hops.map { $0 + 1 } + [points.count - 2], cost)
+                }
+            }
+        }
+        // And each step from one line to the one beside it slanting, as a
+        // crossover is.
+        guard let best else { return nil }
+        let way = RealRailwayTraces.eased(best.points, hops: best.hops)
+        guard networkFollowsTrack, leaving != nil || arriving != nil else { return way }
+        let path = WorldPath(way)
+        guard path.points.count > 1 else { return way }
+        let ahead = path.point(at: min(path.length, 50 * RealRailwayTraces.metre)).plan
+        let behind = path.point(at: max(0, path.length - 50 * RealRailwayTraces.metre)).plan
+        let away = leaving.flatMap { Self.joiningDirection(of: $0, toward: ahead, in: world) }
+        let toward = arriving.flatMap { Self.joiningDirection(of: $0, toward: behind, in: world) }?.reversed
+        guard away != nil || toward != nil else { return way }
+        return RealRailwayTraces.eased(best.points, hops: best.hops, leaving: away, arriving: toward)
+    }
+
+    /// The way track joining `anchor` runs from it toward `point`, where
+    /// the anchor is on track that track may join (decision 103).
+    static func joiningDirection(of anchor: NetworkAnchor, toward point: PlanPoint, in world: GameWorld) -> WorldVector? {
+        switch anchor {
+        case .node(let id):
+            guard !world.joiningDirections(at: id).isEmpty, let direction = world.joiningDirection(at: id, toward: point) else { return nil }
+            return WorldVector(x: Double(direction.dx), y: Double(direction.dy)).unit
+        case .track(let place):
+            return world.joiningDirection(at: place, toward: point).map { WorldVector(x: Double($0.dx), y: Double($0.dy)).unit }
+        case .point:
+            return nil
+        }
     }
 
     /// The traced stretch from `start` to `end` (decision 213): `nil`
@@ -450,7 +589,7 @@ extension GameSession {
         // Generous: an end on existing track is up to a tap's reach from
         // the real line, and the way joins it there.
         let reach = Self.traceReach(NetworkBuilding.minimumSpacing * 2)
-        guard let way = given ?? tracedWay(from: from, to: to, reach: reach) else { return nil }
+        guard let way = given ?? tracedWay(from: from, to: to, reach: reach, leaving: start, arriving: end) else { return nil }
         let path = WorldPath(way).smoothed()
         guard path.points.count > 1, path.length >= Double(NetworkBuilding.minimumSpacing) else { return nil }
         let spans = platforms.map { span -> ClosedRange<Double> in
@@ -652,8 +791,23 @@ extension GameSession {
         var previous: TrackNodeID?
         var refused = false
         let tightest = Self.traceMinimumRadius(ofSystem: lineSystem)
-        for stretch in stretches {
+        for (index, stretch) in stretches.enumerated() {
             if let radius = Self.tightestRadius(of: stretch), radius < tightest {
+                // Decision 972: where the way turns back on itself (two
+                // real lines that meet facing the same way, as the
+                // North-Link Line and the Su'ao branch do at Su'aoxin),
+                // said as that.
+                let reach = 60 * RealRailwayTraces.metre
+                let before = path.tangent(at: max(0, plan.distances[index] - reach))
+                let after = path.tangent(at: min(path.length, plan.distances[index + 1] + reach))
+                if before.angle(to: after) > 2 * Double.pi / 3 {
+                    problem = language.text(
+                        "The real line turns back here: trains reverse at this place, and one stretch of track cannot. Trace it as two stretches, each ending here.",
+                        "真實鐵路在這裡要折返，列車是在這裡調頭的，一段軌道描不過去。請分兩段描，各描到這裡為止。"
+                    )
+                    brief = language.text("The real line turns back here", "真實鐵路在這裡要折返")
+                    break
+                }
                 problem = language.text(
                     "The real line turns too tightly here for the track (a curve of about \(Int((radius / RealRailwayTraces.metre).rounded())) m; the tool lays \(Int(tightest / RealRailwayTraces.metre)) m or more).",
                     "這裡真實鐵路彎得太急（半徑約 \(Int((radius / RealRailwayTraces.metre).rounded())) 公尺，描線最小 \(Int(tightest / RealRailwayTraces.metre)) 公尺），鋪不過去。"
