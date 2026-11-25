@@ -39,6 +39,19 @@ public enum DoubleTrack {
     }
 }
 
+extension GameWorld {
+    /// REVIEW-L35 P2-1 (decision 970): the gauge a second track beside edge
+    /// `id` is laid at, that edge's own. Drawn beside it, the second track
+    /// joins no track at its ends, so left to GameCore it would be laid at
+    /// ``TrackGauge/default`` and the crossovers would join two gauges.
+    /// `nil` for a guideway's edge (decision 951: its system decides) or
+    /// one not here.
+    func gaugeBeside(_ id: TrackEdgeID) -> TrackGauge? {
+        guard let edge = network.edge(id), !edge.system.isGuideway else { return nil }
+        return edge.gauge
+    }
+}
+
 extension GameSession {
     /// `plan` and the track beside it (``parallelPlan(beside:in:)``). Decision
     /// 164 eases a grade only where it fits under the steepest; the track on
