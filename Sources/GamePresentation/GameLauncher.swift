@@ -551,6 +551,12 @@ public final class GameLauncher {
                 preferences.christmasLiveries?[moved] = lines
                 savePreferences()
             }
+            // Decision 983: and its trains' paints.
+            if let paints = preferences.trainPaints?[row] {
+                preferences.trainPaints?[row] = nil
+                preferences.trainPaints?[moved] = paints
+                savePreferences()
+            }
         }
         keptTwiceToTell += outcome.keptBoth.count
         guard session == nil else { return }
@@ -999,6 +1005,40 @@ public final class GameLauncher {
         all[row] = lines.isEmpty ? nil : lines
         guard all != preferences.christmasLiveries ?? [:] else { return }
         preferences.christmasLiveries = all.isEmpty ? nil : all
+        savePreferences()
+    }
+
+    /// Decision 983: gives `session` the paints `row`'s lines wore (kept
+    /// on the device, not in the save) and keeps each change the player
+    /// makes.
+    func attachTrainPaints(to session: GameSession, row: String?) {
+        var chosen: [LineID: [String: String]] = [:]
+        for (line, paints) in row.flatMap({ preferences.trainPaints?[$0] }) ?? [:] {
+            guard let number = Int(line), !paints.isEmpty else { continue }
+            chosen[LineID(rawValue: number)] = paints
+        }
+        session.trainPaintChosen = chosen
+        session.trainPaintChanged = { [weak self, weak session] _ in
+            guard let self, let session, self.session === session else { return }
+            self.keepTrainPaints()
+        }
+    }
+
+    /// Decision 983: writes the game's trains' paints under its row. A
+    /// game not saved yet takes its row now, as for the Christmas livery
+    /// (decision 814): its autosaves name that row, so the paints come
+    /// back with them when the app reopens.
+    func keepTrainPaints(at date: Date = Date()) {
+        guard let session, !isLookingAtSharedNetwork else { return }
+        if gameRow == nil, !session.trainPaintChosen.isEmpty {
+            gameRow = library.newRow(at: date)
+        }
+        guard let row = gameRow else { return }
+        var all = preferences.trainPaints ?? [:]
+        let lines = Dictionary(uniqueKeysWithValues: session.trainPaintChosen.map { (String($0.key.rawValue), $0.value) })
+        all[row] = lines.isEmpty ? nil : lines
+        guard all != preferences.trainPaints ?? [:] else { return }
+        preferences.trainPaints = all.isEmpty ? nil : all
         savePreferences()
     }
 
@@ -2017,6 +2057,8 @@ public final class GameLauncher {
         gameRow = row
         // Decision 795: the lines this game's row wore the livery on.
         attachChristmasLivery(to: started, row: row)
+        // Decision 983: and the paints its lines' trains wore.
+        attachTrainPaints(to: started, row: row)
         gamesBegun += 1
         gameIsOpen.value = true
         startLessonClock()
@@ -2156,6 +2198,7 @@ public final class GameLauncher {
         let row = (name == nil ? gameRow : nil) ?? library.newRow(at: date, besides: [gameRow].compactMap { $0 })
         gameRow = row
         keepChristmasLivery()
+        keepTrainPaints()
         return write(session.worldToSave, news: session.news, as: .manual, at: date, named: name, row: row) { [weak self, weak session] result in
             switch result {
             case .success(let entry):
