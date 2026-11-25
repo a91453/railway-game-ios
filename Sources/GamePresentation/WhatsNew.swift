@@ -7,9 +7,10 @@
 /// on top with a new ``Entry/id`` shows the card again to everyone who
 /// updates; an entry already released keeps its id.
 ///
-/// A pull request between releases does not edit ``entries``: it adds its
-/// line to ``nextItems`` or ``nextFixes`` in `WhatsNewNext.swift`, which
-/// git merges line by line, and the release moves them here.
+/// A pull request between releases does not edit ``entries``: it adds a
+/// file of its own with its line to `WhatsNewNext/new/` or
+/// `WhatsNewNext/fixed/` (the README there), so two pull requests never
+/// change the same line, and the release moves them here.
 public enum WhatsNew {
     /// One build's news.
     public struct Entry: Equatable, Sendable, Identifiable {
@@ -33,8 +34,79 @@ public enum WhatsNew {
     }
 
     /// The released builds' news, the newest first. The next build's lines
-    /// wait in `WhatsNewNext.swift` until its release.
+    /// wait in `WhatsNewNext/` until its release.
     public static let entries: [Entry] = [
+        // 147.
+        Entry(
+            id: "2026-11-25-147",
+            items: [
+                Line(
+                    english: "The Japan map reaches south to Kumamoto; Fukuoka saves grow with it and keep everything built.",
+                    chinese: "日本地圖往南延伸到熊本；福岡的舊存檔跟著長大，蓋好的都不動。"
+                ),
+                Line(
+                    english: "The Kyushu Shinkansen from Hakata to Kumamoto is on sale on the Japan map.",
+                    chinese: "日本地圖可以買九州新幹線（博多到熊本）。"
+                ),
+                Line(
+                    english: "The garage has the Kyushu Shinkansen's N700 series: white-blue with a navy and gold line, eight cars.",
+                    chinese: "車庫多了九州新幹線 N700 系：白藍車身、窗下深藍鑲金的線，八節。"
+                ),
+                Line(
+                    english: "Hong Kong: the transit tool's ferry mode lays the two harbour crossings, Central and Wan Chai to Tsim Sha Tsui.",
+                    chinese: "香港：接駁工具的渡輪模式可以照真實航線開中環、灣仔到尖沙咀的兩條港內渡輪。"
+                ),
+                Line(
+                    english: "Each track has its own gauge: high-speed, regular, and forest railway trains run only on the rails that fit them.",
+                    chinese: "每段軌道有自己的軌距：高鐵、台鐵、林鐵的車各跑適合自己的軌。"
+                ),
+                Line(
+                    english: "Pick a train by its model only: the card shows how it runs, and an older train can go back to its factory settings.",
+                    chinese: "列車只要選車款，卡片上看得到它怎麼跑；舊車可以一鍵改回原廠。"
+                ),
+                Line(
+                    english: "Taroko, Puyuma, local EMUs, the DMU Tze-Chiang and the C381 run like the real trains.",
+                    chinese: "太魯閣、普悠瑪、區間車、柴聯自強、C381 照真車的性能跑。"
+                ),
+                Line(
+                    english: "The catalog and fleet assignment list only the trains that can run on that line.",
+                    chinese: "車種型錄與車隊配屬只列這條線跑得了的車。"
+                ),
+                Line(
+                    english: "Metro, light rail and rubber-tyred lines look like their own kind of track up close.",
+                    chinese: "捷運、輕軌、膠輪線的軌道拉近看得出是哪一種。"
+                ),
+                Line(
+                    english: "Tracing a real line on flat ground builds a bridge over rivers, and picks the right one of two parallel lines.",
+                    chinese: "平坦地形描真實鐵路過河會架橋；兩條線並排時會選順路的那條。"
+                ),
+                Line(
+                    english: "The Alishan line can be traced station to station, and its switchbacks are explained.",
+                    chinese: "阿里山線可以一站一站描完，之字形折返的地方會說明怎麼做。"
+                ),
+                Line(
+                    english: "Level crossings appear where real-map roads meet tracks at ground level.",
+                    chinese: "實景地圖的道路和地面軌道交會處也有平交道。"
+                ),
+                Line(
+                    english: "Your primary schools and hospitals have new, detailed buildings.",
+                    chinese: "自己蓋的國小與醫院換成更精細的新建築。"
+                ),
+                Line(
+                    english: "Hong Kong stations stay Hong Kong-style when you expand them.",
+                    chinese: "香港的車站擴建後仍是香港款的站房。"
+                ),
+                Line(
+                    english: "Hillsides look like smooth slopes, and Rovaniemi's ground follows more precise terrain data.",
+                    chinese: "山坡看起來是連續的坡；羅瓦涅米的地面改用更準的高程資料。"
+                ),
+                Line(
+                    english: "After buying land, the expand-map controls fold into a round button.",
+                    chinese: "擴建地圖買過地後，收成一顆圓形按鈕。"
+                ),
+            ],
+            fixes: []
+        ),
         // 146.
         Entry(
             id: "2026-11-24-146",
