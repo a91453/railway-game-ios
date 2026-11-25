@@ -376,6 +376,8 @@ public struct Map3DTrainSet: Sendable {
         // they were a type, as the set their performance had.
         "TAROKO": "taroko", "PUYUMA": "puyuma", "EMU800": "emu800", "PUSHPULL": "pushPull",
         "DR3100": "dieselExpress", "DR1000": "dieselRailcar", "C381": "metroC381",
+        // Decision 986: the Keikyu New 1000 at its real 18 m.
+        "KEIKYU1000": Map3DKeikyuNew1000.key,
     ]
 
     /// How far from the eye a car of `key` is drawn with its model, in

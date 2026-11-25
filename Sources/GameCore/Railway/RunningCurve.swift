@@ -130,6 +130,11 @@ public struct TrainPerformance: Hashable, Sendable {
     /// service (90 by design); the two types' published figures are the
     /// same. ``metro`` brakes at their emergency 1.3 m/s².
     public static let metroC381 = TrainPerformance(acceleration: 3600, braking: 3600, topSpeed: 80)
+    /// The Keikyu New 1000 (decision 986): 120 km/h in service (130 by
+    /// design), 3.5 km/h a second to start and 4.0 km/h a second of service
+    /// braking, the figures of the type's page on the Japanese Wikipedia
+    /// (京急1000形電車 (2代), read 2026-11-25).
+    public static let keikyuNew1000 = TrainPerformance(acceleration: 3500, braking: 4000, topSpeed: 120)
     /// The Taiwan Railway's EMU800 and EMU900 local trains (decision 237):
     /// 130 km/h in service (140 by design). They start at 0.7 m/s² to
     /// 50 km/h, then 0.4 to 110 and 0.2 to 130: 130 km/h in 89.3 seconds,
