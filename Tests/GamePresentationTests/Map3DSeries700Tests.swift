@@ -161,19 +161,17 @@ final class Map3DSeries700Tests: XCTestCase {
         }
     }
 
-    /// Each coupled end has the 700T's hood (decision 988), the band and
-    /// the line not carried across it.
-    func testTheHoodsCloseTheGapBetweenCars() throws {
+    /// The joints are the old car's inset ones, no hood (the studio's
+    /// review, 2026-11-25: the 700 series has none; the hood came with the
+    /// N700): at each coupled end the body stops short of the coupling,
+    /// only the dark gangway between.
+    func testTheJointsAreInset() throws {
         for unit in Map3DSeries700.Unit.allCases {
             let model = try XCTUnwrap(Map3DSeries700.model(unit))
             let half = Map3DSeries700.length(unit) / 2
             for end: Float in unit.isCab ? [-1] : [-1, 1] {
-                let rim = model.vertices.filter { abs($0.x * end - (half - Map3DSeries700.hoodGap)) < 0.002 && $0.color != Map3DPalette.dark }
-                let name = "\(unit.rawValue) \(end)"
-                XCTAssertEqual(rim.map { abs($0.y) }.max() ?? 0, 1.69, accuracy: 0.01, "\(name): as wide as the body")
-                XCTAssertEqual(rim.map(\.z).max() ?? 0, 3.65, accuracy: 0.01, "\(name): to the roof")
-                XCTAssertTrue(rim.allSatisfy { $0.color == white || $0.color == Map3DPalette.tankStand }, "\(name): no band on it")
-                XCTAssertTrue(model.vertices.allSatisfy { $0.x * end <= half - Map3DSeries700.hoodGap + 0.002 || $0.color == Map3DPalette.dark }, name)
+                let body = model.vertices.filter { $0.color != Map3DPalette.dark }.map { $0.x * end }
+                XCTAssertLessThan(try XCTUnwrap(body.max()), half - 0.1, "\(unit.rawValue) \(end): inset")
             }
         }
     }
@@ -189,6 +187,7 @@ final class Map3DSeries700Tests: XCTestCase {
             XCTAssertTrue(lamps.allSatisfy { $0.x > Map3DSeries700.pitch * 0.3 }, "\(unit.rawValue): the lamps on the nose")
             // Its windscreen and its lamps are apart, as the old car's
             // (the 700T's black mask over both is the 700T's own).
+            if unit.isCab { Map3DTHSR700TTests.assertTheRedLampsAreOutside(model) }
             XCTAssertFalse(unit.isCab && model.vertices.contains { $0.color == Map3DPalette.dark && $0.x > 7 && $0.z > 2 && abs($0.y) < 1.2 },
                            unit.rawValue)
         }

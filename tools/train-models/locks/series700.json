@@ -1,7 +1,7 @@
 {
   "comment" : "Decision 782: the models of the registered train series700: FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
   "lampCount" : 7,
-  "lamps" : "fd47f4916e3c215",
+  "lamps" : "9b68f7bff0d96ffb",
   "models" : {
     "light-set-series700-car" : {
       "hash" : "c57e20121a4a3de7",
@@ -32,32 +32,32 @@
       "triangles" : 116
     },
     "set-series700-car" : {
-      "hash" : "b588286b312c18aa",
-      "triangles" : 1436
+      "hash" : "bd92aeec127cb579",
+      "triangles" : 1384
     },
     "set-series700-carBack" : {
-      "hash" : "486fed01a9ce2418",
-      "triangles" : 1436
+      "hash" : "c06e3850fcd5eabe",
+      "triangles" : 1384
     },
     "set-series700-centre" : {
-      "hash" : "ffbf408828ee025",
-      "triangles" : 1217
+      "hash" : "f2930cbd51c68274",
+      "triangles" : 1165
     },
     "set-series700-head" : {
-      "hash" : "de1c994b0a927bf6",
-      "triangles" : 1905
+      "hash" : "d570a182a7564ea",
+      "triangles" : 1881
     },
     "set-series700-panto" : {
-      "hash" : "bf93c1edced29099",
-      "triangles" : 1520
+      "hash" : "61d3170b237f0921",
+      "triangles" : 1468
     },
     "set-series700-pantoBack" : {
-      "hash" : "c19619b36934fcc5",
-      "triangles" : 1520
+      "hash" : "7712d92a7faab5a9",
+      "triangles" : 1468
     },
     "set-series700-tail" : {
-      "hash" : "84e0c2d09ddc687",
-      "triangles" : 1869
+      "hash" : "1a8cf695f6b5a959",
+      "triangles" : 1845
     }
   }
 }

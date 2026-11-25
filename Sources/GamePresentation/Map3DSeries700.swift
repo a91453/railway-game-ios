@@ -61,17 +61,12 @@ public enum Map3DSeries700 {
     /// `unit`'s length, metres.
     public static func length(_ unit: Unit) -> Float { unit.isCab ? cabLength : pitch }
 
-    /// How far short of its coupling a car's hood ends, metres: the
-    /// 700T's (``Map3DTHSR700T/hoodGap``), the band and the line not
-    /// carried across it.
-    public static let hoodGap: Float = Map3DTHSR700T.hoodGap
-
-    /// What a car may have, triangles (1,905 and 1,869 the cab cars,
-    /// 1,436 the middle car, 1,217 the car with wide windows, 1,520 the
-    /// car under the pantograph: a sixteen-car train some 23,400, few
+    /// What a car may have, triangles (1,881 and 1,845 the cab cars,
+    /// 1,384 the middle car, 1,165 the car with wide windows, 1,468 the
+    /// car under the pantograph: a sixteen-car train some 22,600, few
     /// enough to be drawn at any distance a train's model is, so no far
     /// set).
-    static let triangles = 1_200...2_000
+    static let triangles = 1_100...2_000
 
     /// The colours of the mesh's palette indices, in the order
     /// `glb_to_swift.py --materials` gave them: white, band, line, skirt,

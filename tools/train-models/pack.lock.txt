@@ -766,10 +766,10 @@ set-greenTram-single lamps light-set-greenTram-single 128598e5b9011519
 set-greenTram-tail lamps light-set-greenTram-tail a69d4aab27201eb1
 set-highSpeed-car lamps light-set-highSpeed-car 87d2b132e5326695
 set-highSpeed-carBack lamps light-set-highSpeed-carBack 87d2b132e5326695
-set-highSpeed-head lamps light-set-highSpeed-head cf25c5776cfcb376
+set-highSpeed-head lamps light-set-highSpeed-head ea927ef1d7080c09
 set-highSpeed-panto lamps light-set-highSpeed-panto cbf29ce484222325
 set-highSpeed-pantoBack lamps light-set-highSpeed-pantoBack cbf29ce484222325
-set-highSpeed-tail lamps light-set-highSpeed-tail 1dc775b5fdd0b5ee
+set-highSpeed-tail lamps light-set-highSpeed-tail 5ec0849d33230d89
 set-kaohsiung-car lamps light-set-kaohsiung-car 65507ba9710a09d5
 set-kaohsiung-head lamps light-set-kaohsiung-head a4faa34f4ae330d2
 set-kaohsiung-tail lamps light-set-kaohsiung-tail 885fe00b774a5b1a

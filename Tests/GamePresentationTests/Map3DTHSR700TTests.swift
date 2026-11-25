@@ -185,7 +185,7 @@ final class Map3DTHSR700TTests: XCTestCase {
     }
 
     /// The glass is marked as the windows; the cab's lamps are on its
-    /// nose, a white one and a red one on each side of the centre line,
+    /// nose, on each side of the centre line white ones inside and a red one outside,
     /// and the other cars have none.
     func testTheGlassAndTheLampsAreMarked() throws {
         for unit in Map3DTHSR700T.Unit.allCases {
@@ -199,11 +199,24 @@ final class Map3DTHSR700TTests: XCTestCase {
             XCTAssertGreaterThan(lamps.map(\.x).min() ?? 0, Map3DTHSR700T.pitch * 0.3, "the lamps on the nose")
             XCTAssertTrue(lamps.contains { $0.y > 0.1 } && lamps.contains { $0.y < -0.1 }, "a lamp on each side")
         }
+        Self.assertTheRedLampsAreOutside(cab)
         // The windscreen over the nose, on the car's centre line too.
         XCTAssertFalse(cab.vertices.filter { $0.color == Map3DTrainStyle.glass && $0.x > 5.5 && abs($0.y) < 0.3 }.isEmpty)
         for unit in [Map3DTHSR700T.Unit.middle, .pantograph] {
             let model = try XCTUnwrap(Map3DTHSR700T.model(unit))
             XCTAssertTrue(model.vertices.allSatisfy { $0.color != Map3DTrainStyle.headlamp && $0.color != Map3DPalette.lantern }, unit.rawValue)
+        }
+    }
+
+    /// Each lamp group as the real train's: the white lamps inside (by the
+    /// centre line), the red one at its outer end (the studio's review,
+    /// 2026-11-25: they were the other way round).
+    static func assertTheRedLampsAreOutside(_ cab: Map3DModelPack.Model, file: StaticString = #filePath, line: UInt = #line) {
+        for side: Float in [-1, 1] {
+            let white = cab.vertices.filter { $0.color == Map3DTrainStyle.headlamp && $0.y * side > 0 }.map { abs($0.y) }
+            let red = cab.vertices.filter { $0.color == Map3DPalette.lantern && $0.y * side > 0 }.map { abs($0.y) }
+            XCTAssertLessThan(white.max() ?? 9, (red.max() ?? 0) - 0.05, "\(side): the red lamp outside", file: file, line: line)
+            XCTAssertLessThan(white.min() ?? 9, red.min() ?? 0, "\(side): the white lamps inside", file: file, line: line)
         }
     }
 

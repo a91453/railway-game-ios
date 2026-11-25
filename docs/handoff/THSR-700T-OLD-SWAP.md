@@ -2,7 +2,7 @@
 
 ## 進度
 
-- 做到哪（2026-11-25 深夜，第三個 session）：兩款車都做完並接進遊戲，700T 車鼻定案為 B（朝上的面全白，d8c09215b 的網格；決策 988 第 11 輪），分支上的就是最終版，相關測試在 Mac 上全過。下一步是工作室換家審查（規劃安排）。**還沒開 PR**。
+- 做到哪（2026-11-26 凌晨，第三個 session）：兩款車都做完並接進遊戲。700T 車鼻定案為 B（工作室 codex-a 把 A、B 一起審，選 B）；審查的四項小修都做了（決策 988 第 12 輪、989 第 4 輪）：兩款的燈組改成白燈在內、紅燈在外並加高、700 系拿掉全周幌、700T 面罩修圓、前門後黑色斜塊貼住橘帶。相關測試在 Mac 上全過（除了既有的 Mac 雜湊差）。**還沒開 PR**（700T 排在 #2691 之後，與 N700S、800 系同批）。
 - 分支：`claude/thsr-700t-old-700`，疊在還沒合的 #2683（九州 N700）與 #2689（逐線選塗裝，決策 983）上，另帶 N700S 那一個 commit（決策 979）。三者合進 main 後併 main，再開草稿 PR。
 - 下一步的第一個指令：`gh pr view 2683 --json state && gh pr view 2689 --json state`；都合了就 `git fetch origin main && git merge origin/main`，再跑下面「驗證」那一行測試。
 
@@ -33,7 +33,7 @@
 
 ## 還留下什麼
 
-1. （做完）車鼻定案為 B。之後擁有者或審查有意見就改工具、重產網格、重寫鎖檔（Mac 上 `run.sh OUT --lock TMP/hashes.lock.json` 會改到三十幾個無關模型的雜湊，含配方的 `refresh-700t-*`，只取 `set-highSpeed-head`／`-tail` 的行與 `TMP/locks/series700.json`；`pack.lock.txt` 只在燈變時用 `MAP3D_WRITE_PACK_LOCK=1` 跑 `Map3DModelPackLockTests/testTheOrderAndTheLampsAreAsBefore` 重寫）。規劃請工作室審查。
+1. （做完）車鼻定案為 B，工作室審查的四項小修已做（報告在作者 Mac 的工作室資料夾 `reports/review-thsr-700t-r1/review.md`）。審查列為以後近景細修、沒做的：鼻尖偏薄、方角的窗、斜看時車鼻的折面、700T 全周幌車頂與底部的範圍再核對；B 的外側橘肩「略窄」也沒動（再加寬會回到 A 的樣子）。之後擁有者或審查有意見就改工具、重產網格、重寫鎖檔（Mac 上 `run.sh OUT --lock TMP/hashes.lock.json` 會改到三十幾個無關模型的雜湊，含配方的 `refresh-700t-*`，只取 `set-highSpeed-head`／`-tail` 的行與 `TMP/locks/series700.json`；燈變了時 `pack.lock.txt` 用 `MAP3D_WRITE_PACK_LOCK=1` 跑 `Map3DModelPackLockTests/testTheOrderAndTheLampsAreAsBefore` 重寫）。
 2. #2683、N700S、#2689 合進 main 後：併 main、開草稿 PR（本文開頭兩行署名、「經驗：…」一行、指派並請 a91453 審）、在 #2118 留言。
 3. 經驗的全文已傳給規劃一次（給私有庫 `docs/studio/lessons/thsr-700t.md`；Mac 推不了那個庫，由雲端的工作串推）。規劃要的是：工作室審查完，在「每輪被退回什麼」的表加上審查那一列，再整份傳一次。草稿在作者 Mac 的工作資料夾（`thsr-700t.md`）。
 4. 可以再做的小事：`thsr_700t.py` 的 `ORANGE_KIND` 改名；配方畫的 `refresh-700t-*` 研究模型與配方是否拿掉。
