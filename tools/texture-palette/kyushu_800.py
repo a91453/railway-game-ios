@@ -24,10 +24,12 @@
 - 拿掉：凸出側牆 3 cm 的行先表示器薄片、通道幌的兩個端面、重複的面。
 - 車端的牆塗深色（真車兩節之間是全高的黑色外幌）。
 - 舊版把車壓成 21 m × 2.80 m × 3.96 m；這裡放回真車的尺寸：中間車 25.00 m、
-  寬 3.38 m、屋頂高 3.65 m，頭車 27.35 m。頭車是整節沿車身等比放大（舊版
-  21.0 m → 27.35 m），車鼻不單獨拉長、不改形（作者 2026-11-25：車頭不可
-  單獨拉長或改造型，整節等比放大可以）。轉向架只平移不縮放，頭車的照真車
-  的位置放（後轉向架中心離連結面 3.75 m、中心距 17.5 m）：輪子中心距
+  寬 3.38 m、屋頂高 3.65 m，頭車 27.35 m。頭車和中間車同一個比例：車鼻的
+  弧線、窗、門、窗距都不另外放大（作者 2026-11-25：只放大方形部分，車鼻
+  彎曲的部分不放大）。到真車 27.35 m 還差的長度補在直線車身：窗帶中間多插
+  兩格窗（把那一段車身照樣再排一次），剩下的加在乘務員門與第一格窗之間那
+  段沒有東西的牆上。轉向架只平移不縮放，頭車的照真車的位置放（後轉向架
+  中心離連結面 3.75 m、中心距 17.5 m）：輪子中心距
   1.50 m，就是 1,435 mm 軌距的鋼軌中心。
 - 輸出的軸與 `glb_to_swift.py` 讀的一樣：+y 上、車沿 x、駕駛室在 +x、連結面
   在 ±半車長、軌面 y 0。
@@ -59,7 +61,10 @@ SHA256 = {
 LENGTH = 12.5 / 10.501   # 連結面 ±10.501 → ±12.5（車距 25 m）
 WIDTH = 3.38 / 2.80      # 側牆 ±1.40 → ±1.69
 HEIGHT = 3.65 / 3.964    # 屋頂 3.964 → 3.65
-CAB = 27.35 / 21.001     # 頭車整節：鼻尖 −10.5、連結面 +10.501 → 27.35 m
+CAB_LENGTH = 27.35        # 真車的頭車
+NOSE_FROM = -4.03         # 頭車：直線車身從這裡（乘務員門的前緣）往後
+BAYS = 2                  # 頭車多插幾格窗
+WALL_ZONE = 0.2           # 乘務員門後那段牆上，拿來加長的一小段（舊版的公尺）
 BOGIE_FROM_END = 3.75     # 真車：轉向架中心離連結面
 BOGIE_CENTRES = 17.5      # 真車：轉向架中心距
 
@@ -201,8 +206,96 @@ def cut_body(part, table, debug=None):
 
 
 def along(z: np.ndarray, cab: bool) -> np.ndarray:
-    """舊版沿車身的位置 → 真車尺寸的位置。頭車整節等比放大，車鼻不單獨拉長。"""
-    return z * (CAB if cab else LENGTH)
+    """舊版沿車身的位置 → 真車尺寸的位置。頭車和中間車同一個比例。"""
+    return z * LENGTH
+
+
+def cut_at(triangles, value):
+    """沿車身在 z = value 把三角形切開，切完沒有一個跨過這個面。"""
+    out = []
+    for c, kind in triangles:
+        z = c[:, 2]
+        if z.max() <= value + 1e-9 or z.min() >= value - 1e-9:
+            out.append((c, kind))
+            continue
+        for low in (True, False):
+            polygon = []
+            for i in range(3):
+                a, b = c[i], c[(i + 1) % 3]
+                a_in = a[2] <= value if low else a[2] >= value
+                b_in = b[2] <= value if low else b[2] >= value
+                if a_in:
+                    polygon.append(a)
+                if a_in != b_in:
+                    point = a + (b - a) * (value - a[2]) / (b[2] - a[2])
+                    point[2] = value
+                    polygon.append(point)
+            out += [(np.array([polygon[0], polygon[i], polygon[i + 1]]), kind) for i in range(1, len(polygon) - 1)]
+    return out
+
+
+def spans(pieces, gap=0.05):
+    """一堆面沿車身佔的區間，接在一起的併成一段。"""
+    out = []
+    for low, high in sorted((float(c[:, 2].min()), float(c[:, 2].max())) for c in pieces):
+        if out and low - out[-1][1] < gap:
+            out[-1][1] = max(out[-1][1], high)
+        else:
+            out.append([low, high])
+    return out
+
+
+def lengthen(triangles):
+    """頭車的直線車身加長到真車的長度（舊版的座標），車鼻不動。
+
+    回傳加長後的面、把車身以外的東西（通道幌）移到新位置的函式、與報告用的數字。"""
+    wall = [(c, kind) for c, kind in triangles if np.abs(c[:, 0]).min() > 1.39 and c[:, 2].min() > NOSE_FROM]
+    doors_at = spans([c for c, kind in wall if kind == DOOR])
+    windows = [w for w in spans([c for c, kind in wall if kind == GLASS])
+               if not any(low - 0.1 < w[0] and w[1] < high + 0.1 for low, high in doors_at)]
+    centres = [(low + high) / 2 for low, high in windows]
+    steps = np.diff(centres)
+    pitch = float(np.median(steps))
+    if len(windows) < 6 or np.abs(steps - pitch).max() > 0.02 * pitch:
+        raise SystemExit(f"頭車的窗不是等距的：{[round(float(v), 3) for v in steps]}")
+    extra = CAB_LENGTH / LENGTH - 21.001          # 還差的長度（舊版的公尺）
+    rest = extra - BAYS * pitch                   # 插完窗格還差的，加在牆上
+    if rest < 0:
+        raise SystemExit("插的窗格比要補的長度還長")
+    middle = len(windows) // 2
+    bay = (centres[middle - 1] + centres[middle]) / 2          # 兩格窗中間的牆
+    plain = (doors_at[0][1] + windows[0][0]) / 2 - WALL_ZONE / 2   # 乘務員門與第一格窗之間
+    if not doors_at[0][1] < plain and plain + WALL_ZONE < windows[0][0]:
+        raise SystemExit("乘務員門與第一格窗之間沒有空的牆")
+    for value in (plain, plain + WALL_ZONE, bay, bay + BAYS * pitch):
+        triangles = cut_at(triangles, value)
+    out = []
+    for c, kind in triangles:
+        at = float(c[:, 2].mean())
+        c = c.copy()
+        if at < plain:
+            pass
+        elif at < plain + WALL_ZONE:
+            c[:, 2] = plain + (c[:, 2] - plain) * (WALL_ZONE + rest) / WALL_ZONE
+        elif at < bay:
+            c[:, 2] += rest
+        elif at < bay + BAYS * pitch:
+            c[:, 2] += rest
+            again = c.copy()
+            again[:, 2] += BAYS * pitch
+            out.append((again, kind))
+        else:
+            c[:, 2] += rest + BAYS * pitch
+        out.append((c, kind))
+
+    def moved(points: np.ndarray) -> np.ndarray:
+        points = points.copy()
+        points[:, 2] += np.where(points[:, 2] > bay + BAYS * pitch, extra, 0)
+        return points
+
+    numbers = {"windows": len(windows) + BAYS, "pitch_m": round(pitch * LENGTH, 3),
+               "bays_m": round(BAYS * pitch * LENGTH, 3), "wall_m": round(rest * LENGTH, 3)}
+    return out, moved, extra, numbers
 
 
 def build(path: Path, cab: bool, debug_dir: Path | None):
@@ -217,6 +310,9 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         canvas = Image.blend(canvas, Image.new("RGB", canvas.size, (0, 0, 0)), 0.6)
         draw = ImageDraw.Draw(canvas)
     triangles = cut_body(body, table, draw)
+    moved, extra, numbers = (lambda points: points), 0.0, {}
+    if cab:
+        triangles, moved, extra, numbers = lengthen(triangles)
     if debug_dir:
         canvas.save(debug_dir / f"{path.stem[:13]}-uv-cut.png")
 
@@ -236,13 +332,13 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
             middle = (low[2] + high[2]) / 2
             target = float(along(np.array([middle]), cab)[0])
             if cab:
-                rear = 10.501 * CAB - BOGIE_FROM_END
+                rear = (10.501 + extra) * LENGTH - BOGIE_FROM_END
                 target = rear if middle > 0 else rear - BOGIE_CENTRES
             moved = world + np.array([0, 0, target - middle])
             scaled += [(moved[face], DARK) for face in piece["faces"]]
         elif size[1] > 1.5:
             # 通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在連結面上）。
-            hood = grown(world)
+            hood = grown(moved(world))
             for face in piece["faces"]:
                 corners = hood[face]
                 if np.ptp(corners[:, 2]) < 1e-6:
@@ -263,7 +359,7 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
             continue
         seen.add(key)
         out.append((corners, kind))
-    return out, digest
+    return out, digest, numbers
 
 
 def doors(triangles, cab: bool):
@@ -298,14 +394,14 @@ def main():
     args.out_dir.mkdir(parents=True, exist_ok=True)
     report = {}
     for name, path, cab in (("kyushu-800-cab", args.cab, True), ("kyushu-800-middle", args.middle, False)):
-        triangles, digest = build(path.expanduser(), cab, args.out_dir if args.debug else None)
+        triangles, digest, numbers = build(path.expanduser(), cab, args.out_dir if args.debug else None)
         expected = SHA256["cab" if cab else "middle"]
         if digest != expected:
             raise SystemExit(f"{path.name}: 不是這個工具認得的原檔（SHA-256 {digest}）")
         base.write_glb(args.out_dir / f"{name}.glb", triangles, MATERIALS, PREVIEW, "tools/texture-palette/kyushu_800.py")
         points = np.concatenate([c for c, _ in triangles])
         counts = {MATERIALS[k]: sum(1 for _, kind in triangles if kind == k) for k in range(len(MATERIALS))}
-        report[name] = {"sha256": digest, "triangles": len(triangles), "materials": counts, "doors": doors(triangles, cab),
+        report[name] = {"sha256": digest, "triangles": len(triangles), "materials": counts, "doors": doors(triangles, cab), **({"lengthened": numbers} if numbers else {}),
                         "min": [round(float(v), 3) for v in points.min(0)], "max": [round(float(v), 3) for v in points.max(0)]}
     (args.out_dir / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(report, ensure_ascii=False, indent=2))
