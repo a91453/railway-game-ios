@@ -37,7 +37,7 @@ final class Map3DShowcaseTests: XCTestCase {
 
     func testALockedPacksTrainsAreNeitherOfferedNorPicked() {
         let locked = TrainPack.locked(unlocked: false)
-        var selection = Map3DShowcase.Selection(keys: ["emu3000", "n700sG", "threeCarUrban"], hiding: locked)
+        var selection = Map3DShowcase.Selection(keys: ["emu3000", "n700s", "threeCarUrban"], hiding: locked)
         XCTAssertEqual(selection.keys, ["emu3000"])
         XCTAssertTrue(selection.offered.allSatisfy { !TrainPack.sets.contains($0.key) })
         XCTAssertEqual(selection.offered.count, Map3DShowcase.catalog.count - TrainPack.sets.count)

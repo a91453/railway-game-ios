@@ -1252,19 +1252,38 @@ public enum DataSourceCredits {
                         ]
                     ),
                     // Decision 408: the second high-speed train
-                    // (Map3DN700SG), the author's own model in the reference
-                    // repository with fewer triangles, which the author lets
-                    // the game and its public repository carry.
+                    // (decision 979: Map3DN700S, the author's own N700S of
+                    // the earlier version, its texture cut into faces of the
+                    // game's colours), which the author lets the game and
+                    // its public repository carry.
                     DataSourceCredit(
                         id: "highSpeedTrainModel",
                         title: language.text("White high-speed train", "白色高速列車"),
                         detail: language.text(
-                            "The Train Pack’s high-speed train on the 3D map, white with a dark green line: a model the game’s author made.",
-                            "列車包裡 3D 地圖上的高速列車，白色車身配深綠色線條：遊戲作者自己做的模型。"
+                            "The Train Pack’s high-speed train on the 3D map, white with two blue lines: a model the game’s author made.",
+                            "列車包裡 3D 地圖上的高速列車，白色車身配兩道藍色線條：遊戲作者自己做的模型。"
                         ),
                         notice: language.text(
-                            "The game author’s own model, simplified and in the game’s colours, used with the author’s permission.",
-                            "遊戲作者自己做的模型，簡化並換成遊戲的配色，經作者同意使用。"
+                            "The game author’s own model from the game’s earlier version, in the game’s colours, used with the author’s permission.",
+                            "遊戲作者在舊版遊戲裡自己做的模型，換成遊戲的配色，經作者同意使用。"
+                        ),
+                        links: []
+                    ),
+                    // Decisions 988 and 989: the 700T (Map3DTHSR700T) and
+                    // the 700 series in its own paint (Map3DSeries700),
+                    // the author's own 700 series cars of the earlier
+                    // version, their texture cut into faces of the game's
+                    // colours.
+                    DataSourceCredit(
+                        id: "highSpeed700Model",
+                        title: language.text("High-speed 700T and 700 Series", "高鐵 700T 與 700 系"),
+                        detail: language.text(
+                            "The high-speed line’s 700T on the 3D map, white with an orange band, and the white and blue 700 Series in the garage: models the game’s author made.",
+                            "3D 地圖上高鐵的 700T（白色車身配橘色帶）和車庫裡白色車身配藍帶的 700 系：遊戲作者自己做的模型。"
+                        ),
+                        notice: language.text(
+                            "The game author’s own models from the game’s earlier version, in the game’s colours, used with the author’s permission.",
+                            "遊戲作者在舊版遊戲裡自己做的模型，換成遊戲的配色，經作者同意使用。"
                         ),
                         links: []
                     ),

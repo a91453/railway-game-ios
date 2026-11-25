@@ -5,12 +5,12 @@ import XCTest
 /// Decision 566: the new-train arrival card.
 final class NewTrainArrivalTests: XCTestCase {
     /// Every model with a card is a set the 3D map draws, and none is the
-    /// pack's N700S-G or a light rail built in Taiwan.
+    /// pack's N700S or a light rail built in Taiwan.
     func testEveryCardIsADrawnImportedModel() {
         for entry in NewTrainArrivals.entries {
             XCTAssertNotNil(Map3DTrainSet.byKey[entry.key], "\(entry.key) is a 3D set")
         }
-        for key in ["n700sG", "danhaiLRT", "ankengLRT"] {
+        for key in ["n700s", "danhaiLRT", "ankengLRT"] {
             XCTAssertNil(NewTrainArrivals.catalog[key], "\(key) has no card")
         }
     }
