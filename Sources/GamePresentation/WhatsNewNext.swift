@@ -13,6 +13,7 @@
 extension WhatsNew {
     public static let nextItems: [Line] = [
         Line(english: "Choose a paint for a line's trains on the line's page; the high-speed 700T now wears its real orange band, with the earlier teal as a choice", chinese: "路線頁可以替這條線的列車選塗裝；高鐵 700T 改成真車的橘色帶，原本的青綠帶可以選回來"),
+        Line(english: "Hong Kong: the transit tool's ferry mode lays the two harbour crossings, Central and Wan Chai to Tsim Sha Tsui.", chinese: "香港：接駁工具的渡輪模式可以照真實航線開中環、灣仔到尖沙咀的兩條港內渡輪。"),
     ]
 
     public static let nextFixes: [Line] = [
