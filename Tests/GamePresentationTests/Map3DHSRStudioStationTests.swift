@@ -104,7 +104,7 @@ final class Map3DHSRStudioStationTests: XCTestCase {
         _ = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
         let realTrains = Map3DScene.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
-        builder.realTrackLines = realTrains?.shownLanes ?? []
+        builder.state.realTrains.realTrackLines = realTrains?.shownLanes ?? []
         builder.addViaducts()
         let exteriors = builder.addStationExteriors(snapshot, frame: frame)
         _ = builder.addStations(snapshot, frame: frame, shops: false)
@@ -117,7 +117,7 @@ final class Map3DHSRStudioStationTests: XCTestCase {
     @MainActor func testEachStandsInTheHighSpeedDemo() throws {
         for station in Station.allCases {
             let built = try Self.built(round: station)
-            let stood = built.builder.stationExteriors.filter { $0.station == .studio(station) }
+            let stood = built.builder.state.exteriors.stationExteriors.filter { $0.station == .studio(station) }
             XCTAssertEqual(stood.count, 1, "\(station) stands once")
             guard let exterior = stood.first else { continue }
             print("HSR studio \(station): kept near \(exterior.kept.near) far \(exterior.kept.far),",
@@ -129,7 +129,7 @@ final class Map3DHSRStudioStationTests: XCTestCase {
             XCTAssertEqual(Map3DStationExteriorsTests.inTheGauge(exterior.near, built.builder, ground: exterior.origin.y), 0, "\(station) near")
             XCTAssertEqual(Map3DStationExteriorsTests.inTheGauge(exterior.far, built.builder, ground: exterior.origin.y), 0, "\(station) far")
             XCTAssertTrue(exterior.near.vertices.contains { $0.layer == Map3DVertex.glowing }, "\(station)'s lamp band")
-            XCTAssertEqual(built.builder.houseTriangleCount, 0, "\(station): no building of the kit's")
+            XCTAssertEqual(built.builder.state.stations.houseTriangleCount, 0, "\(station): no building of the kit's")
         }
     }
 }

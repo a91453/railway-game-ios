@@ -71,14 +71,14 @@ extension Map3DScene.Builder {
     /// Returns the 64 m cells they stand on, which keep no city lot.
     mutating func addStationCommerce(clearOf cleared: Set<Map3DScene.ChunkKey>) -> Set<Map3DScene.ChunkKey> {
         var taken = Set<Map3DScene.ChunkKey>(), placed: [[Map3DPoint]] = [], triangles = 0
-        for station in bigStations {
+        for station in state.stations.bigStations {
             let facing = station.forward * -1
             var free = Self.commerceSlots(centre: station.centre, forward: station.forward, depth: station.depth)
             for (_, model) in Self.commerceModels where triangles + model.triangles <= Self.commerceTriangles {
                 for (index, slot) in free.enumerated() {
                     let footprint = Self.parkFootprint(model, centre: slot, facing: facing)
                     let cells = cells(under: footprint)
-                    guard cleared.isDisjoint(with: cells), !Self.overlaps(footprint, houseFootprints + placed), !onPlacedGround(footprint),
+                    guard cleared.isDisjoint(with: cells), !Self.overlaps(footprint, state.stations.houseFootprints + placed), !onPlacedGround(footprint),
                           isClear(footprint, facing: facing) else { continue }
                     let foot = Map3DPoint(slot.x, footprint.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0, slot.z)
                     target = .close

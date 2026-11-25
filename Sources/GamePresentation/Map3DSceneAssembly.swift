@@ -65,7 +65,7 @@ extension Map3DScene {
         builder.detail = detail
         builder.detailAhead = detailAhead
         builder.studyRegion = studies
-        builder.buildsFacades = facades
+        builder.state.facades.buildsFacades = facades
         // Decision 876: a part of a scene, built with the scene's track
         // cover, with what the scene's builds worked out before it.
         if let trackCover { builder.shared = trackCover.shared }
@@ -88,10 +88,10 @@ extension Map3DScene {
                                 names: builder.look.streets.hasStreetNameSigns)
             // Decision 834: the motorways held to their grade, their
             // cuttings cut out of the ground laid next.
-            builder.roadGrade = builder.gradeMotorways(of: real!)
+            builder.state.roadGrade = builder.gradeMotorways(of: real!)
             // Decision 385: the city's low homes and shops along the real
             // roads, and none on the land OpenStreetMap keeps clear.
-            builder.streetFrontage = true
+            builder.state.roadside.streetFrontage = true
             if let noBuild { builder.prepareNoBuild(noBuild, frame: frame) }
         }
         builder.time("read the base map")
@@ -103,7 +103,7 @@ extension Map3DScene {
         builder.trackCover = trackCover ?? Map3DTrackCover(snapshot, builder: &builder)
         // Decision 876 (later): once for the scene and the blocks built with its
         // track cover, not again for each block.
-        builder.undergroundStations = builder.shared.undergroundStations(of: snapshot, originX: originX, originY: originY) {
+        builder.state.underground.undergroundStations = builder.shared.undergroundStations(of: snapshot, originX: originX, originY: originY) {
             Map3DUndergroundStations(snapshot, point: builder.point, cover: builder.trackCover)
         }
         builder.time("track cover")
@@ -136,7 +136,7 @@ extension Map3DScene {
         // their trains on it.
         realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
         builder.mark("real railways")
-        builder.realTrackLines = realTrains?.shownLanes ?? []
+        builder.state.realTrains.realTrackLines = realTrains?.shownLanes ?? []
         // Decision 941 (later): the real map's roads crossing the track on
         // the level, the player's and the real lines', at level crossings.
         if real != nil { builder.addRealLevelCrossings() }
@@ -177,7 +177,7 @@ extension Map3DScene {
         // stations' buildings leave out only those they overlap
         // (``onTrack(_:)``, ``underRailway(_:)``). Their cells still
         // keep no city lot.
-        let realClear = stationCells.subtracting(builder.outlineOnlyCells).union(runways)
+        let realClear = stationCells.subtracting(builder.state.stations.outlineOnlyCells).union(runways)
         // What the track, the stations, the runways, the landmarks and
         // the turntable take: no prop, bush or forest tree on it.
         let builtOn = stations.union(landmarkCells).union(turntable)
@@ -187,17 +187,17 @@ extension Map3DScene {
         // they cross it, and of the stations' buildings.
         if real == nil, world.geoAnchor == nil { builder.addSeededStreets(city, clearOf: cleared) }
         builder.mark("landmarks and stations")
-        seededStreets = SeededStreetPlan(edges: builder.streetEdges)
-        stationExteriors = builder.stationExteriors
+        seededStreets = SeededStreetPlan(edges: builder.state.streets.streetEdges)
+        stationExteriors = builder.state.exteriors.stationExteriors
         // Decision 322: the shops, clear of the streets.
         builder.addShopStreets()
         // Decision 794: where the winter event's trees and lights go.
         builder.addWinterDecor(frame: worldFrame)
-        winterLights = Map3DWinterLights(placements: builder.winterDecor)
+        winterLights = Map3DWinterLights(placements: builder.state.winter.winterDecor)
         // Decision 840: the Santa Claus village's reindeer, clear of its tree.
         builder.addReindeerHerd(frame: worldFrame)
-        reindeerHerd = Map3DReindeerHerd(placements: builder.reindeerHerd)
-        freightYards = builder.freightYardPlaces
+        reindeerHerd = Map3DReindeerHerd(placements: builder.state.reindeer.reindeerHerd)
+        freightYards = builder.state.freight.freightYardPlaces
         screenDoors = builder.shared.screenDoors(of: world)
         // Decision 326: the overhead line, its masts clear of the platforms;
         // on a real-world map, none along the real lines without one.
@@ -207,8 +207,8 @@ extension Map3DScene {
         // Decision 436: the platforms' small things, close up.
         // Decision 882: the second names on the platforms' name boards.
         if let railways, let worldFrame {
-            builder.boardSecondNames = Builder.boardSecondNames(world, railways, worldFrame)
-            builder.boardSigns = Builder.boardSigns(world, railways, worldFrame)
+            builder.state.nameBoards.boardSecondNames = Builder.boardSecondNames(world, railways, worldFrame)
+            builder.state.nameBoards.boardSigns = Builder.boardSigns(world, railways, worldFrame)
         }
         // Decision 936: the footbridges and underpass stairs, before the
         // platforms' small things, which stand clear of them.
@@ -218,12 +218,12 @@ extension Map3DScene {
         // where a station's building or a landmark stands).
         // Decision 458: the conifers of the high woods, before the props
         // where the track, a station or a landmark is are taken away.
-        builder.addConifers(clearOf: builder.realTrackCells)
+        builder.addConifers(clearOf: builder.state.realTrains.realTrackCells)
         builder.removeProps(on: builtOn)
         // Decision 458: the bushes on the stations' plazas and the grass
         // beside the line.
         builder.addStationBushes()
-        builder.addBushesBesideTrack(cleared.union(builder.realTrackCells), clearOf: builtOn)
+        builder.addBushesBesideTrack(cleared.union(builder.state.realTrains.realTrackCells), clearOf: builtOn)
         builder.mark("trees, bushes and platform things")
         // Decision 229 續: the street lights' pools, seen at night.
         builder.addLampPools()
@@ -235,7 +235,7 @@ extension Map3DScene {
         // The cells no real building is laid on, of the tiles' or the
         // footprints', and those no lot of the game's own city is.
         let clearOfReal = realClear.union(landmarkCells)
-        let clearOfCity = stations.union(builder.realTrackCells)
+        let clearOfCity = stations.union(builder.state.realTrains.realTrackCells)
         // Decision 385: the airports' own buildings; decision 389: only
         // with no footprints, which have them.
         func addAirportBuildings() {
@@ -302,7 +302,7 @@ extension Map3DScene {
                 if let frame, let tiles = footprintTiles {
                     footprints = Map3DFootprints(tiles: tiles, frame: frame, region: builder.region)
                     // Decision 707: the game's own houses no taller than these.
-                    builder.lowRise = Map3DLowRise(tiles: tiles, frame: frame)
+                    builder.state.lowRise.lowRise = Map3DLowRise(tiles: tiles, frame: frame)
                 }
                 beforeFootprints = standing
                 builder.time("read the footprints")
@@ -328,7 +328,7 @@ extension Map3DScene {
             if full {
                 // Decision 811: the land cover's forests' trees, on nothing
                 // built.
-                builder.addWildTrees(clearOf: builtOn.union(standing).union(taken.whole).union(builder.realTrackCells))
+                builder.addWildTrees(clearOf: builtOn.union(standing).union(taken.whole).union(builder.state.realTrains.realTrackCells))
                 builder.mark("forest trees")
             }
         }
@@ -343,6 +343,6 @@ extension Map3DScene {
         builder.time("chunks")
         steps = builder.steps
         streetLife = builder.streetLife
-        levelCrossings = builder.crossings
+        levelCrossings = builder.state.streets.crossings
     }
 }

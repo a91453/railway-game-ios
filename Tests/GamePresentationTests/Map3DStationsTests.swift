@@ -15,8 +15,8 @@ final class Map3DStationsTests: XCTestCase {
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                                          world: world)
         func line(_ z: Float) -> [Map3DPoint] { stride(from: Float(-60), through: 60, by: 2).map { Map3DPoint($0, Map3DScene.railLift, z) } }
-        builder.laidPlatforms = [Map3DScene.Builder.LaidPlatform(station: station, line: line(0), offset: 3.5, width: 3.2, structure: structure)]
-        builder.trackLines = ([0] + tracks).map { (line($0), TrackSectionKind.surface) }
+        builder.state.platforms.laidPlatforms = [Map3DScene.Builder.LaidPlatform(station: station, line: line(0), offset: 3.5, width: 3.2, structure: structure)]
+        builder.state.track.trackLines = ([0] + tracks).map { (line($0), TrackSectionKind.surface) }
         return builder
     }
 
@@ -76,9 +76,9 @@ final class Map3DStationsTests: XCTestCase {
         var viaduct = builder(.elevated)
         _ = stations(&viaduct)
         viaduct.addWinterDecor(frame: nil)
-        let onStairs = viaduct.winterDecor.filter { $0.decor == .lightString }
+        let onStairs = viaduct.state.winter.winterDecor.filter { $0.decor == .lightString }
         XCTAssertEqual(onStairs.count, 4, "two stair entrances, a length each side")
-        XCTAssertFalse(viaduct.winterDecor.contains { $0.decor != .lightString })
+        XCTAssertFalse(viaduct.state.winter.winterDecor.contains { $0.decor != .lightString })
         for string in onStairs {
             XCTAssertEqual(string.point.y, 2.8, accuracy: 0.3)
             // Along the stairs, which run along the viaduct (x).
@@ -87,7 +87,7 @@ final class Map3DStationsTests: XCTestCase {
         var ground = builder(tracks: [-5])
         _ = stations(&ground)
         ground.addWinterDecor(frame: nil)
-        let front = ground.stationFronts[0], onHouse = ground.winterDecor.filter { $0.decor == .lightString }
+        let front = ground.state.stations.stationFronts[0], onHouse = ground.state.winter.winterDecor.filter { $0.decor == .lightString }
         XCTAssertFalse(onHouse.isEmpty)
         for string in onHouse {
             // The forecourt is the last six metres of the bounds.

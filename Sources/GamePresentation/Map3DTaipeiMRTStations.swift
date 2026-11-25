@@ -245,7 +245,7 @@ extension Map3DScene.Builder {
         }
         ownColourFar[key, default: Map3DMesh()].append(Map3DTaipeiMRTStation.sceneMesh(kind, near: false, at: placement, ground: ground))
         let footprint = corners.map { Map3DPoint($0.x, ground, $0.z) }
-        houseFootprints.append(footprint)
+        state.stations.houseFootprints.append(footprint)
         return cells(under: footprint)
     }
 }

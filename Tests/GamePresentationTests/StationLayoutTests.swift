@@ -209,7 +209,7 @@ final class StationLayoutTests: XCTestCase {
             let snapshot = session.world.railwaySnapshot()
             _ = builder.addTrack(snapshot)
             builder.addPlatforms(snapshot)
-            let laid = builder.laidPlatforms.filter { $0.station == station }
+            let laid = builder.state.platforms.laidPlatforms.filter { $0.station == station }
             XCTAssertEqual(laid.count, halves, "\(layout)")
             for platform in laid {
                 XCTAssertEqual(platform.width, half, accuracy: 0.05, "\(layout): half an island")

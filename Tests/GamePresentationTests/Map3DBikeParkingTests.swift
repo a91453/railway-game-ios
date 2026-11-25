@@ -76,9 +76,9 @@ final class Map3DBikeParkingSceneTests: XCTestCase {
                                          world: .newGame())
         builder.streetLife.region = region
         let line = stride(from: Float(-60), through: 60, by: 2).map { Map3DPoint($0 + shift, Map3DScene.railLift, 0) }
-        builder.laidPlatforms = [Map3DScene.Builder.LaidPlatform(station: StationID(rawValue: 7), line: line, offset: 3.5, width: 3.2,
+        builder.state.platforms.laidPlatforms = [Map3DScene.Builder.LaidPlatform(station: StationID(rawValue: 7), line: line, offset: 3.5, width: 3.2,
                                                                  structure: .elevated)]
-        builder.trackLines = [(line, TrackSectionKind.surface)]
+        builder.state.track.trackLines = [(line, TrackSectionKind.surface)]
         _ = builder.addStations(GameWorld.newGame().railwaySnapshot(), frame: nil)
         return builder.props.values.flatMap { $0 }
     }

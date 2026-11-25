@@ -2883,8 +2883,8 @@ extension Map3DScene.Builder {
             let d = p - middle
             return abs(d.dot(facing)) < length + margin && abs(d.dot(side)) < width + margin
         }
-        if trackLines.contains(where: { $0.kind != .tunnel && $0.points.contains { near($0, 4) } }) { return false }
-        return !laidPlatforms.contains { platform in
+        if state.track.trackLines.contains(where: { $0.kind != .tunnel && $0.points.contains { near($0, 4) } }) { return false }
+        return !state.platforms.laidPlatforms.contains { platform in
             platform.structure != .tunnel && platform.line.contains { near($0, abs(platform.offset) + platform.width / 2 + 1) }
         }
     }
