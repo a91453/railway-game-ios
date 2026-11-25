@@ -125,9 +125,10 @@ final class Map3DTrainSetTests: XCTestCase {
                 // the seven-section car's 7.6 to 8.3 m, as they are.
                 // Decision 408: the 700T's cars 25.2 to 25.5 m (decision 979:
                 // the N700S's 25 m is its registration's),
-                // Decision 422: the 700T's far set as long as its near one.
+                // Decision 988: the owner's old 700 series as the 700T, 25 m,
+                // its cab cars the real 27 m; no far set.
                 let alishan = ["ALISHAN", "ALISHANFar"].contains(set.key)
-                let length: ClosedRange<Float> = registered?.length ?? (["highSpeed", "highSpeedFar"].contains(set.key) ? 25...25.6
+                let length: ClosedRange<Float> = registered?.length ?? (set.key == "highSpeed" ? 24.9...27.1
                     // Decision 433: and #1323's C341 units, 23.6 and 23.7 m with their couplers.
                     // Decision 461: and its C371 and C381 units, 23.6 and 23.9 m; the
                     // 610's 16.7 and 17.6 m.
@@ -172,7 +173,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 957: and its wooden coaches 3.40 m to their ventilators.
                     : ["STEAM", "STEAMFar"].contains(set.key) ? 3.38...4.7
                     // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too).
-                    : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "highSpeedFar", "n700s", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
+                    : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "n700s", "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
                     // Decision 554: and #1539's EP's, 5.0 m.

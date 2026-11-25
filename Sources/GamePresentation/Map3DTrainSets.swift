@@ -202,11 +202,12 @@ public struct Map3DTrainSet: Sendable {
             // the line-coloured band.
             Map3DEMU3000.trainSet(),
             Map3DEMU3000.trainSet(far:true),
-            // Decision 408: the 700T as #1201's tenth revision, each car its
-            // own length, the pantographs on cars 4 and 9; decision 422:
-            // from 500 m out its light cars, made by the same recipe.
+            // Decision 408: the 700T, each car its own length, the
+            // pantographs on cars 4 and 9. Decision 988: the owner's old
+            // 700 series cars painted as the real train
+            // (``Map3DTHSR700T``), in the place of the recipe's cars and
+            // their far set (decision 422).
             highSpeed700T(),
-            highSpeed700T(far: true),
             // Decision 408's second high-speed set, the N700S-G, and
             // its far set (decision 422) were here until decision 979:
             // the owner's old N700S, a registered train, has its place.
@@ -377,6 +378,9 @@ public struct Map3DTrainSet: Sendable {
         // Decision 979: the N700S-G's keys, as the N700S that has its
         // place.
         "n700sG": Map3DN700S.key, "n700sGFar": Map3DN700S.key,
+        // Decision 988: the recipe's 700T's far set's key, as the 700T that
+        // has its place.
+        Map3DTHSR700T.formerFarKey: Map3DTHSR700T.key,
     ]
 
     /// How far from the eye a car of `key` is drawn with its model, in
@@ -389,8 +393,9 @@ public struct Map3DTrainSet: Sendable {
     }
 
     /// Decision 408: and the 700T, 5,600 to 9,100 a car (its ``far`` set
-    /// between); the N700S-G too until decision 979, whose N700S, two to
-    /// three thousand a car, is drawn as far as any model.
+    /// between), until decision 988, whose 700T, 1,300 to 1,800 a car, is
+    /// drawn as far as any model; the N700S-G too until decision 979,
+    /// whose N700S, two to three thousand a car, is too.
     /// Decision 420: and the Taroko and the EMU800 (their far sets).
     /// Decision 426: and the Puyuma (its far set).
     /// Decision 427: and the push-pull Tze-Chiang's E1000 look.
@@ -411,7 +416,7 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 782: and the registered trains' sets with a far set.
     /// Decision 825: and the DR1000 railcar and the DR3100 (their far
     /// sets, decision 511), left out until then.
-    static let nearOnly: Set<String> = Set(Map3DTrainRegistry.sets.filter { $0.far != nil }.map(\.key)).union(["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "BLUE", "highSpeed", "emu3000",
+    static let nearOnly: Set<String> = Set(Map3DTrainRegistry.sets.filter { $0.far != nil }.map(\.key)).union(["E200CK", "R100CK", "R200CK", "E500CK", "MINGRI", "STAR", "pushPull", "pushPullE1000", "greenTram", "SUMMER", "BLUE", "emu3000",
                                 "taroko", "emu800", "emu500", "puyuma", "metroC341", "emu900", "emu700", "metroC371", "metroC381", "circular610", "sanying",
                                 "kaohsiung", "taichungGreen", "danhaiLRT", "ankengLRT", "klrtCAF", "klrtCitadis", "ALISHAN", freightKey,
                                 "HAIFENG", "SHANLAN", "dieselRailcar", "dieselExpress", wenhuVAL256Key, wenhu370Key, taoyuanAirport1000Key, taoyuanAirport2000Key])
@@ -420,8 +425,8 @@ public struct Map3DTrainSet: Sendable {
     /// as: half the high-speed trains, the odd-numbered, the N700S-G
     /// (decision 979: the owner's old N700S, ``Map3DN700S``), the rest the
     /// 700T. Decision 338 (second later): while it is in `locked` (the
-    /// train pack's), every one of them the 700T, its far set
-    /// ``highSpeedFar``. Decision 427: every push-pull Tze-Chiang, odd
+    /// train pack's), every one of them the 700T (decision 988: with no
+    /// far set). Decision 427: every push-pull Tze-Chiang, odd
     /// or even, the E1000 look unless `locked` has `pushPullE1000`.
     /// Decision 432: and half the Taiwan Railway local trains, the
     /// odd-numbered, the EMU500; not locked, the train pack's has no part
@@ -1189,16 +1194,6 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 466: the key of ``sanying(far:)``, the Sanying line's real
     /// trains and the trains of one bought.
     static let sanyingKey = "sanying"
-
-    /// Decision 422: `far`, the light cars of the same recipe
-    /// (``Map3DTrainShapeRefresh/model(_:far:)``), lit the same.
-    static func highSpeed700T(far: Bool = false) -> Map3DTrainSet {
-        Map3DTrainSet(key: far ? "highSpeedFar" : "highSpeed", pantographCars: [3, 8], ownLengths: true, far: far ? nil : "highSpeedFar") {
-            func model(_ id: String) -> Map3DModelPack.Model { Map3DTrainShapeRefresh.model(id, far: far) }
-            return Cars(head: lit(model("refresh-700t-cab"), front: true), middle: model("refresh-700t-middle"),
-                        tail: lit(model("refresh-700t-tail"), front: false), single: nil, pantograph: model("refresh-700t-panto"))
-        }
-    }
 
     /// Decision 408: `model` with its lamp lenses (``Map3DPalette/tunnelLamp``)
     /// lit, those at its front (+x) white when `front`, those at its back

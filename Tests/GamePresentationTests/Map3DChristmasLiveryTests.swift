@@ -206,7 +206,7 @@ final class Map3DChristmasLiveryTests: XCTestCase {
     /// no bulb of another colour, no ribbon, no glow.
     func testAFarCarWearsOnlySnowAndALitLine() throws {
         let pack = Map3DModelPack.standard
-        for name in ["set-highSpeedFar-head", "set-emu500Far-panto", "set-pushPullFar-car"] {
+        for name in ["set-emu500Far-panto", "set-pushPullFar-car"] {
             let (model, wear, all) = try dressed(name, in: pack)
             XCTAssertTrue(wear.far, name)
             let added = Array(all[model.vertices.count...])

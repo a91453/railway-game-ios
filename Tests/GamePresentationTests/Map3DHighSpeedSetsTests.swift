@@ -3,10 +3,11 @@ import GameCore
 @testable import GamePresentation
 import XCTest
 
-/// Decision 408: the high-speed trains two sets, #1201's 700T and the
-/// N700S-G (decision 979: the owner's old N700S in its place,
-/// `Map3DN700STests`), each car its own length; #900's light 700T drawn
-/// past the 700T's reach; #1201's E200 the Chu-Kuang's locomotive.
+/// Decision 408: the high-speed trains two sets, the 700T (decision 988:
+/// the owner's old 700 series cars in the place of #1201's recipe and its
+/// light far cars, `Map3DTHSR700TTests`) and the N700S-G (decision 979:
+/// the owner's old N700S in its place, `Map3DN700STests`), each car its
+/// own length; #1201's E200 the Chu-Kuang's locomotive.
 final class Map3DHighSpeedSetsTests: XCTestCase {
     private var pack: Map3DModelPack { .unbaked }  // the recipes before decision 439's shade
 
@@ -18,19 +19,20 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         try XCTUnwrap(pack.layout(forType: key, count: count), key).map { (pack.models[$0.model].name, $0.length, $0.gap) }
     }
 
-    /// The 700T: #1201's cab, middle, pantograph and tail cars, twelve at
-    /// their own lengths, the pantographs on the fourth and ninth.
-    func testThe700TIsTheRefreshedModel() throws {
+    /// The 700T: the owner's old cars (``Map3DTHSR700T``), twelve at
+    /// their own lengths, the pantographs on the fourth and ninth, the
+    /// back half turned round.
+    func testThe700TIsTheOwnersOldCars() throws {
         let cars = try layout("HSR", 12)
-        XCTAssertEqual(cars.map(\.0), ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-panto"]
-            + Array(repeating: "set-highSpeed-car", count: 4) + ["set-highSpeed-panto", "set-highSpeed-car", "set-highSpeed-car", "set-highSpeed-tail"])
-        for (name, refresh) in [("head", "refresh-700t-cab"), ("car", "refresh-700t-middle"), ("panto", "refresh-700t-panto"), ("tail", "refresh-700t-tail")] {
-            let car = try model("set-highSpeed-" + name), source = Map3DTrainShapeRefresh.model(refresh)
-            XCTAssertEqual(car.triangleCount, source.triangleCount, "\(name): #1201's shape as it is")
-            XCTAssertEqual(car.length, source.length, accuracy: 1e-4, name)
-            XCTAssertEqual(cars.first { $0.0 == "set-highSpeed-" + name }?.1 ?? 0, source.length, accuracy: 1e-3, "\(name): its own length")
+        XCTAssertEqual(cars.map(\.0), ["head", "car", "car", "panto", "car", "car", "carBack", "carBack", "pantoBack", "carBack", "carBack", "tail"]
+            .map { "set-highSpeed-" + $0 })
+        for (name, unit) in [("head", Map3DTHSR700T.Unit.cab), ("car", .middle), ("panto", .pantograph), ("tail", .cab), ("carBack", .middle), ("pantoBack", .pantograph)] {
+            let car = try model("set-highSpeed-" + name), source = try XCTUnwrap(Map3DTHSR700T.model(unit))
+            XCTAssertEqual(car.triangleCount, source.triangleCount, "\(name): the old car as the tool cut it")
+            XCTAssertEqual(car.length, Map3DTHSR700T.length(unit), accuracy: 0.01, name)
+            XCTAssertEqual(cars.first { $0.0 == "set-highSpeed-" + name }?.1 ?? 0, Map3DTHSR700T.length(unit), accuracy: 0.01, "\(name): its own length")
         }
-        XCTAssertEqual(cars.reduce(0) { $0 + $1.1 }, 305.3, accuracy: 0.5)
+        XCTAssertEqual(cars.reduce(0) { $0 + $1.1 }, 304, accuracy: 0.1)
         // Lit white at the head's nose, red at the tail's.
         let head = try model("set-highSpeed-head").vertices.filter(\.glows), tail = try model("set-highSpeed-tail").vertices.filter(\.glows)
         XCTAssertFalse(head.isEmpty)
@@ -54,23 +56,18 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         XCTAssertNotNil(pack.models(forType: "n700s"))
     }
 
-    /// Within 500 m the 700T, on to 900 m its light cars (decision 422) car for car,
-    /// beyond that a box.
-    func testThe700TFarSet() throws {
-        XCTAssertEqual(Map3DTrainSet.reach(of: "HSR"), Map3DTrainSet.tramReach)
+    /// Decision 988: a 700T car is under two thousand triangles, so it is
+    /// drawn as itself as far as any train's model (the light far cars of
+    /// decision 422 are gone), beyond that a box.
+    func testThe700THasNoFarSet() throws {
+        XCTAssertEqual(Map3DTrainSet.reach(of: "HSR"), Map3DTrains.modelReach)
+        XCTAssertNil(pack.index(of: "set-highSpeedFar-head"))
         for name in ["head", "car", "panto", "tail"] {
             let near = try XCTUnwrap(pack.index(of: "set-highSpeed-" + name))
             XCTAssertEqual(pack.model(near, forType: "HSR", count: 12, at: 100), near, name)
-            XCTAssertEqual(pack.model(near, forType: "HSR", count: 12, at: 700), pack.index(of: "set-highSpeedFar-" + name), name)
-            XCTAssertNil(pack.model(near, forType: "HSR", count: 12, at: 1_000), name)
+            XCTAssertEqual(pack.model(near, forType: "HSR", count: 12, at: 700), near, name)
+            XCTAssertNil(pack.model(near, forType: "HSR", count: 12, at: Map3DTrains.modelReach + 100), name)
         }
-        let far = try model("set-highSpeedFar-car"), near = try model("set-highSpeed-car")
-        XCTAssertLessThan(far.triangleCount * 5, near.triangleCount, "a fifth of the triangles")
-        // A whole 700T is over eight times the light one's triangles (decision 422).
-        let cars = try XCTUnwrap(pack.layout(forType: "HSR", count: 12))
-        let whole = cars.reduce(0) { $0 + pack.models[$1.model].triangleCount }
-        let light = try cars.reduce(0) { $0 + pack.models[try XCTUnwrap(pack.farModel(of: $1.model, forType: "HSR", count: 12))].triangleCount }
-        XCTAssertGreaterThan(whole, 8 * light)
     }
 
     /// #1201's E200 heads the Chu-Kuang, its lamps lit at the front.

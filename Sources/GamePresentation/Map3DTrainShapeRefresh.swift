@@ -1,8 +1,10 @@
 import Foundation
 
 /// Independent photo-led static studies. Decision 408: the E200 draws the
-/// Chu-Kuang sets' locomotive and the 700T units the high-speed set
-/// (``Map3DTrainSet/highSpeed700T()``); their shapes are as made here.
+/// Chu-Kuang sets' locomotive; the 700T units drew the high-speed set
+/// until decision 988 (``Map3DTHSR700T``, the owner's old cars, has its
+/// place: these stay as the studies they were made as, and the 700T's
+/// colours, which the new cars wear too).
 public enum Map3DTrainShapeRefresh {
     public static let highSpeedBodyColor=Map3DPalette.shopAwnings[3]
     public static let highSpeedAccentColor=Map3DColor.shaded(Map3DPalette.tankStand,0.42)
@@ -13,7 +15,7 @@ public enum Map3DTrainShapeRefresh {
     public static let highSpeedGameBandColor=Map3DPalette.shopAwnings[0]
     /// Decision 983: the paints a line's 700T sets can wear.
     static let highSpeedPaints=TrainPaintFamily(
-        id:"highSpeed",sets:["highSpeed","highSpeedFar"],english:"700T",chinese:"700T",
+        id:"highSpeed",sets:[Map3DTHSR700T.key],english:"700T",chinese:"700T",
         ownEnglish:"Orange band",ownChinese:"橘色帶",ownSwatch:highSpeedBandColor,
         paints:[TrainPaint(id:"teal",english:"Teal band",chinese:"青綠帶",swatch:highSpeedGameBandColor,
                            swaps:[TrainPaint.Swap(from:highSpeedBandColor,to:highSpeedGameBandColor)])])

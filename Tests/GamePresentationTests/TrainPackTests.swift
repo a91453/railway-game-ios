@@ -67,7 +67,8 @@ final class TrainPackTests: XCTestCase {
             XCTAssertEqual(names(pack, key, 12).first, "set-highSpeed-head")
             let head = pack.modelIndex(forType: key, carIndex: 0, count: 12)!
             let far = pack.model(head, forType: key, count: 12, at: Map3DTrainSet.tramReach + 100).map { pack.models[$0].name }
-            XCTAssertEqual(far, "set-highSpeedFar-head", "train \(number) from 500 m out")
+            // Decision 988: the 700T has no far set; itself from 500 m out too.
+            XCTAssertEqual(far, "set-highSpeed-head", "train \(number) from 500 m out")
         }
         pack.locked = TrainPack.locked(unlocked: true)
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: pack.locked), "n700s")

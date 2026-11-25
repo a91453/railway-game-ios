@@ -129,11 +129,11 @@ final class TrainPaintTests: XCTestCase {
 
     /// The 700T: built in its real orange band; "teal" turns every orange
     /// triangle the game's earlier teal and leaves its white body, its
-    /// black line and its glass alone, near and far.
+    /// black line and its glass alone, on every car (decision 988: the
+    /// owner's old cars, with no far set).
     func testThe700TsOrangeBandTurnsTeal() throws {
         let pack = Map3DModelPack.standard
         let family = try XCTUnwrap(TrainPaintFamily.named(set: "highSpeed"))
-        XCTAssertEqual(TrainPaintFamily.named(set: "highSpeedFar")?.id, family.id)
         XCTAssertEqual(family.ownSwatchRGB, 0xEA6A1E, "the 2D map's orange (TrainLivery.highSpeed)")
         XCTAssertEqual(family.ownSwatchRGB, TrainLivery.highSpeed.stripe)
         let teal = try XCTUnwrap(family.paint("teal"))
@@ -142,7 +142,7 @@ final class TrainPaintTests: XCTestCase {
             vertices.filter { $0.color >> 24 == 0xFF && !$0.glows && $0.layer == Map3DVertex.plain && TrainPaint.shade(of: $0.color, in: colour) != nil }.count
         }
         for name in ["set-highSpeed-head", "set-highSpeed-car", "set-highSpeed-panto", "set-highSpeed-tail",
-                     "set-highSpeedFar-head", "set-highSpeedFar-car", "set-highSpeedFar-panto", "set-highSpeedFar-tail"] {
+                     "set-highSpeed-carBack", "set-highSpeed-pantoBack"] {
             let model = pack.models[try XCTUnwrap(pack.index(of: name), name)]
             let banded = count(model.vertices, shadesOf: orange)
             XCTAssertGreaterThan(banded, 0, "\(name): an orange band")
