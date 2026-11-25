@@ -196,6 +196,35 @@ final class Map3DTHSR700TTests: XCTestCase {
         }
     }
 
+    /// The owner, 2026-11-25 (「他是從車燈到上方」): the real 700T's
+    /// windscreen and lamps are in one black mask, from the lamps up to the
+    /// windscreen's top; the old car's were two patches with white between
+    /// them. The mask reaches the lamps' front edge and the windscreen's
+    /// back one, and no face between the lamps and the windscreen is left
+    /// white.
+    func testTheMaskRunsFromTheLampsToTheWindscreensTop() throws {
+        let cab = try XCTUnwrap(Map3DTHSR700T.model(.cab))
+        func onTheNose(_ v: Map3DVertex) -> Bool { v.x > 7 && v.z > 2 && abs(v.y) < 1.2 }
+        let nose = cab.vertices.filter(onTheNose)
+        let lamps = nose.filter { $0.color == Map3DTrainStyle.headlamp || $0.color == Map3DPalette.lantern }
+        let glass = nose.filter { $0.color == Map3DTrainStyle.glass }
+        let mask = nose.filter { $0.color == Map3DPalette.dark }
+        let lampFront = try XCTUnwrap(lamps.map(\.x).max()), lampBack = try XCTUnwrap(lamps.map(\.x).min())
+        let glassFront = try XCTUnwrap(glass.map(\.x).max()), glassBack = try XCTUnwrap(glass.map(\.x).min())
+        XCTAssertLessThan(glassFront, lampBack, "the lamps before the windscreen")
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(mask.map(\.x).max()), lampFront, "the mask to the lamps' front edge")
+        XCTAssertLessThanOrEqual(try XCTUnwrap(mask.map(\.x).min()), glassBack + 0.2, "and to the windscreen's top")
+        var between = 0
+        for start in stride(from: 0, to: cab.vertices.count, by: 3) {
+            let corners = cab.vertices[start ..< start + 3]
+            let x = corners.map(\.x).reduce(0, +) / 3, y = corners.map(\.y).reduce(0, +) / 3, z = corners.map(\.z).reduce(0, +) / 3
+            guard x > glassFront + 0.02, x < lampBack - 0.02, abs(y) < 0.35, z > 2.2 else { continue }
+            between += 1
+            XCTAssertEqual(corners[start].color, Map3DPalette.dark, "a face between the lamps and the windscreen at \(x), \(y)")
+        }
+        XCTAssertGreaterThan(between, 0)
+    }
+
     /// The cab car is the real one's 27 m, 2 m longer than the recipe's
     /// was, and its nose is given no stretch of its own (the owner's
     /// rule): from its tip to its front door is the old car's 6.736 units

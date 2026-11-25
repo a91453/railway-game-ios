@@ -187,6 +187,10 @@ final class Map3DSeries700Tests: XCTestCase {
             let lamps = model.vertices.filter { $0.color == Map3DTrainStyle.headlamp || $0.color == Map3DPalette.lantern }
             XCTAssertEqual(lamps.isEmpty, !unit.isCab, unit.rawValue)
             XCTAssertTrue(lamps.allSatisfy { $0.x > Map3DSeries700.pitch * 0.3 }, "\(unit.rawValue): the lamps on the nose")
+            // Its windscreen and its lamps are apart, as the old car's
+            // (the 700T's black mask over both is the 700T's own).
+            XCTAssertFalse(unit.isCab && model.vertices.contains { $0.color == Map3DPalette.dark && $0.x > 7 && $0.z > 2 && abs($0.y) < 1.2 },
+                           unit.rawValue)
         }
     }
 

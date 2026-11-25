@@ -113,6 +113,12 @@ WINDSCREEN = [
     [(10, 72), (10, 67), (13, 64), (17, 61), (19, 60), (20.5, 60.5), (23, 64), (25, 67), (26.5, 69), (26.5, 72)],
     [(90.5, 72), (90.5, 67), (87.5, 64), (84, 61), (82, 60), (80, 60.5), (78, 63), (76, 65), (74, 68), (73, 70), (73, 72)],
 ]
+# 700T 的黑色面罩：真車的前窗與燈在同一片黑色裡，從燈一路到前窗的上緣，上寬
+# 下窄（照片）。舊版的前窗與燈是分開的兩塊，中間是白的；700T 把兩者之間、
+# 前窗兩耳之間都補成黑色。一個凸多邊形，排在前窗與燈的後面切。原塗裝的
+# 700 系（決策 989）前窗與燈本來就分開，不畫。
+MASK = [(10, 76), (10, 67), (13, 64), (17, 61), (19, 60), (82, 60), (84, 61), (87.5, 64), (90.5, 67), (90.5, 76),
+        (88.5, 84), (74.5, 123), (25, 123), (12, 84)]
 # 兩組燈，各切成外側頭燈、內側（靠中線）尾燈。
 LAMPS = [((26.5, 112.5, 37.5, 121.5), HEAD), ((37.5, 112.5, 44.5, 121.5), TAIL),
          ((54.5, 112.5, 61.5, 121.5), TAIL), ((61.5, 112.5, 73, 121.5), HEAD)]
@@ -260,6 +266,7 @@ class Paint:
     def __init__(self, unit: str, train: str = "thsr"):
         self.cab = unit in ("cab", "tail")
         own = train == "series700"
+        self.mask = not own  # 700T 的黑色面罩（`MASK`）
         if self.cab:
             a, b = STRETCH
             extra = CAB - (CAB_OLD[1] - CAB_OLD[0]) * LENGTH
@@ -405,11 +412,13 @@ ORANGE_KIND = 1  # `ORANGE` 是橘帶的高度，類別另外記
 
 # ---------------------------------------------------------------- 車體
 
-def front_pieces(uv):
+def front_pieces(uv, mask: bool):
     """車鼻上面的一個三角形（貼圖座標）：（多邊形, 類別或 None）。"""
     cells, pending = [], [uv]
     regions = [(region, GLASS) for region in WINDSCREEN]
     regions += [([(x0, y0), (x1, y0), (x1, y1), (x0, y1)], kind) for (x0, y0, x1, y1), kind in LAMPS]
+    if mask:
+        regions.append((MASK, BLACK))
     for region, paint in regions:
         left = []
         for piece in pending:
@@ -493,7 +502,7 @@ def cut_body(part, paint: Paint):
                 t = (e1[0] * py - e1[1] * px) / det
                 return corners[0] + (corners[1] - corners[0]) * s + (corners[2] - corners[0]) * t
 
-            for polygon, kind in front_pieces(uv):
+            for polygon, kind in front_pieces(uv, paint.mask):
                 lifted = [lift(p) for p in polygon]
                 if kind is not None:
                     add(lifted, kind)

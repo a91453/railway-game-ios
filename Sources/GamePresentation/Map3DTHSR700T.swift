@@ -27,7 +27,10 @@ import Foundation
 /// through the doors to the nose, deep from the skirt up before the front
 /// door, its top falling toward the nose's tip and round it; a black
 /// piece leaning back over the skirt behind the front door, and the black
-/// line starting in a point two metres behind it. The driver's door of
+/// line starting in a point two metres behind it; and on the nose a black
+/// mask over the windscreen and the lamps, from the lamps up to the
+/// windscreen's top (the old car's were two patches with white between
+/// them; the owner, 2026-11-25). The driver's door of
 /// the old car is not drawn (the 700T's cab car has only its passenger
 /// doors). The old game had no car under the pantograph: it is the middle
 /// car with a single-arm pantograph, its insulator cover and its two wind
@@ -75,9 +78,9 @@ public enum Map3DTHSR700T {
     /// and the line not carried across it.
     public static let hoodGap: Float = 0.02
 
-    /// What a car may have, triangles (1,927 the cab car, 1,360 the middle
+    /// What a car may have, triangles (1,999 the cab car, 1,360 the middle
     /// car, 1,444 the car under the pantograph: a twelve-car train some
-    /// 17,600, few enough to be drawn at any distance a train's model is,
+    /// 17,800, few enough to be drawn at any distance a train's model is,
     /// so no far set).
     static let triangles = 1_200...2_000
 
