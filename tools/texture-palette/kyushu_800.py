@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import struct
 from pathlib import Path
 
 import numpy as np
@@ -496,6 +497,54 @@ def doors(triangles, cab: bool):
     return out
 
 
+def write_glb(path: Path, triangles: list[tuple[np.ndarray, int]]):
+    """`triangles`：（3 × 3 的頂點, 材質）；一個材質一個 primitive，頂點併起來，
+    整節車一個 mesh。（`kyushu_n700.py` 的 `write_glb` 後來把每扇門拆成自己的
+    mesh；這台的門是一個材質格位，不用拆，所以自己留一份。）"""
+    materials, preview, generator = MATERIALS, PREVIEW, "tools/texture-palette/kyushu_800.py"
+    binary = bytearray()
+    views, accessors, primitives = [], [], []
+    for material in range(len(materials)):
+        mine = [corners for corners, paint in triangles if paint == material]
+        if not mine:
+            continue
+        points, lookup, indices = [], {}, []
+        for corners in mine:
+            for corner in corners:
+                key = tuple(int(round(v * 1000)) for v in corner)
+                if key not in lookup:
+                    lookup[key] = len(points)
+                    points.append([k / 1000 for k in key])
+                indices.append(lookup[key])
+        position = np.array(points, "<f4")
+        index = np.array(indices, "<u4")
+        for array, target in ((position, 34962), (index, 34963)):
+            while len(binary) % 4:
+                binary.append(0)
+            views.append({"buffer": 0, "byteOffset": len(binary), "byteLength": array.nbytes, "target": target})
+            binary += array.tobytes()
+        accessors.append({"bufferView": len(views) - 2, "componentType": 5126, "count": len(position), "type": "VEC3",
+                          "min": position.min(0).tolist(), "max": position.max(0).tolist()})
+        accessors.append({"bufferView": len(views) - 1, "componentType": 5125, "count": len(index), "type": "SCALAR"})
+        primitives.append({"attributes": {"POSITION": len(accessors) - 2}, "indices": len(accessors) - 1, "material": material})
+    while len(binary) % 4:
+        binary.append(0)
+    gltf = {
+        "asset": {"version": "2.0", "generator": generator},
+        "scene": 0, "scenes": [{"nodes": [0]}], "nodes": [{"mesh": 0, "name": path.stem}],
+        "meshes": [{"name": path.stem, "primitives": primitives}],
+        "materials": [{"name": name, "pbrMetallicRoughness": {
+            "baseColorFactor": [((c / 255) ** 2.2) for c in preview[i]] + [1.0], "metallicFactor": 0.0, "roughnessFactor": 1.0}}
+            for i, name in enumerate(materials)],
+        "buffers": [{"byteLength": len(binary)}], "bufferViews": views, "accessors": accessors,
+    }
+    text = json.dumps(gltf, separators=(",", ":")).encode()
+    text += b" " * (-len(text) % 4)
+    total = 12 + 8 + len(text) + 8 + len(binary)
+    path.write_bytes(b"glTF" + struct.pack("<II", 2, total) + struct.pack("<I4s", len(text), b"JSON") + text
+                     + struct.pack("<I4s", len(binary), b"BIN\0") + bytes(binary))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--cab", type=Path, required=True)
@@ -510,7 +559,7 @@ def main():
         expected = SHA256["cab" if cab else "middle"]
         if digest != expected:
             raise SystemExit(f"{path.name}: 不是這個工具認得的原檔（SHA-256 {digest}）")
-        base.write_glb(args.out_dir / f"{name}.glb", triangles, MATERIALS, PREVIEW, "tools/texture-palette/kyushu_800.py")
+        write_glb(args.out_dir / f"{name}.glb", triangles)
         points = np.concatenate([c for c, _ in triangles])
         counts = {MATERIALS[k]: sum(1 for _, kind in triangles if kind == k) for k in range(len(MATERIALS))}
         report[name] = {"sha256": digest, "triangles": len(triangles), "materials": counts, "doors": doors(triangles, cab), **({"more_windows": numbers} if numbers else {}),

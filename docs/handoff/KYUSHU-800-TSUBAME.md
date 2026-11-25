@@ -2,11 +2,11 @@
 
 - 派工：專案「規劃3」工作串「九州新幹線 800 系」，認領在 #2118，決策 978（`docs/decisions/978.md`）。照 N700 那張（決策 977，#2683）的做法，把作者舊版 SwiftRailMac 的 800 系車頭 `d7f7f5e4`、中間車 `652fb052` 的貼圖切成色票面、放回真車尺寸、接進列車註冊表（決策 782）、九州新幹線與車庫「日本」類。
 - session：作者 Mac 上的工作串（原始 GLB 只在那台 Mac 上，不進這個公開庫），2026-11-25。前一串對話壓縮第 2 次，照規矩停手，寫了這份；接手的工作串把頭車的加長法定下來之後更新。
-- 分支 `claude/kyushu-shinkansen-800`，**已推上 GitHub 備份，還沒開 PR**：派工說等 #2683 合了再 rebase 到 main 才開。它現在疊在 N700 的舊提交 `9d61fb672` 上，#2683 之後又改過，之後 rebase 到 main 時 `tools/texture-palette/kyushu_n700.py`、`Map3DKyushuN700Tests.swift`、`Map3DRealTrains.swift` 多半會衝突。
+- 分支 `claude/kyushu-shinkansen-800`，**還沒開 PR**。#2683 在 2026-11-25 合了，分支已在作者的 Mac 上 rebase 到合併後的 main（`290d9128e`）；只有 `kyushu_n700.py` 衝突，留 main 的版本，`kyushu_800.py` 改用自己的 `write_glb`。協調者交代 rebase 後的分支**先不要推、不要開 PR**：800 系排在 #2691 後面，輪到時協調者會說。GitHub 上的同名分支還是 rebase 前的舊版。
 
 ## 做完、已提交的（`5a259ed12`）
 
-- `tools/texture-palette/kyushu_800.py`：貼圖上每塊顏色的位置寫成一張表，轉檔前先對一次貼圖（`check_regions`），再照表切三角形。車頭 1,825 面、中間車 1,573 面（中間車的窗帶多排了兩格、車端補了全周幌，見下面）。讀檔、切面、寫 GLB 用 `kyushu_n700.py` 的函式（`write_glb` 多了材質表參數，N700 的產出逐位元組不變）。
+- `tools/texture-palette/kyushu_800.py`：貼圖上每塊顏色的位置寫成一張表，轉檔前先對一次貼圖（`check_regions`），再照表切三角形。車頭 1,825 面、中間車 1,573 面（中間車的窗帶多排了兩格、車端補了全周幌，見下面）。讀檔、切面用 `kyushu_n700.py` 的函式；寫 GLB 是 `kyushu_800.py` 自己的一份（`kyushu_n700.py` 不改）。
 - 真車尺寸：中間車 25.00 m、頭車 27.35 m、寬 3.38 m、屋頂高 3.65 m、標準軌 1,435 mm，六節 154.7 m。**頭車照真車的比例**（做法 E，見下面）：車身乘 1.30 加一格窗，車鼻乘 1.14。
 - 顏色只用既有色票（白 `tileWhite`、紅 `trainRed`），沒有新增顏色；紅色在五張真車照片上量過（#5E0E11 到 #7A2522）。
 - 車門：門框照舊貼圖的位置補回（`steel`），門板自成一個材質格位（`Map3DKyushu800.doorIndex`），每扇門的範圍在 `Map3DKyushu800.doors(_:)`，`testEachDoorIsAPieceOfItsOwn` 守著（和 N700S 同一個做法）。紅線在門的地方斷開，和舊貼圖、真車一樣。
@@ -50,7 +50,7 @@
 
 ## 還留下的
 
-1. 等 #2683 合進 main，把這個分支 rebase 到 main（`tools/texture-palette/kyushu_n700.py`、`Map3DKyushuN700Tests.swift`、`Map3DRealTrains.swift` 多半會衝突），重跑建置與測試、重產鎖檔，開草稿 PR（開頭兩行署名、`經驗檔：docs/studio/lessons/kyushu-800.md`、五個角度、VERIFIED／UNVERIFIED），指派作者、請作者審，在 #2118 留言。分支已經推上 GitHub 備份，還沒開 PR。
+1. 輪到時（協調者說），先再 fetch 一次 main、必要時再 rebase，重跑建置與測試、重產鎖檔，用 `--force-with-lease` 推上去（GitHub 上是 rebase 前的舊版），開草稿 PR（開頭兩行署名、`經驗檔：docs/studio/lessons/kyushu-800.md`、五個角度、VERIFIED／UNVERIFIED），指派作者、請作者審，在 #2118 留言。
 2. **合併前先送工作室審**（作者同意的）：把分支、GLB、總覽圖交給協調者，由不同家的模型審，審過、CI 綠了才合。不開 auto-merge。
 3. 私有素材庫 -2 的經驗檔 `docs/studio/lessons/kyushu-800.md` 與 `rolling-stock.md` §8 的更正（「頭車只拉長車鼻」改成上面那條規則）已經交給協調者代推；Mac 推不了那個庫。
 4. 合了之後在 #2118 放掉決策 978。
