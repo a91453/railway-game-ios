@@ -10,7 +10,7 @@
 - 真車尺寸：中間車 25.00 m、頭車 27.35 m、寬 3.38 m、屋頂高 3.65 m、標準軌 1,435 mm，六節 154.7 m。**頭車照真車的比例**（做法 E，見下面）：車身乘 1.30 加一格窗，車鼻乘 1.14。
 - 顏色只用既有色票（白 `tileWhite`、紅 `trainRed`），沒有新增顏色；紅色在五張真車照片上量過（#5E0E11 到 #7A2522）。
 - 車門：門框照舊貼圖的位置補回（`steel`），門板自成一個材質格位（`Map3DKyushu800.doorIndex`），每扇門的範圍在 `Map3DKyushu800.doors(_:)`，`testEachDoorIsAPieceOfItsOwn` 守著（和 N700S 同一個做法）。紅線在門的地方斷開，和舊貼圖、真車一樣。
-- `Map3DKyushu800.swift`、`Map3DKyushu800Mesh.swift`（產生的）、註冊表名單末尾一行、`tools/train-models/locks/kyushu800.json`、`Map3DRealTrains` 的 `alternate`（車次奇數畫 800 系六節）、車庫「日本」類、`WhatsNewNext` 一行、`docs/art/kyushu-800-2026-11/`、`Map3DKyushu800Tests`（現在 10 項）。存檔版本、golden schema、GameCore 都沒動。
+- `Map3DKyushu800.swift`、`Map3DKyushu800Mesh.swift`（產生的）、註冊表名單末尾一行、`tools/train-models/locks/kyushu800.json`、`Map3DRealTrains` 的 `alternate`（車次奇數畫 800 系六節）、車庫「日本」類、`WhatsNewNext/new/` 一個檔、`docs/art/kyushu-800-2026-11/`、`Map3DKyushu800Tests`（現在 10 項）。存檔版本、golden schema、GameCore 都沒動。
 
 ## 頭車：照真車的比例（做法 E，2026-11-25 晚上定的，取代 A）
 
