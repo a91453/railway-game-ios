@@ -11,10 +11,10 @@ final class Map3DStationCommerceTests: XCTestCase {
     private func builder() -> Map3DScene.Builder {
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                                          world: GameWorld.newGame())
-        builder.trackLines = [(stride(from: Float(-300), through: 300, by: 2).map { Map3DPoint($0, Map3DScene.railLift, 0) }, .surface)]
+        builder.state.track.trackLines = [(stride(from: Float(-300), through: 300, by: 2).map { Map3DPoint($0, Map3DScene.railLift, 0) }, .surface)]
         let centre = Map3DPoint(0, 0, 25), forward = Map3DPoint(0, 0, 1)
-        builder.houseFootprints = [[Map3DPoint(-40, 0, 10), Map3DPoint(40, 0, 10), Map3DPoint(40, 0, 40), Map3DPoint(-40, 0, 40)]]
-        builder.bigStations = [(centre, forward, 30)]
+        builder.state.stations.houseFootprints = [[Map3DPoint(-40, 0, 10), Map3DPoint(40, 0, 10), Map3DPoint(40, 0, 40), Map3DPoint(-40, 0, 40)]]
+        builder.state.stations.bigStations = [(centre, forward, 30)]
         return builder
     }
 
@@ -54,7 +54,7 @@ final class Map3DStationCommerceTests: XCTestCase {
         var regional = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                                           world: GameWorld.newGame())
         _ = regional.addStations(GameWorld.newGame().railwaySnapshot(), frame: nil)
-        XCTAssertTrue(regional.bigStations.isEmpty)
+        XCTAssertTrue(regional.state.stations.bigStations.isEmpty)
         XCTAssertTrue(regional.addStationCommerce(clearOf: []).isEmpty)
     }
 
@@ -88,7 +88,7 @@ final class Map3DStationCommerceTests: XCTestCase {
 
         // A road across the forecourt: the scenes stand clear of it.
         var road = builder()
-        road.roadLines = [([Map3DPoint(-400, 0, 70), Map3DPoint(400, 0, 70)], 6)]
+        road.state.baseMap.roadLines = [([Map3DPoint(-400, 0, 70), Map3DPoint(400, 0, 70)], 6)]
         _ = road.addStationCommerce(clearOf: [])
         let points = vertices(road.closeMeshes)
         XCTAssertFalse(points.isEmpty)
@@ -96,7 +96,7 @@ final class Map3DStationCommerceTests: XCTestCase {
 
         // A second track before the building: none on it.
         var track = builder()
-        track.trackLines.append((stride(from: Float(-300), through: 300, by: 2).map { Map3DPoint($0, Map3DScene.railLift, 75) }, .surface))
+        track.state.track.trackLines.append((stride(from: Float(-300), through: 300, by: 2).map { Map3DPoint($0, Map3DScene.railLift, 75) }, .surface))
         _ = track.addStationCommerce(clearOf: [])
         XCTAssertTrue(vertices(track.closeMeshes).allSatisfy { abs($0.z - 75) > 4 }, "4 m from the track")
     }

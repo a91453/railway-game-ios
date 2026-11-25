@@ -360,12 +360,12 @@ extension Map3DScene.Builder {
         // Decision 860: the underground platforms' too.
         // Decision 936: the lines at each face, for the transfer signs.
         var transfers: [StationID: StationTransfers] = [:]
-        let all = laidPlatforms + laidUnderground
+        let all = state.platforms.laidPlatforms + state.underground.laidUnderground
         for (index, platform) in all.enumerated() where !depots.contains(platform.station) {
             guard let path = Map3DStreetLife.Path(platform.line) else { continue }
             // Decision 936: nothing where a footbridge's tower or an
             // underpass's stairs stand on it.
-            let crossing = index < laidPlatforms.count ? crossingKeepOut[index] : nil
+            let crossing = index < state.platforms.laidPlatforms.count ? state.stationCrossings.crossingKeepOut[index] : nil
             func clearOfCrossing(_ along: Float, _ half: Float = 0.5) -> Bool {
                 crossing.map { along + half < $0.lowerBound || along - half > $0.upperBound } ?? true
             }
@@ -378,7 +378,7 @@ extension Map3DScene.Builder {
             // mark its doors, so the queue lines meet the openings.
             let lineTrains = platform.edge.map { screenDoors.trains(edge: $0, station: platform.station) } ?? []
             let kind = doorsHere != nil ? .metro
-                : Map3DPlatformProps.kind(system: stationSystems[platform.station], calling: trains?.formations.count ?? 0,
+                : Map3DPlatformProps.kind(system: state.stations.stationSystems[platform.station], calling: trains?.formations.count ?? 0,
                                           metroTrains: trains?.metro ?? 0)
             let formations = (doorsHere != nil && !lineTrains.isEmpty ? lineTrains : trains?.formations ?? [])
                 .filter { kind == .railway || $0.doors > 0 }
@@ -393,14 +393,14 @@ extension Map3DScene.Builder {
             let edge = platform.offset - side * platform.width / 2
             let top = Self.platformHeight
             let canopyShare = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
-            let shellRoofed = shellRoofed
+            let shellRoofed = state.stations.shellRoofed
             // NAME-BOARD-STYLES: a station's board in the style of the
             // system of the line on this platform.
-            let styledBoard = boardSigns[platform.station]?.board(realLine: platform.edge.flatMap {
+            let styledBoard = state.nameBoards.boardSigns[platform.station]?.board(realLine: platform.edge.flatMap {
                 screenDoors.realLine(edge: $0, station: platform.station)
             })
             let name = styledBoard?.name ?? world.station(id: platform.station)?.name
-            let second = styledBoard.map(\.second) ?? boardSecondNames[platform.station]
+            let second = styledBoard.map(\.second) ?? state.nameBoards.boardSecondNames[platform.station]
             let styled = styledBoard?.board
             mesh(at: path.at(path.length / 2).point) { mesh in
                 func place(_ along: Float, _ across: Float, _ up: Float) -> (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint) {
@@ -508,7 +508,7 @@ extension Map3DScene.Builder {
                                 transfers: inout [StationID: StationTransfers])
         -> [(along: Float, hung: Bool, near: [UInt32], far: [UInt32])] {
         let platform = all[index]
-        guard platform.island, platform.structure != .tunnel, !shellRoofed.contains(platform.station), let edge = platform.edge
+        guard platform.island, platform.structure != .tunnel, !state.stations.shellRoofed.contains(platform.station), let edge = platform.edge
         else { return [] }
         func back(_ platform: LaidPlatform, _ path: Map3DStreetLife.Path) -> Map3DPoint {
             let at = path.at(path.length / 2), side: Float = platform.offset >= 0 ? 1 : -1
@@ -537,7 +537,7 @@ extension Map3DScene.Builder {
         keptColours.formUnion(nearColours + farColours)
         let share = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
         let roof = (path.length * (1 - share) / 2)...(path.length * (1 + share) / 2)
-        let otherCrossing = other < laidPlatforms.count ? crossingKeepOut[other] : nil
+        let otherCrossing = other < state.platforms.laidPlatforms.count ? state.stationCrossings.crossingKeepOut[other] : nil
         return Map3DPlatformTransferSign.places(length: path.length, width: platform.width + all[other].width, roof: roof,
                                                 taken: [crossing, otherCrossing].compactMap { $0 })
             .map { ($0.along, $0.hung, nearColours, farColours) }

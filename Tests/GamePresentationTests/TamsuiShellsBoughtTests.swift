@@ -20,9 +20,9 @@ final class TamsuiShellsBoughtTests: XCTestCase {
         let snapshot = world.railwaySnapshot()
         _ = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
-        XCTAssertFalse(builder.laidPlatforms.filter { $0.station == station.id }.isEmpty, "\(station.name): its platforms drawn")
+        XCTAssertFalse(builder.state.platforms.laidPlatforms.filter { $0.station == station.id }.isEmpty, "\(station.name): its platforms drawn")
         let network = snapshot.platforms.map { (station: $0.platform.station, structure: $0.structure, points: $0.points) }
-        let lines = Map3DScene.Builder.shellLines(laid: builder.laidPlatforms, network: network) { builder.point($0) + Map3DScene.Builder.lifted }
+        let lines = Map3DScene.Builder.shellLines(laid: builder.state.platforms.laidPlatforms, network: network) { builder.point($0) + Map3DScene.Builder.lifted }
         return lines[station.id].flatMap { builder.taipeiMRTShell(platforms: $0, frame: frame)?.station }
     }
 

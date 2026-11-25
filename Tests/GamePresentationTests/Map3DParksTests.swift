@@ -86,7 +86,7 @@ final class Map3DParksTests: XCTestCase {
 
         var track = self.builder(world)
         let middle = track.point(x: (track.region.minX + track.region.maxX) / 2, y: (track.region.minY + track.region.maxY) / 2, height: 0)
-        track.trackLines = [(stride(from: Float(-200), through: 200, by: 2).map { middle + Map3DPoint($0, 0, 0) }, .surface)]
+        track.state.track.trackLines = [(stride(from: Float(-200), through: 200, by: 2).map { middle + Map3DPoint($0, 0, 0) }, .surface)]
         track.addParks(map, clearOf: [])
         for bounds in track.closeMeshes.values.compactMap(\.bounds) {
             XCTAssertTrue(bounds.min.z > middle.z + 4 || bounds.max.z < middle.z - 4, "4 m from the track")

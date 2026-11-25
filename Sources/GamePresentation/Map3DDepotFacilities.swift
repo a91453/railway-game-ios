@@ -240,7 +240,7 @@ extension Map3DScene.Builder {
         // within 15 m of their line.
         let half = path.length / 2
         func beyond(_ sign: Float) -> Int {
-            trackLines.reduce(0) { count, line in
+            state.track.trackLines.reduce(0) { count, line in
                 count + line.points.filter { p in
                     let d = p - middle.point, along = d.dot(middle.along) * sign
                     return along > half && along < half + 60 && abs(d.dot(middle.right)) < 15
@@ -260,7 +260,7 @@ extension Map3DScene.Builder {
         mesh(at: foot) { $0.append(Map3DDepotYardKit.shedFarMesh(system: system, tracks: tracks, bays: bays, cladding: cladding), at: foot, forward: facing) }
         // The cells under its footprint.
         let corners = Map3DMesh.footprint(centre: foot, forward: facing, length: wide, width: depth)
-        houseFootprints.append(corners)
+        state.stations.houseFootprints.append(corners)
         return cells(under: corners)
     }
 

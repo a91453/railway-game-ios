@@ -35,6 +35,14 @@ extension Map3DScene {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the real lines' overhead line, kept while the scene is
+    /// built (``LayerStates/overhead``).
+    struct OverheadState {
+        /// Decision 326: on a real-world map, the real lines round the
+        /// scene and whether each runs under an overhead line.
+        var realLines: [(points: [Map3DPoint], wired: Bool)] = []
+    }
+
     /// Decision 326: `railways`' lines round the scene, in scene metres,
     /// each piece with whether it runs under an overhead line.
     mutating func addRealLines(_ railways: RealRailways, frame: RealWorldFrame) {
@@ -60,17 +68,17 @@ extension Map3DScene.Builder {
             let points = line.points.map(scene)
             let wired = Map3DScene.wiredSystems.contains(line.system.id)
             guard wired, let branch = Map3DScene.dieselBranches.first(where: { line.name.hasPrefix($0) }) else {
-                realLines.append((points, wired))
+                state.overhead.realLines.append((points, wired))
                 continue
             }
             // The Neiwan Line is wired from Hsinchu as far as Zhuzhong.
             if branch == "內灣線", let zhuzhong, let hsinchu, let first = points.first, let last = points.last {
                 let cut = points.indices.min { (points[$0] - zhuzhong).length < (points[$1] - zhuzhong).length } ?? 0
                 let fromHsinchu = (first - hsinchu).length < (last - hsinchu).length
-                realLines.append((Array(points[...cut]), fromHsinchu))
-                realLines.append((Array(points[cut...]), !fromHsinchu))
+                state.overhead.realLines.append((Array(points[...cut]), fromHsinchu))
+                state.overhead.realLines.append((Array(points[cut...]), !fromHsinchu))
             } else {
-                realLines.append((points, false))
+                state.overhead.realLines.append((points, false))
             }
         }
     }
@@ -148,7 +156,7 @@ extension Map3DScene.Builder {
     /// the second's contact wire ends where the first's does.
     mutating func addOverheadLine() {
         // Decision 947: none over a guideway.
-        let lines = trackLines.enumerated().filter { !guidedTrackLines.contains($0.offset) }.compactMap { item in
+        let lines = state.track.trackLines.enumerated().filter { !state.track.guidedTrackLines.contains($0.offset) }.compactMap { item in
             Map3DStreetLife.Path(item.element.points).map { (index: item.offset, path: $0, kind: item.element.kind) }
         }
         // Every piece of track in the open by 32 m cell, to find a track's
@@ -199,13 +207,13 @@ extension Map3DScene.Builder {
                 }
             }
         }
-        let diamonds = diamonds
+        let diamonds = state.track.diamonds
         /// Near enough a diamond for a mast's foot to reach the other
         /// track: the flatter the crossing, the farther out.
         func nearDiamond(_ p: Map3DPoint) -> Bool {
             diamonds.contains { level($0.point - p).length < (Self.mastOffset + Self.mastClearOfTrack) / $0.sine + 4 }
         }
-        let platforms = laidPlatforms.compactMap { platform in Map3DStreetLife.Path(platform.line).map { (path: $0, platform: platform) } }
+        let platforms = state.platforms.laidPlatforms.compactMap { platform in Map3DStreetLife.Path(platform.line).map { (path: $0, platform: platform) } }
         /// The platform beside the track at `p` on `side`, if one is.
         func platform(at p: Map3DPoint, side: Float) -> LaidPlatform? {
             platforms.first { item in
@@ -224,7 +232,7 @@ extension Map3DScene.Builder {
         // point is laid along one run without an overhead line: the
         // nearest within 30 m.
         var real: [Cell: [(a: Map3DPoint, b: Map3DPoint, wired: Bool)]] = [:]
-        for line in realLines {
+        for line in state.overhead.realLines {
             for (a, b) in zip(line.points, line.points.dropFirst()) {
                 let low = cell(Map3DPoint(min(a.x, b.x), 0, min(a.z, b.z))), high = cell(Map3DPoint(max(a.x, b.x), 0, max(a.z, b.z)))
                 guard high.x - low.x < 64, high.z - low.z < 64 else { continue }
@@ -247,7 +255,7 @@ extension Map3DScene.Builder {
         }
         /// Whether `p` lies on a street at one of its level crossings.
         func inStreet(_ p: Map3DPoint) -> Bool {
-            crossings.contains { crossing in
+            state.streets.crossings.contains { crossing in
                 let d = level(p - crossing.point)
                 return abs(d.dot(crossing.along)) < Self.mastSpacing
                     && abs(d.x * crossing.along.z - d.z * crossing.along.x) <= crossing.halfWidth + 0.5
@@ -269,7 +277,7 @@ extension Map3DScene.Builder {
                 // heights file's ground above a track the world laid lower),
                 // but in a trench cut for it (decision 375) or a tunnel
                 // (decision 395).
-                guard realLines.isEmpty || isWired(p),
+                guard state.overhead.realLines.isEmpty || isWired(p),
                       inTunnel || drawnGround(x: p.x, z: p.z) < p.y + 1
                         || trackCover.trenches.piece(at: Map3DBaseMap.Point(x: Double(p.x), z: Double(p.z))) != nil
                 else {

@@ -309,7 +309,7 @@ extension Map3DScene.Builder {
     /// `roadCuts` (a motorway's own lanes, which lie in them).
     func outsideTrenches(_ polygon: [Map3DBaseMap.Point], roadCuts: Bool = true) -> [[Map3DBaseMap.Point]]? {
         var parts: [[Map3DBaseMap.Point]]?
-        for trenches in roadCuts ? [trackCover.trenches, roadGrade.cuts] : [trackCover.trenches] where !trenches.isEmpty {
+        for trenches in roadCuts ? [trackCover.trenches, state.roadGrade.cuts] : [trackCover.trenches] where !trenches.isEmpty {
             var next: [[Map3DBaseMap.Point]] = [], touched = false
             for part in parts ?? [polygon] {
                 guard let first = part.first else { continue }
@@ -369,7 +369,7 @@ extension Map3DScene.Builder {
                                   level: Bool = false) -> (points: [Map3DPoint], triangles: [Int]) {
         guard !points.isEmpty else { return (points, triangles) }
         let xs = points.map { Double($0.x) }, zs = points.map { Double($0.z) }
-        let all = roadCuts ? [trackCover.trenches, roadGrade.cuts] : [trackCover.trenches]
+        let all = roadCuts ? [trackCover.trenches, state.roadGrade.cuts] : [trackCover.trenches]
         guard all.contains(where: { !$0.pieces(minX: xs.min()!, minZ: zs.min()!, maxX: xs.max()!, maxZ: zs.max()!).isEmpty }) else {
             return (points, triangles)
         }
@@ -418,7 +418,7 @@ extension Map3DScene.Builder {
     mutating func addTrenches() {
         addTrenches(trackCover.trenches)
         // Decision 834: the motorways' cuttings, drawn as the track's.
-        addTrenches(roadGrade.cuts)
+        addTrenches(state.roadGrade.cuts)
     }
 
     private mutating func addTrenches(_ trenches: Map3DTrenches) {

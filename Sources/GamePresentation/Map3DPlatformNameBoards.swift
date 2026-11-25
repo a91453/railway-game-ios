@@ -363,6 +363,17 @@ extension Map3DPlatformProps {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the platforms' name boards, kept while the scene is
+    /// built (``LayerStates/nameBoards``).
+    struct NameBoardState {
+        /// Decision 882: each real station's other name (its English one
+        /// under a Chinese name), for its platforms' name boards.
+        var boardSecondNames: [StationID: String] = [:]
+        /// NAME-BOARD-STYLES: the boards of the stations of systems with
+        /// a style of their own.
+        var boardSigns: [StationID: Map3DBoardSign] = [:]
+    }
+
     /// Decision 882: the second name of each of `world`'s stations that is
     /// a real one (as the station card's nameboard, decision 845): the
     /// official English name under a Chinese name, the Chinese one under

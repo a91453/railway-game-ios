@@ -181,6 +181,13 @@ public enum Map3DFreightYard {
 }
 
 extension Map3DScene.Builder {
+    /// Decision 976: the freight yards, kept while the scene is built
+    /// (``LayerStates/freight``).
+    struct FreightState {
+        /// Decision 837: the freight yards laid so far.
+        var freightYardPlaces: [Map3DFreightYard.Place] = []
+    }
+
     /// Decision 837: the yards (``Map3DFreightYard``) of the world's
     /// freight facilities, by station.
     var freightYards: [StationID: CargoKind] {
@@ -201,7 +208,7 @@ extension Map3DScene.Builder {
             let (out, back) = besidePlatforms(depth: Yard.depth + Yard.gap, wide: Yard.length, platforms: platforms, middle: middle, sides: [side])
             let centre = back + out * (Yard.gap + Yard.depth / 2)
             let corners = Map3DMesh.footprint(centre: centre, forward: out, length: Yard.depth, width: Yard.length)
-            guard !Self.overlaps(corners, houseFootprints), isClearOfRoads(corners) else { continue }
+            guard !Self.overlaps(corners, state.stations.houseFootprints), isClearOfRoads(corners) else { continue }
             let foot = Map3DPoint(centre.x, corners.map { drawnGround(x: $0.x, z: $0.z) }.max() ?? 0, centre.z)
             let saved = target
             defer { target = saved }
@@ -209,8 +216,8 @@ extension Map3DScene.Builder {
             mesh(at: foot) { $0.append(Yard.mesh(product), at: foot, forward: out) }
             target = .far
             mesh(at: foot) { $0.append(Yard.farMesh(product), at: foot, forward: out) }
-            houseFootprints.append(corners)
-            freightYardPlaces.append(Map3DFreightYard.Place(station: station, product: product, centre: foot, forward: out))
+            state.stations.houseFootprints.append(corners)
+            state.freight.freightYardPlaces.append(Map3DFreightYard.Place(station: station, product: product, centre: foot, forward: out))
             return cells(under: corners)
         }
         return []
@@ -228,7 +235,7 @@ extension Map3DScene.Builder {
             return abs(d.dot(facing)) < length + margin && abs(d.dot(side)) < width + margin
         }
         let reach = length + width
-        for road in roadLines {
+        for road in state.baseMap.roadLines {
             for (a, b) in zip(road.points, road.points.dropFirst()) {
                 let span = Map3DPoint(b.x - a.x, 0, b.z - a.z), steps = max(1, Int((span.length / 2).rounded(.up)))
                 guard (a - middle).length < span.length + reach + road.half + 4 else { continue }

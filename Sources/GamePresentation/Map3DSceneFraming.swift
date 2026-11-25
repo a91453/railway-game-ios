@@ -87,7 +87,7 @@ extension Map3DScene {
         builder.addViaducts()
         builder.addPlatforms(snapshot)
         builder.addSeededStreets(skyline ?? CitySkyline(world: world), clearOf: cleared, laying: false)
-        return SeededStreetPlan(edges: builder.streetEdges)
+        return SeededStreetPlan(edges: builder.state.streets.streetEdges)
     }
 
     /// The scene of `world`: what is built and ``margin`` round it, at most

@@ -1669,7 +1669,7 @@ extension Map3DScene.Builder {
     /// there: a link road coming down beside its main road, the map's
     /// widths overlapping.
     mutating func underHigherDeck(_ p: Map3DBaseMap.Point, along: (x: Double, z: Double), rise: Float) -> Bool {
-        let bridges = roadBridges
+        let bridges = state.roadBridges
         let reach = Double(Map3DRoadBridges.half(.motorway))
         let low = Map3DRoadBridges.key(p.x - reach, p.z - reach), high = Map3DRoadBridges.key(p.x + reach, p.z + reach)
         var seen = Set<Int>()
@@ -1702,12 +1702,12 @@ extension Map3DScene.Builder {
     /// down; else 0. Only a road `onDeck` (a bridge's) is on a deck: one
     /// on the ground under it is not.
     mutating func roadRise(at p: Map3DBaseMap.Point, along: (x: Double, z: Double)?, onDeck: Bool) -> (rise: Float, onBridge: Bool) {
-        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return (0, false) }
+        guard !state.roadBridges.isEmpty || !state.roadGrade.isEmpty else { return (0, false) }
         let key = Map3DRoadBridges.key(p.x, p.z)
         // Decision 876 (later, PERF-3D-BLOCK-FIXED): the bridges copied
         // (the ground below changes `self`) only where a cell holds one
         // of them: copying them was most of what this cost elsewhere.
-        let bridges = Self.bridgesNear(roadBridges, key: key, decks: onDeck, ends: true, joins: !onDeck)
+        let bridges = Self.bridgesNear(state.roadBridges, key: key, decks: onDeck, ends: true, joins: !onDeck)
         var best: (rise: Float, onBridge: Bool) = (0, false)
         // Decision 865: over the road's bed there, which whoever asks
         // stands the road on (``roadGround(at:along:onDeck:beyond:)``).
@@ -1770,7 +1770,7 @@ extension Map3DScene.Builder {
         // Decision 834: a motorway on its profile: a deck no lower, a road
         // on the ground lifted over it (a deck once its girder is clear)
         // or down in its cutting.
-        if !roadGrade.isEmpty, let graded = roadGrade.profile(at: p, along: along, onDeck: onDeck) {
+        if !state.roadGrade.isEmpty, let graded = state.roadGrade.profile(at: p, along: along, onDeck: onDeck) {
             let rise = graded.height - ground()
             if onDeck {
                 best = (max(best.rise, rise), true)
@@ -1791,7 +1791,7 @@ extension Map3DScene.Builder {
     mutating func roadBeside(_ probe: Map3DBaseMap.Point, of centre: Map3DBaseMap.Point, at height: Float, within: Float) -> Bool {
         let key = Map3DRoadBridges.key(probe.x, probe.z)
         // Decision 876 (later): copied only where a cell holds one.
-        let bridges = roadBridges.segments[key] == nil && roadBridges.groundCells[key] == nil ? Map3DRoadBridges() : roadBridges
+        let bridges = state.roadBridges.segments[key] == nil && state.roadBridges.groundCells[key] == nil ? Map3DRoadBridges() : state.roadBridges
         // Over the probe, and not the road along `centre` itself.
         func covers(_ a: Map3DBaseMap.Point, _ b: Map3DBaseMap.Point, half: Float) -> Bool {
             Map3DRoadBridges.nearest(probe, a, b).distance <= Double(half)
@@ -1834,14 +1834,14 @@ extension Map3DScene.Builder {
     /// Decision 391: whether a road from `a` to `b` may come near a
     /// raised road (a bridge or a ramp onto one).
     func nearRaisedRoad(from a: Map3DBaseMap.Point, to b: Map3DBaseMap.Point) -> Bool {
-        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return false }
+        guard !state.roadBridges.isEmpty || !state.roadGrade.isEmpty else { return false }
         let low = Map3DRoadBridges.key(min(a.x, b.x), min(a.z, b.z)), high = Map3DRoadBridges.key(max(a.x, b.x), max(a.z, b.z))
         for row in low.row...high.row {
             for column in low.column...high.column {
                 let key = Map3DScene.ChunkKey(column: column, row: row)
-                if roadBridges.segments[key] != nil || roadBridges.endCells[key] != nil || roadBridges.joinCells[key] != nil { return true }
+                if state.roadBridges.segments[key] != nil || state.roadBridges.endCells[key] != nil || state.roadBridges.joinCells[key] != nil { return true }
                 // Decision 834: a motorway off its ground.
-                if roadGrade.cells[key] != nil { return true }
+                if state.roadGrade.cells[key] != nil { return true }
             }
         }
         return false
@@ -1922,7 +1922,7 @@ extension Map3DScene.Builder {
     /// road's first point and a pier every ``Map3DElevatedLook/pierSpacing``
     /// from it, so a chunk built apart draws what the whole scene does.
     mutating func addRoadBridges(_ roads: [Map3DBaseMap.Road], look: Map3DElevatedLook = .roadBridge) {
-        guard !roadBridges.isEmpty || !roadGrade.isEmpty else { return }
+        guard !state.roadBridges.isEmpty || !state.roadGrade.isEmpty else { return }
         typealias Point = Map3DBaseMap.Point
         for road in roads where road.points.count >= 2 {
             let xs = road.points.map(\.x), zs = road.points.map(\.z)

@@ -358,10 +358,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         let line = stride(from: Float(-300), through: 300, by: 2).map { middle + Map3DPoint($0, 0, 20) }
         var blocked = self.builder(world)
-        blocked.trackLines = [(line, .surface)]
+        blocked.state.track.trackLines = [(line, .surface)]
         XCTAssertTrue(blocked.addTaipeiLandmarks(frame: frame).isEmpty)
         var tunnel = self.builder(world)
-        tunnel.trackLines = [(line, .tunnel)]
+        tunnel.state.track.trackLines = [(line, .tunnel)]
         XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), [station])
     }
 
@@ -458,10 +458,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         let line = stride(from: Float(-120), through: 120, by: 2).map { middle + Map3DPoint($0, 0, 10) }
         var blocked = self.builder(world)
-        blocked.trackLines = [(line, .surface)]
+        blocked.state.track.trackLines = [(line, .surface)]
         XCTAssertEqual(Set(blocked.addTaipeiLandmarks(frame: frame).keys), [.kaohsiungMusicCenter])
         var tunnel = self.builder(world)
-        tunnel.trackLines = [(line, .tunnel)]
+        tunnel.state.track.trackLines = [(line, .tunnel)]
         XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), baySet)
     }
 
@@ -510,10 +510,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         XCTAssertTrue(builder.keptColours.contains(brick))
         let line = stride(from: Float(-120), through: 120, by: 2).map { middle + Map3DPoint($0, 0, 10) }
         var blocked = self.builder(world)
-        blocked.trackLines = [(line, .surface)]
+        blocked.state.track.trackLines = [(line, .surface)]
         XCTAssertNil(blocked.addTaipeiLandmarks(frame: frame)[tower])
         var tunnel = self.builder(world)
-        tunnel.trackLines = [(line, .tunnel)]
+        tunnel.state.track.trackLines = [(line, .tunnel)]
         XCTAssertNotNil(tunnel.addTaipeiLandmarks(frame: frame)[tower])
     }
 
@@ -569,10 +569,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         let line = stride(from: Float(-120), through: 120, by: 2).map { middle + Map3DPoint($0, 0, 10) }
         var blocked = self.builder(world)
-        blocked.trackLines = [(line, .surface)]
+        blocked.state.track.trackLines = [(line, .surface)]
         XCTAssertTrue(blocked.addTaipeiLandmarks(frame: frame).isEmpty)
         var tunnel = self.builder(world)
-        tunnel.trackLines = [(line, .tunnel)]
+        tunnel.state.track.trackLines = [(line, .tunnel)]
         XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), [roundhouse])
     }
 
@@ -681,10 +681,10 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         let line = stride(from: Float(-120), through: 120, by: 2).map { middle + Map3DPoint($0, 0, 5) }
         var blocked = self.builder(world)
-        blocked.trackLines = [(line, .surface)]
+        blocked.state.track.trackLines = [(line, .surface)]
         XCTAssertEqual(Set(blocked.addTaipeiLandmarks(frame: frame).keys), [musicCenter, gushan, cijin])
         var tunnel = self.builder(world)
-        tunnel.trackLines = [(line, .tunnel)]
+        tunnel.state.track.trackLines = [(line, .tunnel)]
         XCTAssertEqual(Set(tunnel.addTaipeiLandmarks(frame: frame).keys), harborSet)
     }
 
@@ -727,15 +727,15 @@ final class Map3DTaipeiLandmarksTests: XCTestCase {
         var builder = builder(world)
         let middle = builder.point(x: frame.middleX, y: frame.middleY, height: 0)
         let line = stride(from: Float(-300), through: 300, by: 2).map { middle + Map3DPoint($0, 0, 30) }
-        builder.trackLines = [(line, .surface)]
+        builder.state.track.trackLines = [(line, .surface)]
         XCTAssertNil(builder.addTaipeiLandmarks(frame: frame)[.taipeiMainStation])
         XCTAssertFalse(builder.nearMeshes.values.contains { $0.vertices.contains { $0.color == Self.wall } })
         var under = self.builder(world)
-        under.trackLines = [(line, .tunnel)]
+        under.state.track.trackLines = [(line, .tunnel)]
         XCTAssertNotNil(under.addTaipeiLandmarks(frame: frame)[.taipeiMainStation])
         // 120 m off, clear of it.
         var beside = self.builder(world)
-        beside.trackLines = [(line.map { $0 + Map3DPoint(0, 0, 90) }, .surface)]
+        beside.state.track.trackLines = [(line.map { $0 + Map3DPoint(0, 0, 90) }, .surface)]
         XCTAssertNotNil(beside.addTaipeiLandmarks(frame: frame)[.taipeiMainStation])
     }
 

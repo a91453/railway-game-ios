@@ -110,7 +110,7 @@ enum Map3DDiamondCrossings {
 extension Map3DScene.Builder {
     /// Decision 888: the diamond at `end` of a line of track, if one is.
     func diamond(at end: Map3DPoint) -> Map3DDiamondCrossing? {
-        diamonds.first { Map3DPoint($0.point.x - end.x, 0, $0.point.z - end.z).length < 0.05 && abs($0.point.y - end.y) < 0.5 }
+        state.track.diamonds.first { Map3DPoint($0.point.x - end.x, 0, $0.point.z - end.z).length < 0.05 && abs($0.point.y - end.y) < 0.5 }
     }
 
     /// Decision 888: where along `line` (metres from its start) the rail
@@ -118,7 +118,7 @@ extension Map3DScene.Builder {
     /// diamond at either end: just short of the other track's rail, on the
     /// diamond's side of it.
     func diamondGaps(_ line: [Map3DPoint], offset: Float) -> [ClosedRange<Float>] {
-        guard line.count > 1, !diamonds.isEmpty else { return [] }
+        guard line.count > 1, !state.track.diamonds.isEmpty else { return [] }
         var travelled: Float = 0
         for (a, b) in zip(line, line.dropFirst()) { travelled += Map3DPoint(b.x - a.x, 0, b.z - a.z).length }
         var gaps: [ClosedRange<Float>] = []
@@ -153,7 +153,7 @@ extension Map3DScene.Builder {
     /// the rails at each corner.
     mutating func addDiamondWings() {
         let region = region
-        for diamond in diamonds {
+        for diamond in state.track.diamonds {
             let x = Double(diamond.world.x), y = Double(diamond.world.y)
             guard x >= region.minX, x <= region.maxX, y >= region.minY, y <= region.maxY else { continue }
             let wings = Map3DDiamondCrossings.wings(of: diamond, gauge: look.gauge)

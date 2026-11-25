@@ -64,7 +64,7 @@ final class Map3DStreetsTests: XCTestCase {
         let world = GameWorld.newGame()
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                                          world: world)
-        if platform { builder.platformLines = [track] } else { builder.trackLines = [(track, kind)] }
+        if platform { builder.state.platforms.platformLines = [track] } else { builder.state.track.trackLines = [(track, kind)] }
         return builder
     }
 
@@ -83,19 +83,19 @@ final class Map3DStreetsTests: XCTestCase {
         // Decision 267: a double track (4 m apart): one crossing over both,
         // in the middle between them.
         var double = builder(track: across, kind: .surface)
-        double.trackLines.append(([Map3DPoint(34, 1, -40), Map3DPoint(34, 1, 40)], .surface))
+        double.state.track.trackLines.append(([Map3DPoint(34, 1, -40), Map3DPoint(34, 1, 40)], .surface))
         let (doubleSegments, doubleIndex) = double.trackSegments()
         XCTAssertEqual(double.trackMeeting(from: road.0, to: road.1, half: 7.5, segments: doubleSegments, index: doubleIndex),
                        .crossing(Map3DPoint(32, 1, 0), way: north, spread: 4))
         // Two tracks far apart are not one crossing.
         var apart = builder(track: across, kind: .surface)
-        apart.trackLines.append(([Map3DPoint(50, 1, -40), Map3DPoint(50, 1, 40)], .surface))
+        apart.state.track.trackLines.append(([Map3DPoint(50, 1, -40), Map3DPoint(50, 1, 40)], .surface))
         let (apartSegments, apartIndex) = apart.trackSegments()
         XCTAssertEqual(apart.trackMeeting(from: road.0, to: road.1, half: 7.5, segments: apartSegments, index: apartIndex), .blocked)
         // Over a viaduct or a tunnel, the street runs on under or over.
         XCTAssertEqual(meeting(across, .viaduct), .clear, "under a viaduct where no pier stands")
         var piered = builder(track: across, kind: .viaduct)
-        piered.piers = [Map3DPoint(30, 0, 2)]
+        piered.state.elevated.piers = [Map3DPoint(30, 0, 2)]
         let (segments, index) = piered.trackSegments()
         XCTAssertEqual(piered.trackMeeting(from: road.0, to: road.1, half: 7.5, segments: segments, index: index), .blocked, "a pier in the street")
         // A track of short pieces still crosses once, at a level crossing.
@@ -109,7 +109,7 @@ final class Map3DStreetsTests: XCTestCase {
         XCTAssertEqual(meeting(across, .surface, platform: true), .blocked)
         // Track and its platform crossing the street at one place: a station.
         var station = builder(track: across, kind: .surface)
-        station.platformLines = [across]
+        station.state.platforms.platformLines = [across]
         let (stationSegments, stationIndex) = station.trackSegments()
         XCTAssertEqual(station.trackMeeting(from: road.0, to: road.1, half: 7.5, segments: stationSegments, index: stationIndex), .blocked)
         // Far off: nothing.
@@ -221,11 +221,11 @@ final class Map3DStreetsTests: XCTestCase {
             _ = builder.addTrack(snapshot)
             builder.addPlatforms(snapshot)
             _ = builder.addStations(snapshot, frame: nil)
-            XCTAssertFalse(builder.houseFootprints.isEmpty, "the stations have buildings")
+            XCTAssertFalse(builder.state.stations.houseFootprints.isEmpty, "the stations have buildings")
             let navy = Set([Map3DBaseMap.RoadKind.primary, .tertiary, .minor].map(Map3DPalette.road))
             let roads = scene.chunks.flatMap(\.mesh.vertices).filter { navy.contains($0.color) }
             XCTAssertGreaterThan(roads.count, 1_000)
-            for corners in builder.houseFootprints {
+            for corners in builder.state.stations.houseFootprints {
                 let middle = corners.reduce(Map3DPoint(0, 0, 0)) { $0 + $1 } * 0.25
                 let forward = try XCTUnwrap((corners[1] - corners[0]).normalized), side = try XCTUnwrap((corners[3] - corners[0]).normalized)
                 let depth = (corners[1] - corners[0]).length / 2, wide = (corners[3] - corners[0]).length / 2
@@ -242,7 +242,7 @@ final class Map3DStreetsTests: XCTestCase {
         var builder = Map3DScene.Builder(originX: 0, originY: 0, region: WorldRegion(minX: -64_000, minY: -64_000, maxX: 64_000, maxY: 64_000),
                                          world: GameWorld.newGame())
         XCTAssertNil(builder.streetFronts(column: 0, row: 0), "no seeded streets: as before")
-        builder.streetEdges = [Map3DSeededStreets.Edge(horizontal: true, line: 0, along: 0): .primary,
+        builder.state.streets.streetEdges = [Map3DSeededStreets.Edge(horizontal: true, line: 0, along: 0): .primary,
                                Map3DSeededStreets.Edge(horizontal: false, line: 1, along: 0): .minor]
         let fronts = builder.streetFronts(column: 0, row: 0)
         // North on a main road: its pavement reaches 4.5 + 3 m from the

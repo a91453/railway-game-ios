@@ -64,7 +64,7 @@ final class Map3DStationExteriorBatch2MapTests: XCTestCase {
         let cleared = builder.addTrack(snapshot)
         builder.addPlatforms(snapshot)
         let realTrains = Map3DScene.realTrains(world: world, railways: session.railways, snapshot: snapshot, builder: &builder)
-        builder.realTrackLines = realTrains?.shownLanes ?? []
+        builder.state.realTrains.realTrackLines = realTrains?.shownLanes ?? []
         builder.addViaducts()
         _ = builder.addStationExteriors(snapshot, frame: frame)
         let stations = cleared.union(builder.addStations(snapshot, frame: frame, shops: false))
@@ -134,7 +134,7 @@ final class Map3DStationExteriorBatch2MapTests: XCTestCase {
         for station in Batch2.allCases {
             let built = try await Self.built(round: station)
             let study = Map3DExteriorStudy.batch2(station)
-            let stood = built.builder.stationExteriors.filter { $0.station == study }
+            let stood = built.builder.state.exteriors.stationExteriors.filter { $0.station == study }
             XCTAssertEqual(stood.count, 1, "\(station) stands once")
             guard let exterior = stood.first else { continue }
             let place = built.frame.worldPosition(latitude: study.origin.latitude, longitude: study.origin.longitude)
@@ -154,7 +154,7 @@ final class Map3DStationExteriorBatch2MapTests: XCTestCase {
     static func assertClear(_ exterior: Map3DStationExterior, in built: Built, station: Batch2) throws {
         let builder = built.builder
         let snapshot = built.world.railwaySnapshot()
-        var lines: [[Map3DPoint]] = builder.realTrackLines
+        var lines: [[Map3DPoint]] = builder.state.realTrains.realTrackLines
         for alignment in snapshot.edges {
             for span in alignment.edge.sectionSpans where span.end > span.start && span.kind != .tunnel {
                 lines.append(builder.sample(alignment.geometry, from: span.start, to: span.end).map { builder.point($0) + Map3DScene.Builder.lifted })
@@ -193,9 +193,9 @@ final class Map3DStationExteriorBatch2MapTests: XCTestCase {
     func testItStandsForTheStation() async throws {
         let session = try await Self.world(round: .keelung)
         let plain = try Self.built(round: .keelung, in: session, studies: nil)
-        let exterior = try XCTUnwrap(plain.builder.stationExteriors.first { $0.station == .batch2(.keelung) })
+        let exterior = try XCTUnwrap(plain.builder.state.exteriors.stationExteriors.first { $0.station == .batch2(.keelung) })
         let studied = exterior.outlines.map(Map3DStationExterior.rectangle(round:))
-        for footprint in plain.builder.houseFootprints where !studied.contains(footprint) {
+        for footprint in plain.builder.state.stations.houseFootprints where !studied.contains(footprint) {
             let middle = footprint.reduce(Map3DPoint(0, 0, 0)) { $0 + $1 } * (1 / Float(footprint.count))
             for corner in footprint + [middle] {
                 XCTAssertFalse(exterior.covers(corner, margin: 0), "the kit's building on Keelung's study")
@@ -205,9 +205,9 @@ final class Map3DStationExteriorBatch2MapTests: XCTestCase {
         let without = try Self.built(round: .keelung, in: session, studies: east)
         // Decision 722: the kit's building is in the look already, apart
         // from the chunk's near mesh.
-        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } + builder.houseTriangleCount }
+        func triangles(_ builder: Map3DScene.Builder) -> Int { builder.nearMeshes.values.reduce(0) { $0 + $1.triangleCount } + builder.state.stations.houseTriangleCount }
         XCTAssertGreaterThan(triangles(without.builder), triangles(plain.builder), "Keelung's own building")
-        XCTAssertGreaterThan(without.builder.houseFootprints.count, plain.builder.houseFootprints.count - exterior.outlines.count)
+        XCTAssertGreaterThan(without.builder.state.stations.houseFootprints.count, plain.builder.state.stations.houseFootprints.count - exterior.outlines.count)
     }
 
     /// `STATION_EXTERIOR_REPORT=1`: what stands of each, for decision 665.
@@ -217,8 +217,8 @@ final class Map3DStationExteriorBatch2MapTests: XCTestCase {
             let built = try await Self.built(round: station)
             let study = Map3DExteriorStudy.batch2(station)
             let full = (study.mesh(detail: .near).triangleCount, study.mesh(detail: .far).triangleCount)
-            if let exterior = built.builder.stationExteriors.first(where: { $0.station == study }) {
-                print("STATION-EXTERIOR \(station.rawValue) kept \(exterior.kept.near)/\(exterior.kept.far) tris \(exterior.near.triangleCount)/\(exterior.far.triangleCount) whole \(full.0)/\(full.1) lines \(built.builder.realTrackLines.count) platforms \(built.world.network.platforms.count)")
+            if let exterior = built.builder.state.exteriors.stationExteriors.first(where: { $0.station == study }) {
+                print("STATION-EXTERIOR \(station.rawValue) kept \(exterior.kept.near)/\(exterior.kept.far) tris \(exterior.near.triangleCount)/\(exterior.far.triangleCount) whole \(full.0)/\(full.1) lines \(built.builder.state.realTrains.realTrackLines.count) platforms \(built.world.network.platforms.count)")
             } else {
                 print("STATION-EXTERIOR \(station.rawValue) does not stand; whole \(full.0)/\(full.1)")
             }

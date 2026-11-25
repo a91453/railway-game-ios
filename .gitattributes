@@ -12,3 +12,6 @@ Sources/GamePresentation/WhatsNewNext.swift merge=union
 # MODEL-PACK-PINS-SPLIT: one model of the pack a line, the same way
 # (Map3DModelPackLockTests checks the result).
 tools/train-models/pack.lock.txt merge=union
+# Decision 976: one layer of the 3D scene's state a line, the same way
+# (Map3DSceneLayerRegistryTests checks the result).
+Sources/GamePresentation/Map3DSceneLayerList.swift merge=union
