@@ -295,21 +295,23 @@ extension MapPack {
 /// ground.
 public struct OverseasPlace: Equatable, Sendable {
     public let city: OverseasMap
-    public let anchor: GeoAnchor
-    public let bounds: WorldBounds
+    /// Decision 969: how its map lies, now and before it grew.
+    public let layout: MapPack.Layout
+    public var anchor: GeoAnchor { layout.anchor }
+    public var bounds: WorldBounds { layout.bounds }
 
     /// The place `manifest`, the city's `pack.json`, gives; `nil` when it
     /// has no extent that fits a world.
     public init?(city: OverseasMap, manifest: Data) {
-        guard let extent = try? MapPack.extent(ofManifest: manifest), let anchor = extent.anchor, let bounds = extent.bounds else { return nil }
+        guard let layout = MapPack.Layout(manifest: manifest) else { return nil }
         self.city = city
-        self.anchor = anchor
-        self.bounds = bounds
+        self.layout = layout
     }
 
-    /// Whether `world` is this city's map (``OverseasGround/holds(_:)``).
+    /// Whether `world` is this city's map (``OverseasGround/holds(_:)``):
+    /// as it is now or as it was before it grew (decision 969).
     public func holds(_ world: GameWorld) -> Bool {
-        world.geoAnchor == anchor && world.bounds == bounds
+        layout.holds(world)
     }
 }
 
@@ -317,10 +319,13 @@ public struct OverseasPlace: Equatable, Sendable {
 /// far it reaches, and the people who live on it.
 public struct OverseasGround: Sendable {
     public let city: OverseasMap
-    /// The middle of the map.
-    public let anchor: GeoAnchor
+    /// Decision 969: how its map lies, now and before it grew.
+    public let layout: MapPack.Layout
+    /// Where the map lies: the middle of the part of the world that holds
+    /// the pack's first extent (``MapPack/Layout/anchor``).
+    public var anchor: GeoAnchor { layout.anchor }
     /// The world that holds the pack's extent.
-    public let bounds: WorldBounds
+    public var bounds: WorldBounds { layout.bounds }
     /// The city's people, or `nil` for a pack without them: its stations
     /// then get the standard ridership, and no town grows round them.
     public let population: PopulationGrid?
@@ -348,13 +353,12 @@ public struct OverseasGround: Sendable {
     /// likewise its water and heights (decision 726) and land cover
     /// (decision 835).
     public init(city: OverseasMap, pack: MapPack) throws {
-        let extent = try pack.extent()
-        guard let anchor = extent.anchor, let bounds = extent.bounds else {
+        let extents = try MapPack.extents(ofManifest: pack.file("pack", "json"))
+        guard let layout = MapPack.Layout(extent: extents.extent, earlier: extents.earlier) else {
             throw RealRailways.ResourceError.missing("MapPacks/\(city.packFolder)/pack.json: extent")
         }
         self.city = city
-        self.anchor = anchor
-        self.bounds = bounds
+        self.layout = layout
         population = (try? pack.file("population", "json")).flatMap { try? PopulationGrid(data: $0) }
         baseMap = pack.baseMapFile.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
         water = (try? pack.file("water", "json")).flatMap { try? WaterGrid(data: $0) }
@@ -362,9 +366,145 @@ public struct OverseasGround: Sendable {
         landCover = (try? pack.file("landcover", "dat")).flatMap { try? LandCoverGrid(data: $0) }
     }
 
-    /// Whether `world` is this city's map: laid over its extent.
+    /// Whether `world` is this city's map: laid over its extent, or over
+    /// one it had before it grew (decision 969), which ``grown(_:)`` makes
+    /// the map it is now.
     public func holds(_ world: GameWorld) -> Bool {
-        world.geoAnchor == anchor && world.bounds == bounds
+        layout.holds(world)
+    }
+
+    /// Decision 969: `world`, on this map as it was before it grew, grown
+    /// to the map as it is now (``GameWorld/growMap(to:)``): everything in
+    /// it where it was, over the same places. Its company owns the tiles
+    /// that hold the map's first extent (``MapPack/Layout/startTiles``),
+    /// given, and buys the rest as on a map of Taiwan bought tile by tile
+    /// (decision 160), each asking the riders the people of the tiles
+    /// given call for (``RealWorldExpansion/ridersStep(forResidents:)``);
+    /// a game that buys its map already keeps what it owns. `nil` for a
+    /// world this map does not hold, or holds as it is now: a game goes on
+    /// as it was.
+    public func grown(_ world: GameWorld) -> GameWorld? {
+        guard layout.holds(world), world.bounds != layout.bounds else { return nil }
+        var grown = world
+        do throws(GameError) {
+            try grown.growMap(to: layout.bounds)
+            if grown.mapExpansion == nil {
+                let tiles = layout.startTiles
+                try grown.enableMapExpansion(owning: tiles, townSeed: nil, ridersStep: ridersStep(owning: tiles, in: grown))
+            }
+        } catch {
+            // A world this map holds grows to it, and what it built lies
+            // in the part it was, which the tiles given hold.
+            return nil
+        }
+        return grown
+    }
+
+    /// The riders each tile bought beyond `tiles` asks of `world`: from
+    /// the people of `tiles` in the pack's `population.json`
+    /// (``RealWorldExpansion/ridersStep(forResidents:)``), the standard
+    /// step for a pack without people.
+    func ridersStep(owning tiles: [MapTile], in world: GameWorld) -> Int64 {
+        guard let population, let frame = RealWorldFrame(world: world) else { return MapExpansion.standardRidersStep }
+        let length = Double(MapExpansion.tileLength)
+        let rows = tiles.map(\.row), columns = tiles.map(\.column)
+        guard let top = rows.min(), let bottom = rows.max(), let left = columns.min(), let right = columns.max() else {
+            return MapExpansion.standardRidersStep
+        }
+        let northWest = frame.coordinate(worldX: Double(left) * length, worldY: Double(top) * length)
+        let southEast = frame.coordinate(
+            worldX: min(Double(right + 1) * length, Double(world.bounds.width)), worldY: min(Double(bottom + 1) * length, Double(world.bounds.height))
+        )
+        let cells = population.cells(north: northWest.latitude, south: southEast.latitude, west: northWest.longitude, east: southEast.longitude)
+        let residents = cells.reduce(Int64(0)) { sum, cell in
+            let inside = (southEast.latitude...northWest.latitude).contains(cell.centerLatitude)
+                && (northWest.longitude...southEast.longitude).contains(cell.centerLongitude)
+            return inside ? sum + Int64(cell.count) : sum
+        }
+        return RealWorldExpansion.ridersStep(forResidents: residents)
+    }
+}
+
+extension MapPack {
+    /// Decision 969: how a city's map lies over the Earth, as it is now and
+    /// as it was before it grew (`pack.json`'s `earlier`).
+    ///
+    /// A map that never grew lies as it always did: its world holds the
+    /// extent round the extent's middle (``Extent/anchor``,
+    /// ``Extent/bounds``). One that grew keeps the anchor and the world of
+    /// its first extent, where its first games were laid, and reaches from
+    /// that world's north-west corner to each later extent's south-east
+    /// corner, rounded up to the next whole world unit: a game laid over
+    /// the first stays over the same places as it grows.
+    public struct Layout: Equatable, Sendable {
+        /// Where the map lies: the middle of the world of its first extent.
+        public let anchor: GeoAnchor
+        /// The world that holds the extent now.
+        public let bounds: WorldBounds
+        /// The worlds of the extents it had before, oldest first: empty for
+        /// a map that never grew.
+        public let earlier: [WorldBounds]
+
+        /// The part of the world the anchor is the middle of
+        /// (``GameWorld/geoAnchorBounds``): the world of the first extent,
+        /// `nil` for a map that never grew.
+        public var anchorBounds: WorldBounds? { earlier.first }
+
+        /// The layout of a map of `extent` that had the `earlier` extents
+        /// before (``MapPack/extents(ofManifest:)``); `nil` when the first
+        /// has no world (``Extent/bounds``) or a later one reaches too far.
+        public init?(extent: Extent, earlier extents: [Extent]) {
+            guard let first = extents.first else {
+                guard let anchor = extent.anchor, let bounds = extent.bounds else { return nil }
+                (self.anchor, self.bounds, earlier) = (anchor, bounds, [])
+                return
+            }
+            guard let anchor = first.anchor, let start = first.bounds else { return nil }
+            let frame = RealWorldFrame(anchor: anchor, bounds: start)
+            var worlds = [start]
+            for stage in extents.dropFirst() + [extent] {
+                let corner = frame.worldPosition(latitude: stage.south, longitude: stage.east)
+                guard corner.x.isFinite, corner.y.isFinite, corner.x < Double(Int64.max), corner.y < Double(Int64.max),
+                      let last = worlds.last,
+                      let grown = try? WorldBounds(
+                          width: max(last.width, Int64(corner.x.rounded(.up))), height: max(last.height, Int64(corner.y.rounded(.up)))
+                      )
+                else { return nil }
+                worlds.append(grown)
+            }
+            self.anchor = anchor
+            bounds = worlds.removeLast()
+            earlier = worlds
+        }
+
+        /// The layout `manifest`, a `pack.json`, gives; `nil` when it
+        /// cannot be read or has no extent that fits a world.
+        public init?(manifest: Data) {
+            guard let read = try? MapPack.extents(ofManifest: manifest) else { return nil }
+            self.init(extent: read.extent, earlier: read.earlier)
+        }
+
+        /// Whether `world` is laid over this map: as it is now, or as it was
+        /// at an earlier extent (its world that size, its anchor the middle
+        /// of the whole of it at the first, of the first's world after).
+        public func holds(_ world: GameWorld) -> Bool {
+            guard world.geoAnchor == anchor else { return false }
+            if world.bounds == bounds, world.geoAnchorBounds == anchorBounds { return true }
+            return earlier.indices.contains { index in
+                world.bounds == earlier[index] && world.geoAnchorBounds == (index == 0 ? nil : anchorBounds)
+            }
+        }
+
+        /// The tiles of the map (decision 160) that hold the world of its
+        /// first extent, by row and then column: those a game laid over it
+        /// owns as the map grows, and a new game owns from the start. The
+        /// tile of the world's north-west corner alone for a map that never
+        /// grew (unused there).
+        public var startTiles: [MapTile] {
+            let start = anchorBounds ?? bounds, length = MapExpansion.tileLength
+            let rows = Int((start.height + length - 1) / length), columns = Int((start.width + length - 1) / length)
+            return (0..<max(rows, 1)).flatMap { row in (0..<max(columns, 1)).map { MapTile(row: row, column: $0) } }
+        }
     }
 }
 
@@ -374,11 +514,18 @@ extension GameWorld {
     /// Taiwan's (``newWholeTaiwanGame(balance:eventSeed:)``). Decision
     /// 828: with far demand on, so a city's far stations draw less of its
     /// trips than its near ones.
+    ///
+    /// Decision 969: on a map that grew, the game is laid over its first
+    /// extent and grown as a game played there before is
+    /// (``OverseasGround/grown(_:)``), so a new game and an old one own
+    /// the same tiles and buy the rest alike.
     public static func newOverseasGame(_ ground: OverseasGround, balance: Money = startingBalance, eventSeed: UInt32 = 1) -> GameWorld {
-        var world = newGame(anchor: ground.anchor, bounds: ground.bounds, balance: balance, eventSeed: eventSeed, land: [])
+        var world = newGame(
+            anchor: ground.anchor, bounds: ground.layout.anchorBounds ?? ground.bounds, balance: balance, eventSeed: eventSeed, land: []
+        )
         world.setLandOnDemand()
         world.setFarDemand(true)
-        return world
+        return ground.grown(world) ?? world
     }
 }
 

@@ -515,9 +515,12 @@ public struct RealTrainTraffic: Sendable {
     /// High Speed Rail's day of trains, or Taiwan Railway's week of every
     /// train (decision 532; its headways without that file).
     public init(operations: RealRailwayOperations, frame: RealWorldFrame, bounds: WorldBounds, bought: Set<String> = [], margin metres: Double = 2_000) {
-        let half = RealWorldFrame.halfExtent(of: bounds)
-        let corners = [(-1.0, -1.0), (1.0, 1.0)].map { sx, sy in
-            frame.worldPosition(east: sx * (half.east + metres), south: sy * (half.south + metres))
+        // Decision 969: from the world's edges, which on a map that grew
+        // are not as far from the anchor each way (on one that never did,
+        // the same numbers as half the world each way from it).
+        let unitsPerMetre = Double(WorldCoordinate.unitsPerMetre), region = WorldRegion(bounds: bounds)
+        let corners = [(region.minX, region.minY, -metres), (region.maxX, region.maxY, metres)].map { x, y, margin in
+            frame.worldPosition(east: (x - frame.middleX) / unitsPerMetre + margin, south: (y - frame.middleY) / unitsPerMetre + margin)
         }.map { frame.coordinate(worldX: $0.x, worldY: $0.y) }
         let box = (
             minLatitude: min(corners[0].latitude, corners[1].latitude), maxLatitude: max(corners[0].latitude, corners[1].latitude),
