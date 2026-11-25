@@ -79,7 +79,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     : set.key == "emu700" ? ([set.headName, set.tailName].contains(name) ? 13_500...14_000 : 5_900...6_200)
                     : set.key == "emu700Far" && [set.headName, set.tailName].contains(name) ? 6_600...6_800
                     : set.key == "emu500" ? (name == set.middleName || name == set.middleBackName || [set.headName, set.tailName].contains(name) ? 4_400...4_700 : 2_800...2_950)
-                    // Decision 988: the 700T is the owner's old 700 series, 1,879
+                    // Decision 988: the 700T is the owner's old 700 series, 1,873
                     // a cab car and 1,360 to 1,444 the others.
                     : set.key == "highSpeed" ? 1_200...2_000
                     // Decision 461: #1323's C371 and C381 cabs, 5,358 and 6,976.

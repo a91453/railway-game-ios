@@ -86,34 +86,17 @@ final class Map3DTHSR700TTests: XCTestCase {
         XCTAssertFalse(wall.contains { $0.color == orange && $0.x < door.x.lowerBound - 1.1 && $0.z < 1.57 }, "the band alone behind it")
         XCTAssertTrue(cab.vertices.contains { $0.color == orange && $0.x > 13 && abs($0.y) < 0.3 }, "round the tip")
         XCTAssertTrue(cab.vertices.contains { $0.color == white && $0.x > 10 && abs($0.y) < 0.3 && $0.z > 1.8 }, "the nose's top white")
-        // The owner, 2026-11-25: the nose's top is white, as the real
-        // train's, but the faces that look up round its tip and on its
-        // shoulders are orange ("塗多一點比較像", the second of three
-        // versions). From over the nose the white top starts 1.8 m behind
-        // the tip, ±0.2 m wide, ±0.8 m at 3 m and the car's whole width at
-        // 5.5 m (the tool's NOSE_TOP): no orange face looking up is in it.
-        let tip = try XCTUnwrap(cab.vertices.map(\.x).max())
-        func inWhiteTop(_ x: Float, _ y: Float) -> Bool {
-            let behind = tip - x
-            guard behind > 1.8 + 0.02 else { return false }
-            let half: Float = behind < 3.0 ? 0.2 + (behind - 1.8) / 1.2 * 0.6
-                : behind < 5.5 ? 0.8 + (behind - 3.0) / 2.5 * 1.2 : 2.0
-            return abs(y) < half - 0.02
-        }
-        var shoulders = 0
+        // The owner, 2026-11-25: the nose's faces that look up are white,
+        // its shoulders too (the real train's nose is white on top, the
+        // band on its flanks and round the edge of its tip).
         for start in stride(from: 0, to: cab.vertices.count, by: 3) where cab.vertices[start].color == orange && cab.vertices[start].x > 6 {
             let a = cab.vertices[start], b = cab.vertices[start + 1], c = cab.vertices[start + 2]
             let u = (b.x - a.x, b.y - a.y, b.z - a.z), v = (c.x - a.x, c.y - a.y, c.z - a.z)
             let n = (u.1 * v.2 - u.2 * v.1, u.2 * v.0 - u.0 * v.2, u.0 * v.1 - u.1 * v.0)
             let size = (n.0 * n.0 + n.1 * n.1 + n.2 * n.2).squareRoot()
-            guard size > 0.002, abs(n.2) / size >= 0.7 else { continue }  // a sliver, or not looking up
-            let x = (a.x + b.x + c.x) / 3, y = (a.y + b.y + c.y) / 3
-            XCTAssertFalse(inWhiteTop(x, y), "an orange face looking up in the white top at \(x), \(y)")
-            if tip - x > 2.5, tip - x < 5.5, abs(y) > 0.8 { shoulders += 1 }
+            guard size > 0.002 else { continue }  // a sliver
+            XCTAssertLessThan(abs(n.2) / size, 0.7, "an orange face looking up at \(a.x), \(a.y)")
         }
-        XCTAssertGreaterThan(shoulders, 0, "the shoulders' orange")
-        XCTAssertFalse(cab.vertices.contains { $0.color == orange && $0.z > 1.8 && abs($0.y) < 0.15 && $0.x > 6 && $0.x < tip - 1.9 },
-                       "the centre line white behind the tip")
         let line = wall.filter { $0.color == Map3DPalette.dark && $0.z > 1.87 && $0.z < 2.0 }.map(\.x)
         XCTAssertEqual(try XCTUnwrap(line.max()), door.x.lowerBound - 2.3, accuracy: 0.05, "the line's point")
         let piece = wall.filter { $0.color == Map3DPalette.dark && $0.z < 1.57 && $0.z > 1.0 }.map(\.x)
