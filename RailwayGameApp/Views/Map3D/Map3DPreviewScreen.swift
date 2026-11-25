@@ -369,6 +369,10 @@ struct Map3DPreviewScreen: View {
         .onChange(of: session.christmasLiveryLines) { _, _ in
             feed.update(session: session, palette: linePalette)
         }
+        // Decision 983: and a line's trains repainted.
+        .onChange(of: session.trainPaintChosen) { _, _ in
+            feed.update(session: session, palette: linePalette)
+        }
         .onChange(of: session.realClockKey, initial: true) { _, key in
             // CABVIEW-2 (decision 379 續三): over the game loop's whole
             // step, as the trains do. Decision 661: and taken when a step
@@ -879,8 +883,16 @@ final class Map3DModelBuffers: @unchecked Sendable {
     private let lock = NSLock()
     private var buffers: [MTLBuffer?]
     /// Decision 795: the models' buffers in the Christmas livery, made as
-    /// they are first drawn.
-    private var liveried: [Int: MTLBuffer] = [:]
+    /// they are first drawn. Decision 983: and in each paint a player
+    /// chose (``Map3DInstance/paint``), with the livery or without.
+    private var liveried: [Dress: MTLBuffer] = [:]
+
+    /// What a car is drawn in other than its model's own vertices.
+    private struct Dress: Hashable {
+        let model: Int
+        let paint: UInt8
+        let christmas: Bool
+    }
     private var bytesMade = 0
 
     init(device: MTLDevice, file: Map3DModelVertexFile) {
@@ -934,18 +946,26 @@ final class Map3DModelBuffers: @unchecked Sendable {
     /// under snow and the decoration's own triangles after its own), made
     /// from its own buffer the first time a car of it is drawn so, then
     /// kept; longer than the model's own, so the draw counts its length.
-    /// `nil` when it cannot be made (the car is then drawn in its own paint).
-    func christmas(_ index: Int, wear: Map3DChristmasLivery.Wear?, model: Map3DModelPack.Model) -> MTLBuffer? {
+    /// Decision 983: in `paint` first (``TrainPaint/painted(_:)``), when
+    /// the player chose one for its line; with no livery, as long as the
+    /// model's own. `nil` when it cannot be made (the car is then drawn in
+    /// its own paint).
+    func dressed(_ index: Int, paint: UInt8 = 0, in family: TrainPaintFamily? = nil, wear: Map3DChristmasLivery.Wear?,
+                 model: Map3DModelPack.Model) -> MTLBuffer? {
         let stride = MemoryLayout<Map3DVertex>.stride
-        guard let wear, let plain = self[index], plain.length == model.vertexCount * stride else { return nil }
+        let chosen = family?.paint(slot: paint)
+        guard chosen != nil || wear != nil, let plain = self[index], plain.length == model.vertexCount * stride else { return nil }
         lock.lock()
         defer { lock.unlock() }
-        if let buffer = liveried[index] { return buffer }
-        let vertices = Array(UnsafeBufferPointer(start: plain.contents().bindMemory(to: Map3DVertex.self, capacity: model.vertexCount), count: model.vertexCount))
-        let buffer = Map3DChristmasLivery.dressed(vertices, minimum: model.minimum, maximum: model.maximum, wear: wear).withUnsafeBytes { bytes in
+        let dress = Dress(model: index, paint: chosen == nil ? 0 : paint, christmas: wear != nil)
+        if let buffer = liveried[dress] { return buffer }
+        var vertices = Array(UnsafeBufferPointer(start: plain.contents().bindMemory(to: Map3DVertex.self, capacity: model.vertexCount), count: model.vertexCount))
+        if let chosen { vertices = chosen.painted(vertices) }
+        if let wear { vertices = Map3DChristmasLivery.dressed(vertices, minimum: model.minimum, maximum: model.maximum, wear: wear) }
+        let buffer = vertices.withUnsafeBytes { bytes in
             bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
         }
-        liveried[index] = buffer
+        liveried[dress] = buffer
         bytesMade += buffer?.length ?? 0
         return buffer
     }
@@ -1476,6 +1496,8 @@ final class Map3DTrainFeed {
     var buried = false
     /// Decision 795: the lines whose trains wear the Christmas livery.
     private var christmas: Set<LineID> = []
+    /// Decision 983: the paint each line's trains wear, by family.
+    private var paints: [LineID: [String: String]] = [:]
     /// Decision 583 (CABLEFOLLOW): the cabin the camera follows, always
     /// drawn whole, its way the cable cars' ahead.
     var followedCabin: CabinID?
@@ -1511,6 +1533,7 @@ final class Map3DTrainFeed {
         heights = session.map3DTrainHeights()
         self.palette = palette
         christmas = session.christmasLiveryLines
+        paints = session.trainPaints
         activity = Map3DStreetLife.Activity(world: world)
         labels = Map3DTrainLabels(world: world)
     }
@@ -1605,7 +1628,8 @@ final class Map3DTrainFeed {
             heights = heights.driving(on: driven.track, metres: driven.metres, length: driven.length)
         }
         var frame = Map3DTrains.frame(motion, progress: progress, heights: heights, in: scene, models: models, eye: eye, palette: palette,
-                                      ringed: ringed, reach: reach, buried: buried, headlamp: followedTrain, christmas: christmas)
+                                      ringed: ringed, reach: reach, buried: buried, headlamp: followedTrain, christmas: christmas,
+                                      paints: paints)
         // Decision 710: and the mark at its stopping point.
         if let driven { driven.track.addStopMark(to: &frame, at: driven.stop, in: scene) }
         // Decision 339: and the real timetables' trains, on their own track.

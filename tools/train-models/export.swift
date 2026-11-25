@@ -7,7 +7,7 @@ import GameCore
 // FNV-1a hash of every vertex field, the near/far pairs of every train
 // set) and the game's light at the two hours the renderer uses.
 //
-//   export OUT [--tag NAME] [--ids a,b,c] [--all] [--lock FILE] [--night-lights]
+//   export OUT [--tag NAME] [--ids a,b,c] [--all] [--lock FILE] [--night-lights] [--paint ID]
 //
 // Without `--ids` the models are the pack's trains (`set-*` and `style-*`).
 // `--lock FILE` writes the hash of EVERY model in the pack to FILE (the
@@ -18,6 +18,10 @@ import GameCore
 // car's (`-head`, `-cab`, `-single`) headlamps lit at its front, a tail
 // car's (`-tail`) tail lamps at its back. The manifest's triangles and hash
 // stay the pack model's.
+// `--paint ID` (decision 983) writes each car whose model of train has a
+// paint of that name (`TrainPaintFamily`) wearing it, as the game draws it
+// on a line the player chose it for; the manifest's hash stays the pack
+// model's here too.
 let arguments = Array(CommandLine.arguments.dropFirst())
 func option(_ name: String) -> String? {
     guard let at = arguments.firstIndex(of: name), at + 1 < arguments.count else { return nil }
@@ -141,6 +145,14 @@ func lit(_ model: Map3DModelPack.Model, index: Int) -> Map3DModelPack.Model {
     return Map3DModelPack.Model(name: model.name, vertices: vertices, minimum: model.minimum, maximum: model.maximum)
 }
 
+/// Decision 983: `model` (the pack's `index`) in the paint `--paint` names,
+/// when its model of train has one of that name.
+let paintID = option("--paint")
+func worn(_ model: Map3DModelPack.Model, index: Int?) -> Map3DModelPack.Model {
+    guard let paintID, let index, let paint = pack.paintFamily(of: index)?.paint(paintID) else { return model }
+    return Map3DModelPack.Model(name: model.name, vertices: paint.painted(model.vertices), minimum: model.minimum, maximum: model.maximum)
+}
+
 // Which models, and which are far versions of which near ones.
 var wanted: [String]
 if let ids = option("--ids") {
@@ -175,7 +187,8 @@ var records: [[String: Any]] = []
 let farNames = Set(farOf.values)
 for id in wanted {
     let (model, index) = find(id)!
-    try nativeFile(nightLights && index != nil ? lit(model, index: index!) : model).write(to: modelsDir.appendingPathComponent(id + ".m3dmodel"))
+    let drawn = worn(model, index: index)
+    try nativeFile(nightLights && index != nil ? lit(drawn, index: index!) : drawn).write(to: modelsDir.appendingPathComponent(id + ".m3dmodel"))
     var record: [String: Any] = ["id": id, "native": "models/\(id).m3dmodel", "triangles": model.triangleCount, "hash": hash(model),
                                  "role": farNames.contains(id) ? "far" : "near", "category":"section", "glowTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { model.vertices[$0..<$0 + 3].contains { $0.glows } }.count,
                                  "glassTriangles": stride(from: 0, to: model.vertices.count, by: 3).filter { [Map3DVertex.trainGlass, Map3DVertex.trainGlassLit].contains(model.vertices[$0].layer) }.count,

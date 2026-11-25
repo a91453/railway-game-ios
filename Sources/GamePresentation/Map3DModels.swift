@@ -76,6 +76,9 @@ public struct Map3DModelPack: Sendable {
     /// by model index (``Map3DChristmasLivery``); kept when the vertices
     /// are let go of, for the app to dress them from.
     public private(set) var christmas: [Int: Map3DChristmasLivery.Wear] = [:]
+    /// Decision 983: the paints each car with paints to choose can wear,
+    /// by model index: its family's place in ``TrainPaintFamily/all``.
+    public private(set) var paintFamilies: [Int: Int] = [:]
 
     /// Every style's cab car and middle car, made once (on first use).
     /// Decision 608: the app lets go of their vertices once they are on
@@ -417,12 +420,20 @@ public struct Map3DModelPack: Sendable {
             self.models = models
         }
         headSigns = Map3DHeadSign.anchors(in: models)
+        paintFamilies = TrainPaintFamily.families(of: self.models)
     }
 
     init(models: [Model], lights: [Int: Map3DTrainLights.Car] = [:]) {
         self.models = models
         self.lights = lights
         headSigns = Map3DHeadSign.anchors(in: models)
+        paintFamilies = TrainPaintFamily.families(of: self.models)
+    }
+
+    /// Decision 983: the paint family of the car at model `index`, `nil`
+    /// for a model with only its own paint.
+    public func paintFamily(of index: Int) -> TrainPaintFamily? {
+        paintFamilies[index].map { TrainPaintFamily.all[$0] }
     }
 
     /// The model called `name`'s index.
@@ -1088,6 +1099,10 @@ public struct Map3DInstance: Sendable {
     /// repainted vertices (``Map3DModelPack/christmas``). Not read by the
     /// shader.
     public var christmas = false
+    /// Decision 983: the paint the player chose for its line
+    /// (``TrainPaintFamily/paint(slot:)`` of ``Map3DModelPack/paintFamily(of:)``),
+    /// 0 for the model's own. Not read by the shader.
+    public var paint: UInt8 = 0
 
     /// The 20 floats the shader reads: the last 1, plus ``lit``.
     public var floats: [Float] {
