@@ -323,6 +323,7 @@
 		F199B5397675D4313FDF2279 /* real_buses_HsinchuCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = D129610F8191026E87FF4557 /* real_buses_HsinchuCounty.json */; };
 		F247F91E86B7304979506B50 /* kenney-ui-toggle.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9D09463AE35CC137B450932F /* kenney-ui-toggle.wav */; };
 		F46D9B04101FA9F89A33CB08 /* station-chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 4966256D18F5622FE1A080BB /* station-chime.wav */; };
+		F4F8C691A7F83F8415A5807B /* Map3DPhotoMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6466B61D69AB366C57F52D7B /* Map3DPhotoMode.swift */; };
 		F558913BB3ACD23EA6FB4CC7 /* StationOperationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5252AAF098DD4F7D13231B10 /* StationOperationsView.swift */; };
 		F5CBC90A1720CA0C211907E6 /* tpe-temple-longshan.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = E151948FD36304E43DED0587 /* tpe-temple-longshan.m3dmodel */; };
 		F616E84EA51C9BCB0921FBA7 /* track_stations.geojson in Resources */ = {isa = PBXBuildFile; fileRef = BDC928DD3917E8959E2930DD /* track_stations.geojson */; };
@@ -494,6 +495,7 @@
 		634E1D072848CA2A2FE70998 /* real_buses_NantouCounty.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_buses_NantouCounty.json; sourceTree = "<group>"; };
 		634F11070F2F2510BBBA5D96 /* chime-tourist-motif.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-tourist-motif.wav"; sourceTree = "<group>"; };
 		64216AD6EE4B4C8F1D51D07F /* hk-minibus.m3dmodel */ = {isa = PBXFileReference; path = "hk-minibus.m3dmodel"; sourceTree = "<group>"; };
+		6466B61D69AB366C57F52D7B /* Map3DPhotoMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DPhotoMode.swift; sourceTree = "<group>"; };
 		649A13DFCE7328AD6D549B82 /* RouteStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteStrip.swift; sourceTree = "<group>"; };
 		64FC0E6D263BA9DF11A366DD /* line-acquired.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "line-acquired.wav"; sourceTree = "<group>"; };
 		6630BFF287E651429AA31CC3 /* tra-yilan-schedule.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tra-yilan-schedule.json"; sourceTree = "<group>"; };
@@ -733,6 +735,7 @@
 			isa = PBXGroup;
 			children = (
 				ED45B563EF8CA610F22296E6 /* Map3DMetalView.swift */,
+				6466B61D69AB366C57F52D7B /* Map3DPhotoMode.swift */,
 				A32E5B7462B864BC37E88A37 /* Map3DPreviewScreen.swift */,
 				B9632F6F7D420675666B2F9E /* Map3DShaders.metal */,
 				4F9A3E00736ED2F139B7EBF4 /* Map3DStopBar.swift */,
@@ -1567,6 +1570,7 @@
 				20561212C765FBDE6629645A /* ListSearchField.swift in Sources */,
 				6DB79EAED8748D6DC94EA8CF /* LoadChartViews.swift in Sources */,
 				6A899B2715257CD7BAC63CCF /* Map3DMetalView.swift in Sources */,
+				F4F8C691A7F83F8415A5807B /* Map3DPhotoMode.swift in Sources */,
 				4CF789B41082623D62B5AB27 /* Map3DPreviewScreen.swift in Sources */,
 				CE4E2C27EEA4AEF2AEAB2DE0 /* Map3DShaders.metal in Sources */,
 				C6F7187FCF517F6610CC95B9 /* Map3DStopBar.swift in Sources */,
@@ -1759,7 +1763,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used once to move a real-world map's start square near you. It is not sent anywhere.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves your postcard to Photos when you choose Save Image.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves a postcard or a photo of your railway to Photos when you choose to save it.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -1947,7 +1951,7 @@
 				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Railway Game";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location is used once to move a real-world map's start square near you. It is not sent anywhere.";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves your postcard to Photos when you choose Save Image.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Saves a postcard or a photo of your railway to Photos when you choose to save it.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
