@@ -212,30 +212,36 @@ struct Map3DPhotoBar: View {
         .sensoryFeedback(.success, trigger: state.saved)
     }
 
+    /// The three spots, each written out: a `ForEach`'s row closure in a
+    /// `ViewThatFits` would be measured off the main thread (CRASH101).
     private func spots(language: DisplayLanguage, named: Bool) -> some View {
         HStack(spacing: 8) {
-            ForEach(PhotoSpot.allCases, id: \.self) { spot in
-                Button {
-                    go(spot)
-                } label: {
-                    Label {
-                        Text(verbatim: spot.text(in: language))
-                    } icon: {
-                        Image(systemName: Self.symbol(of: spot))
-                    }
-                    .labelStyle(Map3DPhotoSpotLabelStyle(named: named))
-                    .font(.headline)
-                    .lineLimit(1)
-                    .padding(.horizontal, named ? 14 : 0)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .glassBackground(in: Capsule(), interactive: true)
-                }
-                .disabled(!isReady)
-                .accessibilityLabel(Text(verbatim: spot.text(in: language)))
-                .accessibilityHint(Text(verbatim: spot.hint(in: language)))
-                .accessibilityIdentifier("map3D.photoMode.spot.\(spot.rawValue)")
-            }
+            spotButton(.train, language: language, named: named)
+            spotButton(.station, language: language, named: named)
+            spotButton(.skyline, language: language, named: named)
         }
+    }
+
+    private func spotButton(_ spot: PhotoSpot, language: DisplayLanguage, named: Bool) -> some View {
+        Button {
+            go(spot)
+        } label: {
+            Label {
+                Text(verbatim: spot.text(in: language))
+            } icon: {
+                Image(systemName: Self.symbol(of: spot))
+            }
+            .labelStyle(Map3DPhotoSpotLabelStyle(named: named))
+            .font(.headline)
+            .lineLimit(1)
+            .padding(.horizontal, named ? 14 : 0)
+            .frame(minWidth: 44, minHeight: 44)
+            .glassBackground(in: Capsule(), interactive: true)
+        }
+        .disabled(!isReady)
+        .accessibilityLabel(Text(verbatim: spot.text(in: language)))
+        .accessibilityHint(Text(verbatim: spot.hint(in: language)))
+        .accessibilityIdentifier("map3D.photoMode.spot.\(spot.rawValue)")
     }
 
     static func symbol(of spot: PhotoSpot) -> String {
