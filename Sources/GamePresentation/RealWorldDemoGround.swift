@@ -638,6 +638,14 @@ struct TrackRise {
     /// How far a node may stand from the ground: the game's 64 m, less a
     /// margin.
     static let nodeReach = 60.0 * RealWorldDemo.metre
+    /// SHINKANSEN-SALE (decision 975): how far an edge may rise from end
+    /// to end: GameCore's 2^13 units, 128 m (``TrackGeometry``'s limit of
+    /// a sloping edge). A longer climb is cut, in a deep tunnel too.
+    static let greatestEdgeRise = Int64(1) << 13
+    /// How far under the ground a node may stand where
+    /// ``greatestEdgeRise`` asks for one in a deep tunnel: the game's
+    /// 1,024 m (decision 513), less a margin.
+    static let deepNodeReach = 1_000.0 * RealWorldDemo.metre
     /// How far an edge's straight grade may stray from the line, unless
     /// the track asks otherwise (``fits(from:to:within:)``).
     static let fit = 1.0 * RealWorldDemo.metre
@@ -968,6 +976,14 @@ struct TrackRise {
     /// ground.
     func allowsNode(at distance: Double) -> Bool {
         abs(height(at: distance) - interpolate(ground, at: distance)) <= Self.nodeReach
+    }
+
+    /// SHINKANSEN-SALE (decision 975): whether a node may stand `distance`
+    /// along the path deep under the ground (``deepNodeReach``), where
+    /// ``allowsNode(at:)`` takes none.
+    func allowsDeepNode(at distance: Double) -> Bool {
+        let over = height(at: distance) - interpolate(ground, at: distance)
+        return over <= Self.nodeReach && over >= -Self.deepNodeReach
     }
 
     /// Whether a straight grade from `a` to `b` keeps within `limit` of

@@ -165,8 +165,12 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         // FUKUOKA-OPEN: Fukuoka's three lines share Hakata and
         // Nakasu-Kawabata, so they are only ever sold together (decision
         // 862, older than the map's opening: no save holds one alone);
-        // `testFukuokaLines` plays them together.
-        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N"])
+        // `testFukuokaLines` plays them together. SHINKANSEN-SALE (decision
+        // 975): the Kyushu Shinkansen, another system, is sold alone and
+        // shares no track with them (its Hakata platforms stand on its
+        // viaduct over the subway's), so `testFukuokaShinkansen` plays it
+        // alone.
+        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS"])
     }
 
     /// The groups of lines sharing a station on each map, and the worlds
@@ -269,6 +273,21 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
             try check(name, {
                 let session = try Self.fukuoka(rules: rules)
                 try Self.buyTogether(ids, in: session)
+                return session.world
+            }())
+        }
+    }
+
+    /// SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen, sold on its
+    /// own on Japan's map (another system than the subway's), bought
+    /// from a new game's land in the north-west, under both rules.
+    func testFukuokaShinkansen() throws {
+        try full()
+        for (label, rules) in Self.rules {
+            let name = "fukuoka kyushushinkansen:KS \(label)"
+            try check(name, {
+                let session = try Self.fukuoka(rules: rules)
+                try Self.buyTogether(["kyushushinkansen:KS"], in: session)
                 return session.world
             }())
         }
