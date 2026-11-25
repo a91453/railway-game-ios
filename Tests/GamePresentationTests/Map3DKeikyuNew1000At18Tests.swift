@@ -47,8 +47,8 @@ final class Map3DKeikyuNew1000At18Tests: XCTestCase {
     }
 
     /// 18.00 m from coupler to coupler; across and upward the 20 m car's
-    /// own size (2.80 m wide, 3.904 m tall), its triangles and its
-    /// colours.
+    /// own size (2.80 m wide, 3.904 m tall), its triangles (and on the near
+    /// cars the 16 of the four window pillars) and its colours.
     func testEveryCarIsEighteenMetresAndOtherwiseTheTwentyMetreCars() throws {
         for (name, short, long) in try pairs() {
             XCTAssertEqual(short.minimum.x, -9.00, accuracy: 0.005, name)
@@ -59,7 +59,7 @@ final class Map3DKeikyuNew1000At18Tests: XCTestCase {
             XCTAssertEqual(short.maximum.y, 1.40, accuracy: 0.005, name)
             XCTAssertEqual(short.minimum.z, 0, accuracy: 0.002, name)
             XCTAssertEqual(short.maximum.z, long.maximum.z, accuracy: 0.001, name)
-            XCTAssertEqual(short.triangleCount, long.triangleCount, name)
+            XCTAssertEqual(short.triangleCount, long.triangleCount + (name.hasSuffix("far") ? 0 : 16), name)
             XCTAssertEqual(Set(short.vertices.map(\.color)), Set(long.vertices.map(\.color)), name)
             XCTAssertEqual(short.vertices.filter(\.glows).count, long.vertices.filter(\.glows).count, name)
         }
@@ -127,6 +127,28 @@ final class Map3DKeikyuNew1000At18Tests: XCTestCase {
         guard doors.count == 4 else { return }
         for (door, centre) in zip(doors, [Float(-5.135), 0.226, 5.892, 8.413]) {
             XCTAssertEqual((door.lowerBound + door.upperBound) / 2, centre, accuracy: 0.01)
+        }
+    }
+
+    /// The pair of windows between two doors is two windows on the near
+    /// cars: the glass cut in two 75 mm apart and a pillar of the dark
+    /// colour in the gap, in the glass's plane, two pairs a side; the far
+    /// cars keep one pane (the studio's review of revision-5, decision 986
+    /// §4).
+    func testTheWindowPairsHaveTheirPillarsNear() throws {
+        for far in [false, true] {
+            for (name, car) in [("cab", try XCTUnwrap(Map3DKeikyuNew1000.cab(far: far))),
+                                ("middle", try XCTUnwrap(Map3DKeikyuNew1000.middle(far: far)))] {
+                let pillars = car.vertices.filter { abs($0.y) > 1.399 && $0.z > 2.1 && $0.z < 3.1 && $0.color == Map3DPalette.dark }
+                // Two triangles a pillar, three vertices each.
+                XCTAssertEqual(pillars.count, far ? 0 : 24, "\(name) far \(far)")
+                for side: Float in [-1, 1] {
+                    let xs = pillars.filter { $0.y * side > 0 }.map(\.x).sorted()
+                    guard !far, xs.count == 12 else { continue }
+                    XCTAssertEqual(xs[5] - xs[0], 0.075, accuracy: 0.002, "\(name)")
+                    XCTAssertEqual(xs[11] - xs[6], 0.075, accuracy: 0.002, "\(name)")
+                }
+            }
         }
     }
 
