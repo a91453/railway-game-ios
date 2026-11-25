@@ -39,16 +39,16 @@ extension OverseasMap {
     public func mapSummary(in language: DisplayLanguage) -> String {
         switch self {
         case .hongKong: language.text(
-            "The whole of Hong Kong, about 63 by 45 km, all open from the start. You can buy the MTR's lines.",
-            "整個香港，約 63 × 45 公里，一開始全部開放，可以收購港鐵的路線。"
+            "Hong Kong: you start with about 33 by 33 km round Kowloon and buy the rest of its 63 by 45 km as your railway grows. You can buy the MTR's lines.",
+            "香港：一開始是九龍一帶約 33 × 33 公里，整張約 63 × 45 公里的其餘部分用買的。可以收購港鐵的路線。"
         )
         case .rovaniemi: language.text(
             "Rovaniemi in Finnish Lapland and the country round it, from Muurola to Kemijärvi, about 107 by 55 km, all open from the start. You can buy the line to Kemijärvi and the main line to Muurola.",
             "芬蘭拉普蘭的羅瓦涅米，從穆羅拉一路到凱米耶爾維，約 107 × 55 公里，一開始全部開放，可以收購往凱米耶爾維與往穆羅拉的路線。"
         )
         case .fukuoka: language.text(
-            "The city of Fukuoka in Japan, from Meinohama to Fukuoka Airport and Kaizuka, about 18 by 22 km, all open from the start. You can buy the Fukuoka City Subway's three lines.",
-            "日本的福岡市，從姪濱到福岡機場與貝塚，約 18 × 22 公里，一開始全部開放，可以收購福岡市地鐵的三條路線。"
+            "Japan from Fukuoka south to Kumamoto: you start with about 33 by 33 km round Fukuoka and buy the rest as your railway grows. You can buy the Fukuoka City Subway's three lines and the Kyushu Shinkansen.",
+            "日本從福岡往南到熊本：一開始是福岡市一帶約 33 × 33 公里，其餘用買的。可以收購福岡市地鐵三條路線與九州新幹線。"
         )
         }
     }

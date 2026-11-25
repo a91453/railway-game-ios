@@ -4,8 +4,9 @@ import GameCore
 // The land a real-world game starts with, as the place picker draws it
 // (ARCHITECTURE decision 312, the competitor study's 4.6): a frame on the
 // map that a tap moves, with its area and whether more land can be bought
-// later. A place of Taiwan starts with one tile and buys the rest
-// (decision 167); a place elsewhere is the 16 km square, its whole map.
+// later. A place of Taiwan starts with four tiles, two by two, and buys
+// the rest (decision 167; one tile before decision 992); a place elsewhere
+// is the 16 km square, its whole map.
 //
 // The owner's references have no start area to port (gap): `MapBuilder/`
 // and `Railway/city_world_reference/` have no chosen region on a map, and
@@ -42,10 +43,10 @@ public struct RealWorldStartArea: Hashable, Sendable {
 
     /// The land's width and height on the ground, in metres, along its
     /// middle's latitude and longitude. A new game's map is 16,384 m a
-    /// side at its middle; a tile of Taiwan is 16,384 world metres, which
-    /// are metres at the map's own anchor (``RealWorldExpansion/anchor``),
-    /// so a little less on the ground north of it (about 16.2 km at
-    /// Taipei).
+    /// side at its middle; the four tiles of Taiwan are 32,768 world
+    /// metres a side, which are metres at the map's own anchor
+    /// (``RealWorldExpansion/anchor``), so a little less on the ground north
+    /// of it (about 32.4 km at Taipei).
     public var groundMetres: (width: Double, height: Double) {
         let corners = corners
         let metresPerDegree = 2 * Double.pi * RealWorldFrame.earthRadius / 360
@@ -55,7 +56,7 @@ public struct RealWorldStartArea: Hashable, Sendable {
     }
 
     /// The area on the ground in square kilometres (about 268 for a map
-    /// abroad, 262 for a tile at Taipei).
+    /// abroad, 1,050 for the four tiles at Taipei).
     public var squareKilometres: Double {
         let ground = groundMetres
         return ground.width * ground.height / 1_000_000
@@ -96,8 +97,10 @@ public struct RealWorldStartArea: Hashable, Sendable {
         if let expansion {
             let frame = expansion.frame
             let length = Double(MapExpansion.tileLength)
-            let west = Double(expansion.start.column) * length, north = Double(expansion.start.row) * length
-            return [(west, north), (west + length, north), (west + length, north + length), (west, north + length)].map {
+            let rows = expansion.startTiles.map(\.row), columns = expansion.startTiles.map(\.column)
+            let west = Double(columns.min() ?? 0) * length, north = Double(rows.min() ?? 0) * length
+            let east = Double((columns.max() ?? 0) + 1) * length, south = Double((rows.max() ?? 0) + 1) * length
+            return [(west, north), (east, north), (east, south), (west, south)].map {
                 frame.coordinate(worldX: $0.0, worldY: $0.1)
             }
         }
