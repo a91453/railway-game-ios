@@ -4,9 +4,20 @@
 
 ## 進度
 
-- 做到哪：修正 PR 已開（見 #2118 的登記）；等 CI 綠就合，再由作者從 `main` 跑 `testflight.yml` 出 0.6.0 (151)。
-- 已驗證：`MapPackDownloadsTests` 在 Linux 全過（含新的 `testAPackFoundOnlyBySearchingTheSharedFolderIsTaken`）。App 端（`MapPackDownloader.swift`）只能在實機驗，UNVERIFIED。
-- 下一步：151 裝上後看設定的三列地圖；若還是「尚未下載」，請作者貼「回報問題」的「地圖包：」那一行，看 `url(for:) said …` 與 `… MapPacks files in the shared folder` 兩段。
+- 151（TestFlight run 151，main `60d841a8`）11-26 22:37 上架。作者 iPhone 上設定三列都是「使用內建資料」，香港、羅瓦涅米、福岡都能玩：內建保底有效。
+- 下載還是壞的，151 的回報說出原因（下面「151 的回報」）。根因在系統端，App 端沒有可修的地方。
+- 0.7.0 送審版保留內建（`CARRY_MAP_PACKS` 預設 YES；與發版串說好）。
+
+## 151 的回報
+
+三包都是 `noManifest`；`url(for:)` 對 `MapPacks/<城市>/pack.json` 和 `MapPacks/<城市>` 都回同一個錯：
+`NSCocoaErrorDomain Code=513`「你沒有在檔案夾「<UUID>」裡面儲存檔案「Staged Subpaths.plist」的權限」（每包一個 UUID），App Group 資料夾裡沒有任何 `MapPacks` 檔。
+
+- 也就是系統替 App 準備檔案時，要在那包的資料夾寫一份 `Staged Subpaths.plist`，卻被拒絕。問檔、問資料夾都一樣，所以 FB19512759 的「改問資料夾」繞不過。
+- 手機從 11-07 起就是 iOS 27.3（24C5037i），147 那天也是，所以不是系統更新造成。150 與 147 的差別在 App Store Connect 那邊：六包一次上傳、香港等包按了「取代」、福岡多了分包。猜測是新版本的資料夾權限在手機上壞了（UNVERIFIED）。
+- 151 內建了地圖，所以「刪掉重抓」不會跑（`!city.isCarried`）；設定裡的「移除」對內建的城市也不能按。要驗證重抓能不能修好，得用不內建的版本，或刪掉 App 重裝（存檔會不見，除非在 iCloud）。
+- 可以回報 Apple（Feedback Assistant，Background Assets）：附上這段錯誤和 iOS 版本。
+- 147（628fd6a）→ 150（760d40d）比過：香港的下載程式、Info.plist、entitlements、StoreDownloader 擴充都沒改（`MapPackDownloader.swift` 只把一個 ID 換成 `assetPackIDs`，香港與羅瓦涅米仍只有自己一包，`assetPackPath` 對它們給的路徑和以前一樣）；`testflight.yml` 只把時限從 45 改 90 分。改了的是**三個城市的資料本身**（香港、羅瓦涅米人口換官方，羅瓦涅米建物、福岡地形與分包），所以 150 是手機第一次把已下載的三包都換成新版本；147 時手機是第一次下載，沒有舊版要換。最可能是「換新版」這一步在手機上壞了（UNVERIFIED），不是分包本身（沒分包的香港也壞）。要不內建，得先在一台裝過舊版的手機上證明換版本能成功。
 
 ## 看到的
 

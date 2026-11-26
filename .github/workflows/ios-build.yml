@@ -232,7 +232,9 @@ jobs:
     outputs:
       ipad: ${{ steps.detect.outputs.ipad }}
       key: ${{ steps.key.outputs.key }}
-      passed: ${{ steps.passed.outputs.cache-hit }}
+      # True when this change passed before (decision 187) or changes only
+      # the release notes (decision 1017): the macOS jobs skip.
+      passed: ${{ steps.passed.outputs.cache-hit == 'true' || steps.notes.outputs.notes == 'true' }}
     steps:
       # Depth 2 is enough: on a pull request the checkout is the pull request
       # merged into its base, whose two parents are both fetched.
@@ -279,6 +281,25 @@ jobs:
           fi
           echo "ipad=$ipad" >> "$GITHUB_OUTPUT"
           echo "iPad job: $ipad"
+
+      # Decision 1017: a pull request that changes only the release notes
+      # (the entries of WhatsNew.swift, WhatsNewNext's lines, the What to
+      # Test text, docs) changes nothing in the app but the What's New
+      # card's text, which ci.yml's Linux build compiles and WhatsNewTests
+      # reads; it skips the macOS jobs (0.6.0's release pull request was
+      # pushed 8 times, each rebuilding the app for 29.9 minutes).
+      # release-notes-only.py says notes=false for anything else and for
+      # anything it cannot read, and a failing step leaves the jobs on.
+      - name: Only the release notes?
+        id: notes
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 -I .github/scripts/release-notes-only.py --base HEAD^1 | tee -a "$GITHUB_OUTPUT"
+          if grep -q -x 'notes=true' "$GITHUB_OUTPUT"; then
+            echo "This pull request changes only the release notes; the macOS jobs are skipped (decision 1017)." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
 
       # The key of what this pull request changes in the app: the patch ID
       # of its diff against the base (HEAD^1 is the base, HEAD the pull

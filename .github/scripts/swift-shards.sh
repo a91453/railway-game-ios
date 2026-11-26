@@ -2127,6 +2127,11 @@ affected_plan() {
 # 413 for pushes: a push is compared with the last successful push run, so
 # the files are everything since); a pull request labelled full-ci, a push
 # whose files could not be listed, a manual run and the nightly run are full.
+# NOTES_BASE (a pull request's base commit, HEAD the pull request merged
+# into it) turns on the release-notes tier of decision 1017: when
+# release-notes-only.py says only the release notes changed, the tier is
+# `notes` and NOTES_TESTS alone run.
+NOTES_TESTS="WhatsNewTests ReviewL19FixTests"
 ci_decide() {
   local files swift=true tier=full matrix plan tests parts k sep docs=true
   files="$(cat)"
@@ -2138,6 +2143,16 @@ ci_decide() {
       if [[ "${EVENT:-}" == pull_request && " $(tr '\n' ' ' <<<"${LABELS:-}") " == *" full-ci "* ]]; then
         echo "Label full-ci: every shard runs." >&2
         swift=true
+      elif [[ "${EVENT:-}" == pull_request && -n "${NOTES_BASE:-}" ]] \
+        && python3 -I "$(dirname "${BASH_SOURCE[0]}")/release-notes-only.py" --base "$NOTES_BASE" | grep -q -x 'notes=true'; then
+        # Decision 1017: only the release notes changed (the entries of
+        # WhatsNew.swift, WhatsNewNext's lines, the What to Test text, docs):
+        # the build still compiles them, and only the tests that read them
+        # run.
+        echo "Only the release notes changed (release-notes-only.py): $NOTES_TESTS." >&2
+        tier=notes
+        swift=true
+        matrix="{\"include\":[{\"shard\":\"selected\",\"tests\":\"$NOTES_TESTS\",\"part\":\"1/1\"}]}"
       elif plan="$("$0" plan <<<"$files")"; then
         tier="$(sed -n 's/^tier=//p' <<<"$plan")"
         tests="$(sed -n 's/^tests=//p' <<<"$plan")"

@@ -219,7 +219,11 @@ needs OSM data reads the same extract.
   classes its changed files reach by name, plus a smoke list of the core,
   when every file can be followed and the result is at most half the tier
   (decision 1012, `affected-tests.py`); so a test should name the type it
-  tests. The label `full-ci` runs every shard of a pull request (add
+  tests. A pull request that changes only the release notes
+  (`WhatsNew.entries`, `WhatsNewNext/` lines, the What to Test text, docs)
+  runs only `WhatsNewTests` and `ReviewL19FixTests` and no macOS job
+  (decision 1017, `release-notes-only.py`); the release pull request
+  takes no `full-ci` label. The label `full-ci` runs every shard of a pull request (add
   it, then re-run the pull request's run). A pull request or push that
   changes a file `tools/golden-checks/doc_numbers.py` reads (`docs/`, the
   tool, the save version, the golden schema, the fixture directories), and
