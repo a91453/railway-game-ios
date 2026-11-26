@@ -30,11 +30,15 @@ public struct PopulationHeatmap: Sendable {
         public let people: Int
         /// How many grid cells it covers (1 for a single cell).
         public let cells: Int
+        /// How many of the grid's cells a 30″ cell holds (decision 1002):
+        /// 1 for WorldPop's grids, 16 for a census's 7.5″ cells.
+        var cellsPerThirtySeconds = 1.0
 
         /// The step of the population gradient it is filled with
-        /// (``PopTravel/populationBand(people:)`` of its cells' average).
+        /// (``PopTravel/populationBand(people:)`` of its cells' average,
+        /// as people per 30″ cell, the gradient's own scale).
         public var band: Int {
-            PopTravel.populationBand(people: Double(people) / Double(max(cells, 1)))
+            PopTravel.populationBand(people: Double(people) / Double(max(cells, 1)) * cellsPerThirtySeconds)
         }
     }
 
@@ -83,6 +87,7 @@ public struct PopulationHeatmap: Sendable {
     /// Each row's non-empty cells, by column.
     private let rows: [[(column: Int, count: Int)]]
     private let columnCount: Int
+    private let cellsPerThirtySeconds: Double
 
     public init(grid population: PopulationGrid, frame: RealWorldFrame) {
         let grid = population.people
@@ -102,6 +107,11 @@ public struct PopulationHeatmap: Sendable {
         self.frame = frame
         self.rows = rows
         self.columnCount = columnCount
+        // Decision 1002: a finer grid is shaded by the people a 30″ cell
+        // of its density would hold; WorldPop's own 30″ grids exactly as
+        // before.
+        let ratio = (1.0 / 120) / grid.cellDegrees
+        cellsPerThirtySeconds = abs(ratio - 1) < 1e-6 ? 1 : ratio * ratio
     }
 
     /// The x of column `column`'s west edge.
@@ -173,7 +183,10 @@ public struct PopulationHeatmap: Sendable {
         return order.map { block in
             let x0 = columnX(block.column * size), x1 = columnX((block.column + 1) * size)
             let y0 = rowY(block.row * size), y1 = rowY((block.row + 1) * size)
-            return Tile(minX: min(x0, x1), minY: min(y0, y1), maxX: max(x0, x1), maxY: max(y0, y1), people: people[block] ?? 0, cells: size * size)
+            return Tile(
+                minX: min(x0, x1), minY: min(y0, y1), maxX: max(x0, x1), maxY: max(y0, y1), people: people[block] ?? 0, cells: size * size,
+                cellsPerThirtySeconds: cellsPerThirtySeconds
+            )
         }
     }
 

@@ -3,7 +3,8 @@ import GameCore
 import GamePresentation
 import XCTest
 
-/// Who lives where on real-world maps in Taiwan (WorldPop's 1 km grid,
+/// Who lives where on real-world maps in Taiwan (the government's own
+/// counts on cells of 7.5″, decision 1002,
 /// `Resources/RealWorld/taiwan_population.json`), and the ridership a
 /// managed company's new station there gets from it.
 final class PopulationGridTests: XCTestCase {
@@ -22,10 +23,14 @@ final class PopulationGridTests: XCTestCase {
 
     func testTheBundledGridHoldsTaiwan() throws {
         let grid = try Self.bundled()
-        // WorldPop's 2025 estimate, every cell rounded to whole people.
-        XCTAssertEqual(grid.total, 23_163_504)
+        // Decision 1002: the statistical areas' people of December 2024,
+        // each township's scaled to the 2020 census's residents (WorldPop's
+        // 2025 estimate was 23,163,504).
+        XCTAssertEqual(grid.total, 23_715_666)
+        // Round Taipei Main Station lie its tracks, offices and shops: some
+        // 31,000 live within 800 m (WorldPop spread 44,000 over its 1 km).
         let taipei = try XCTUnwrap(grid.people(within: 800, ofLatitude: Self.taipei.latitude, longitude: Self.taipei.longitude))
-        XCTAssertTrue((40_000 ... 50_000).contains(taipei), "\(taipei) people within 800 m of Taipei Main Station")
+        XCTAssertTrue((28_000 ... 35_000).contains(taipei), "\(taipei) people within 800 m of Taipei Main Station")
         // Pingxi, a village: a few hundred.
         let pingxi = try XCTUnwrap(grid.people(within: 800, ofLatitude: 25.025_7, longitude: 121.738_1))
         XCTAssertTrue((100 ... 1_000).contains(pingxi), "\(pingxi) people around Pingxi")
@@ -192,7 +197,8 @@ final class PopulationGridTests: XCTestCase {
                 let residents = try XCTUnwrap(grid.people(within: 800, ofLatitude: place.latitude, longitude: place.longitude))
                 XCTAssertEqual(demand, .realWorld(residents: residents))
                 XCTAssertNotEqual(demand, .cityDefault)
-                XCTAssertTrue((15_000 ... 20_000).contains(demand.dailyTrips), "\(demand.dailyTrips) trips a day by Taipei Main Station")
+                // Decision 1002: some 31,000 residents, 40 trips a hundred.
+                XCTAssertTrue((11_000 ... 14_000).contains(demand.dailyTrips), "\(demand.dailyTrips) trips a day by Taipei Main Station")
             }
         }
     }
@@ -223,7 +229,8 @@ final class PopulationGridTests: XCTestCase {
 
             let catchment = session.stationCatchmentPopulation(of: station.id)
             let people = try XCTUnwrap(catchment)
-            XCTAssertTrue((40_000 ... 50_000).contains(people), "Catchment population around Taipei station should be 40k-50k")
+            // Decision 1002: some 31,000 (WorldPop's 1 km cells: 40k-50k).
+            XCTAssertTrue((28_000 ... 35_000).contains(people), "Catchment population around Taipei station should be 28k-35k")
 
             // Unknown station ID returns nil
             XCTAssertNil(session.stationCatchmentPopulation(of: StationID(rawValue: 9999)))

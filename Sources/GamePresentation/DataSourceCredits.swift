@@ -7,8 +7,9 @@
 // `afr.json`, `trtc.json` and the other systems'): the Ministry of
 // Transportation and Communications' TDX under the Open Government Data
 // License, version 1.0, and OpenStreetMap under the Open Database License.
-// The population that sets a real-world station's ridership is WorldPop's,
-// under CC BY 4.0 (PopulationGrid.swift).
+// The population that sets a real-world station's ridership is the
+// government's own counts, under the Open Government Data License (decision
+// 1002, PopulationGrid.swift); the map packs abroad keep WorldPop's (CC BY 4.0).
 //
 // The website's credits page (a91453/railway-reference-private,
 // `Website/site/credits.html`) says the same in both languages: when a
@@ -52,7 +53,6 @@ public enum DataSourceCredits {
     static let worldPopURL = "https://www.worldpop.org"
     static let moiTerrainURL = "https://data.gov.tw/dataset/178729"
     static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
-    static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
     static let worldCoverURL = "https://doi.org/10.5281/zenodo.7254221"
     static let travelSurveyURL = "https://data.gov.tw/dataset/6248"
     static let civilAviationURL = "https://www.caa.gov.tw"
@@ -900,21 +900,25 @@ public enum DataSourceCredits {
                 id: "population",
                 title: language.text("People and Riders", "人口與旅客"),
                 credits: [
+                    // Decision 1002 (TAIWAN-CENSUS-GRID): the government's
+                    // own counts of where people live and work, in place of
+                    // WorldPop's estimate (`tools/census-grid/`).
                     DataSourceCredit(
-                        id: "worldPop",
-                        title: "WorldPop",
+                        id: "taiwanCensus",
+                        title: language.text("Where Taiwan lives and works", "台灣住與上班的人"),
                         detail: language.text(
-                            "How many people live round a station you build on a real-world map of Taiwan, and so how many riders it gets. The population grid layer shows the same data.",
-                            "在台灣實景地圖上蓋車站時，車站周圍住多少人、因此有多少旅客。人口網格圖層畫的也是這份資料。"
+                            "How many people live and work round a station you build on a real-world map of Taiwan, and so how many riders it gets and whether they come in the morning or go home in the evening. The population grid layer shows the same people.",
+                            "在台灣實景地圖上蓋車站時，車站周圍住多少人、多少人在那裡上班，因此有多少旅客、早上來還是傍晚回家。人口網格圖層畫的也是這些人。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), University of Southampton: population estimates per square kilometre, 2025 (R2025A), DOI 10.5258/SOTON/WP00840, under the Creative Commons Attribution 4.0 International licence (CC BY 4.0). The game rounds each square to whole people.",
-                            "WorldPop（www.worldpop.org），英國南安普敦大學：2025 年每平方公里人口估計（R2025A），DOI 10.5258/SOTON/WP00840，依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）使用。遊戲將每格人數四捨五入為整數。"
+                            "Ministry of the Interior, Department of Statistics: population of the basic statistical areas (December 2024) and the basic statistical areas’ boundaries; Ministry of the Interior, Department of Household Registration: households and population by village (December 2020); Directorate-General of Budget, Accounting and Statistics: the 2020 Population and Housing Census (residents by township) and the 2021 Industry, Commerce and Service Census (persons engaged by township). Used under the Open Government Data License, version 1.0. The game spreads each area’s people over its buildings, and each township’s jobs over OpenStreetMap’s shops, offices, schools, sights and industrial land (© OpenStreetMap contributors, ODbL 1.0), on cells of about 230 m.",
+                            "內政部統計處「統計區人口統計_最小統計區」（113 年 12 月）與「最小統計區圖」、內政部戶政司「村里戶數、單一年齡人口」（109 年 12 月）、行政院主計總處「109 年人口及住宅普查」（各鄉鎮市區常住人口）與「110 年工業及服務業普查」（各鄉鎮市區從業員工），依「政府資料開放授權條款第 1 版」使用。遊戲把每區的人分到區內的建物，每個鄉鎮市區的上班人數分到 OpenStreetMap 的店家、辦公室、學校、景點與工業區（© OpenStreetMap 貢獻者，ODbL 1.0），每格約 230 公尺。"
                         ),
                         links: [
-                            DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
-                            DataSourceCredit.Link(title: language.text("Dataset", "資料集"), url: worldPopDatasetURL),
-                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                            DataSourceCredit.Link(title: language.text("Statistical areas’ population", "統計區人口統計"), url: "https://data.gov.tw/dataset/18681"),
+                            DataSourceCredit.Link(title: language.text("Statistical areas’ boundaries", "最小統計區圖"), url: "https://data.gov.tw/dataset/25128"),
+                            DataSourceCredit.Link(title: language.text("Population by village", "村里戶數、單一年齡人口"), url: "https://data.gov.tw/dataset/77132"),
+                            openGovernmentLicense(in: language),
                         ]
                     ),
                     // Decision 298: the real stations' riders a day, which
