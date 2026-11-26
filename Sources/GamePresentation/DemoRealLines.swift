@@ -98,6 +98,14 @@ public struct DemoRealLines: Sendable {
         }
     }
 
+    /// Cars of the trains of the line `key` of `system`: its system's
+    /// (``cars(ofSystem:)``) but on a line whose real trains have more or
+    /// fewer. Decision 998: the Nishi-Kyushu Shinkansen's six, the real
+    /// N700S Kamome sets', beside the Kyushu Shinkansen's eight.
+    static func cars(ofLine key: String, system: String) -> Int {
+        key == "kyushushinkansen|NK" ? 6 : cars(ofSystem: system)
+    }
+
     /// The type of the trains of the line `key` of `system`, as the real
     /// line's are: High Speed Rail sets on the High Speed Rail (which makes
     /// the line a high-speed one, decision 168), the forest railway's train
@@ -181,7 +189,7 @@ public struct DemoRealLines: Sendable {
             guard let lines = pieces[key], let first = lines.first, let stops = railways.stops[key] else { continue }
             let points = stops.map { (chinese: $0.chinese, point: world($0.coordinate)) }
             guard points.contains(where: { inside($0.point, view) && inside($0.point, map) }) else { continue }
-            let cars = cars(ofSystem: first.system.id)
+            let cars = cars(ofLine: key, system: first.system.id)
             let type = trainType(ofLine: key, system: first.system.id)
             let length = Double(platformLength(cars: cars, of: type, carLength: carLength, real: real))
             for chain in Self.chains(lines.map { $0.points.map(world) }) {

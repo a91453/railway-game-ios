@@ -43,8 +43,9 @@ final class KyushuShinkansenTests: XCTestCase {
 
         XCTAssertEqual(FukuokaRailwaysTests.open.issues, [])
         let railways = try FukuokaRailwaysTests.railways()
-        XCTAssertEqual(railways.lines.filter { $0.system.id == "kyushushinkansen" }.map(\.lineKey), ["kyushushinkansen|KS"])
-        let stations = railways.stations.filter { $0.system.id == "kyushushinkansen" }
+        // Decision 998: and the Nishi-Kyushu Shinkansen's, its second line.
+        XCTAssertEqual(railways.lines.filter { $0.system.id == "kyushushinkansen" }.map(\.lineKey).sorted(), ["kyushushinkansen|KS", "kyushushinkansen|NK"])
+        let stations = railways.stations.filter { $0.system.id == "kyushushinkansen" && Self.stops.contains($0.chinese) }
         XCTAssertEqual(stations.map(\.chinese).sorted(), Self.stops.sorted())
         XCTAssertEqual(stations.first { $0.chinese == "博多" }?.english, "Hakata")
         XCTAssertEqual(stations.first { $0.chinese == "熊本" }?.english, "Kumamoto")

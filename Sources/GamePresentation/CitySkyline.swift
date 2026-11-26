@@ -111,9 +111,11 @@ public struct CitySkyline: Sendable {
     /// with its `jobs`) adds its look here in the same pull request.
     /// Finland's (`.nordic`, Rovaniemi) since decision 1007: Statistics
     /// Finland's 1 km people and postal areas' jobs, spread over the map's
-    /// buildings on 7.5″ cells. Hong Kong's since decision 1008: the 2021
+    /// buildings on 7.5″ cells. Taiwan's since decision 1002: the official
+    /// smallest statistical areas' residents and the census of industry's
+    /// jobs on 7.5″ cells. Hong Kong's since decision 1008: the 2021
     /// census and each planning unit's jobs.
-    public static let censusLooks: [Map3DRegionLook.Buildings] = [.japan, .nordic, .hongKong]
+    public static let censusLooks: [Map3DRegionLook.Buildings] = [.japan, .taiwan, .nordic, .hongKong]
 
     /// Decision 1006: whether a map drawn with `buildings` lays the game's
     /// houses by its cells' people (``censusLooks``).

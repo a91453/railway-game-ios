@@ -2,6 +2,14 @@
 
 公司（經營模式）在台灣的實景地圖上建新車站時，運量照車站周邊住了多少人決定，不再一律是「住宅區、每日 10,000 人次」。人口來自 WorldPop 的台灣人口格網，App 打包成 `RailwayGameApp/Resources/RealWorld/taiwan_population.json`，由 `GamePresentation` 的 `PopulationGrid` 讀取。
 
+> **2026-11-26 起（決策 1002）**：App 的 `taiwan_population.json` 換成官方普查的 7.5″ 格（住的人＋上班的人，
+> `tools/census-grid/taiwan_census_grid.py`，見 `tools/census-grid/README.md`）。這頁以下的 WorldPop 30″ 格網
+> 只剩「格網」用途：地點、分區、水域、建物等工具的第一個參數要的是 **30″ 的 WorldPop 格網**（它們照它的西北角與
+> 格大小切格），所以先用下面的 `build_population_grid.py` 寫到暫存檔（例如 `/tmp/worldpop_30s.json`），把下面
+> 指令裡的 `RailwayGameApp/Resources/RealWorld/taiwan_population.json` 換成它，不要拿 App 裡的普查檔。
+> 普查格的上班地點要另外照 7.5″ 數一次 OSM 地點（`build_place_grid.py` 的第一個參數給 7.5″ 的格網），
+> 指令在 `tools/census-grid/README.md`。
+
 ## 資料
 
 - 來源：WorldPop，Taiwan 2025，constrained，30 角秒（約 1 公里）一格，R2025A v1（DOI [10.5258/SOTON/WP00840](https://doi.org/10.5258/SOTON/WP00840)）。

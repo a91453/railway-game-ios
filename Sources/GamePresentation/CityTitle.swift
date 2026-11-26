@@ -115,10 +115,12 @@ public struct CityTitle: Hashable, Sendable {
         }
 
         /// Each sector's usual share of the jobs, in thousandths: the whole
-        /// of Taiwan's land as the app reads it in (``LandImport``, 12.0
-        /// million jobs; ``CityTitleReportTests`` prints them).
+        /// of Taiwan's land as the app reads it in (``LandImport``, 10.3
+        /// million jobs since decision 1002's census, 12.0 million of
+        /// OpenStreetMap's places before, at 537, 119, 252, 21, 12 and 57;
+        /// ``CityTitleReportTests`` prints them).
         static let usualShare: [Kind: Int64] = [
-            .commercial: 537, .business: 119, .industrial: 252, .civic: 21, .tourist: 12, .farming: 57,
+            .commercial: 389, .business: 281, .industrial: 189, .civic: 55, .tourist: 8, .farming: 74,
         ]
         /// The sectors, in the order a tie goes to the first.
         static let sectors: [Kind] = [.commercial, .business, .industrial, .civic, .tourist, .farming]

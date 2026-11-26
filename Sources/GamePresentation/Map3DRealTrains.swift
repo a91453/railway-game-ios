@@ -433,6 +433,9 @@ public struct Map3DRealTrains: Sendable {
             // 8000, eight cars (the "Mizuho" and "Sakura" through trains).
             // Decision 978: and its odd-numbered trains the 800 series'
             // six (the "Tsubame"), the line's two fleets.
+            // Decision 998: the Nishi-Kyushu Shinkansen's N700S series
+            // 8000, six cars (the "Kamome"), the game's N700S.
+            if id == "NK" { return Formation(key: Map3DN700S.key, cars: 6) }
             return Formation(key: Map3DKyushuN700.key, cars: Map3DKyushuN700.cars, alternate: Map3DKyushu800.key)
         default:
             // A system the game has no set for: boxes.
