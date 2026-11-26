@@ -586,6 +586,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   say nothing is broken, so the model is looked at beside real photographs
   at the game's camera angle and on-screen size, for at least three rounds,
   and the owner or another session judges its overview, not its maker.
+  A train ported from the owner's old version is the exception (owner,
+  2026-11-26): `tools/texture-palette/port_check.py` all green, then one
+  review by another studio, then merge; small fixes the review asks for
+  merge once the check is green again, with no second round
+  (model-look §4).
   The studio workflow (who builds, briefs, reviews, lessons, the list of
   models still to make) is kept in the private assets repository,
   `a91453/railway-assets-private-2` `docs/studio/` (owner, 2026-11-18),
