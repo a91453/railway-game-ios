@@ -170,9 +170,7 @@ extension Map3DKyushu800 {
 extension Map3DTrainSet {
     /// Decision 978: the owner's old 800 series cars (``Map3DKyushu800``),
     /// each its own length: the cab car, middle cars, the cab car turned
-    /// round at the back. The lamps a train shows at each end lit
-    /// (``litEnd(_:leading:)``): the head's white ones, the tail's red ones;
-    /// each nose's other lamps stay unlit lenses.
+    /// round at the back. The ends' lamp lenses lit.
     static func kyushu800() -> Map3DTrainSet {
         Map3DTrainSet(key: Map3DKyushu800.key, ownLengths: true) {
             func model(_ unit: Map3DKyushu800.Unit) -> Map3DModelPack.Model {
@@ -181,7 +179,7 @@ extension Map3DTrainSet {
                 Map3DKyushu800.model(unit)
                     ?? Map3DTrainShell(style: Map3DTrainStyle.all[0], cab: unit.isCab).model(named: unit.rawValue)
             }
-            return Cars(head: litEnd(model(.cab), leading: true), middle: model(.middle), tail: litEnd(model(.cab).turned, leading: false),
+            return Cars(head: litLenses(model(.cab), front: true), middle: model(.middle), tail: litLenses(model(.cab).turned, front: false),
                         single: nil)
         }
     }
