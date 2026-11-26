@@ -58,6 +58,17 @@ jobs:
       runs-on: ${{ steps.pick.outputs.runs-on }}
       where: ${{ steps.pick.outputs.where }}
     steps:
+      # The Xcode every macOS job builds with is written once, in
+      # select-xcode. The Mac must say it has it, with a runner label
+      # xcode-<version> (docs/MAC_RUNNER.md): when the repository moves to
+      # another Xcode, or the Mac's Xcode is updated and its label changed,
+      # pull requests go to hosted runners until the two agree again, rather
+      # than every iOS build failing on the Mac.
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: .github/actions/select-xcode
+          sparse-checkout-cone-mode: false
+
       - name: Is the Mac online and free?
         id: pick
         env:
@@ -69,6 +80,7 @@ jobs:
           REPO: ${{ github.repository }}
           LABEL: chien-mac
         run: |
+          xcode="$(sed -n 's/^ *XCODE_VERSION: *"\([0-9.]*\)".*/\1/p' .github/actions/select-xcode/action.yml | head -n 1)"
           hosted() {
             echo "runs-on=\"xcode-27\"" >>"$GITHUB_OUTPUT"
             echo "where=hosted" >>"$GITHUB_OUTPUT"
@@ -86,17 +98,22 @@ jobs:
               "https://api.github.com/repos/$REPO/actions/runners?per_page=100")"; then
             hosted "the runner list could not be read."
           fi
-          state="$(jq -r --arg label "$LABEL" '
-            [.runners[]? | select(any(.labels[]?; .name == $label))] as $mine
-            | if ($mine | length) == 0 then "none"
+          [[ -n "$xcode" ]] || hosted "the Xcode version in select-xcode could not be read."
+          XLABEL="xcode-$xcode"
+          state="$(jq -r --arg label "$LABEL" --arg xlabel "$XLABEL" '
+            [.runners[]? | select(any(.labels[]?; .name == $label))] as $all
+            | [$all[] | select(any(.labels[]?; .name == $xlabel))] as $mine
+            | if ($all | length) == 0 then "none"
+              elif ($mine | length) == 0 then "noxcode"
               elif any($mine[]; .status == "online" and (.busy | not)) then "free"
               elif any($mine[]; .status == "online") then "busy"
               else "offline" end' <<<"$runners" 2>/dev/null || echo unreadable)"
           case "$state" in
             free)
-              echo "runs-on=[\"self-hosted\",\"macOS\",\"$LABEL\"]" >>"$GITHUB_OUTPUT"
+              echo "runs-on=[\"self-hosted\",\"macOS\",\"$LABEL\",\"$XLABEL\"]" >>"$GITHUB_OUTPUT"
               echo "where=mac" >>"$GITHUB_OUTPUT"
-              echo "The Mac ($LABEL): online and free." | tee -a "$GITHUB_STEP_SUMMARY" ;;
+              echo "The Mac ($LABEL, $XLABEL): online and free." | tee -a "$GITHUB_STEP_SUMMARY" ;;
+            noxcode) hosted "the Mac has no $XLABEL label (Xcode $xcode, select-xcode)." ;;
             busy) hosted "the Mac is running another job." ;;
             offline) hosted "the Mac is offline." ;;
             none) hosted "no runner is labelled $LABEL." ;;
