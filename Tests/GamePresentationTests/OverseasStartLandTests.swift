@@ -157,14 +157,17 @@ final class OverseasStartLandTests: XCTestCase {
     /// A whole map that grows (a game opened whole on Japan's first extent,
     /// as a later pack could find one) stays whole: no tiles to buy.
     func testAWholeMapThatGrowsStaysWhole() throws {
+        // An old Fukuoka game, laid over the map as it lay before its
+        // north and west edges moved (decision 991).
         let ground = Self.fukuoka
-        let first = try XCTUnwrap(ground.layout.anchorBounds)
-        var world = GameWorld.newGame(anchor: ground.anchor, bounds: first, eventSeed: 3, land: [])
+        let old = try XCTUnwrap(ground.layout.older.first)
+        let first = try XCTUnwrap(old.anchorBounds)
+        var world = GameWorld.newGame(anchor: old.anchor, bounds: first, eventSeed: 3, land: [])
         world.setLandOnDemand()
         try world.openWholeMap()
         XCTAssertTrue(ground.holds(world))
         let grown = try XCTUnwrap(ground.grown(world))
-        XCTAssertEqual(grown.bounds, ground.bounds)
+        XCTAssertEqual(grown.bounds, old.bounds)
         XCTAssertNil(grown.mapExpansion)
         XCTAssertTrue(grown.wholeMapOpen)
     }

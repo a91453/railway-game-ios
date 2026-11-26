@@ -43,8 +43,8 @@ extension OverseasMap {
             "整個香港，約 63 × 45 公里，一開始全部開放、不用買地。不計成就與排名。"
         )
         case .fukuoka: language.text(
-            "The whole of the Japan map, from Fukuoka to Kumamoto, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
-            "日本整張地圖，從福岡到熊本，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
+            "The whole of the Japan map, the Fukuoka, Saga and Kumamoto prefectures, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
+            "日本整張地圖，福岡、佐賀、熊本三縣，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
         )
         case .rovaniemi: nil
         }
@@ -53,8 +53,9 @@ extension OverseasMap {
 
 extension OverseasGround {
     /// Decision 992: the tiles a new game on this map starts with, by row
-    /// and then column: on a map that grew, those that hold its first
-    /// extent (``MapPack/Layout/startTiles``, decision 969); on one that
+    /// and then column: on a map that grew or names where its games
+    /// begin, the layout's (``MapPack/Layout/startTiles``, decisions 969
+    /// and 991, the first place's); on one that
     /// did not, the two by two with the most people in the pack's
     /// `population.json`, the first by row and then column where two have
     /// as many; the world's first two by two for a pack without people.
@@ -62,7 +63,8 @@ extension OverseasGround {
     /// than two tiles by two.
     public var startTiles: [MapTile] {
         guard city.buysLand else { return [] }
-        if layout.anchorBounds != nil { return layout.startTiles }
+        // Decision 991: or those round where a new game begins.
+        if layout.anchorBounds != nil || !layout.starts.isEmpty { return layout.startTiles }
         let length = MapExpansion.tileLength
         let rows = Int((bounds.height + length - 1) / length), columns = Int((bounds.width + length - 1) / length)
         guard rows >= 2, columns >= 2 else { return [] }
@@ -106,10 +108,14 @@ extension GameWorld {
     /// riders their people call for, as a grown map's do
     /// (``OverseasGround/ridersStep(owning:in:)``). A map that is whole
     /// anyway (Rovaniemi) is whole and not marked, either way.
-    public static func newOverseasGame(_ ground: OverseasGround, wholeMap: Bool, balance: Money = startingBalance, eventSeed: UInt32 = 1) -> GameWorld {
-        guard ground.city.buysLand else { return newOverseasGame(ground, balance: balance, eventSeed: eventSeed) }
+    /// Decision 991: a game that buys its land begins round the `start`th
+    /// of the map's places (``MapPack/Layout/starts``).
+    public static func newOverseasGame(
+        _ ground: OverseasGround, wholeMap: Bool, balance: Money = startingBalance, eventSeed: UInt32 = 1, start: Int = 0
+    ) -> GameWorld {
+        guard ground.city.buysLand else { return newOverseasGame(ground, balance: balance, eventSeed: eventSeed, start: start) }
         guard wholeMap else {
-            var world = newOverseasGame(ground, balance: balance, eventSeed: eventSeed)
+            var world = newOverseasGame(ground, balance: balance, eventSeed: eventSeed, start: start)
             let tiles = ground.startTiles
             if world.mapExpansion == nil, !tiles.isEmpty {
                 do throws(GameError) {

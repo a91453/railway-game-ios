@@ -47,8 +47,8 @@ extension OverseasMap {
             "芬蘭拉普蘭的羅瓦涅米，從穆羅拉一路到凱米耶爾維，約 107 × 55 公里，一開始全部開放，可以收購往凱米耶爾維與往穆羅拉的路線。"
         )
         case .fukuoka: language.text(
-            "Japan from Fukuoka south to Kumamoto: you start with about 33 by 33 km round Fukuoka and buy the rest as your railway grows. You can buy the Fukuoka City Subway's three lines and the Kyushu Shinkansen.",
-            "日本從福岡往南到熊本：一開始是福岡市一帶約 33 × 33 公里，其餘用買的。可以收購福岡市地鐵三條路線與九州新幹線。"
+            "Japan's Fukuoka, Saga and Kumamoto prefectures: you start with about 33 by 33 km round Fukuoka and buy the rest as your railway grows. You can buy the Fukuoka City Subway's three lines and the Kyushu Shinkansen.",
+            "日本的福岡、佐賀、熊本三縣：一開始是福岡市一帶約 33 × 33 公里，其餘用買的。可以收購福岡市地鐵三條路線與九州新幹線。"
         )
         }
     }
