@@ -18,6 +18,9 @@ name: iOS App Build
 #   and the tutorial's first steps. The iPad job runs only
 #   when the change touches the tutorial's own files. Kept short and steady so
 #   a red result means something: about 6 minutes of tests (decision 199).
+#   A pull request that changes only what those screens never show (a 3D
+#   model, a map's data, the release notes) runs the toolbar test alone
+#   (decision 1019, ui-gate.py).
 # - The full lane: main once a night (ios-full-lane.yml starts it unless
 #   main's newest commit has had one) and runs by hand, before a release and
 #   to bisect a red one; a merge no longer starts it (decision 582). All
@@ -231,6 +234,10 @@ jobs:
     timeout-minutes: 5
     outputs:
       ipad: ${{ steps.detect.outputs.ipad }}
+      # Decision 1019: toolbar when the pull request changes only what the
+      # gate's UI tests never show (a 3D model, a map's data, the release
+      # notes); gate otherwise. The build job's UI step reads it.
+      ui: ${{ steps.ui.outputs.ui || 'gate' }}
       key: ${{ steps.key.outputs.key }}
       # True when this change passed before (decision 187) or changes only
       # the release notes (decision 1017): the macOS jobs skip.
@@ -301,6 +308,26 @@ jobs:
             echo "This pull request changes only the release notes; the macOS jobs are skipped (decision 1017)." | tee -a "$GITHUB_STEP_SUMMARY"
           fi
 
+      # Decision 1019: a pull request whose every changed file is one the
+      # gate's four UI tests never show (ui-gate.py says which: a Map3D
+      # file the app's 2D screens do not name, the data of the 3D map, the
+      # real-world maps and the overseas map packs, the release notes, the
+      # paths above) runs only the English toolbar test: the same launch and
+      # blank map as the other three, some 3.4 minutes less on a hosted
+      # runner. The script's own cases run first; a failing step, or
+      # anything the script cannot read, leaves the four.
+      - name: Which UI tests does the change need?
+        id: ui
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python3 -I .github/scripts/ui-gate.py --selftest
+          python3 -I .github/scripts/ui-gate.py --base HEAD^1 | tee -a "$GITHUB_OUTPUT"
+          if grep -q -x 'ui=toolbar' "$GITHUB_OUTPUT"; then
+            echo "This pull request changes only what the gate's UI tests never show; the UI step runs the toolbar test alone (decision 1019)." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
       # The key of what this pull request changes in the app: the patch ID
       # of its diff against the base (HEAD^1 is the base, HEAD the pull
       # request merged into it), over every path this workflow does not
@@ -309,8 +336,8 @@ jobs:
       # pull request's own lines (in the diff's context), a conflict
       # resolved in an app file, or any new commit to the app changes it.
       # --binary keeps images and other binary files in it; --verbatim keeps
-      # whitespace (YAML and Python depend on it). The iPad decision is in
-      # the key too. Only a pull request from this repository has a key: a
+      # whitespace (YAML and Python depend on it). The iPad decision and
+      # the UI tests' (decision 1019) are in the key too. Only a pull request from this repository has a key: a
       # fork's always runs everything. Its cache is the pull request's own
       # (refs/pull/N/merge), which no other pull request can read or write.
       # Nothing to key (an empty diff, a git error) runs everything. To force
@@ -321,6 +348,7 @@ jobs:
         continue-on-error: true
         env:
           IPAD: ${{ steps.detect.outputs.ipad }}
+          UI: ${{ steps.ui.outputs.ui || 'gate' }}
         run: |
           set -o pipefail
           # The paths of pull_request.paths-ignore above.
@@ -341,8 +369,8 @@ jobs:
             echo "Nothing in the app to key; the macOS jobs run."
             exit 0
           fi
-          echo "key=ios-pr-passed-v1-ipad-$IPAD-$id" >> "$GITHUB_OUTPUT"
-          echo "Key of this change to the app: ios-pr-passed-v1-ipad-$IPAD-$id"
+          echo "key=ios-pr-passed-v1-ipad-$IPAD-ui-$UI-$id" >> "$GITHUB_OUTPUT"
+          echo "Key of this change to the app: ios-pr-passed-v1-ipad-$IPAD-ui-$UI-$id"
 
       # Exact key only. A failure to read the cache runs everything.
       - name: Has this change passed before?
@@ -700,6 +728,9 @@ jobs:
       # joins it only if it is steady, only a Simulator can answer it, and
       # it fits; otherwise it runs in the full lane, which runs after each
       # merge and must be green before a TestFlight release.
+      # Decision 1019: a pull request the changes job marks ui=toolbar (a
+      # 3D model, a map's data, the release notes) runs the English
+      # toolbar test alone.
       # Decision 412: with 7 tests this step took 7.3 to 11.8 minutes
       # (median 9.0) over 10 pull request runs on 2026-10-25, about 2.5
       # minutes of it XCTest starting and writing the result. The house
@@ -741,9 +772,13 @@ jobs:
         timeout-minutes: ${{ github.event_name == 'pull_request' && 25 || 120 }}
         env:
           ONLY_TESTING: ${{ inputs.only_testing }}
+          UI_GATE: ${{ needs.changes.outputs.ui }}
         run: |
           only=()
-          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == pull_request && "$UI_GATE" == toolbar ]]; then
+            lane="gate (pull request), toolbar only: the change is one the other gate tests never show (decision 1019)"
+            only=(-only-testing:RailwayGameUITests/ToolbarSmokeTests/testEnglishToolbar)
+          elif [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
             lane="gate (pull request): the short list"
             only=(
               -only-testing:RailwayGameUITests/ToolbarSmokeTests/testEnglishToolbar
