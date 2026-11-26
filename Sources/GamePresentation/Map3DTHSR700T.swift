@@ -37,6 +37,12 @@ import Foundation
 /// car with a single-arm pantograph, its insulator cover and its two wind
 /// shields written by the tool. No company mark, lettering or number is
 /// drawn.
+/// The bogies stand where the real cars' do, 3.75 m from a coupling face
+/// and 17.5 m apart, and the skirts' openings are moved to them, each
+/// with its bogie in its middle; the cab car's front opening, shallow and
+/// narrow on the old car, is made as wide as the back one and 0.70 m high,
+/// a strip of the nose's skirt left over the wheels as on the real car
+/// (the owner, 2026-11-26: the wheels were not in their openings).
 public enum Map3DTHSR700T {
     /// The cars the game draws: the cab car, the middle car and the car
     /// under the pantograph.
