@@ -41,10 +41,11 @@ final class RealWorldStartAreaTests: XCTestCase {
         XCTAssertTrue(taipei.buysMoreLand)
         let scale = cos(RealWorldPlace.standard.anchor.latitudeDegrees * .pi / 180) / cos(expansion.anchor.latitudeDegrees * .pi / 180)
         XCTAssertLessThan(scale, 1, "Taipei is north of the map's anchor")
-        XCTAssertEqual(taipei.groundMetres.width, 16_384 * scale, accuracy: 1)
-        XCTAssertEqual(taipei.groundMetres.height, 16_384 * scale, accuracy: 3)
-        XCTAssertEqual(taipei.squareKilometres, 16.384 * 16.384 * scale * scale, accuracy: 0.1)
-        let area = Int((16.384 * 16.384 * scale * scale).rounded()), side = (163.84 * scale).rounded() / 10
+        // Decision 992: four tiles, two by two.
+        XCTAssertEqual(taipei.groundMetres.width, 32_768 * scale, accuracy: 1)
+        XCTAssertEqual(taipei.groundMetres.height, 32_768 * scale, accuracy: 3)
+        XCTAssertEqual(taipei.squareKilometres, 32.768 * 32.768 * scale * scale, accuracy: 0.2)
+        let area = Int((32.768 * 32.768 * scale * scale).rounded()), side = (327.68 * scale).rounded() / 10
         XCTAssertEqual(taipei.summary(in: .english), "You start with \(area) km² (\(side) × \(side) km) of land. You can buy land later to grow it.")
         XCTAssertEqual(taipei.summary(in: .traditionalChinese), "一開始的土地約 \(area) 平方公里（\(side) × \(side) 公里），之後可以買地擴大。")
     }
@@ -75,16 +76,28 @@ final class RealWorldStartAreaTests: XCTestCase {
         }
     }
 
-    /// For a place of Taiwan the frame is the tile the game would own:
-    /// the expansion's start tile, as decision 167 lays it.
-    func testTaiwansFrameIsTheStartTile() throws {
+    /// For a place of Taiwan the frame is the tiles the game would own:
+    /// the expansion's four start tiles (decision 992), as decision 167
+    /// lays them, two by two round the place.
+    func testTaiwansFrameIsTheStartTiles() throws {
         let area = RealWorldStartArea(middle: RealWorldPlace.standard.anchor)
         let expansion = try XCTUnwrap(area.expansion)
         let frame = expansion.frame
         let length = Double(MapExpansion.tileLength)
-        let northWest = frame.coordinate(worldX: Double(expansion.start.column) * length, worldY: Double(expansion.start.row) * length)
+        let first = try XCTUnwrap(expansion.startTiles.first)
+        XCTAssertEqual(expansion.startTiles, [
+            first, MapTile(row: first.row, column: first.column + 1),
+            MapTile(row: first.row + 1, column: first.column), MapTile(row: first.row + 1, column: first.column + 1),
+        ])
+        let northWest = frame.coordinate(worldX: Double(first.column) * length, worldY: Double(first.row) * length)
+        let southEast = frame.coordinate(worldX: Double(first.column + 2) * length, worldY: Double(first.row + 2) * length)
         XCTAssertEqual(area.corners[0].latitude, northWest.latitude, accuracy: 1e-12)
         XCTAssertEqual(area.corners[0].longitude, northWest.longitude, accuracy: 1e-12)
+        XCTAssertEqual(area.corners[2].latitude, southEast.latitude, accuracy: 1e-12)
+        XCTAssertEqual(area.corners[2].longitude, southEast.longitude, accuracy: 1e-12)
+        // About 32.4 km a side at Taipei, 1,050 km².
+        XCTAssertEqual(area.groundMetres.width, 32_400, accuracy: 200)
+        XCTAssertEqual(area.squareKilometres, 1_050, accuracy: 15)
     }
 
     /// A tap moves the frame to the point; one near a pole moves it as far

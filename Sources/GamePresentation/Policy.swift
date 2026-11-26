@@ -614,7 +614,7 @@ public enum PolicyMap: Sendable {
 
     /// The world, a new game under `rules`, and its towns: the blank
     /// map's town centres, or the real place's densest towns
-    /// (``densestTowns(in:tile:)``). A real place reads the app's data
+    /// (``densestTowns(in:tiles:)``). A real place reads the app's data
     /// from `files`.
     @MainActor
     public func start(rules: NewGameRules, files: RealWorldFiles?) throws -> (world: GameWorld, towns: [PlanPoint]) {
@@ -632,8 +632,8 @@ public enum PolicyMap: Sendable {
             var world = GameWorld.newRealWorldExpansionGame(layout, ridersStep: step)
             rules.apply(to: &world)
             GameSession.readLand(roundStationsOf: &world, population: population, places: places)
-            guard let towns = Self.densestTowns(in: world, tile: layout.start) else {
-                throw HeadlessGameError("\(id) has no two towns 3 to 8 km apart in its first tile")
+            guard let towns = Self.densestTowns(in: world, tiles: layout.startTiles) else {
+                throw HeadlessGameError("\(id) has no two towns 3 to 8 km apart in its first tiles")
             }
             return (world, towns)
         }
@@ -644,9 +644,17 @@ public enum PolicyMap: Sendable {
     /// (RealWorldExpansionReportTests' pair), and, when there is one, a
     /// third 3 to 8 km from the first and 2 km or more from the second.
     public static func densestTowns(in world: GameWorld, tile: MapTile) -> [PlanPoint]? {
+        densestTowns(in: world, tiles: [tile])
+    }
+
+    /// ``densestTowns(in:tile:)`` in the box of `tiles` (decision 992: the
+    /// four a place of Taiwan starts with); `nil` for no tiles.
+    public static func densestTowns(in world: GameWorld, tiles: [MapTile]) -> [PlanPoint]? {
+        guard let top = tiles.map(\.row).min(), let bottom = tiles.map(\.row).max(),
+              let left = tiles.map(\.column).min(), let right = tiles.map(\.column).max() else { return nil }
         let length = MapExpansion.tileLength, margin = 1_000 * Int64(WorldCoordinate.unitsPerMetre)
-        let minX = Int64(tile.column) * length + margin, maxX = Int64(tile.column + 1) * length - margin
-        let minY = Int64(tile.row) * length + margin, maxY = Int64(tile.row + 1) * length - margin
+        let minX = Int64(left) * length + margin, maxX = Int64(right + 1) * length - margin
+        let minY = Int64(top) * length + margin, maxY = Int64(bottom + 1) * length - margin
         // One candidate for each block of 1 km that holds a cell.
         var candidates = Set<LandBlock>()
         for cell in world.land.cells {

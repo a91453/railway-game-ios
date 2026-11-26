@@ -478,7 +478,8 @@ public struct OverseasGround: Sendable {
         var grown = world
         do throws(GameError) {
             try grown.growMap(to: layout.bounds)
-            if grown.mapExpansion == nil {
+            // Decision 992: a map opened whole stays whole.
+            if grown.mapExpansion == nil, !grown.wholeMapOpen {
                 let tiles = layout.startTiles
                 try grown.enableMapExpansion(owning: tiles, townSeed: nil, ridersStep: ridersStep(owning: tiles, in: grown))
             }

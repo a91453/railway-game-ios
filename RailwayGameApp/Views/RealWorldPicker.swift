@@ -450,6 +450,17 @@ struct RealWorldPicker: View {
                     ) {
                         if launcher.startOverseasMap(row.city) { dismiss() }
                     }
+                    // Decision 992: a map that starts with four tiles can
+                    // also be opened whole, counting no achievements.
+                    if let whole = row.city.wholeMapSummary(in: language) {
+                        WholeMapRow(
+                            id: "realWorld.overseas.\(row.city.rawValue).whole", name: row.city.wholeMapName(in: language),
+                            symbol: "map.fill", summary: whole, howToOpen: row.closed,
+                            closedSymbol: row.waitsForDownload ? "arrow.down.circle" : "lock.fill"
+                        ) {
+                            if launcher.startOverseasMap(row.city, wholeMap: true) { dismiss() }
+                        }
+                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: MapPackDownloads.statusChanged).receive(on: DispatchQueue.main)) { _ in
                     mapPackAnswers += 1

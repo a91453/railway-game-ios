@@ -3,16 +3,17 @@ import GameCore
 
 // A real place of Taiwan bought tile by tile (ARCHITECTURE decision 167, the
 // second step of decision 160): the world is the whole island, as for
-// ``WholeTaiwan``, but the company starts with one tile of it, the 16 km
-// square round where the player pointed, and buys the others as its railway
-// grows. The tile's land is read in whole as it starts and as each next
-// tile is bought, so the city is there to build to, as in a 16 km real-world
-// map; where the player points does not decide how far the map reaches.
+// ``WholeTaiwan``, but the company starts with part of it and buys the
+// others as its railway grows. Since decision 992 the part is four tiles,
+// two by two, about 32 km square round where the player pointed (one tile,
+// the 16 km square, before). The tiles' land is read in whole as it starts
+// and as each next tile is bought, so the city is there to build to; where
+// the player points does not decide how far the map reaches.
 //
 // GameCore splits any world into tiles from its north-west corner
 // (``MapExpansion``), so the world is laid over the island so that the
-// tile the company starts with is centred on the pick: its middle is where
-// the player pointed, and every tile is a whole one.
+// four tiles the company starts with are centred on the pick: the corner
+// they share is where the player pointed, and every tile is a whole one.
 //
 // The owner's references have nothing to port (gap), as for decision 160:
 // `Ci/`'s "扩建" is a capacity quota. The layout, the step and the rest are
@@ -22,17 +23,18 @@ import GameCore
 /// over the Earth, and the tile the company starts with.
 public struct RealWorldExpansion: Hashable, Sendable {
     /// The world's middle on the Earth: not ``WholeTaiwan/anchor``, but the
-    /// point that puts the pick in the middle of a tile.
+    /// point that puts the pick at a corner of four tiles.
     public let anchor: GeoAnchor
     /// The world: whole tiles (``MapExpansion/tileLength``), enough to hold
-    /// the island's box (``WholeTaiwan``) and the tile.
+    /// the island's box (``WholeTaiwan``) and the four tiles.
     public let bounds: WorldBounds
-    /// The tile the company starts with: the one whose middle is ``pick``.
-    public let start: MapTile
+    /// Decision 992: the tiles the company starts with, two by two, by row
+    /// and then column: the four round the corner at ``pick``.
+    public let startTiles: [MapTile]
     /// Where the player pointed.
     public let pick: GeoAnchor
 
-    /// The layout with the middle of the first tile at `pick`, or `nil` for
+    /// The layout with the corner of the first four tiles at `pick`, or `nil` for
     /// a place outside the box of Taiwan (``WholeTaiwan/contains(latitude:longitude:)``),
     /// which has no people of the app's to fill more than its own square.
     public init?(around pick: GeoAnchor) {
@@ -71,16 +73,19 @@ public struct RealWorldExpansion: Hashable, Sendable {
         guard let settled else { return nil }
         anchor = settled.anchor
         bounds = settled.bounds
-        start = MapTile(row: grid.north, column: grid.west)
+        startTiles = [
+            MapTile(row: grid.north - 1, column: grid.west - 1), MapTile(row: grid.north - 1, column: grid.west),
+            MapTile(row: grid.north, column: grid.west - 1), MapTile(row: grid.north, column: grid.west),
+        ]
         self.pick = pick
-        // The layout must do what it says: the pick in the middle of the
-        // tile, within a centimetre or so (an anchor is whole ten-millionths
-        // of a degree), and the box inside the world.
+        // The layout must do what it says: the pick at the corner of the
+        // four tiles, within a centimetre or so (an anchor is whole
+        // ten-millionths of a degree), and the box inside the world.
         let tile = Double(MapExpansion.tileLength)
         let frame = RealWorldFrame(anchor: anchor, bounds: bounds)
         let middle = frame.worldPosition(latitude: pick.latitudeDegrees, longitude: pick.longitudeDegrees)
         let metre = Double(WorldCoordinate.unitsPerMetre)
-        guard abs(middle.x - (Double(grid.west) + 0.5) * tile) < metre, abs(middle.y - (Double(grid.north) + 0.5) * tile) < metre else { return nil }
+        guard abs(middle.x - Double(grid.west) * tile) < metre, abs(middle.y - Double(grid.north) * tile) < metre else { return nil }
         let northWest = frame.worldPosition(latitude: WholeTaiwan.north, longitude: WholeTaiwan.west)
         let southEast = frame.worldPosition(latitude: WholeTaiwan.south, longitude: WholeTaiwan.east)
         guard northWest.x >= 0, northWest.y >= 0, southEast.x <= Double(bounds.width), southEast.y <= Double(bounds.height) else { return nil }
@@ -101,8 +106,9 @@ public struct RealWorldExpansion: Hashable, Sendable {
         let south: Double
     }
 
-    /// The tiles round the pick's: how many lie to its west, east, north and
-    /// south, so that the world holds the box.
+    /// The tiles round the pick's corner: how many lie to its west, east,
+    /// north and south, so that the world holds the box; at least one each,
+    /// the four the company starts with.
     private struct Grid: Equatable {
         var west: Int
         var east: Int
@@ -110,12 +116,12 @@ public struct RealWorldExpansion: Hashable, Sendable {
         var south: Int
 
         /// The tiles the box needs where the anchor lies at `latitude`°: the
-        /// pick is in the middle of its tile, so a side needs the tiles
-        /// that reach its distance beyond half a tile.
+        /// pick is at a corner of tiles, so a side needs the tiles that
+        /// reach its distance, and at least one, a start tile.
         init(_ reach: Reach, atLatitude latitude: Double) {
             let pointsPerTile = Double(MapExpansion.tileLength) * RealWorldExpansion.pointsPerUnit(atLatitude: latitude)
             func tiles(_ distance: Double) -> Int {
-                max(0, Int((distance / pointsPerTile - 0.5).rounded(.up)))
+                max(1, Int((distance / pointsPerTile).rounded(.up)))
             }
             west = tiles(reach.west)
             east = tiles(reach.east)
@@ -136,11 +142,11 @@ public struct RealWorldExpansion: Hashable, Sendable {
             return grid
         }
 
-        var columns: Int { west + 1 + east }
-        var rows: Int { north + 1 + south }
+        var columns: Int { west + east }
+        var rows: Int { north + south }
     }
 
-    /// The anchor that puts the pick in the middle of the tile `grid` gives
+    /// The anchor that puts the pick at the corner of tiles `grid` gives
     /// it, and the world of its tiles.
     private struct Solution {
         let anchor: GeoAnchor
@@ -155,8 +161,8 @@ public struct RealWorldExpansion: Hashable, Sendable {
             else { return nil }
             // How far the pick lies east and south of the world's middle,
             // in world units.
-            let eastOfMiddle = (Double(grid.west) + 0.5) * tile - Double(bounds.width) / 2
-            let southOfMiddle = (Double(grid.north) + 0.5) * tile - Double(bounds.height) / 2
+            let eastOfMiddle = Double(grid.west) * tile - Double(bounds.width) / 2
+            let southOfMiddle = Double(grid.north) * tile - Double(bounds.height) / 2
             var latitude = start
             var anchorX = pickX
             for _ in 0..<32 {
@@ -195,9 +201,9 @@ public struct RealWorldExpansion: Hashable, Sendable {
         x / RealWorldFrame.worldPoints * 360 - 180
     }
 
-    // MARK: - The first tile's people
+    // MARK: - The first tiles' people
 
-    /// What the first tile's people ask of the map's milestone (decision
+    /// What the first tiles' people ask of the map's milestone (decision
     /// 167): ``ridersPerRootTrip`` riders for every whole number of the
     /// square root of the trips a day they make (40 for every 100 residents,
     /// ``StationDemand/tripsPerHundredResidents``), a thousand riders at a
@@ -220,15 +226,32 @@ public struct RealWorldExpansion: Hashable, Sendable {
         return min(max(carried / 1_000 * 1_000, minimumRidersStep), MapExpansion.standardRidersStep)
     }
 
-    /// What the first tile's people ask of the map's milestone, from the
+    /// What the first tiles' people ask of the map's milestone, from the
     /// land `population` and `places` give it on this layout's world
-    /// (``LandImport``): the residents of its tile, through
+    /// (``LandImport``): the residents of the one tile's worth of land
+    /// round the pick (``middleBlocks``), through
     /// ``ridersStep(forResidents:)``.
+    ///
+    /// Decision 992: the same land as when a game started with that one
+    /// tile, not the four it starts with now, so a first line unlocks the
+    /// next tile as soon as it did (measured with the four: Taichung's,
+    /// Tainan's, Kaohsiung's, Taoyuan's and Chiayi's first lines had not
+    /// in 30 days).
     public func ridersStep(population: PopulationGrid, places: PlaceGrid?, water: WaterGrid?) -> Int64 {
-        let cells = LandImport.cells(
-            in: Set(start.landBlocks(in: bounds)), population: population, places: places, water: water, frame: frame, bounds: bounds
-        )
+        let cells = LandImport.cells(in: middleBlocks, population: population, places: places, water: water, frame: frame, bounds: bounds)
         return Self.ridersStep(forResidents: cells.reduce(0) { $0 + $1.residents })
+    }
+
+    /// The land blocks of one tile's side centred on the pick, the
+    /// corner the four start tiles share: a quarter of each.
+    public var middleBlocks: Set<LandBlock> {
+        let side = Int(MapExpansion.tileLength / Land.blockLength), corner = startTiles[startTiles.count - 1]
+        let row = corner.row * side, column = corner.column * side
+        var blocks: Set<LandBlock> = []
+        for r in (row - side / 2)..<(row + side / 2) {
+            for c in (column - side / 2)..<(column + side / 2) { blocks.insert(LandBlock(row: r, column: c)) }
+        }
+        return blocks
     }
 
     /// The fewest riders a tile may ask: the smallest place still has a
@@ -267,9 +290,10 @@ extension WholeTaiwan {
 
 extension GameWorld {
     /// A new game on a real place of Taiwan bought tile by tile (decision
-    /// 167): the world of `expansion`, whose company owns its first tile,
-    /// each tile beyond it asking `ridersStep` riders more of its best day.
-    /// Its land is read in as it is needed (``WholeTaiwan``): the tile's as
+    /// 167): the world of `expansion`, whose company owns its first four
+    /// tiles (decision 992), each tile bought beyond them asking `ridersStep`
+    /// riders more of its best day.
+    /// Its land is read in as it is needed (``WholeTaiwan``): the tiles' as
     /// the game begins (``GameSession/readLandRoundStations()``) and each
     /// tile's as it is bought.
     ///
@@ -283,7 +307,7 @@ extension GameWorld {
         var world = newGame(anchor: expansion.anchor, bounds: expansion.bounds, balance: balance, eventSeed: eventSeed, land: [])
         world.setLandOnDemand()
         do throws(GameError) {
-            try world.enableMapExpansion(owning: expansion.start, townSeed: nil, ridersStep: ridersStep)
+            try world.enableMapExpansion(owning: expansion.startTiles, townSeed: nil, ridersStep: ridersStep)
         } catch {
             // A tile of the world, nothing built, a step in range.
             preconditionFailure("Could not buy the map of a real place: \(error)")

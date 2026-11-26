@@ -50,7 +50,7 @@
 
 ## 還留下什麼（KUMAMOTO-OPEN 的事）
 
-- **「整張全開、不計成就」的選項**還沒做（評分檔第 5 張）。`newOverseasGame` 遇到有 `earlier` 的包一律四塊起跳。
+- ~~**「整張全開、不計成就」的選項**還沒做~~：OVERSEAS-BUY-LAND（決策 992）做了，香港與日本的地圖選單各多一列「整張全開」（`GameWorld.newOverseasGame(_:wholeMap:)`、存檔 115 的 `wholeMapOpen`）。
 - **裝置上的包比存檔舊**：已經長大的存檔（`bounds` 是新範圍），裝置上卻是還沒長大的舊包時，`OverseasGround.holds`
   認不得它，`overseasAwaited` 也沒有它（包在裝置上），會被當成台灣的地面。正常更新不會發生（存檔要先在新包上
   長大），但換機、還原舊版時可能；KUMAMOTO-OPEN 時看包的更新方式要不要擋。

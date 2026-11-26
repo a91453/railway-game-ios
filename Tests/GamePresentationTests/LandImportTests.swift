@@ -218,13 +218,14 @@ final class LandImportTests: XCTestCase {
             XCTAssertNotNil(expected)
             XCTAssertEqual(launcher.session?.world.land.cells, expected)
             XCTAssertNil(launcher.session?.world.mapExpansion)
-            // A place of Taiwan is bought tile by tile, from the 16 km round it.
+            // A place of Taiwan is bought tile by tile, from the four round
+            // it (decision 992).
             launcher.returnToStart()
             launcher.startNewGame(at: anchor)
             let island = try XCTUnwrap(launcher.session?.world)
-            XCTAssertEqual(island.mapExpansion?.owned.count, 1)
+            XCTAssertEqual(island.mapExpansion?.owned.count, 4)
             XCTAssertGreaterThan(island.bounds.width, GameWorld.newGameBounds.width)
-            XCTAssertGreaterThan(island.land.totals.residents, 4_000_000, "Taipei's people, the tile round the pick")
+            XCTAssertGreaterThan(island.land.totals.residents, 4_000_000, "Taipei's people, the four tiles round the pick")
             launcher.returnToStart()
             launcher.startNewGame()
             let blank = try XCTUnwrap(launcher.session?.world)
