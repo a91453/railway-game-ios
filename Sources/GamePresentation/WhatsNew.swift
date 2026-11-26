@@ -77,8 +77,8 @@ public enum WhatsNew {
                     chinese: "高鐵 700T 換新模型，塗成真車的白底橘帶，十二節。"
                 ),
                 Line(
-                    english: "Choose a paint for a line's trains on the line's page; the high-speed 700T now wears its real orange band, with the earlier teal as a choice.",
-                    chinese: "路線頁可以替這條線的列車選塗裝；高鐵 700T 改成真車的橘色帶，原本的青綠帶可以選回來。"
+                    english: "Choose a paint for a line's trains on the line's page; the high-speed 700T now wears its real orange band.",
+                    chinese: "路線頁可以替這條線的列車選塗裝；高鐵 700T 改成真車的橘色帶。"
                 ),
                 Line(
                     english: "The Train Pack's white high-speed train is now the N700S: white with two blue lines, twelve cars.",
