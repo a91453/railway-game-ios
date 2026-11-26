@@ -4,9 +4,9 @@
 
 ## 進度
 
-- 做到：程式寫好（下面「改了什麼」），PR 開了等 CI；還沒上實機。
-- 已驗證：Linux 上 `MapPackDownloadsTests` 過；App 那段（`descriptor(for:)`）只有 iOS CI 編得到。
-- 下一步：從 main 發一版 TestFlight（`carry_map_packs: yes`），照「接下來（實機）」請作者看設定三列與回報。
+- 做到：#2771 合進 main（48e293b），TestFlight 152（run 45876417790，`carry_map_packs: yes`）11-27 03:20 上架；拆成三段的 testflight.yml 第一次真的跑，三段都成功。
+- 已驗證（作者 iPhone，iOS 27.3，從 150、151 升上來）：設定三列都「已下載」；回報「地圖包：」是 `mappack-hongkong used (copied out: 17 files, 17 new); mappack-rovaniemi used (copied out: 16 files, 16 new); mappack-fukuoka used (copied out: 24 files, 24 new)`。也就是 `url(for:)` 還是壞的，`descriptor(for:)` 讀得到，三座城 57 個檔全靠複製讀到；沒有走到「刪掉重抓」。
+- 下一步：從 main 發 `carry_map_packs: no` 的 TestFlight，作者看三列都「已下載」、三座城開得起來（從內建版升級）；有沒裝過的裝置就順便驗全新安裝。過了，上架版就用 `no` 發，送審時「素材包」附上六包現行版本（DEBUG-150）。
 
 ## 為什麼
 
@@ -45,4 +45,5 @@ Apple 論壇有一樣的情形（UNVERIFIED，是別人的回報，不是 Apple 
 
 ## 還沒做
 
+- 複製一份會多占手機空間（三座城約 140 MB，系統那份也還在）。`url(for:)` 好了以後會自動刪掉複製。要省空間，可以在複製完後改成只留一份，但系統那份不能刪（刪了就會重抓），先不動。
 - 如果 `descriptor(for:)` 也回 513，下一步是讓每次資料更新都換一個新的包 ID（`mappack-hongkong-2`），而且路徑也要換（Apple：包的 ID 不算在路徑裡，兩包同路徑會撞，thread 804019），讓手機每次都是「第一次下載」，不會走到換新版那一步。
