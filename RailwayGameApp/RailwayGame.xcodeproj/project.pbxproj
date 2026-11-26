@@ -151,6 +151,7 @@
 		74BD5B61914AE9365DF955E5 /* run-highspeed.caf in Resources */ = {isa = PBXBuildFile; fileRef = DBFC7FA3ED09CBDFFAD8866F /* run-highspeed.caf */; };
 		7620F6925D1B67C07C540F42 /* RegionStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9BEC5EA8A60EBE76A1B2C84 /* RegionStyle.swift */; };
 		7720BB19B20EEC81C11BF19E /* line-acquired.wav in Resources */ = {isa = PBXBuildFile; fileRef = 64FC0E6D263BA9DF11A366DD /* line-acquired.wav */; };
+		77EC09E0BC7923BA092F2A69 /* OverseasStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F7D8131F8C256D13E9A3FF5 /* OverseasStore.swift */; };
 		789C9FAADEA0419549125729 /* krtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = A1B80E3285C9871A9D98DECB /* krtc_times.json */; };
 		792A33CF70AD2536E13CF479 /* sanying_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 68B0C0FD89F59C53A9685C67 /* sanying_times.json */; };
 		79E93C89D5CBC16C6999156A /* real_buses_LienchiangCounty.json in Resources */ = {isa = PBXBuildFile; fileRef = B2B258E67922BFC5C37DA76C /* real_buses_LienchiangCounty.json */; };
@@ -466,6 +467,7 @@
 		4D6A3F60A0B6002F78C394C3 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		4D96B133962987F25B9A5B38 /* departure-d.m4a */ = {isa = PBXFileReference; path = "departure-d.m4a"; sourceTree = "<group>"; };
 		4E5B19D3B11CAE01ADC9F0A2 /* FrameTimeBenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameTimeBenchView.swift; sourceTree = "<group>"; };
+		4F7D8131F8C256D13E9A3FF5 /* OverseasStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverseasStore.swift; sourceTree = "<group>"; };
 		4F9A3E00736ED2F139B7EBF4 /* Map3DStopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Map3DStopBar.swift; sourceTree = "<group>"; };
 		503321E830F0B6D127E92AE9 /* departure-e.m4a */ = {isa = PBXFileReference; path = "departure-e.m4a"; sourceTree = "<group>"; };
 		50F1B1CF5E7A5989229368AA /* NightSkipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NightSkipUITests.swift; sourceTree = "<group>"; };
@@ -781,6 +783,7 @@
 				81D9DBA602A1D4B5ECC848F8 /* GameCenterLink.swift */,
 				1F535381372C4F02DE0EF39B /* ICloudSaveFolder.swift */,
 				CCAFE6C4740826EF37F0FA0C /* MapPackDownloader.swift */,
+				4F7D8131F8C256D13E9A3FF5 /* OverseasStore.swift */,
 				76E2973BBBB24FACFFCBE7AD /* RailwayGame.entitlements */,
 				9D5672CF6C6C6FF4659709AE /* RailwayGameApp.swift */,
 			);
@@ -1601,6 +1604,7 @@
 				230CF50ABD22FC093F7C16FD /* NightSkipChip.swift in Sources */,
 				5650A33F4398B9F43624CE35 /* OSMMapBackground.swift in Sources */,
 				21720CA3F8090EB484A82AC2 /* OneShotLocation.swift in Sources */,
+				77EC09E0BC7923BA092F2A69 /* OverseasStore.swift in Sources */,
 				830D83B9EA543EBE0B160A9E /* Palette.swift in Sources */,
 				7A4A6D92573E439869E49F7A /* PerformanceMenu.swift in Sources */,
 				AA89DE59BE4AB10592AFA96C /* PopulationLegendView.swift in Sources */,

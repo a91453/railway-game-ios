@@ -441,7 +441,13 @@ struct RealWorldPicker: View {
                 // Decision 858: a city whose map pack is still to come
                 // says so, read afresh when its download answers.
                 let _ = mapPackAnswers
-                ForEach(launcher.overseasMapRows(in: language), id: \.city) { row in
+                let overseasRows = launcher.overseasMapRows(in: language)
+                // Decision 1010: until the overseas maps unlock is bought,
+                // its row above theirs, each of which says to buy it.
+                if !launcher.overseasMapsOpen, !overseasRows.isEmpty {
+                    OverseasUnlockRow(store: .shared, language: language)
+                }
+                ForEach(overseasRows, id: \.city) { row in
                     // Decision 999: a row for each place its map can
                     // begin round (Japan: Fukuoka, Saga, Kumamoto).
                     ForEach(launcher.overseasStartRows(for: row, in: language), id: \.start) { start in

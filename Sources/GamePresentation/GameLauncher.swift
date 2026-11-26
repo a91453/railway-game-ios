@@ -236,6 +236,15 @@ public final class GameLauncher {
     /// lesson is open, a new game has unlimited funds and the whole map,
     /// and every game it starts counts nothing, as a demo.
     public var isDemoMode = false
+    /// Decision 1010: what the App Store says of the overseas maps unlock,
+    /// set by the app (``OverseasUnlock``). Open where there is no App
+    /// Store to ask: the tests and the headless game.
+    public var overseasUnlock = OverseasUnlock.State.open
+    /// Decision 1010: whether new games can start outside Taiwan: the
+    /// unlock is bought or a gift, or the demo mode is on.
+    public var overseasMapsOpen: Bool {
+        isDemoMode || overseasUnlock.isOpen
+    }
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
     /// The world of the last autosave taken in turn, or of the game when
@@ -838,6 +847,13 @@ public final class GameLauncher {
             // Decision 858: its map pack is not on the device yet.
             let waiting = overseasAwaited.contains { $0.city == city } ? city.notDownloadedText(MapPackDownloads.status(city), in: language) : nil
             message = StatusMessage(kind: .failure, text: waiting ?? language.text("The real-world data is not ready yet.", "實景資料還沒準備好。"))
+            return false
+        }
+        // Decision 1010: a new game outside Taiwan needs the unlock (a
+        // saved one plays on without it); asked first, so a refused map
+        // is not taken as the player's first.
+        guard overseasMapsOpen else {
+            message = StatusMessage(kind: .failure, text: OverseasUnlock.refusedText(in: language))
             return false
         }
         // Decision 712: the city's flights open its map.

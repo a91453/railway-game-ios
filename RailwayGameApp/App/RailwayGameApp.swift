@@ -91,6 +91,14 @@ struct RailwayGameApp: App {
         DeviceDiagnosticsRecorder.shared.start()
         let audio = GameAudio(plays: plays)
         let launcher = RailwayGameApp.makeLauncher()
+        // Decision 1010: the overseas maps unlock, from the App Store. A
+        // Debug build (the Simulator, the UI tests, the screenshots) has
+        // every map open unless launched with -overseas-lock.
+        #if DEBUG
+        OverseasStore.shared.start(launcher: launcher, opensWithoutStore: !DebugLaunch.isSet("-overseas-lock"))
+        #else
+        OverseasStore.shared.start(launcher: launcher)
+        #endif
         launcher.playSound = { audio.play($0) }
         launcher.previewSound = { audio.preview($0) }
         launcher.duckMusic = { audio.duckMusic($0) }

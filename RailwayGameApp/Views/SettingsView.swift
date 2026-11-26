@@ -111,6 +111,7 @@ struct SettingsView: View {
                 if TestBuild.isTest {
                     testSection
                 }
+                purchaseSection
                 aboutSection
             }
             .listStyle(.insetGrouped)
@@ -755,6 +756,16 @@ struct SettingsView: View {
 
     /// Decision 127: the version testers quote, and a note to send about a
     /// problem, through the share sheet to wherever the player chooses.
+    /// Decision 1010: the overseas maps unlock, and Restore Purchases.
+    private var purchaseSection: some View {
+        let language = DisplayLanguage.app
+        return Section {
+            OverseasUnlockRow(store: .shared, language: language)
+        } header: {
+            Text(verbatim: language.text("Purchases", "購買"))
+        }
+    }
+
     private var aboutSection: some View {
         let language = DisplayLanguage.app
         let report = ProblemReport.current(game: game, lessons: lessons)
