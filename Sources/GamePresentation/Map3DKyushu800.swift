@@ -30,7 +30,12 @@ import Foundation
 /// old cars had a narrow gangway alone and 0.6 m of daylight around it.
 /// Seen from above the hood's mouth is a shallow V, so that two cars
 /// turned up to 4 degrees to each other on a curve keep their hoods
-/// apart; only the couplers' tips meet at the joint.
+/// apart; only the couplers' tips meet at the joint. The bogies stand
+/// where the real cars' do, 3.75 m from a coupling face and 17.5 m
+/// apart, and the skirts' openings are moved to them, each with its bogie
+/// in its middle; the cab car's front bogie, under the old car's
+/// equipment box with no opening, has one of the back one's size cut for
+/// it (the owner, 2026-11-26: the wheels were not in their openings).
 /// No company mark, lettering or number is drawn, and no pantograph (the
 /// old cars have none).
 public enum Map3DKyushu800 {
@@ -154,7 +159,7 @@ public enum Map3DKyushu800 {
 
 extension Map3DKyushu800 {
     /// Decision 782: its set, its showcase row (six cars) and its cars'
-    /// triangles (2,314 the cab car, 1,868 the middle car: few enough to be
+    /// triangles (2,572 the cab car, 2,061 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(
@@ -164,7 +169,7 @@ extension Map3DKyushu800 {
             Map3DShowcase.Entry(key, "Kyushu Shinkansen 800 series", "九州新幹線 800 系", .japan, cars: cars, fixed: true,
                                 gauge: 1.435),
         ],
-        triangles: 1_000...2_400, length: 24.9...27.4)
+        triangles: 1_000...2_700, length: 24.9...27.4)
 }
 
 extension Map3DTrainSet {

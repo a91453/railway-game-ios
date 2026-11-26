@@ -78,3 +78,12 @@ r1 判 needs-fix（比例、門位、燈、塗裝、軌距都過），三項都�
 
 - **VERIFIED**（Mac，Swift 6.4.2）：`swift build --build-tests -Xswiftc -warnings-as-errors`（繞過上面那個既有的錯）；`Map3DKyushu800Tests`、`Map3DKyushuN700Tests`、`Map3DTrainOwnGlassTests`、`Map3DTrainMaterialTests`、`Map3DRealTrainsTests`、`Map3DTrainSetTests`、`Map3DTrainRegistryTests`、`Map3DPaletteGuardTests`、`Map3DShowcaseTests`、`Map3DTrainLightsTests`、`Map3DFukuokaTrainsTests`、`Map3DMotionBudgetTests`、`Map3DTaipeiMetro461Tests`、`WhatsNewTests` 全過；`check.mjs --new-set kyushu800` 沒有這台車的失敗；兩支轉檔工具重跑的產出逐位元組相同；`doc_numbers.py --check` 差異 0 項。
 - **UNVERIFIED**：鎖檔雜湊是 Mac 算的，Linux 以 CI 為準；其餘測試沒跑；iPhone 上沒看過。樣子（model-look）要作者與工作室判，不是做的人自己判。
+
+## 2026-11-26：輪罩開口對準轉向架（小修，800 系輪罩開口串）
+
+作者看了側面說頭車前後轉向架沒在開口正中。`kyushu_800.py` 照 `kyushu_n700.py` 的做法只動車身下緣：`cut_low`、`openings`、每個開口整段平移到轉向架正中，頭車前轉向架用 `front_opening` 在床下箱上切一個開口；中間車的轉向架改照真車放（±8.928 → ±8.75 m）。四個開口正中和轉向架中心差不到 1 mm，`port_check.py` 全過，`testTheWheelsAreInTheMiddleOfTheirOpenings` 守著。面數頭車 2,572、中間車 2,061，註冊表上限 2,700。詳見決策 978 第 6 點最後一段。
+
+**還沒做的同類修理**（同一天量的，量法：解碼 `Map3D*Mesh.swift`，深色 z < 0.3 的輪軸分組，側牆非深色面的下緣找開口）：
+
+- 台灣高鐵 700T 與東海道 700 系（`tools/texture-palette/thsr_700t.py`）：頭車後轉向架與中間車的開口偏 0.15–0.19 m，頭車前開口太淺（約 5.9–9.5 m，轉向架中心 7.85 m）。照這次 800 系同法修，要作者 Mac 上的舊版原檔（SwiftRailMac）。
+- N700S：開口差 < 5 cm，不用動。京急新1000：沒有裙板，不適用（它另外缺每扇門一個 node、幌偏航 4° 會碰、沒用 litEnd，協調者另開串）。

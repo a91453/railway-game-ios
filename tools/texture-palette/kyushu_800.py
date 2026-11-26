@@ -37,9 +37,12 @@
   看真車來評比；在真車照片上用窗格當尺量的，決策 978 第 3 點）：乘務員門
   起往後的車身沿車身乘 1.30、窗帶多排一格（13 → 14 格，窗距和中間車一樣），
   車鼻拿剩下的長度（乘 1.14，寬乘 1.21，形狀幾乎不變），鼻尖到乘務員門正
-  中 7.86 m（真車約 7.85 m）。轉向架只平移不縮放，頭車的照真車
-  的位置放（後轉向架中心離連結面 3.75 m、中心距 17.5 m）：輪子中心距
+  中 7.86 m（真車約 7.85 m）。轉向架只平移不縮放，兩節都照真車
+  的位置放（轉向架中心離連結面 3.75 m、中心距 17.5 m）：輪子中心距
   1.50 m，就是 1,435 mm 軌距的鋼軌中心。
+- 輪罩開口跟著轉向架（作者 2026-11-26）：裙板下緣的每個開口整段平移到
+  它那台轉向架的正中（車鼻、窗、門不動）；頭車的前轉向架舊版在床下箱
+  底下沒有開口，照後面那個開口的大小在箱子上切一個（`front_opening`）。
 - 中間車的窗帶多排兩格（14 → 16）、沿車身乘 0.9，窗的寬與窗距和頭車一樣
   （1.04–1.08 m，真車約 1 m）；窗帶後面那扇門往車端移 0.5 m，門後的空牆收短
   同樣的長度（`more_windows`）。車長、另一扇門、車端不動。
@@ -86,6 +89,16 @@ HOOD_TAPER = 0.025        # 幌口往兩側每離中線 1 m 再退多少（從�
 HOOD_YAW = 4.2            # 兩節相對轉這麼多度以內幌不相碰：2·atan(HOOD_TAPER + HOOD_SHORT / 1.69)
 COUPLER = (0.95, 1.05)    # 車鉤（連結面上唯一的東西）離軌面的高度
 BOGIE_CENTRES = 17.5      # 真車：轉向架中心距
+# 車身下緣讓輪子露出來的開口（輪罩，作者 2026-11-26：輪子要在輪罩正中）。舊版的側牆下緣在
+# y 1.0，下面是一個斜邊的床下箱（斷面上緣 ±1.40、下緣 ±1.154 在 y 0.459），箱與箱之間就是
+# 開口，開口的頂是 y 1.0 的深色底板。
+SKIRT_TOP = 1.005         # 低於這個的頂點（床下箱、側牆的下緣、開口的頂板）照裙板放
+SKIRT_STRIP = 1.07        # 從下緣伸到這以上的面先在這個高度切開：只有下面 7 cm 的一條白牆跟著裙板斜，
+                          # 上面的牆（門、窗、紅線）一點都不動
+FOOT = 0.461              # 床下箱的底（舊版 y 0.457–0.459）以下
+BOX_FRONT = -7.688        # 頭車床下箱的前端（舊版）：再往前是車鼻，前轉向架在箱子底下
+BOX_SECTION = ((1.4, 1.0), (1.154, 0.459))   # 頭車床下箱的斷面：上緣、下緣（舊版的 x, y）
+RAMP = 0.508              # 頭車床下箱靠後轉向架那頭的斜邊：上緣比下緣往後多少（舊版 6.527 → 7.035）
 
 def rect(x0, y0, x1, y1):
     return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
@@ -470,6 +483,75 @@ def hoods(body, cab: bool, joint: float):
     return out
 
 
+def clip_plane(triangles, normal, offset):
+    """每個面照平面切開：回傳（`normal · p ≥ offset` 那一邊, 另一邊）。"""
+    normal = np.asarray(normal, dtype=float)
+    ahead, behind = [], []
+    for c, kind, door in triangles:
+        d = c @ normal - offset
+        if d.min() >= -1e-9:
+            ahead.append((c, kind, door))
+            continue
+        if d.max() <= 1e-9:
+            behind.append((c, kind, door))
+            continue
+        for sign, out in ((1, ahead), (-1, behind)):
+            polygon = []
+            for i in range(3):
+                a, b, da, db = c[i], c[(i + 1) % 3], d[i] * sign, d[(i + 1) % 3] * sign
+                if da >= 0:
+                    polygon.append(a)
+                if (da > 0 > db) or (da < 0 < db):
+                    polygon.append(a + (b - a) * da / (da - db))
+            out += [(np.array([polygon[0], polygon[i], polygon[i + 1]]), kind, door) for i in range(1, len(polygon) - 1)]
+    return ahead, behind
+
+
+def cut_low(triangles, value=SKIRT_STRIP):
+    """從車身下緣（`SKIRT_TOP` 以下）伸到 `value` 以上的面，在 y = value 切開（九州 N700 的同名做法）。"""
+    reach = [face for face in triangles if face[0][:, 1].min() < SKIRT_TOP and face[0][:, 1].max() > value + 1e-9]
+    rest = [face for face in triangles if not (face[0][:, 1].min() < SKIRT_TOP and face[0][:, 1].max() > value + 1e-9)]
+    above, below = clip_plane(reach, (0, 1, 0), value)
+    return rest + above + below
+
+
+def openings(triangles):
+    """床下箱的底（`FOOT` 以下的面）沿車身佔的幾段之間的空檔，就是讓輪子露出來的開口：
+    回傳 [(前端, 後端)]（開口下緣兩端，舊版沿車身的座標）與箱子底的頭尾。"""
+    runs = spans([c for c, _, _ in triangles if c[:, 1].max() < FOOT], gap=1e-3)
+    return [(runs[i][1], runs[i + 1][0]) for i in range(len(runs) - 1)], (runs[0][0], runs[-1][1])
+
+
+def front_opening(triangles, vertical: float, top: float, foot: float):
+    """頭車：舊版的前轉向架整個在床下箱底下（側面看不到開口，只露出輪子的下緣）。照
+    後轉向架的開口，在床下箱上切一個開口：車鼻那一頭是直的（`vertical`），往車身
+    那一頭是斜的（上緣 `top`、下緣 `foot`），切掉的兩頭補上深色的端板，開口的頂就是
+    原本 y 1.0 的深色底板。座標都是舊版的（多排一格窗以後）。"""
+    (high_x, high_y), (low_x, low_y) = BOX_SECTION
+    at_front = {(round(abs(float(p[0])), 3), round(float(p[1]), 3)) for c, _, _ in triangles
+                for p in c if abs(p[2] - BOX_FRONT) < 1e-3}
+    if not {(high_x, high_y), (low_x, low_y)} <= at_front or not BOX_FRONT < vertical < top < foot:
+        raise SystemExit(f"床下箱的前端不是認得的斷面，或前面的開口放錯：{sorted(at_front)}、{vertical} {top} {foot}")
+    box = [face for face in triangles if face[0][:, 1].max() <= high_y + 1e-6 and face[0][:, 1].min() < high_y - 0.01
+           and face[0][:, 2].min() > BOX_FRONT - 1e-3]
+    rest = [face for face in triangles if not any(face is other for other in box)]
+    ahead, inside = clip_plane(box, (0, 0, -1), -vertical)          # 直的那頭以前留著
+    run = (foot - top) / (high_y - low_y)
+    behind, cut = clip_plane(inside, (0, run, 1), top + run * high_y)   # 斜的那頭以後留著
+    if not cut or any(c[:, 1].max() > high_y + 1e-6 for c, _, _ in cut):
+        raise SystemExit("前面的開口切到床下箱以外的東西")
+    caps = []
+    for (z_high, z_low), facing in (((vertical, vertical), 1), ((top, foot), -1)):
+        quad = [np.array(p, dtype=float) for p in ((high_x, high_y, z_high), (-high_x, high_y, z_high),
+                                                    (-low_x, low_y, z_low), (low_x, low_y, z_low))]
+        for a, b, c in ((quad[0], quad[1], quad[2]), (quad[0], quad[2], quad[3])):
+            triangle = np.array([a, b, c])
+            if np.cross(b - a, c - a)[2] * facing < 0:
+                triangle = triangle[::-1]
+            caps.append((triangle, DARK, -1))
+    return rest + ahead + behind + caps
+
+
 def build(path: Path, cab: bool, debug_dir: Path | None):
     gltf, blob, digest = base.read_glb(path)
     pieces = base.parts(gltf, blob)
@@ -497,14 +579,66 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
     if debug_dir:
         canvas.save(debug_dir / f"{path.stem[:13]}-uv-cut.png")
 
-    def grown(points: np.ndarray) -> np.ndarray:
-        return np.stack([points[:, 0] * WIDTH, points[:, 1] * HEIGHT, along(points[:, 2], nose)], 1)
+    # 轉向架正中（放大後沿車身的位置）：照真車，離連結面 BOGIE_FROM_END、相距 BOGIE_CENTRES。
+    rear = joint - BOGIE_FROM_END
+    centres = (rear - BOGIE_CENTRES, rear)
+    if cab:
+        # 前轉向架在床下箱底下，沒有開口：照後面那個開口的大小（放大後）在它正中切一個，
+        # 方向反過來（直的那頭朝車鼻）。放大後的位置換回舊版的座標再切。
+        (low, high), = openings(triangles)[0]
+        ramp = float(along(np.array([low + RAMP]), nose)[0] - along(np.array([low]), nose)[0])
+        width = float(along(np.array([high]), nose)[0] - along(np.array([low]), nose)[0])
+
+        def back(value):   # 放大後沿車身的位置 → 舊版的座標（`along` 的反函數）
+            return NOSE_TO + value / (nose if value <= 0 else CAB_BODY)
+
+        front = centres[0]
+        numbers["front_opening_old"] = [round(back(front - width / 2), 3), round(back(front + width / 2 - ramp), 3),
+                                        round(back(front + width / 2), 3)]
+        triangles = front_opening(triangles, *numbers["front_opening_old"])
+    # 車身下緣另外放：每個開口照原本放大後的大小、正中對到轉向架正中，伸縮放在開口
+    # 之間的床下箱；箱子底的頭尾（車鼻、車端）照車身放。側牆下緣以上 7 cm 先橫切開，
+    # 只有那一條白牆跟著斜。
+    triangles = cut_low(triangles)
+    found, (first, last) = openings(triangles)
+    if len(found) != 2:
+        raise SystemExit(f"{path.name}: 床下箱之間應該有兩個開口：{found}")
+    knots, moved = [first], [float(along(np.array([first]), nose)[0])]
+    for (low, high), centre in zip(found, centres):
+        a, b = (float(v) for v in along(np.array([low, high]), nose))
+        knots += [low, high]
+        moved += [centre - (b - a) / 2, centre + (b - a) / 2]
+    knots.append(last)
+    moved.append(float(along(np.array([last]), nose)[0]))
+    if np.any(np.diff(knots) <= 0) or np.any(np.diff(moved) <= 0):
+        raise SystemExit(f"裙板的折點沒有照順序：{np.round(knots, 3).tolist()} → {np.round(moved, 3).tolist()}")
+    numbers["openings_old"] = [[round(float(v), 3) for v in pair] for pair in found]
+    numbers["opening_shift_m"] = [round(float(m - along(np.array([k]), nose)[0]), 3) for k, m in zip(knots, moved)]
+
+    def grown(points: np.ndarray, skirts: bool = True) -> np.ndarray:
+        z = along(points[:, 2], nose)
+        if skirts:
+            low = (points[:, 1] < SKIRT_TOP) & (points[:, 2] >= first - 1e-6) & (points[:, 2] <= last + 1e-6)
+            z = np.where(low, np.interp(points[:, 2], knots, moved), z)
+        return np.stack([points[:, 0] * WIDTH, points[:, 1] * HEIGHT, z], 1)
 
     # 原座標：x 右、y 上、z 沿車身（頭車的車鼻在 -z）。車體照真車尺寸放大。
     if cab:
         # 頭車沿車身的伸縮在乘務員門門框的前緣轉折（車鼻與車身的比例不同）：先切開。
         triangles = cut_at(triangles, NOSE_TO)
     scaled = [(grown(corners), kind, door) for corners, kind, door in triangles]
+    # 下緣的頂點另外移動：沒有一個面因此翻面，跨在下緣上的面也只有車身色（側牆下緣
+    # 那一條斜一點看不出來，有顏色的格子斜了就看得出來）。
+    for (corners, kind, _), (shifted, *_) in zip(triangles, scaled):
+        plain = grown(corners, skirts=False)
+        if np.abs(shifted[:, 2] - plain[:, 2]).max() < 1e-9:
+            continue
+        if np.dot(np.cross(shifted[1] - shifted[0], shifted[2] - shifted[0]),
+                  np.cross(plain[1] - plain[0], plain[2] - plain[0])) <= 0:
+            raise SystemExit(f"{path.name}: 裙板移動讓一個面翻了：{np.round(corners, 3).tolist()}")
+        low = corners[:, 1] < SKIRT_TOP
+        if kind not in (BODY, GREY, DARK) and low.any() and not low.all():
+            raise SystemExit(f"{path.name}: 有顏色（{MATERIALS[kind]}）的面跨在車身下緣：{np.round(corners, 3).tolist()}")
     scaled += hoods(scaled, cab, joint)
     for piece in pieces:
         if piece is body:
@@ -513,12 +647,9 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         low, high = world.min(0), world.max(0)
         size = high - low
         if size[2] > 2.5:
-            # 轉向架：本身不縮放；中間車的位置跟著車體，頭車的照真車的位置。
+            # 轉向架：本身不縮放，照真車的位置（離連結面 3.75 m、相距 17.5 m）。
             middle = (low[2] + high[2]) / 2
-            target = float(along(np.array([middle]), nose)[0])
-            if cab:
-                rear = joint - BOGIE_FROM_END
-                target = rear if middle > 0 else rear - BOGIE_CENTRES
+            target = centres[1] if middle > 0 else centres[0]
             moved = world + np.array([0, 0, target - middle])
             scaled += [(moved[face], DARK, -1) for face in piece["faces"]]
         # （舊版中間那條窄的通道幌整條在全周幌裡面，不畫；見 `hoods`。）
