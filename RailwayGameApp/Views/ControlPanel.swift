@@ -47,7 +47,11 @@ struct ControlPanel: View {
     /// tool's taps pick a site, not a station, so the selection row only
     /// took the room its kinds need.
     static func showsInspector(_ session: GameSession) -> Bool {
-        session.tool != .building
+        // NETWORK-PANEL-SIMPLE: before a track's start is picked, its one
+        // line stands under the build options instead (``NetworkControls``),
+        // so a phone held sideways shows the options without a scroll.
+        if session.tool == .network, session.networkMode == .build, session.networkStart == nil { return false }
+        return session.tool != .building
     }
 
     /// Whether the details card has an action button to show.

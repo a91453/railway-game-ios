@@ -1269,10 +1269,10 @@ extension GameSession {
         switch networkMode {
         case .build:
             guard let start = networkStart else {
-                return language.text(
-                    "Tap where the track starts: the end of a track, a track for a turnout there, or anywhere to start new track.",
-                    "請點軌道的起點：既有軌道的端點、軌道上（在那裡設轉轍器），或任何地方開始新的軌道。"
-                )
+                // NETWORK-PANEL-SIMPLE: one line. Its four, on a phone held
+                // sideways, left no room in the card for the options
+                // under it; what was picked says the rest (a turnout, an end).
+                return language.text("Tap the map where the track starts.", "點地圖選軌道的起點。")
             }
             guard let end = networkEnd else {
                 let ground = groundText(at: [start]).map { language.text(" (\($0))", "（\($0)）") } ?? ""

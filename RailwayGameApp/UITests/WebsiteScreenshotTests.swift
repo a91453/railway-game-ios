@@ -2846,6 +2846,30 @@ final class WebsiteScreenshotTests: XCTestCase {
         keep("currency-build-cost-\(suffix)", again)
     }
 
+    /// The network tool's build card on a real-world map, as a phone on its
+    /// side shows it, and with its more options open (NETWORK-PANEL-SIMPLE,
+    /// 2026-11-26). For the pull request's before and after.
+    func testNetworkBuildPanel() {
+        let app = launch(extra: ["-screenshot-scene", "xiaobitan"])
+        defer { app.terminate() }
+        XCTAssertTrue(app.descendants(matching: .any)["map"].firstMatch.appears(within: 120), "The scene opens")
+        let build = app.buttons["dock.build"]
+        XCTAssertTrue(build.appears(within: 10))
+        build.tap()
+        let network = app.buttons["tool.network"]
+        XCTAssertTrue(network.appears(within: 5))
+        network.waitUntilSettled()
+        if !network.isSelected { network.tap() }
+        XCTAssertTrue(app.buttons["network.system"].firstMatch.appears(within: 10), "The build card opens")
+        settle(seconds: 3)
+        keep("network-build-panel", app)
+        let more = app.descendants(matching: .any)["network.advanced"].firstMatch
+        XCTAssertTrue(more.appears(within: 5))
+        more.tap()
+        settle(seconds: 2)
+        keep("network-build-panel-more", app)
+    }
+
     /// Decision 955: the network tool's track system menu, and a monorail
     /// beam drawn but not built, its price and note on the card.
     func testTrackSystemChoice() {
