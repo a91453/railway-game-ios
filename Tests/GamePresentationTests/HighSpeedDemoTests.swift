@@ -395,6 +395,22 @@ final class HighSpeedDemoTests: XCTestCase {
         XCTAssertLessThan(apart.max() ?? .infinity, 5.5)
     }
 
+    /// HSR-TURNOUT-ZFIGHT (0.6.0 build 151): the 3D map lays the whole
+    /// line on the high-speed viaduct, its crossovers, every loop, the
+    /// ends' tracks and the depots' sidings too, so no piece of it gets a
+    /// railway's ballasted deck level with the high-speed deck beside it
+    /// (the two fought on the iPhone).
+    func testItsWholeTrackIsLaidOnTheHighSpeedViaduct() throws {
+        let (_, world, tracks) = try Self.built.get()
+        let fast = Map3DScene.Builder.highSpeedTrack(in: world)
+        let main = Set(tracks.down).union(tracks.up)
+        for (name, part) in [("main", main), ("loops", tracks.downLoops.union(tracks.upLoops)), ("crossovers", tracks.crossovers),
+                             ("ends", tracks.ends), ("sidings", tracks.sidings)] {
+            XCTAssertFalse(part.isEmpty, name)
+            XCTAssertEqual(part.subtracting(fast).count, 0, name)
+        }
+    }
+
     // MARK: - The lines and their sets
 
     /// The real day's three kinds of train (decision 197): a line each,
