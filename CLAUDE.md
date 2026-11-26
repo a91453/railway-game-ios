@@ -584,17 +584,24 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   building, a kit part, a train, a bus), read
   `.claude/skills/model-look/SKILL.md` (decision 685): the kits' tests only
   say nothing is broken, so the model is looked at beside real photographs
-  at the game's camera angle and on-screen size, for at least three rounds,
-  and the owner or another session judges its overview, not its maker.
-  A train ported from the owner's old version is the exception (owner,
-  2026-11-26): `tools/texture-palette/port_check.py` all green, then one
-  review by another studio, then merge; small fixes the review asks for
-  merge once the check is green again, with no second round
-  (model-look §4).
+  at the game's camera angle and on-screen size, and the owner or another
+  session judges its overview, not its maker. Reviews (owner, 2026-11-26,
+  from 241 past review verdicts; model-look §4): the automatic check first
+  (`tools/texture-palette/port_check.py` for trains,
+  `tools/landmark-survey/landmark_check.py` for buildings and landmarks),
+  then a train ported from the owner's old version takes one review, and
+  an old building ported, a new train or a new building take two, the
+  second by another studio; small fixes merge once the check is green
+  again, and only major items left after the second review open a third.
   The studio workflow (who builds, briefs, reviews, lessons, the list of
   models still to make) is kept in the private assets repository,
   `a91453/railway-assets-private-2` `docs/studio/` (owner, 2026-11-18),
   not in this public repository.
+- Before building a landmark or a natural spot (a castle, temple, shrine,
+  tower, bridge, falls, gorge), read `.claude/skills/landmark-survey/SKILL.md`:
+  its footprint, height, bearing and ground are measured from OpenStreetMap
+  and elevation data with `tools/landmark-survey/survey.py`, each with its
+  source, before it is modelled.
 - Before changing how a real line is laid when bought (stations, loops,
   viaducts, a station shared with another line), read
   `.claude/skills/real-line-laying/SKILL.md` (decision 848): two lines at
