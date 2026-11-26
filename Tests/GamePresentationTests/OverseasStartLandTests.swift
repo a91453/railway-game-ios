@@ -231,14 +231,14 @@ final class OverseasStartLandTests: XCTestCase {
         let japan = try XCTUnwrap(rows.first { $0.city == .fukuoka })
         XCTAssertNil(japan.closed)
         let starts = launcher.overseasStartRows(for: japan, in: .traditionalChinese)
-        XCTAssertEqual(starts.map(\.name), ["日本：從福岡開始", "日本：從佐賀開始", "日本：從熊本開始"])
-        XCTAssertEqual(starts.map(\.id), ["realWorld.overseas.fukuoka", "realWorld.overseas.fukuoka.start.1", "realWorld.overseas.fukuoka.start.2"])
-        XCTAssertEqual(starts.map(\.start), [0, 1, 2])
+        XCTAssertEqual(starts.map(\.name), ["日本：從福岡開始", "日本：從佐賀開始", "日本：從熊本開始", "日本：從長崎開始"])
+        XCTAssertEqual(starts.map(\.id), ["realWorld.overseas.fukuoka", "realWorld.overseas.fukuoka.start.1", "realWorld.overseas.fukuoka.start.2", "realWorld.overseas.fukuoka.start.3"])
+        XCTAssertEqual(starts.map(\.start), [0, 1, 2, 3], "decision 997: Nagasaki the fourth")
         XCTAssertEqual(starts[0].summary, OverseasMap.fukuoka.mapSummary(in: .traditionalChinese))
         XCTAssertEqual(starts[2].summary, "一開始是熊本一帶約 33 × 33 公里，地圖其餘部分用買的。")
         XCTAssertEqual(
             launcher.overseasStartRows(for: japan, in: .english).map(\.name),
-            ["Japan: start in Fukuoka", "Japan: start in Saga", "Japan: start in Kumamoto"]
+            ["Japan: start in Fukuoka", "Japan: start in Saga", "Japan: start in Kumamoto", "Japan: start in Nagasaki"]
         )
         XCTAssertEqual(OverseasMap.fukuoka.wholeMapName(in: .traditionalChinese), "日本（整張全開）")
         let hongKong = try XCTUnwrap(rows.first { $0.city == .hongKong })

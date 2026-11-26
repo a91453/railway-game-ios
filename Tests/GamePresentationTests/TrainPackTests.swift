@@ -1,8 +1,9 @@
 import XCTest
 @testable import GamePresentation
 
-/// Decision 338: the train pack's sets are drawn as before them until the
-/// pack is unlocked, which only a test build's switch does for now.
+/// Decision 338: the train pack's sets are drawn as before them while the
+/// pack is locked; since its later note (2026-11-26) it is unlocked for
+/// every player.
 final class TrainPackTests: XCTestCase {
     private func names(_ pack: Map3DModelPack, _ key: String, _ count: Int) -> [String] {
         (0..<count).map { car in
@@ -45,10 +46,9 @@ final class TrainPackTests: XCTestCase {
         XCTAssertNotNil(pack.layout(forType: "C", count: 4))
     }
 
-    func testOnlyATestBuildsSwitchUnlocksIt() {
-        XCTAssertTrue(TrainPack.isUnlocked(testBuild: true, switchOn: true))
-        XCTAssertFalse(TrainPack.isUnlocked(testBuild: true, switchOn: false))
-        XCTAssertFalse(TrainPack.isUnlocked(testBuild: false, switchOn: true), "the App Store's build ignores the switch")
+    func testThePackIsUnlockedForEveryPlayer() {
+        XCTAssertTrue(TrainPack.isUnlocked, "the App Store's build too (decision 338's later note)")
+        XCTAssertEqual(TrainPack.locked(unlocked: TrainPack.isUnlocked), ["pushPullE1000"], "only the E1000 look waits for its switch")
     }
 
     /// Decision 338 (second later): the N700S-G is in the pack (decision
