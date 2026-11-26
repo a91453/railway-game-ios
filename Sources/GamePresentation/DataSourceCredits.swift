@@ -585,14 +585,16 @@ public enum DataSourceCredits {
                         id: "fukuokaPopulation",
                         title: language.text("Fukuoka’s people", "福岡的人口"),
                         detail: language.text(
-                            "Where people live on Fukuoka’s map, for how many ride from each station.",
-                            "福岡地圖上的人住在哪裡，用來算每一站有多少人搭車。"
+                            "Where people live and where they work on Fukuoka’s map, for how many ride from each station and where they go.",
+                            "福岡地圖上的人住在哪裡、在哪裡上班，用來算每一站有多少人搭車、要去哪裡。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), Japan 2025, 1 km grid, CC BY 4.0.",
-                            "WorldPop（www.worldpop.org），日本 2025 年 1 公里格網，CC BY 4.0。"
+                            "Made by processing the 2020 Population Census and the 2021 Economic Census for Business Activity, 500 m grids (Statistics Bureau, Ministry of Internal Affairs and Communications), from e-Stat, the portal site of official statistics of Japan (「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成). Each 500 m cell’s people and workers are spread evenly over it.",
+                            "「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成（以日本總務省統計局 2020 年國勢調查與 2021 年經濟普查的 500 公尺網格加工製作，資料取自政府統計入口網站 e-Stat）。每個 500 公尺格的人與上班的人平均分在格內。"
                         ),
-                        links: []
+                        links: [
+                            DataSourceCredit.Link(title: language.text("e-Stat terms of use", "e-Stat 使用條款"), url: "https://www.e-stat.go.jp/terms-of-use"),
+                        ]
                     ),
                     // Decision 1003: the months' rain and thunder
                     // (`Disruptions.countryRain`).
