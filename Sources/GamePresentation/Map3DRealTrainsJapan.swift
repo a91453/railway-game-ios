@@ -23,8 +23,9 @@ extension Map3DRealTrains {
             // Decision 978: and its odd-numbered trains the 800 series'
             // six (the "Tsubame"), the line's two fleets.
             // Decision 998: the Nishi-Kyushu Shinkansen's N700S series
-            // 8000, six cars (the "Kamome"), the game's N700S.
-            if id == "NK" { return Formation(key: Map3DN700S.key, cars: 6) }
+            // 8000, six cars (the "Kamome"); decision 998 (continued): in
+            // its own livery.
+            if id == "NK" { return Formation(key: Map3DN700SKamome.key, cars: Map3DN700SKamome.cars) }
             return Formation(key: Map3DKyushuN700.key, cars: Map3DKyushuN700.cars, alternate: Map3DKyushu800.key)
         default:
             return nil

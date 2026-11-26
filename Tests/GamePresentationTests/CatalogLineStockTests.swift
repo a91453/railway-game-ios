@@ -17,14 +17,15 @@ final class CatalogLineStockTests: XCTestCase {
         let line = try XCTUnwrap(world.acquisition(of: NishiKyushuShinkansenTests.id)?.line)
 
         // The catalog for the line: the high-speed type as the N700S, by
-        // that name; the others as their own.
+        // that name; the others as their own. Decision 998 (continued):
+        // the N700S in the Kamome's own livery.
         let catalog = RollingStockCatalog(world: world, line: line)
         let highSpeed = try XCTUnwrap(catalog.entries.first { $0.type == .highSpeed })
-        XCTAssertEqual(highSpeed.stock, Map3DN700S.key)
-        XCTAssertEqual(highSpeed.portraitKey, Map3DN700S.key)
-        XCTAssertEqual(highSpeed.title(in: .traditionalChinese), "\(TrainType.highSpeed.title(in: .traditionalChinese))（N700S）")
-        XCTAssertEqual(highSpeed.title(in: .english), "\(TrainType.highSpeed.title(in: .english)) (N700S)")
-        XCTAssertNotNil(TrainPortrait.make(key: highSpeed.portraitKey, cars: 3), "the N700S has a picture")
+        XCTAssertEqual(highSpeed.stock, Map3DN700SKamome.key)
+        XCTAssertEqual(highSpeed.portraitKey, Map3DN700SKamome.key)
+        XCTAssertEqual(highSpeed.title(in: .traditionalChinese), "\(TrainType.highSpeed.title(in: .traditionalChinese))（N700S かもめ）")
+        XCTAssertEqual(highSpeed.title(in: .english), "\(TrainType.highSpeed.title(in: .english)) (N700S Kamome)")
+        XCTAssertNotNil(TrainPortrait.make(key: highSpeed.portraitKey, cars: 3), "the N700S Kamome has a picture")
         for entry in catalog.entries where entry.type != .highSpeed {
             XCTAssertNil(entry.stock, entry.type.rawValue)
             XCTAssertEqual(entry.portraitKey, TrainPortrait.key(of: entry.type))
@@ -56,5 +57,7 @@ final class CatalogLineStockTests: XCTestCase {
         XCTAssertEqual(RealLineStock.lineName(ofSet: Map3DN700S.key, in: .traditionalChinese), "N700S")
         XCTAssertEqual(RealLineStock.lineName(ofSet: Map3DKyushuN700.key, in: .traditionalChinese), "N700／800 系")
         XCTAssertEqual(RealLineStock.name(ofSet: Map3DKyushu800.key, in: .english), "Series 800")
+        XCTAssertEqual(RealLineStock.lineName(ofSet: Map3DN700SKamome.key, in: .traditionalChinese), "N700S かもめ")
+        XCTAssertEqual(RealLineStock.name(ofSet: Map3DN700SKamome.key, in: .english), "N700S Kamome")
     }
 }

@@ -55,6 +55,7 @@ public enum RealLineStock {
         case Map3DN700S.key: language.text("N700S", "N700S")
         case Map3DKyushuN700.key: language.text("N700", "N700")
         case Map3DKyushu800.key: language.text("Series 800", "800 系")
+        case Map3DN700SKamome.key: language.text("N700S Kamome", "N700S かもめ")
         default: nil
         }
     }
