@@ -160,7 +160,7 @@ enum MapPackDownloader {
             // said to be on the device, yet not one of its files could be
             // found (the day before, 147 read them). The system's copy is
             // thrown away and fetched again, once each time this is asked.
-            if refusal == .noManifest {
+            if refusal == .noManifest, !city.isCarried {
                 log.notice("map pack \(city.assetPackID, privacy: .public) said to be on the device but not found; fetching it again")
                 MapPackDownloads.note(city, .downloading)
                 for id in city.assetPackIDs {

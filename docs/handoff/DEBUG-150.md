@@ -20,9 +20,10 @@
 1. `take` 多第三個找法：在 App Group 的資料夾裡找路徑含 `MapPacks/<城市>/<檔名>` 的檔（同一路徑有兩份取最新），`url(for:)` 失靈時也讀得到（`MapPackDownloads.mapPackFiles(under:)`）。
 2. 系統說包在手機上、卻一個檔都找不到（`noManifest`）時，把那座城的每一包 `remove` 掉、`ensureLocalAvailability` 重抓一次，再讀。每次問（開 App、按「重新下載」）最多一次。
 3. 回報問題的「地圖包：」在 `noManifest` 時多寫兩段：`url(for:)` 回的錯（最多兩條）、App Group 資料夾裡看到幾個 `MapPacks` 檔、哪些城市。
+4. 保底：Release 也把地圖包整包裝進 App（`project.yml` 的 `CARRY_MAP_PACKS`，預設 YES；設 NO 回到只帶 `pack.json`），App 約多 140 MB；`testflight-verify-ipa.sh` 不再擋，只在摘要列出帶了幾個檔。App 照樣在背景下載，下載到就用下載的、沒有就用內建的，所以回報裡的「地圖包：」還是看得到下載的結果。內建時不做第 2 點的重抓（不然每次開 App 都重抓 140 MB）。
 
 ## 0.7.0
 
 - 地圖包從 150（`760d40d`）到現在沒改，151 與之後的發版不會再傳新版（`testflight-map-packs.py` 跟上一次成功的 run 比）。
-- 0.7.0 送審前：裝上那個 build，設定裡三列要是「已下載」才送；不是就先看回報。
+- 0.7.0 送審前：先看 151 的回報。下載正常（三列「已下載」、回報沒有 `noManifest`）才把 `CARRY_MAP_PACKS` 設成 NO 拿掉內建；查不出來就帶著內建送審（App 大 140 MB，但玩家一定玩得到）。
 - 送 App Store 審核時，在版本頁的「素材包」把六包目前的版本一起加進去（香港 7、羅瓦涅米 4、福岡 4、佐賀／熊本／長崎 2）。
