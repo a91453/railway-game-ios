@@ -25,6 +25,10 @@
    - 要改的地方：`ios-build.yml` 的 changes job，以及 `swift-shards.sh plan` 或 `affected-tests.py`。
    - 怎麼判斷：檔案清單只含這三種；`WhatsNew.swift` 的 diff 只在條目陣列裡，其他程式碼沒動。判斷不了就照舊全跑。
    - selftest 兩個情況都要有：只改條目的 PR 走快速路線，改到條目以外程式碼的 PR 照舊。
-2. MAC-RUNNER 上線一週後量 PR 的 iOS 排隊時間和 Mac 上 build job 的時間，寫回決策 1014 的「下一步」。
-3. `website-screenshots.yml` 也接 `pick-mac.yml`（等 #2726 合）。
-4. `Map3DFarViewTests.testTheFarthestViewOfTaipeiIsWithinBudget` 一支要 287–440 s，見量測檔 §5。
+2. **GameCore 的改動不縮小測試範圍**（審查串 P3-4，11-26）。現在 PR 縮小範圍（決策 1012）之後，GameCore 內部的改動在合併前不會跑死結、排程那些大測試，要等合進 main 才抓得到。
+   - 改法：`swift-shards.sh decide` 遇到 `plan` 給的 tier 是 `full`（GameCore、package 或 CI 腳本）就不呼叫 `affected_plan`，narrowing 只用在 presentation、tests-only、fixtures 這幾種 tier。
+   - selftest 要加一個情況：改 `Sources/GameCore/` 的 PR 是 full。現有的「source folder by its path」那個情況要改成用 GamePresentation 的路徑。
+   - 決策 1012 補一段「後來」。
+3. MAC-RUNNER 上線一週後量 PR 的 iOS 排隊時間和 Mac 上 build job 的時間，寫回決策 1014 的「下一步」。
+4. `website-screenshots.yml` 也接 `pick-mac.yml`（等 #2726 合）。
+5. `Map3DFarViewTests.testTheFarthestViewOfTaipeiIsWithinBudget` 一支要 287–440 s，見量測檔 §5。
