@@ -93,6 +93,9 @@ final class OverseasUnlockTests: XCTestCase {
         XCTAssertFalse(launcher.startOverseasMap(.rovaniemi, wholeMap: true))
         XCTAssertNil(launcher.session)
         XCTAssertEqual(launcher.preferences.airRoutesOpened ?? [], [], "a refused map is not the first one")
+        // Taiwan's games are not locked.
+        launcher.startNewGame()
+        XCTAssertNotNil(launcher.session, launcher.message?.text ?? "")
 
         launcher.overseasUnlock = OverseasUnlock.State(purchased: true, price: "NT$170")
         XCTAssertEqual(launcher.overseasMapRows(in: .english), [
@@ -100,6 +103,37 @@ final class OverseasUnlockTests: XCTestCase {
             OverseasMapRow(city: .rovaniemi, closed: nil),
         ])
         XCTAssertTrue(launcher.startOverseasMap(.rovaniemi), launcher.message?.text ?? "")
+    }
+
+    /// A friend's network outside Taiwan: without the unlock it cannot
+    /// become a new game, but it can be looked at; with it, it can. A
+    /// network of Taiwan's is never locked.
+    func testAFriendsOverseasNetworkNeedsTheUnlockForANewGame() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = await launcher(in: directory)
+        launcher.overseasUnlock = .locked
+        let hongKong = try SaveLibrary.encode(GameWorld.newOverseasGame(try HongKongMapTests.ground()), at: Date(timeIntervalSince1970: 0))
+
+        launcher.receiveNetwork(hongKong)
+        await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame).value
+        XCTAssertNil(launcher.session)
+        XCTAssertEqual(launcher.message?.text, OverseasUnlock.refusedText(in: .traditionalChinese))
+
+        launcher.receiveNetwork(hongKong)
+        await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look).value
+        XCTAssertNotNil(launcher.session, "looking needs no unlock")
+        XCTAssertTrue(launcher.isLookingAtSharedNetwork)
+
+        launcher.receiveNetwork(try SaveLibrary.encode(DemoWorld.make(in: .traditionalChinese), at: Date(timeIntervalSince1970: 0)))
+        await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame).value
+        XCTAssertFalse(launcher.isLookingAtSharedNetwork, "Taiwan's network starts")
+
+        launcher.overseasUnlock = OverseasUnlock.State(purchased: true)
+        launcher.receiveNetwork(hongKong)
+        await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame).value
+        XCTAssertEqual(launcher.session?.world.stations, GameWorld.newOverseasGame(try HongKongMapTests.ground()).stations)
+        XCTAssertFalse(launcher.isLookingAtSharedNetwork)
     }
 
     /// The gift opens the maps as the purchase does.

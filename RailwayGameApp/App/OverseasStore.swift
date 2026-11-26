@@ -29,6 +29,8 @@ final class OverseasStore {
 
     @ObservationIgnored private var product: Product?
     @ObservationIgnored private var updates: Task<Void, Never>?
+    /// Counts the readings of the entitlement, so only the latest counts.
+    @ObservationIgnored private var entitlementReading = 0
     @ObservationIgnored private weak var launcher: GameLauncher?
     /// A Debug build without the launch argument to lock the maps: every
     /// map open, as the UI tests and the screenshots need.
@@ -62,6 +64,13 @@ final class OverseasStore {
                 await self.readEntitlement()
             }
         }
+        refresh()
+    }
+
+    /// Asks the App Store again: at the start and each time the app comes
+    /// back to the front (a first answer missed offline comes then).
+    func refresh() {
+        guard !opensWithoutStore, launcher != nil else { return }
         Task { [weak self] in
             await self?.readEntitlement()
             await self?.readGift()
@@ -89,6 +98,8 @@ final class OverseasStore {
                     return
                 }
                 await transaction.finish()
+                // Ahead of any reading still under way (``readEntitlement()``).
+                entitlementReading += 1
                 setPurchased(transaction.revocationDate == nil)
                 outcome = .bought
             case .pending:
@@ -117,14 +128,20 @@ final class OverseasStore {
             return
         }
         await readEntitlement()
-        await readGift()
+        // Asked of the App Store afresh, not the device's copy: the player
+        // pressed it, so a sign-in may come up.
+        await readGift(refreshing: true)
         outcome = state.isOpen ? .restored : .nothingToRestore
     }
 
     // MARK: - The App Store's answers
 
-    /// Whether this Apple Account owns the unlock now.
+    /// Whether this Apple Account owns the unlock now. Only the latest
+    /// answer counts: a reading that began before a purchase finished
+    /// does not write its older answer over it.
     private func readEntitlement() async {
+        entitlementReading += 1
+        let reading = entitlementReading
         var owned = false
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result, transaction.productID == OverseasUnlock.productID,
@@ -132,16 +149,17 @@ final class OverseasStore {
                 owned = true
             }
         }
+        guard reading == entitlementReading else { return }
         setPurchased(owned)
     }
 
     /// Whether the player first downloaded a free version. Asked until the
     /// answer is yes; no answer (offline, not verified) changes nothing.
-    private func readGift() async {
+    private func readGift(refreshing: Bool = false) async {
         guard !state.freeVersionPlayer else { return }
         let result: VerificationResult<AppTransaction>
         do {
-            result = try await AppTransaction.shared
+            result = refreshing ? try await AppTransaction.refresh() : try await AppTransaction.shared
         } catch {
             return
         }

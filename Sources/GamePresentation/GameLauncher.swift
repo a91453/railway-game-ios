@@ -1919,6 +1919,14 @@ public final class GameLauncher {
                 isReadingReceivedNetwork = false
                 switch made {
                 case .success(let world):
+                    // Decision 1010: a new game on a friend's network
+                    // outside Taiwan needs the unlock, as any new game
+                    // there does; looking at it does not.
+                    guard overseasMapsOpen || airMap(of: world) == AirMap.taiwan.id else {
+                        let refused = StatusMessage(kind: .failure, text: OverseasUnlock.refusedText(in: language))
+                        if let session { session.message = refused } else { message = refused }
+                        return
+                    }
                     guard keepPlayersGame() else { return }
                     begin(world, keepingAutosave: true, isDemo: true)
                 case .failure(let error):

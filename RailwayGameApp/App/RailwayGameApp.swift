@@ -138,6 +138,8 @@ struct RailwayGameApp: App {
             // replayed when the app returns. The music plays only then too.
             launcher.setActive(phase == .active)
             audio.setActive(phase == .active)
+            // Decision 1010: the App Store asked again on coming back.
+            if phase == .active { OverseasStore.shared.refresh() }
             // The autosave is written off the main thread (decision 45,
             // later); the app asks iOS for the time to finish it.
             if phase != .active {
