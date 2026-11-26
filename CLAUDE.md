@@ -215,7 +215,11 @@ needs OSM data reads the same extract.
   app's bundled data or a `tools/` file they read; the classes that read the fixtures
   for `GoldenScenarios/`, `SaveFixtures/` or `ReplayFixtures/`; the classes a
   GameCore test file declares when no other file uses it; the union when
-  several apply. The label `full-ci` runs every shard of a pull request (add
+  several apply. A pull request (not a push) then narrows that to the test
+  classes its changed files reach by name, plus a smoke list of the core,
+  when every file can be followed and the result is at most half the tier
+  (decision 1012, `affected-tests.py`); so a test should name the type it
+  tests. The label `full-ci` runs every shard of a pull request (add
   it, then re-run the pull request's run). A pull request or push that
   changes a file `tools/golden-checks/doc_numbers.py` reads (`docs/`, the
   tool, the save version, the golden schema, the fixture directories), and
