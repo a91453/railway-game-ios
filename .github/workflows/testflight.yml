@@ -1,16 +1,20 @@
 name: TestFlight
 
-# Archives the committed project on a GitHub-hosted macOS runner, exports an
-# App Store distribution IPA signed through App Store Connect with the
-# team's API key, checks it, then uploads the archive, exported the same
-# way, to App Store Connect for TestFlight testing. The manual run chooses
-# whether the uploaded build is internal-only or external-capable. Export
-# and upload use xcodebuild with the API key; the archive is signed ad hoc by
-# default (see archive_signing). Both are tried again when they fail, so a
-# dropped connection to Apple does not cost the archive. A Linux job then
-# waits for App Store Connect to process the build, reports the result, and
-# fills the build's What to Test with the pull requests merged since the
-# last release.
+# Archives the committed project on a macOS runner, exports an App Store
+# distribution IPA signed through App Store Connect with the team's API key,
+# checks it, then uploads the archive, exported the same way, to App Store
+# Connect for TestFlight testing. The manual run chooses whether the
+# uploaded build is internal-only or external-capable. Export and upload use
+# xcodebuild with the API key; the archive is signed ad hoc by default (see
+# archive_signing). Both are tried again when they fail, so a dropped
+# connection to Apple does not cost the archive. A Linux job then waits for
+# App Store Connect to process the build, reports the result, and fills the
+# build's What to Test with the pull requests merged since the last release.
+#
+# Decision 1016: the archive, the map packs and the build upload are three
+# jobs, so a failure is re-run alone (Re-run failed jobs), and they run on
+# the owner's Mac when its release runner is online and free, otherwise on
+# the hosted xcode-27 image (pick-mac.yml, label chien-mac-release).
 #
 # Started only by hand (Actions -> TestFlight -> Run workflow) and
 # only from main. Pull requests never run it; its secrets live in the
@@ -99,30 +103,42 @@ jobs:
           brand: ${{ secrets.GAME_BRAND_JSON }}
           required: "true"
 
-  release:
-    name: Archive, sign, export, check and upload
+  # Decision 1016: the owner's Mac takes the macOS jobs when its release
+  # runner (label chien-mac-release, a macOS account of its own that pull
+  # requests never use) is online and free; otherwise the hosted xcode-27
+  # image does, as before. pick-mac.yml says which and why in its summary.
+  pick:
+    name: Pick the Mac or a hosted runner
     needs: preflight
     if: github.ref == 'refs/heads/main'
-    runs-on: xcode-27
-    # Run 147's archive took 35 minutes and run 148's 41: at 45 the job was
-    # stopped while it uploaded the map packs. 90 leaves room for a slow runner.
+    uses: ./.github/workflows/pick-mac.yml
+    with:
+      allow: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
+      label: chien-mac-release
+    secrets:
+      RUNNER_STATUS_TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+
+  # Decision 1016: the release is three jobs, so a failure re-runs only its
+  # own part (Re-run failed jobs): this one archives, signs, exports and
+  # checks; map-packs uploads the map packs at the same time; upload sends
+  # the build once both have passed. Run 148 was stopped at 45 minutes while
+  # it uploaded the map packs after a 41-minute archive, all in one job.
+  archive:
+    name: Archive, sign, export and check
+    needs: pick
+    if: github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(needs.pick.outputs.runs-on || '"xcode-27"') }}
+    # Run 147's archive took 35 minutes and run 148's 41 on a hosted runner.
+    # 90 leaves room for a slow one.
     timeout-minutes: 90
     environment: testflight
     permissions:
       contents: read
-      # Decision 858: the last successful run of this workflow, whose map
-      # packs App Store Connect has (testflight-map-packs.py).
-      actions: read
-    # One release at a time: a second run's release job waits instead of
-    # uploading in parallel, and a running upload is never cancelled. Only
-    # this job: waiting for Apple's processing does not hold up the next one.
-    concurrency:
-      group: testflight-release
-      cancel-in-progress: false
     outputs:
       build_number: ${{ steps.build.outputs.build_number }}
+      bundle_id: ${{ steps.ipa.outputs.bundle_id }}
       version: ${{ steps.ipa.outputs.version }}
-      upload_started: ${{ steps.upload-start.outputs.started }}
+      bundle_sha256: ${{ steps.pack.outputs.sha256 }}
     env:
       APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
       ARCHIVE_SIGNING: ${{ inputs.archive_signing }}
@@ -202,7 +218,7 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
 
       # Checks a local IPA exported from the same archive and signing options
-      # that the upload step reuses.
+      # that the upload job reuses.
       - name: Check the IPA
         id: ipa
         run: |
@@ -223,18 +239,85 @@ jobs:
             echo "version=$EXPECTED_VERSION"
           } >>"$GITHUB_OUTPUT"
 
-      # Decision 776: the cities' map packs, uploaded apart from the build as
-      # Apple-hosted asset packs (tools/asset-packs/). Decision 858: the app
-      # carries none of their files, so a pack that has to be uploaded and
-      # is not stops the release here, before the build is uploaded. App
-      # Store Connect makes a new version at every upload, the same files or
-      # not, and each version is reviewed, so only a pack that differs from
-      # the last successful release's is uploaded
-      # (testflight-map-packs.py); `map_packs: all` uploads every one.
-      # DEBUG-138: before the build, so App Store Connect has processed a
-      # changed pack by the time the build comes out (0.6.0 (138) was out
-      # minutes before its new Hong Kong pack, and the owner's iPhone kept
-      # 137's).
+      # Decision 1016: the checked archive and the upload options, encrypted
+      # (this repository's artifacts are public; testflight-bundle.sh), for
+      # the upload job. Kept 3 days: re-running only the upload job the next
+      # day still finds it.
+      - name: Encrypt the archive for the upload job
+        id: pack
+        env:
+          BUNDLE_SECRET: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          sha="$(.github/scripts/testflight-bundle.sh pack "$TESTFLIGHT_DIR/archive.bin")"
+          echo "sha256=$sha" >>"$GITHUB_OUTPUT"
+          echo "Encrypted archive: $(du -h "$TESTFLIGHT_DIR/archive.bin" | cut -f1), SHA-256 $sha."
+
+      - name: Hand the encrypted archive to the upload job
+        uses: actions/upload-artifact@v7
+        with:
+          name: testflight-archive-encrypted
+          path: ${{ env.TESTFLIGHT_DIR }}/archive.bin
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
+          overwrite: true
+
+      # Runs even when an earlier step failed or the run was cancelled.
+      - name: Clean up signing material
+        if: always()
+        run: .github/scripts/testflight-signing.sh cleanup
+
+      # The owner's Mac keeps the working copy between jobs: put the brand
+      # back to the neutral name there (a hosted runner is thrown away).
+      - name: Remove the brand from the working copy (the Mac)
+        if: always() && runner.environment == 'self-hosted'
+        run: |
+          git reset --hard --quiet
+          git clean -ffdxq
+
+  # Decision 776: the cities' map packs, uploaded apart from the build as
+  # Apple-hosted asset packs (tools/asset-packs/). Decision 858: the app
+  # carries none of their files, so a pack that has to be uploaded and is
+  # not stops the release: the upload job needs this one. App Store Connect
+  # makes a new version at every upload, the same files or not, and each
+  # version is reviewed, so only a pack that differs from the last
+  # successful release's is uploaded (testflight-map-packs.py);
+  # `map_packs: all` uploads every one. DEBUG-138: before the build, so App
+  # Store Connect has processed a changed pack by the time the build comes
+  # out (0.6.0 (138) was out minutes before its new Hong Kong pack, and the
+  # owner's iPhone kept 137's). Decision 1016: its own job, beside the
+  # archive, so a failed pack upload is re-run without archiving again.
+  map-packs:
+    name: Upload the map packs that changed
+    needs: pick
+    if: github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(needs.pick.outputs.runs-on || '"xcode-27"') }}
+    timeout-minutes: 45
+    environment: testflight
+    permissions:
+      contents: read
+      # Decision 858: the last successful run of this workflow, whose map
+      # packs App Store Connect has (testflight-map-packs.py).
+      actions: read
+    # One map pack upload at a time, never cancelled.
+    concurrency:
+      group: testflight-map-packs
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
+
+      # Only the API key file is used here; the keychain comes with it.
+      - name: Set up the API key file
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: .github/scripts/testflight-signing.sh setup
+
       - name: Upload the map packs that changed (asset packs)
         env:
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
@@ -262,6 +345,63 @@ jobs:
             echo "::notice title=Map packs::A new version of $id was uploaded; it is reviewed with the build."
           done
 
+      - name: Clean up the key file
+        if: always()
+        run: .github/scripts/testflight-signing.sh cleanup
+
+  # Decision 1016: sends the archive the archive job checked, once the map
+  # packs it needs are on App Store Connect (decision 858, DEBUG-138).
+  # Re-running only this job uses the same archive and build number.
+  upload:
+    name: Upload the build to App Store Connect
+    needs: [pick, archive, map-packs]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(needs.pick.outputs.runs-on || '"xcode-27"') }}
+    timeout-minutes: 40
+    environment: testflight
+    permissions:
+      contents: read
+    # One build upload at a time: a second run's upload waits instead of
+    # uploading in parallel, and a running upload is never cancelled. Only
+    # this job: waiting for Apple's processing does not hold up the next one.
+    concurrency:
+      group: testflight-release
+      cancel-in-progress: false
+    outputs:
+      upload_started: ${{ steps.upload-start.outputs.started }}
+    env:
+      BUILD_NUMBER: ${{ needs.archive.outputs.build_number }}
+      TESTING_SCOPE: ${{ inputs.testing_scope }}
+    steps:
+      # Only the scripts: the archive is already built and branded.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github
+
+      - name: Select Xcode
+        uses: ./.github/actions/select-xcode
+
+      - name: Set up signing (temporary keychain and API key file)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: .github/scripts/testflight-signing.sh setup
+
+      - name: Fetch the encrypted archive
+        uses: actions/download-artifact@v8
+        with:
+          name: testflight-archive-encrypted
+          path: ${{ runner.temp }}/testflight-download
+
+      - name: Check and decrypt the archive
+        env:
+          BUNDLE_SECRET: ${{ secrets.ASC_PRIVATE_KEY }}
+          SHA256: ${{ needs.archive.outputs.bundle_sha256 }}
+        run: |
+          .github/scripts/testflight-bundle.sh unpack "$RUNNER_TEMP/testflight-download/archive.bin" "$SHA256"
+          rm -rf "$RUNNER_TEMP/testflight-download"
+
       # From here on App Store Connect may have the build, even if the upload
       # step fails (a retried upload that Apple refuses as a duplicate), so
       # the processing job looks for it.
@@ -269,16 +409,17 @@ jobs:
         id: upload-start
         run: echo "started=true" >>"$GITHUB_OUTPUT"
 
-      # Runs only after the IPA check passed. It re-exports the same archive
-      # with the same signing options; only destination changes to upload
-      # (supported with API keys since Xcode 15). Tried again when it fails.
+      # The archive job's IPA check passed (this job needs it). It re-exports
+      # the same archive with the same signing options; only destination
+      # changes to upload (supported with API keys since Xcode 15). Tried
+      # again when it fails.
       - name: Upload to App Store Connect
         env:
           ASC_APP_ID: ${{ vars.ASC_APP_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          BUNDLE_ID: ${{ steps.ipa.outputs.bundle_id }}
-          VERSION: ${{ steps.ipa.outputs.version }}
+          BUNDLE_ID: ${{ needs.archive.outputs.bundle_id }}
+          VERSION: ${{ needs.archive.outputs.version }}
         run: |
           RETRY_CLEAN="$TESTFLIGHT_DIR/upload" .github/scripts/testflight-retry.sh "Upload" \
             xcodebuild -quiet -exportArchive \
@@ -298,15 +439,17 @@ jobs:
       # Runs even when an earlier step failed or the run was cancelled.
       - name: Clean up signing material
         if: always()
-        run: .github/scripts/testflight-signing.sh cleanup
+        run: |
+          rm -rf "$RUNNER_TEMP/testflight-download"
+          .github/scripts/testflight-signing.sh cleanup
 
   # Linux, so the wait costs no macOS runner. It also runs after a failed
   # upload step once the upload started: App Store Connect may have the build
   # anyway. Re-running only this job checks the same build again.
   processing:
     name: Wait for App Store Connect processing, fill What to Test
-    needs: release
-    if: ${{ !cancelled() && needs.release.outputs.upload_started == 'true' }}
+    needs: [archive, upload]
+    if: ${{ !cancelled() && needs.upload.outputs.upload_started == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     environment: testflight
@@ -340,6 +483,6 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
-          BUILD_NUMBER: ${{ needs.release.outputs.build_number }}
-          APP_VERSION: ${{ needs.release.outputs.version }}
+          BUILD_NUMBER: ${{ needs.archive.outputs.build_number }}
+          APP_VERSION: ${{ needs.archive.outputs.version }}
         run: python3 .github/scripts/testflight-processing.py --whats-new "$RUNNER_TEMP/whats-new.txt"

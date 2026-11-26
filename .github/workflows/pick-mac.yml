@@ -24,6 +24,10 @@ name: Pick the Mac or a hosted runner
 # no secrets) the answer is xcode-27. Anything that fails here answers
 # xcode-27 too, so the Mac can only ever be skipped, never waited for.
 #
+# testflight.yml asks for another label, chien-mac-release: a runner in a
+# second account on the Mac that only releases use, so a pull request's code
+# never runs where the signing key is written (decision 1016).
+#
 # Turn the Mac off without a terminal: Settings, Secrets and variables,
 # Actions, Variables, MAC_RUNNER = off. Or stop the runner on the Mac
 # (./svc.sh stop): offline, it is not picked.
@@ -35,6 +39,13 @@ on:
         description: Whether this run may use the Mac at all.
         type: boolean
         default: false
+      label:
+        description: >-
+          The runner label to look for. chien-mac (the default) is the Mac
+          account pull requests build in; chien-mac-release is the other
+          account, which only testflight.yml asks for (decision 1016).
+        type: string
+        default: chien-mac
     outputs:
       runs-on:
         description: The runs-on value as JSON, for fromJSON().
@@ -78,7 +89,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           REPO: ${{ github.repository }}
-          LABEL: chien-mac
+          LABEL: ${{ inputs.label }}
         run: |
           xcode="$(sed -n 's/^ *XCODE_VERSION: *"\([0-9.]*\)".*/\1/p' .github/actions/select-xcode/action.yml | head -n 1)"
           hosted() {
