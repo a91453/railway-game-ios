@@ -28,13 +28,21 @@ final class CityTitleReportTests: XCTestCase {
     func testTaiwansPlacesReadAsPeopleKnowThem() throws {
         let population = try Self.grid("taiwan_population.json", PopulationGrid.init(data:))
         let places = try Self.grid("taiwan_places.json", PlaceGrid.init(data:))
+        // Decision 1002: the census places the jobs where they are and
+        // counts no public offices, and `CityTitle.usualShare` was measured
+        // again on the census (whole Taiwan's shares). Taipei's and
+        // Taichung's centres stay shops, Kaohsiung's station is a mix of
+        // work, Tainan's reads as its industrial parks' jobs, and
+        // Hualien and Taitung read as their homes and their farms (before:
+        // commercial, commercial, residential, commercial, business,
+        // business).
         let expected: [(String, CityTitle.Rank, CityTitle.Kind)] = [
             ("tra-taipei", .metropolis, .commercial),
             ("tra-taichung", .largeCity, .commercial),
-            ("tra-kaohsiung", .largeCity, .residential),
-            ("tra-tainan", .city, .commercial),
-            ("tra-hualien", .smallCity, .business),
-            ("tra-taitung", .smallCity, .business),
+            ("tra-kaohsiung", .largeCity, .mixed),
+            ("tra-tainan", .city, .industrial),
+            ("tra-hualien", .smallCity, .residential),
+            ("tra-taitung", .smallCity, .farming),
         ]
         for (id, rank, kind) in expected {
             let title = try Self.title(of: id, population: population, places: places)

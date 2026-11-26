@@ -61,7 +61,9 @@ final class Map3DKeikyuNew1000At18Tests: XCTestCase {
             XCTAssertEqual(short.maximum.z, long.maximum.z, accuracy: 0.001, name)
             XCTAssertEqual(short.triangleCount, long.triangleCount + (name.hasSuffix("far") ? 0 : 16), name)
             XCTAssertEqual(Set(short.vertices.map(\.color)), Set(long.vertices.map(\.color)), name)
-            XCTAssertEqual(short.vertices.filter(\.glows).count, long.vertices.filter(\.glows).count, name)
+            // Revision 6: its lamps are lit by the set, the front's white
+            // and the back's red (``Map3DKeikyuNew1000RulesTests``).
+            XCTAssertFalse(short.vertices.contains(where: \.glows), name)
         }
     }
 
@@ -152,12 +154,13 @@ final class Map3DKeikyuNew1000At18Tests: XCTestCase {
         }
     }
 
-    /// The lamps are the cab's own lenses at its face, the white band and
-    /// the body where the 20 m car has them.
+    /// The lamps are the cab's own lenses at its face (lit by the set:
+    /// ``Map3DKeikyuNew1000RulesTests``), the white band and the body where
+    /// the 20 m car has them.
     func testTheLampsAndTheBandAreWhereTheyWere() throws {
         for far in [false, true] {
             let cab = try XCTUnwrap(Map3DKeikyuNew1000.cab(far: far))
-            let lit = cab.vertices.filter(\.glows)
+            let lit = cab.vertices.filter { $0.color == Map3DTrainStyle.headlamp || $0.color == Map3DPalette.lantern }
             XCTAssertTrue(lit.contains { $0.color == Map3DTrainStyle.headlamp })
             XCTAssertTrue(lit.contains { $0.color == Map3DPalette.lantern })
             XCTAssertGreaterThan(lit.map(\.x).min() ?? 0, 8.8)

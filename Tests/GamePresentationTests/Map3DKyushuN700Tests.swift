@@ -40,7 +40,7 @@ final class Map3DKyushuN700Tests: XCTestCase {
         XCTAssertEqual(Map3DPalette.kyushuGold, Map3DColor.rgb(0x897455))
         let colours: Set<UInt32> = [
             Map3DPalette.kyushuWhiteBlue, Map3DPalette.kyushuNavy, Map3DPalette.kyushuGold, Map3DTrainStyle.glass,
-            Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern, Map3DPalette.steel,
+            Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern, Map3DPalette.steel, Map3DPalette.mtrCream,
         ]
         XCTAssertEqual(Set(Map3DKyushuN700.meshPalette), colours)
         for unit in Map3DKyushuN700.Unit.allCases {
@@ -96,8 +96,8 @@ final class Map3DKyushuN700Tests: XCTestCase {
     /// partly the wall's, on either side, so a door can be moved apart
     /// from the wall (to open at a station) without the mesh cut again.
     /// Each has its seams and its window with it, and its box holds its
-    /// faces and no whole face of the wall's (436 faces of the cab car's
-    /// six doors, 380 of the middle car's four, as the tool reports them).
+    /// faces and no whole face of the wall's (488 faces of the cab car's
+    /// six doors, 404 of the middle car's four, as the tool reports them).
     func testEachDoorIsAPieceOfItsOwn() throws {
         XCTAssertEqual(Map3DKyushuN700.Unit.allCases.map { Map3DKyushuN700.doors($0).count }, [3, 2])
         XCTAssertEqual(Map3DKyushuN700.doors(.cab).map(\.crew), [true, false, false])
@@ -145,7 +145,112 @@ final class Map3DKyushuN700Tests: XCTestCase {
                     XCTAssertGreaterThan(seam, 5, unit.rawValue)
                 }
             }
-            XCTAssertEqual(faces, unit.isCab ? 436 : 380, "\(unit.rawValue): the doors' faces")
+            XCTAssertEqual(faces, unit.isCab ? 488 : 404, "\(unit.rawValue): the doors' faces")
+        }
+    }
+
+    /// Decision 977, section 8: the real cars' proportions, the windows
+    /// as the ruler. The windows 1.04 m apart as the seats are (the cab
+    /// car's 1.03 m, its nose kept the old one's shape), fourteen a side on
+    /// the cab car (the real car 8 has fourteen) and twenty on the middle
+    /// car; the middle car's doors 0.94 m from its ends to their middle
+    /// (the real car's 0.74 m), and the nose's tip 8.5 m ahead of the
+    /// driver's door's middle (the real car's about 8.0 m).
+    func testTheCarsAreAtTheRealCarsProportions() throws {
+        for unit in Map3DKyushuN700.Unit.allCases {
+            let model = try XCTUnwrap(Map3DKyushuN700.model(unit))
+            for side: Float in [-1, 1] {
+                // The windows along the car: the glass triangles of the
+                // side wall, the doors' own windows left out, each window
+                // the triangles whose spans along the car touch.
+                let doors = Map3DKyushuN700.doors(unit)
+                var spans: [(low: Float, high: Float)] = []
+                for first in stride(from: 0, to: model.vertices.count, by: 3) {
+                    let points = model.vertices[first..<first + 3]
+                    guard points.allSatisfy({ $0.color == Map3DTrainStyle.glass && $0.y * side > 1.6 }) else { continue }
+                    let low = points.map(\.x).min() ?? 0, high = points.map(\.x).max() ?? 0
+                    if doors.contains(where: { $0.x.contains((low + high) / 2) }) { continue }
+                    spans.append((low, high))
+                }
+                var windows: [(low: Float, high: Float)] = []
+                for span in spans.sorted(by: { $0.low < $1.low }) {
+                    if let last = windows.last, span.low <= last.high + 0.005 {
+                        windows[windows.count - 1].high = max(last.high, span.high)
+                    } else {
+                        windows.append(span)
+                    }
+                }
+                // The cab car's small window by its back door is not one of the seats'.
+                let seats = windows.filter { $0.high - $0.low > 0.5 }
+                XCTAssertEqual(seats.count, unit.isCab ? 14 : 20, "\(unit.rawValue) side \(side)")
+                let middles = seats.map { ($0.low + $0.high) / 2 }
+                let pitch = ((middles.last ?? 0) - (middles.first ?? 0)) / Float(max(middles.count - 1, 1))
+                XCTAssertEqual(pitch, unit.isCab ? 1.03 : 1.04, accuracy: 0.01, "\(unit.rawValue) side \(side)")
+            }
+        }
+        let middleDoor = try XCTUnwrap(Map3DKyushuN700.doors(.middle).first)
+        XCTAssertEqual(12.5 - (middleDoor.x.lowerBound + middleDoor.x.upperBound) / 2, 0.94, accuracy: 0.01)
+        let crew = try XCTUnwrap(Map3DKyushuN700.doors(.cab).first)
+        XCTAssertEqual(27.35 / 2 - (crew.x.lowerBound + crew.x.upperBound) / 2, 8.46, accuracy: 0.05)
+    }
+
+    /// The bogies stand where the real car's do (3.75 m from a coupling
+    /// face, 17.5 m apart; the cab car's front one 6.10 m behind the nose's
+    /// tip), and each sits in the middle of the opening in the skirts that
+    /// shows its wheels (the owner, 2026-11-26: the openings had stretched
+    /// with the body and the wheels stood at one end of them).
+    func testTheWheelsAreInTheMiddleOfTheirOpenings() throws {
+        for unit in Map3DKyushuN700.Unit.allCases {
+            let model = try XCTUnwrap(Map3DKyushuN700.model(unit))
+            let half = unit.pitch / 2
+            let wheels = model.vertices.filter { $0.color == Map3DPalette.dark && $0.z < 0.3 }.map(\.x).sorted()
+            var axles: [[Float]] = []
+            for x in wheels {
+                if let last = axles.last?.last, x - last < 0.8 { axles[axles.count - 1].append(x) } else { axles.append([x]) }
+            }
+            XCTAssertEqual(axles.count, 4, unit.rawValue)
+            guard axles.count == 4 else { continue }
+            // The skirts' foot along the side walls: where the openings begin and end.
+            let feet = model.vertices.filter { $0.color == Map3DPalette.kyushuWhiteBlue && abs($0.z - 0.378) < 0.01 && abs($0.y) > 1.1 }.map(\.x)
+            var centres: [Float] = []
+            for pair in [axles[0] + axles[1], axles[2] + axles[3]] {
+                let low = pair.min() ?? 0, high = pair.max() ?? 0, centre = (low + high) / 2
+                centres.append(centre)
+                let front = try XCTUnwrap(feet.filter { $0 < low }.max(), unit.rawValue)
+                let back = try XCTUnwrap(feet.filter { $0 > high }.min(), unit.rawValue)
+                XCTAssertEqual((front + back) / 2, centre, accuracy: 0.01, "\(unit.rawValue): the opening's middle is the bogie's")
+                XCTAssertEqual(back - front, 4.40, accuracy: 0.05, unit.rawValue)
+            }
+            XCTAssertEqual(centres[1] - centres[0], 17.5, accuracy: 0.01, unit.rawValue)
+            XCTAssertEqual(centres[0], -half + 3.75, accuracy: 0.01, unit.rawValue)
+            if unit.isCab {
+                XCTAssertEqual(half - centres[1], 6.10, accuracy: 0.01, "the front bogie 6.10 m behind the nose's tip")
+            }
+        }
+    }
+
+    /// Between two cars a full-width hood in the real train's beige, flush
+    /// with the body from the skirts to the roof, so the gap between two
+    /// cars is not seen through (the old cars had only a narrow gangway,
+    /// 0.6 m of open air beside it); only the couplers' wedges are dark.
+    /// The cab car has it at its back, the middle car at both ends.
+    func testAGangwayHoodClosesTheGapBetweenTwoCars() throws {
+        for unit in Map3DKyushuN700.Unit.allCases {
+            let model = try XCTUnwrap(Map3DKyushuN700.model(unit))
+            let half = unit.pitch / 2
+            for end: Float in unit.isCab ? [-1] : [-1, 1] {
+                let hood = model.vertices.filter { $0.color == Map3DPalette.mtrCream && $0.x * end > 0 }
+                XCTAssertFalse(hood.isEmpty, "\(unit.rawValue) end \(end)")
+                // Within 4 cm of the coupling plane at the middle, as wide
+                // as the body and from near the skirts to near the roof.
+                XCTAssertGreaterThan(hood.map { $0.x * end }.max() ?? 0, half - 0.04, unit.rawValue)
+                XCTAssertLessThanOrEqual(hood.map { $0.x * end }.max() ?? 0, half - 0.02 + 0.001, unit.rawValue)
+                XCTAssertEqual((hood.map(\.y).max() ?? 0) - (hood.map(\.y).min() ?? 0), 3.36, accuracy: 0.05, unit.rawValue)
+                XCTAssertGreaterThan((hood.map(\.z).max() ?? 0) - (hood.map(\.z).min() ?? 0), 2.5, unit.rawValue)
+            }
+            if unit.isCab {
+                XCTAssertTrue(model.vertices.allSatisfy { $0.color != Map3DPalette.mtrCream || $0.x < 0 }, "no hood at the nose")
+            }
         }
     }
 
@@ -191,7 +296,7 @@ final class Map3DKyushuN700Tests: XCTestCase {
         }
         XCTAssertEqual(models.map(\.name), (["head"] + Array(repeating: "car", count: 6) + ["tail"]).map { "set-\(key)-\($0)" })
         let layout = try XCTUnwrap(pack.layout(forType: key, count: cars))
-        XCTAssertEqual(layout.map(\.length).reduce(0, +), 24.883 * 2 + 25.0 * 6, accuracy: 0.1, "199.8 m")
+        XCTAssertEqual(layout.map(\.length).reduce(0, +), 27.35 * 2 + 25.0 * 6, accuracy: 0.1, "204.7 m, as the real train")
         // Decision 449: the pack lights a running car's lamps only at its
         // train's ends, the head's white and the tail's red.
         let set = try XCTUnwrap(Map3DTrainSet.byKey[key])

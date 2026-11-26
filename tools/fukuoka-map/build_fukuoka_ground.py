@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""The Fukuoka map's ground for its map pack (FUKUOKA-GROUND): the people
-(`population.json`), the base map (`basemap.pmtiles`), and the heights,
+"""The Fukuoka map's ground for its map pack (FUKUOKA-GROUND): the base map
+(`basemap.pmtiles`), and the heights,
 water and steep slopes (`heights.dat`, `water.json`, `terrain.pmtiles`),
 in the formats of Taiwan's, Hong Kong's and Rovaniemi's, with the tools
 they share (`tools/overseas-map/overseas_ground.py`).
 
-    python3 -I tools/fukuoka-map/build_fukuoka_ground.py population /tmp/fk/pop/jpn.tif RailwayGameApp/Resources/MapPacks/fukuoka
     python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka
     python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka
 
-People: WorldPop's 1 km grid of Japan (2025, constrained, R2025A v1,
-CC BY 4.0), cut to the extent (`build_fukuoka_rail.EXTENT`).
+People and jobs (`population.json`): since decision 1000, Japan's census
+grids, made by `tools/census-grid/japan_census_grid.py` (README.md there).
 
 Base map: Taiwan's tiles (`tools/basemap/build_basemap.py`) from the
 Kyushu extract cut to the map; since decision 991, Kyushu's and Chugoku's
@@ -20,8 +19,9 @@ every side, so the open coastline is cut to the extract's box and closed
 along its edge (`overseas_ground.coast_in_box`); Nokonoshima and the other
 islands are closed rings of their own.
 
-Grids: Taiwan's 1.875″ cells from the population grid's corner, over the
-extent. Water: a cell is water when its middle is outside the land of that
+Grids: Taiwan's 1.875″ cells from GRID_CORNER, the corner of WorldPop's
+30″ grid the population used to be on, over the extent (the population's
+7.5″ cells would move it). Water: a cell is water when its middle is outside the land of that
 coastline or inside a body of water. Heights: the Geospatial Information
 Authority of Japan's elevation tiles (`fetch_gsi_dem.py`): the 5 m models
 (the laser survey's where it has the tile, else the photogrammetric ones),
@@ -62,9 +62,9 @@ sys.path.insert(0, os.path.join(HERE, '..', 'hk-map'))
 import build_fukuoka_rail  # noqa: E402
 import overseas_ground  # noqa: E402
 
-POPULATION_SHA256 = '0e6e4155c86d5e87f61a837ad3bd90f993dd19b7a34c475f7a05cb36d6338e3d'
-POPULATION_URL = ('https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/JPN/v1/1km_ua/constrained/'
-                  'jpn_pop_2025_CN_1km_R2025A_UA_v1.tif')
+# The heights grid's corner and the cell it is cut from: WorldPop's 30″
+# grid, which population.json was on before decision 1000.
+GRID_CORNER = {'north': 34.0333335332, 'west': 129.34166542930004, 'cellDegrees': 0.0083333333}
 # The extract's box (west, south, east, north), as cut with osmium.
 BOX = (129.30, 32.05, 131.37, 34.07)
 SEA_MARGIN = 0.05
@@ -82,20 +82,6 @@ def record(name, entry):
         sources = json.load(f)
     sources['inputs'][name] = entry
     overseas_ground.write_json(HERE, 'fukuoka_sources.json', sources)
-
-
-def population(source, folder):
-    fields, digest, cut = overseas_ground.population(source, POPULATION_SHA256, build_fukuoka_rail.EXTENT)
-    overseas_ground.write_json(folder, 'population.json', {
-        'source': 'WorldPop, Japan 2025, constrained, 30 arc-second (about 1 km), R2025A v1, cut to the Fukuoka map',
-        'from': POPULATION_URL,
-        'licence': 'CC BY 4.0',
-        **fields,
-    })
-    build_fukuoka_rail.write_manifest(folder)
-    record('jpn_pop_2025_CN_1km_R2025A_UA_v1.tif', {'sha256': digest, 'from': POPULATION_URL,
-                                                     'licence': 'CC BY 4.0, WorldPop'})
-    print(f'population.json: {len(fields["runs"])} runs, {int(cut.sum())} people, {cut.shape[0]} x {cut.shape[1]} cells')
 
 
 def basemap(extract, folder):
@@ -212,8 +198,7 @@ def grids(tiles_folder, extract, folder):
     import build_water_grid
 
     five, ten, digest = tiles_of(tiles_folder)
-    population_data = json.load(open(os.path.join(folder, 'population.json'), encoding='utf-8'))
-    north, west, step, rows, columns = build_hk_ground_grids.grid_box(population_data, build_fukuoka_rail.EXTENT)
+    north, west, step, rows, columns = build_hk_ground_grids.grid_box(GRID_CORNER, build_fukuoka_rail.EXTENT)
     latitudes = north - (np.arange(rows) + 0.5) * step
 
     # Water.
@@ -269,26 +254,41 @@ def grids(tiles_folder, extract, folder):
           f'heights.dat {size} bytes')
 
 
-def buildings(extract, folder):
+def buildings(extract, folder, overture=None, release=None, plateau=None):
     """`buildings.pmtiles` by Rovaniemi's rule (`overseas_buildings.make`,
     decision 799), with the table of uses of Hong Kong's and Japan's
     `agricultural` and `roof` (a free-standing roof, a shelter). Nine in
     ten of Fukuoka's buildings in OpenStreetMap carry their storeys or
     height (the city's 3D model imported by its mappers), so few are
-    guessed."""
+    guessed.
+
+    With Overture's extract (`tools/overseas-map/overture_extra.py`) and
+    the release it read, the outlines OpenStreetMap has not drawn are added
+    (decision 1001): Kitakyushu, Chikuho, Munakata and Koga have a tenth of
+    the buildings per head of Fukuoka or Kumamoto in OpenStreetMap. With
+    `plateau_buildings.py fetch`'s folder, PLATEAU's official buildings
+    come before Overture's machine outlines, and their measured heights
+    give the storeys of the buildings OpenStreetMap does not tag
+    (Kitakyushu, Kumamoto, Kurume and 21 more towns)."""
     import build_hk_buildings as hk
     import overseas_buildings
+    import plateau_buildings
     use_of = dict(hk.USE_OF, agricultural='agricultural', roof='transportation')
     overseas_buildings.make(
         extract, folder, build_fukuoka_rail.EXTENT, title='Fukuoka building footprints', use_of=use_of,
         report_path=os.path.join(HERE, 'fukuoka_buildings.json'),
         extract_from='https://osmtoday.com/asia/japan/kyushu.pbf and chugoku.pbf (osmium merge), cut with osmium extract -b '
                      + ','.join(f'{v:g}' for v in BOX) + ' -s smart',
-        decision=854, write_manifest=build_fukuoka_rail.write_manifest)
+        decision=1001 if overture else 854, write_manifest=build_fukuoka_rail.write_manifest,
+        overture=overture, overture_release=release,
+        plateau=plateau_buildings.read(plateau) if plateau else None,
+        plateau_from='PLATEAU (国土交通省), the newest CityGML buildings of each town, read by '
+                     'tools/fukuoka-map/plateau_buildings.py' if plateau else None)
 
 
 if __name__ == '__main__':
-    steps = {'population': (population, 2), 'basemap': (basemap, 2), 'grids': (grids, 3), 'buildings': (buildings, 2)}
-    if len(sys.argv) < 2 or sys.argv[1] not in steps or len(sys.argv) != 2 + steps[sys.argv[1]][1]:
+    steps = {'basemap': (basemap, 2), 'grids': (grids, 3), 'buildings': (buildings, 2)}
+    extra = len(sys.argv) - 4 if len(sys.argv) > 1 and sys.argv[1] == 'buildings' and len(sys.argv) in (6, 7) else 0
+    if len(sys.argv) < 2 or sys.argv[1] not in steps or len(sys.argv) != 2 + steps[sys.argv[1]][1] + extra:
         sys.exit(__doc__)
     steps[sys.argv[1]][0](*sys.argv[2:])

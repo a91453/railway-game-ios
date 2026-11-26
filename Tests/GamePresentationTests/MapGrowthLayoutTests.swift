@@ -218,8 +218,9 @@ final class MapGrowthLayoutTests: XCTestCase {
         // The four tiles' some 2.2 million people: Fukuoka's 1.7 million
         // and, now that the pack's people reach as far as the tiles do,
         // Dazaifu's and Chikushino's south and east of the map it was (√
-        // of their trips a day is 930 and some, a hundred riders each).
-        XCTAssertEqual(expansion.ridersStep, 93_000)
+        // of their trips a day is 930 and some, a hundred riders each;
+        // 950 and some since decision 1000 counts them by the 2020 census).
+        XCTAssertEqual(expansion.ridersStep, 95_000)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(grown)), grown, "a world GameCore loads")
 
         // The old pack still on the device: the game goes on as it was.

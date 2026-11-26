@@ -60,10 +60,12 @@ final class RealLineBundleTests: XCTestCase {
         // Fukuoka (not open yet): the Kuko Line, which runs through both
         // stations it shares, first. The Kyushu Shinkansen (decision 975)
         // is another company's on another gauge, sold by itself: its
-        // Hakata stands on its viaduct over the subway's.
+        // Hakata stands on its viaduct over the subway's. Decision 998:
+        // the Nishi-Kyushu Shinkansen shares no station with it, sold by
+        // itself too.
         let fukuoka = try FukuokaRailwaysTests.fukuoka()
         checkEveryLineIsSoldOnce(fukuoka)
-        XCTAssertEqual(bundles(of: fukuoka), [["fksubway:K", "fksubway:H", "fksubway:N"], ["kyushushinkansen:KS"]])
+        XCTAssertEqual(bundles(of: fukuoka), [["fksubway:K", "fksubway:H", "fksubway:N"], ["kyushushinkansen:KS"], ["kyushushinkansen:NK"]])
     }
 
     func testABundleIsNamedAfterItsFirstLine() throws {

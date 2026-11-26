@@ -11,7 +11,7 @@
 | 檔案 | 從哪裡來 | 授權 |
 |---|---|---|
 | `N02-25_Station.geojson` | 国土数値情報 鉄道データ N02 2025 年版，`https://nlftp.mlit.go.jp/ksj/gml/data/N02/N02-25/N02-25_GML.zip`（14.2 MB，取 `UTF-8/N02-25_Station.geojson`） | CC BY 4.0；署名「『国土数値情報（鉄道データ）』（国土交通省）を加工して作成」 |
-| `jpn_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop 日本 2025，constrained，1 km | CC BY 4.0，WorldPop |
+| e-Stat 統計 GIS 的 500 m 網格（決策 1000） | 令和 2 年國勢調查（住的人，`T001141`）與令和 3 年經濟普查‐活動調查（上班的人，`T001162`），地圖碰到的每個 1 次網格一個 zip（四縣 12 格、約 3.5 MB），`tools/census-grid/japan_census_grid.py fetch` 下載，讀了什麼寫在 `tools/census-grid/japan_sources.json` | 政府統計の総合窓口（e-Stat）利用規約（政府標準利用規約 2.0，與 CC BY 4.0 相容）；署名「『令和2年国勢調査』『令和3年経済センサス‐活動調査』（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成」 |
 | 國土地理院標高圖磚 | `https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/…`（沒有就 dem5b、dem5c），另抓 `dem_png/14/…`（DEM10B） 補 5 m 沒有值的點；`fetch_gsi_dem.py` 一次六片地抓（三縣是 5 m 31,672 片、10 m 8,100 片；決策 997 的四縣是 5 m 39,376 片、10 m 10,044 片，約 2 小時，兩個程序從兩頭抓約 1 小時；中斷了再跑會接著抓） | 国土地理院コンテンツ利用規約（與 CC BY 4.0 相容），署名「国土地理院の標高タイルを加工して作成」 |
 | `kyushu.pbf`、`chugoku.pbf` | OpenStreetMap 九州與中國地方，`https://osmtoday.com/asia/japan/kyushu.pbf`（約 354 MB，會轉到 geo2day.com）與 `chugoku.pbf`（約 265 MB）。九州的用 `osmium extract` 切成 `fukuoka.pbf`（約 30 MB，鐵道用）；兩包 `osmium merge` 後切成 `four.pbf`（約 233 MB，地面用，決策 991：北邊到關門海峽對岸的下關；決策 997：西邊到平戶） | ODbL 1.0，© OpenStreetMap 貢獻者 |
 
@@ -43,13 +43,20 @@ python3 -I tools/fukuoka-map/build_fukuoka_rail.py /tmp/fk/n02/N02-25_GML/UTF-8/
 # 2. 排班（`tools/real-timetables/extract_metro_runs.py`，和香港同一套）。
 python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/MapPacks/fukuoka
 
-# 3. 人口、底圖、機場、不蓋區、高度與水域（FUKUOKA-GROUND）。
-mkdir -p /tmp/fk/pop /tmp/fk/gsi
-curl -L -o /tmp/fk/pop/jpn.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/JPN/v1/1km_ua/constrained/jpn_pop_2025_CN_1km_R2025A_UA_v1.tif
-pip install tifffile imagecodecs numpy
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py population /tmp/fk/pop/jpn.tif RailwayGameApp/Resources/MapPacks/fukuoka
+# 3. 人口與上班人數（決策 1000，國勢調查＋經濟普查 500 m，tools/census-grid/README.md）、底圖、機場、不蓋區、
+#    高度與水域（FUKUOKA-GROUND）。高度格的角落寫死在 build_fukuoka_ground.py 的 GRID_CORNER（以前的
+#    WorldPop 30″ 格網），不跟著人口的 7.5″ 格走。
+mkdir -p /tmp/fk/estat /tmp/fk/gsi
+python3 -I tools/census-grid/japan_census_grid.py fetch RailwayGameApp/Resources/MapPacks/fukuoka /tmp/fk/estat
+python3 -I tools/census-grid/japan_census_grid.py build /tmp/fk/estat RailwayGameApp/Resources/MapPacks/fukuoka
+pip install imagecodecs numpy
 python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka   # 約 2 分鐘，要先有人口
+# 建物（決策 1001）：先抓 Overture 的機器畫建物與 PLATEAU 的官方建物，再疊上 OSM。
+pip install duckdb   # MIT，只有讀 Overture 用
+python3 -I tools/overseas-map/overture_extra.py extract 2026-11-18.0 129.34,32.09,131.33,34.03 /tmp/fk/ov/japan.parquet   # 約 20 秒
+python3 -I tools/fukuoka-map/plateau_buildings.py fetch /tmp/fk/plateau   # 四縣 23 個市町，約 40 分鐘，中斷了再跑會接著抓
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka \
+  /tmp/fk/ov/japan.parquet 2026-11-18.0 /tmp/fk/plateau   # 要先有人口；記憶體要 10 GB 以上，別和 swift build 同時跑
 python3 -I tools/airfields/build_airfields.py /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka/airfields.json
 python3 -I tools/no-build-land/build_no_build.py /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka/no_build.json
 python3 -I tools/fukuoka-map/fetch_gsi_dem.py /tmp/fk/gsi
@@ -61,6 +68,9 @@ python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/o
 pip install shapely   # BSD 3-Clause，只有拆分用
 osmium tags-filter -o /tmp/fk/osm/admin4.pbf /tmp/fk/osm/kyushu.pbf r/admin_level=4   # 縣界（整個關係，不切）
 python3 -I tools/fukuoka-map/split_prefectures.py /tmp/fk/osm/admin4.pbf RailwayGameApp/Resources/MapPacks
+# 只重做建物時：先 `git checkout -- RailwayGameApp/Resources/MapPacks/fukuoka/pack.json`（拆過的那份），
+# 再只切建物，底圖不動：
+python3 -I tools/fukuoka-map/split_prefectures.py /tmp/fk/osm/admin4.pbf RailwayGameApp/Resources/MapPacks buildings.pmtiles
 
 swift build --build-tests -Xswiftc -warnings-as-errors
 swift test --skip-build --filter FukuokaRailwaysTests
@@ -79,7 +89,7 @@ swift test --skip-build --filter FukuokaRailwaysTests
 | | 福岡（以前） | 到熊本 |
 |---|--:|--:|
 | 範圍 | 17.6 × 22.2 km | 56.5 × 114.1 km（地圖塊 4 × 7） |
-| 人口（WorldPop） | 約 170 萬 | 484 萬 |
+| 人口（WorldPop，當時） | 約 170 萬 | 484 萬 |
 | 高度格（1.875″） | 400 × 384 | 2000 × 1200 |
 | 建物 | 28.5 萬棟 | 107.9 萬棟 |
 | `basemap.pmtiles` | 3.1 MB | 23.7 MB |
@@ -101,6 +111,25 @@ swift test --skip-build --filter FukuokaRailwaysTests
 整包 117.7 MB（福岡 52.4、佐賀 20.3、熊本 29.4、長崎 15.6 MB）。決策 991 範圍裡的高度只有 27 格差 1 m。
 細節在 `docs/decisions/997.md` §3、§4。
 
+## 建物補齊（決策 1001，2026-11-26）
+
+OSM 在北九州（八幡、戶畑、門司、若松）、飯塚、直方、田川、宗像、古賀一帶建物很少，空地多到看得出來。
+照作者「官方資料優先、最後才 Overture」的順序疊四層，前一層有的，後一層就不放：
+
+1. **OpenStreetMap**：外形、用途、標了的樓層（同之前）。
+2. **PLATEAU**（國土交通省的 3D 都市模型，四縣 23 個市町）：OSM 沒有的建物整棟加進來，帶實測的高度與用途；
+   OSM 有但沒標樓層的，照中心點落在哪個 OSM 外形，用 PLATEAU 量的高度。
+3. **Overture 的 East Asian buildings**（Shi 等人，CC BY 4.0）。
+4. **Overture 的 Microsoft ML Buildings**（ODbL）。
+
+疊的規則：已經放的建物蓋住新的一棟 10% 以上、或新的一棟蓋住已經放的一棟 50% 以上，新的就不放。實測高度
+換成樓層：PLATEAU 有樓層數、而且每層 2–7 m 的照它，否則用高度換（同 Overture 的高度）。樓層來源記成
+`cityMap`（實測），也進四分位數表，所以沒量到的建物用的估計會參考量到的。
+
+PLATEAU 用 CityGML（`api.plateau.reearth.io/datacatalog/citygml/<市町代碼>`，每個市町最新的年度），
+`plateau_buildings.py` 讀 `lod0FootPrint`、`lod0RoofEdge`，沒有就用 `lod1Solid` 的底面。授權是國交省的
+利用規約（相容 CC BY 4.0），要寫「3D都市モデル（Project PLATEAU）（国土交通省）を加工して作成」。
+
 ## 三條線
 
 | 線 | 站數 | 長度（量的） | 官方 | 一天的班次（估計） |
@@ -114,7 +143,7 @@ swift test --skip-build --filter FukuokaRailwaysTests
 - 隧道約 30 km、高架約 0.6 km（姪濱一帶），其餘是地面。
 - 七隈線尖峰用平均 3 分 15 秒，不用最短的 3 分：3 分時，尖峰轉離峰多出來的車，兩端各要 6 股，沒有機廠的線遊戲只鋪 5 股。真實的機廠在橋本，決策 898 起收購時一起蓋（`RealLineDepotSite.hashimoto`，位置與為什麼不在真實的位置見 `tools/rail-depots/README.md`）。
 - **七隈線整天從橋本端排車**（決策 898，`SERVICE["N"]["depotEnd"]`、`FAR_TURN`）：博多的每一班都是橋本開來的車到站 6 分鐘後折返，夜裡 23 組車都在橋本（4 組在站、19 組在機廠），博多不留夜車。博多離機廠 13.5 km，留在那裡的車夜裡會被收回機廠、清晨再空車開回去，擋住博多的頭幾班。只重排時刻不重讀 OSM：`python3 -I tools/fukuoka-map/build_fukuoka_rail.py times RailwayGameApp/Resources/MapPacks/fukuoka`，再跑 `extract_fukuoka_runs.py`。車組數照遊戲的最短停站 36 秒算（時刻表每站 25 秒），橋本再留 3 分鐘讓晚到的車追回來（`extract_branch_runs.RECOVERY`），所以是 23 組不是 20 組。
-- **建物**：OSM 的外形與用途，樓層或高度有標的照標（福岡約九成有標，是圖友匯入的福岡市 3D 模型），沒標的照羅瓦涅米的規則估（同類、同人口密度、同面積的四分位數）。約 28.5 萬棟、4.5 MB，最高 48 層；統計在 `fukuoka_buildings.json`。PLATEAU 不另外接：OSM 已經帶了它的高度。
+- **建物**：OSM 的外形與用途，樓層或高度有標的照標（福岡約九成有標，是圖友匯入的福岡市 3D 模型），沒標的照羅瓦涅米的規則估（同類、同人口密度、同面積的四分位數）。約 28.5 萬棟、4.5 MB，最高 48 層；統計在 `fukuoka_buildings.json`。決策 1001 起再疊上 PLATEAU 與 Overture，見下一節。
 
 ## 九州新幹線（博多—熊本，KYUSHU-SHINKANSEN-DATA）
 

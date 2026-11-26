@@ -7,8 +7,9 @@
 // `afr.json`, `trtc.json` and the other systems'): the Ministry of
 // Transportation and Communications' TDX under the Open Government Data
 // License, version 1.0, and OpenStreetMap under the Open Database License.
-// The population that sets a real-world station's ridership is WorldPop's,
-// under CC BY 4.0 (PopulationGrid.swift).
+// The population that sets a real-world station's ridership is the
+// government's own counts, under the Open Government Data License (decision
+// 1002, PopulationGrid.swift); the map packs abroad keep WorldPop's (CC BY 4.0).
 //
 // The website's credits page (a91453/railway-reference-private,
 // `Website/site/credits.html`) says the same in both languages: when a
@@ -52,7 +53,6 @@ public enum DataSourceCredits {
     static let worldPopURL = "https://www.worldpop.org"
     static let moiTerrainURL = "https://data.gov.tw/dataset/178729"
     static let copernicusDEMURL = "https://dataspace.copernicus.eu/explore-data/data-collections/copernicus-contributing-missions/collections-description/COP-DEM"
-    static let worldPopDatasetURL = "https://doi.org/10.5258/SOTON/WP00840"
     static let worldCoverURL = "https://doi.org/10.5281/zenodo.7254221"
     static let travelSurveyURL = "https://data.gov.tw/dataset/6248"
     static let civilAviationURL = "https://www.caa.gov.tw"
@@ -319,22 +319,34 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
-                    // Decision 712: the people of Hong Kong's map
-                    // (`MapPacks/hongkong/population.json`).
+                    // Decisions 712 and 1008: the people and jobs of Hong
+                    // Kong's map (`MapPacks/hongkong/population.json`,
+                    // `tools/census-grid/hongkong_census_grid.py`).
                     DataSourceCredit(
                         id: "hongKongPeople",
                         title: language.text("Hong Kong’s people", "香港的人口"),
                         detail: language.text(
-                            "On Hong Kong’s map, how many people live round each station, which sets how many ride from it and where the city’s buildings stand.",
-                            "香港地圖上每座車站周圍住了多少人，決定有多少人從那裡搭車，以及城市的建物蓋在哪裡。"
+                            "On Hong Kong’s map, how many people live and work round each station, which sets how many ride from it and where they go.",
+                            "香港地圖上每座車站周圍住了多少人、有多少人在那裡上班，決定有多少人從那裡搭車、往哪裡去。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), University of Southampton: population estimates per square kilometre of Hong Kong, 2025 (R2025A), under the Creative Commons Attribution 4.0 International licence (CC BY 4.0). Each cell is rounded to whole people.",
-                            "WorldPop（www.worldpop.org），英國南安普敦大學：香港 2025 年每平方公里人口估計（R2025A），依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）。每格四捨五入到整數人。"
+                            "Residents: 2021 Population Census, Census and Statistics Department. Jobs: Quarterly Survey of Employment and Vacancies, 2021, Census and Statistics Department. Tertiary Planning Units and land use: Planning Department. All Government of the Hong Kong SAR, via DATA.GOV.HK and the CSDI Portal (Common Spatial Data Infrastructure), used under their Terms and Conditions of Use. Spread over the homes and workplaces for the game.",
+                            "住的人：2021 年人口普查，政府統計處。上班的人：2021 年就業及職位空缺按季統計調查，政府統計處。小規劃統計區與土地用途：規劃署。都是香港特別行政區政府的資料，經「資料一線通」（DATA.GOV.HK）與空間數據共享平台（CSDI）提供，依兩者的使用條款使用；為遊戲分配到住宅與工作的地方。"
                         ),
                         links: [
-                            DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
-                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                            DataSourceCredit.Link(
+                                title: language.text("2021 Population Census", "2021 年人口普查"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-censtatd-census_geo-2021-population-census-by-ssg"
+                            ),
+                            DataSourceCredit.Link(
+                                title: language.text("Persons engaged by Tertiary Planning Unit", "按小規劃統計區劃分的就業人數"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-censtatd-tablechart-215-16009"
+                            ),
+                            DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
+                            DataSourceCredit.Link(
+                                title: language.text("CSDI Portal Terms and Conditions of Use", "空間數據共享平台使用條款"),
+                                url: "https://portal.csdi.gov.hk/csdi-webpage/doc/TNC"
+                            ),
                         ]
                     ),
                     // Decision 1003: the months' rain and thunder
@@ -545,15 +557,18 @@ public enum DataSourceCredits {
                         id: "fukuokaBuildings",
                         title: language.text("Fukuoka’s buildings", "福岡的建物"),
                         detail: language.text(
-                            "On Fukuoka’s map, the outlines and uses of the buildings on the 3D map, and their storeys where they are recorded.",
-                            "福岡地圖上，3D 地圖裡建物的外形與用途，有記錄的還有樓層數。"
+                            "On Fukuoka’s map, the outlines and uses of the buildings on the 3D map, and their storeys where they are recorded or measured.",
+                            "福岡地圖上，3D 地圖裡建物的外形與用途，有記錄或實測的還有樓層數。"
                         ),
                         notice: language.text(
-                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Storeys that are not recorded are this game’s estimate.",
-                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。沒有記錄的樓層數是本遊戲的估計。"
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Where OpenStreetMap has no building: Overture Maps Foundation (overturemaps.org), buildings, release 2026-11-18.0 (ODbL 1.0), its outlines from Microsoft ML Building Footprints (ODbL 1.0) and Qian Shi et al., East Asian buildings, Zenodo, 2023 (CC BY 4.0). Heights measured by MLIT’s 3D city models: 「3D都市モデル（Project PLATEAU）」（国土交通省）を加工して作成. Storeys that are neither recorded nor measured are this game’s estimate.",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。OpenStreetMap 沒有的建物：Overture Maps Foundation（overturemaps.org）建物，2026-11-18.0 版（ODbL 1.0），外形來自 Microsoft ML Building Footprints（ODbL 1.0）與 Qian Shi 等人的東亞建物資料，Zenodo，2023（CC BY 4.0）。實測樓高：「3D都市モデル（Project PLATEAU）」（国土交通省）を加工して作成（以日本國土交通省 3D 都市模型加工製作）。沒有記錄也沒有實測的樓層數是本遊戲的估計。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                            DataSourceCredit.Link(title: "Overture Maps", url: overtureURL),
+                            DataSourceCredit.Link(title: language.text("East Asian buildings", "東亞建物資料"), url: eastAsianBuildingsURL),
+                            DataSourceCredit.Link(title: "Project PLATEAU", url: "https://www.mlit.go.jp/plateau/site-policy/"),
                         ]
                     ),
                     DataSourceCredit(
@@ -575,14 +590,16 @@ public enum DataSourceCredits {
                         id: "fukuokaPopulation",
                         title: language.text("Fukuoka’s people", "福岡的人口"),
                         detail: language.text(
-                            "Where people live on Fukuoka’s map, for how many ride from each station.",
-                            "福岡地圖上的人住在哪裡，用來算每一站有多少人搭車。"
+                            "Where people live and where they work on Fukuoka’s map, for how many ride from each station and where they go.",
+                            "福岡地圖上的人住在哪裡、在哪裡上班，用來算每一站有多少人搭車、要去哪裡。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), Japan 2025, 1 km grid, CC BY 4.0.",
-                            "WorldPop（www.worldpop.org），日本 2025 年 1 公里格網，CC BY 4.0。"
+                            "Made by processing the 2020 Population Census and the 2021 Economic Census for Business Activity, 500 m grids (Statistics Bureau, Ministry of Internal Affairs and Communications), from e-Stat, the portal site of official statistics of Japan (「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成). Each 500 m cell’s people and workers are spread evenly over it.",
+                            "「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成（以日本總務省統計局 2020 年國勢調查與 2021 年經濟普查的 500 公尺網格加工製作，資料取自政府統計入口網站 e-Stat）。每個 500 公尺格的人與上班的人平均分在格內。"
                         ),
-                        links: []
+                        links: [
+                            DataSourceCredit.Link(title: language.text("e-Stat terms of use", "e-Stat 使用條款"), url: "https://www.e-stat.go.jp/terms-of-use"),
+                        ]
                     ),
                     // Decision 1003: the months' rain and thunder
                     // (`Disruptions.countryRain`).
@@ -590,12 +607,12 @@ public enum DataSourceCredits {
                         id: "fukuokaWeather",
                         title: language.text("Kyushu’s weather", "九州的天氣"),
                         detail: language.text(
-                            "How often it rains or thunders in each month on Kyushu’s map.",
-                            "九州地圖上每個月多常下雨、打雷。"
+                            "How often it rains or thunders in each month in each part of Kyushu’s map.",
+                            "九州地圖上各地每個月多常下雨、打雷。"
                         ),
                         notice: language.text(
-                            "Japan Meteorological Agency, normals of 1991–2020 at Fukuoka: days with 1.0 mm of precipitation or more and days with thunder (edited).",
-                            "日本氣象廳 1991–2020 年平年值（福岡）：日降水量 1.0 毫米以上日數與雷日數（經加工）。"
+                            "Japan Meteorological Agency, normals of 1991–2020 at Fukuoka, Saga, Nagasaki and Kumamoto: days with 1.0 mm of precipitation or more and days with thunder (edited).",
+                            "日本氣象廳 1991–2020 年平年值（福岡、佐賀、長崎、熊本）：日降水量 1.0 毫米以上日數與雷日數（經加工）。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Japan Meteorological Agency: normals", "日本氣象廳：平年值"), url: "https://www.data.jma.go.jp/obd/stats/data/mdrr/normal/index.html"),
@@ -907,21 +924,25 @@ public enum DataSourceCredits {
                 id: "population",
                 title: language.text("People and Riders", "人口與旅客"),
                 credits: [
+                    // Decision 1002 (TAIWAN-CENSUS-GRID): the government's
+                    // own counts of where people live and work, in place of
+                    // WorldPop's estimate (`tools/census-grid/`).
                     DataSourceCredit(
-                        id: "worldPop",
-                        title: "WorldPop",
+                        id: "taiwanCensus",
+                        title: language.text("Where Taiwan lives and works", "台灣住與上班的人"),
                         detail: language.text(
-                            "How many people live round a station you build on a real-world map of Taiwan, and so how many riders it gets. The population grid layer shows the same data.",
-                            "在台灣實景地圖上蓋車站時，車站周圍住多少人、因此有多少旅客。人口網格圖層畫的也是這份資料。"
+                            "How many people live and work round a station you build on a real-world map of Taiwan, and so how many riders it gets and whether they come in the morning or go home in the evening. The population grid layer shows the same people.",
+                            "在台灣實景地圖上蓋車站時，車站周圍住多少人、多少人在那裡上班，因此有多少旅客、早上來還是傍晚回家。人口網格圖層畫的也是這些人。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), University of Southampton: population estimates per square kilometre, 2025 (R2025A), DOI 10.5258/SOTON/WP00840, under the Creative Commons Attribution 4.0 International licence (CC BY 4.0). The game rounds each square to whole people.",
-                            "WorldPop（www.worldpop.org），英國南安普敦大學：2025 年每平方公里人口估計（R2025A），DOI 10.5258/SOTON/WP00840，依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）使用。遊戲將每格人數四捨五入為整數。"
+                            "Ministry of the Interior, Department of Statistics: population of the basic statistical areas (December 2024) and the basic statistical areas’ boundaries; Ministry of the Interior, Department of Household Registration: households and population by village (December 2020); Directorate-General of Budget, Accounting and Statistics: the 2020 Population and Housing Census (residents by township) and the 2021 Industry, Commerce and Service Census (persons engaged by township). Used under the Open Government Data License, version 1.0. The game spreads each area’s people over its buildings, and each township’s jobs over OpenStreetMap’s shops, offices, schools, sights and industrial land (© OpenStreetMap contributors, ODbL 1.0), on cells of about 230 m.",
+                            "內政部統計處「統計區人口統計_最小統計區」（113 年 12 月）與「最小統計區圖」、內政部戶政司「村里戶數、單一年齡人口」（109 年 12 月）、行政院主計總處「109 年人口及住宅普查」（各鄉鎮市區常住人口）與「110 年工業及服務業普查」（各鄉鎮市區從業員工），依「政府資料開放授權條款第 1 版」使用。遊戲把每區的人分到區內的建物，每個鄉鎮市區的上班人數分到 OpenStreetMap 的店家、辦公室、學校、景點與工業區（© OpenStreetMap 貢獻者，ODbL 1.0），每格約 230 公尺。"
                         ),
                         links: [
-                            DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
-                            DataSourceCredit.Link(title: language.text("Dataset", "資料集"), url: worldPopDatasetURL),
-                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                            DataSourceCredit.Link(title: language.text("Statistical areas’ population", "統計區人口統計"), url: "https://data.gov.tw/dataset/18681"),
+                            DataSourceCredit.Link(title: language.text("Statistical areas’ boundaries", "最小統計區圖"), url: "https://data.gov.tw/dataset/25128"),
+                            DataSourceCredit.Link(title: language.text("Population by village", "村里戶數、單一年齡人口"), url: "https://data.gov.tw/dataset/77132"),
+                            openGovernmentLicense(in: language),
                         ]
                     ),
                     // Decision 298: the real stations' riders a day, which
@@ -1004,6 +1025,28 @@ public enum DataSourceCredits {
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
+                        ]
+                    ),
+                    // Decision 1004: how often it rains in each part of
+                    // Taiwan, from the weather station nearest each place;
+                    // decision 1013: days of 1 mm and of thunder. CWA open
+                    // data is under the Open Government Data License 1.0
+                    // (attribution); NOAA's summaries are public domain.
+                    DataSourceCredit(
+                        id: "taiwanWeather",
+                        title: language.text("Taiwan’s weather", "台灣的天氣"),
+                        detail: language.text(
+                            "On a map of Taiwan, how often it rains and thunders in each month in each part of the island: the north’s wet winters, the south’s dry ones and summer thunderstorms.",
+                            "台灣地圖上各地每個月多常下雨、打雷：北部冬天多雨、南部冬天少雨，夏天午後雷陣雨。"
+                        ),
+                        notice: language.text(
+                            "Central Weather Administration open data: daily rainfall at 19 stations, 2017–2025, counted as days with 1 mm or more (edited; Open Government Data License, version 1.0). Thunder: airport weather reports of 2015–2024 from the Iowa Environmental Mesonet, Iowa State University, and the Global Summary of the Day of NOAA National Centers for Environmental Information (edited). Station positions: NOAA NCEI.",
+                            "中央氣象署氣象資料開放平臺：19 個氣象站 2017–2025 年的每日雨量，數成 1 毫米以上的日數（經加工；政府資料開放授權條款第 1 版）。雷暴：美國愛荷華州立大學 Iowa Environmental Mesonet 的 2015–2024 年機場天氣報告，與美國國家海洋暨大氣總署國家環境資訊中心（NOAA NCEI）的每日摘要（經加工）。測站位置：NOAA NCEI。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Central Weather Administration: open data", "中央氣象署：氣象資料開放平臺"), url: "https://opendata.cwa.gov.tw/"),
+                            DataSourceCredit.Link(title: "Iowa Environmental Mesonet", url: "https://mesonet.agron.iastate.edu/request/download.phtml"),
+                            DataSourceCredit.Link(title: language.text("NOAA NCEI: Global Summary of the Day", "NOAA NCEI：每日摘要"), url: "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00516"),
                         ]
                     ),
                     // Decision 147: how much of the ground real buildings

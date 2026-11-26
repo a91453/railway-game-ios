@@ -23,6 +23,14 @@ name: CI
 # then). A manual run and the nightly run (schedule, below) run every shard
 # (swift-shards.sh decide).
 #
+# A pull request narrows that tier further (decision 1012, the `affected`
+# tier, .github/scripts/affected-tests.py): it runs only the test classes
+# its changed files reach by name, plus a smoke list of the core (golden
+# scenarios, saves, replays, every start, the real data, the short timetable
+# checkup), when every changed file can be followed and the selection is at
+# most half the broad tier. A push to main keeps the broad tier, and the
+# nightly run every shard, so what the names miss is caught on main.
+#
 # Nightly full run (decision 413): a push to main runs only its tier, as its
 # pull request did, so every night the newest commit of main runs every
 # shard, unless a run of that commit already passed every shard (a manual
@@ -264,7 +272,11 @@ jobs:
     # its tests with -O; about 5 before), up to 16 when it is built twice,
     # less on a restored cache (decision 545; a failing build on it is
     # built once more from nothing), and about a minute to pack and upload.
-    timeout-minutes: 30
+    # The build step keeps those 30 minutes; the job has 60 because pulling
+    # the container image counts against the job's limit before any step
+    # starts, and on 2026-11-26 one layer of it took 24 minutes (decision
+    # 582, later: a slow pull no longer cancels a good run).
+    timeout-minutes: 60
     container: swift:6.4-noble
     outputs:
       cache-key: ${{ steps.key.outputs.key }}
@@ -315,6 +327,7 @@ jobs:
       # compile error is not built again, except that a build on a restored
       # cache that fails is built once more from nothing (decision 545).
       - name: Build (warnings as errors)
+        timeout-minutes: 30
         run: .github/scripts/swift-shards.sh build
 
       # tar keeps the links (.build/debug points into swift-build's own
@@ -388,7 +401,11 @@ jobs:
     # continuation (13 campaign shards); the same classes take up to 1.7
     # times as long on a slow runner. 30 minutes (decision 540) only stops a
     # test that is really stuck. The build job has 30 too since decision 544.
-    timeout-minutes: 30
+    # Those 30 are the test step's own (below); the job has 60, because the
+    # container image is pulled before the first step and counts against
+    # the job's limit: on 2026-11-26 (#2736) one layer took 24 minutes and
+    # the job was cancelled two minutes into its tests (decision 582, later).
+    timeout-minutes: 60
     container: swift:6.4-noble
     strategy:
       # The shards are independent: let every one finish so a failing run
@@ -417,9 +434,10 @@ jobs:
         run: .github/scripts/swift-shards.sh unpack "$RUNNER_TEMP/swift-build/swift-build.tar.gz"
 
       # Runs this shard's tests and fails unless exactly those tests ran.
-      # A partial tier's job is `selected` (SELECTED_TESTS, and its part of
-      # them); a full run's are the shards.
+      # A partial or affected tier's job is `selected` (SELECTED_TESTS, and
+      # its part of them); a full run's are the shards.
       - name: Test (shard ${{ matrix.shard }})
+        timeout-minutes: 30
         run: .github/scripts/swift-shards.sh run "$SHARD"
         env:
           SHARD: ${{ matrix.tests && 'selected' || matrix.shard }}
@@ -430,8 +448,9 @@ jobs:
           # test, not once per class: on #1189's full run campaigns-11 passed
           # 20 minutes (decision 404).
           SWIFT_TEST_WORKERS: 1
-          # The job's timeout-minutes above: the warnings name it, and they
-          # come at 25 and 27.5 minutes of it (decision 544, CIWARN).
+          # This step's timeout-minutes above: the warnings name it, and they
+          # come at 25 and 27.5 minutes of the job's steps (decision 544,
+          # CIWARN; counted from the first step, so a little early).
           # swift-shards-selftest.sh fails when the two differ.
           SHARD_LIMIT_MINUTES: 30
 

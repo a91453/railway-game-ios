@@ -330,7 +330,11 @@ def inward(car: Car, skin=OUTER_SKIN):
     downward = (angle < -45) & (angle > -135)
     sideways = np.linalg.norm(n[:, 1:], axis=1) >= 0.5
     candidates = np.nonzero(ok & shell & ~downward & sideways & (r > 0.5) & ((n * u).sum(1) < -0.3))[0]
-    return [int(i) for i in candidates if _ray_hits(centre[i], -n[i], c, 0.5) == 0]
+    # 背面 0.5 m 內沒東西、而且往背面一路打穿整節車打到偶數個面（0：外面什麼都沒有；2：
+    # 穿過一個突出物）才算翻了。奇數是從車殼裡面打出去：面朝外是對的（九州 N700 低低的
+    # 車鼻頂面在中心線下面、法線朝上，背面的車底在 1 m 以外）。
+    return [int(i) for i in candidates
+            if _ray_hits(centre[i], -n[i], c, 0.5) == 0 and _ray_hits(centre[i], -n[i], c, 50.0) % 2 == 0]
 
 
 # --- 4：門 ----------------------------------------------------------------------
@@ -349,8 +353,10 @@ def door_pieces(car: Car):
         x0, y0 = pts[:, 0].min() - DOOR_BOX, pts[:, 1].min() - DOOR_BOX
         x1, y1 = pts[:, 0].max() + DOOR_BOX, pts[:, 1].max() + DOOR_BOX
         box = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
+        # 這一側的面（三點都在這一側、最外的點到 3/4 車寬以外）：門頂靠近肩部的（九州
+        # N700 的乘務員門），框上緣蓋到的是肩部往裡彎的車殼，從側面看也是牆。
         wall = [i for i in np.nonzero(car.node != name)[0]
-                if (car.tri[i][:, 2] * side).min() > 0.75 * car.half_width
+                if (car.tri[i][:, 2] * side).min() > 0 and (car.tri[i][:, 2] * side).max() > 0.75 * car.half_width
                 and car.tri[i][:, 0].max() > x0 and car.tri[i][:, 0].min() < x1
                 and car.tri[i][:, 1].max() > y0 and car.tri[i][:, 1].min() < y1]
         door2 = [clip(car.tri[i][:, :2], box) for i in own]
@@ -614,13 +620,20 @@ def nose(car: Car, old: np.ndarray, nose_from: float, above: float = NOSE_ABOVE)
             d = np.median(_point_triangle(sample, old + np.array([dx, 0, 0])))
             if d < best[0]:
                 best = (d, float(dx))
-    old = old + np.array([best[1], 0, 0])
+    # 橫向也對齊（5 mm 以內）：舊版車鼻可能整個偏離中線幾毫米（九州 N700 偏 2.23 mm），
+    # 轉檔放回正中是改位置、不是改形狀。
+    side = (np.inf, 0.0)
+    for dz in np.arange(-0.005, 0.0050001, 0.0005):
+        d = np.median(_point_triangle(sample, old + np.array([best[1], 0, dz])))
+        if d < side[0]:
+            side = (d, float(dz))
+    old = old + np.array([best[1], 0, side[1]])
     rows = []
     for label, sign in (("左（-z）", -1), ("右（+z）", 1)):
         nn = new[(new.mean(1)[:, 2] * sign) > 0]
         oo = old[(old.mean(1)[:, 2] * sign) > 0]
         if not len(nn) or not len(oo):
-            rows.append((label, None, None, best[1]))
+            rows.append((label, None, None, (best[1], side[1])))
             continue
         pn = np.concatenate([nn.reshape(-1, 3), nn.mean(1)])
         pn = pn[(pn[:, 0] > cut) & (pn[:, 1] > above)]
@@ -629,7 +642,7 @@ def nose(car: Car, old: np.ndarray, nose_from: float, above: float = NOSE_ABOVE)
         to_old = _point_triangle(pn, old)
         to_new = _point_triangle(po, new)
         rows.append((label, (np.percentile(to_old, 95), to_old.max(), pn[np.argmax(to_old)]),
-                     (np.percentile(to_new, 95), to_new.max(), po[np.argmax(to_new)]), best[1]))
+                     (np.percentile(to_new, 95), to_new.max(), po[np.argmax(to_new)]), (best[1], side[1])))
     return rows
 
 
@@ -779,7 +792,7 @@ def main(argv=None):
             worst = to_old[2] + np.array([head.hi[0], 0, 0])
             verdict(f"車鼻{label}和舊版", ok,
                     f"新→舊 p95 {to_old[0] * 1000:.2f}／最大 {to_old[1] * 1000:.2f} mm（{worst[0]:.3f}, {worst[1]:.3f}, {worst[2]:.3f}）；"
-                    f"舊→新 p95 {to_new[0] * 1000:.2f}／最大 {to_new[1] * 1000:.2f} mm；沿車對齊 {shift * 1000:+.0f} mm")
+                    f"舊→新 p95 {to_new[0] * 1000:.2f}／最大 {to_new[1] * 1000:.2f} mm；沿車對齊 {shift[0] * 1000:+.0f} mm、橫向 {shift[1] * 1000:+.1f} mm")
 
     say()
     say("全部通過" if not failed else f"不過 {len(failed)} 項：" + "、".join(failed))

@@ -23,10 +23,12 @@ final class FukuokaRailwaysTests: XCTestCase {
     }
 
     /// A game on Fukuoka's map with its railways, its people and its
-    /// ground (FUKUOKA-GROUND), as the launcher would start it.
-    static func fukuoka() throws -> GameSession {
+    /// ground (FUKUOKA-GROUND), as the launcher would start it; decision
+    /// 991, round the `start`th of its places to begin (Fukuoka, Saga,
+    /// Kumamoto, decision 997: Nagasaki).
+    static func fukuoka(start: Int = 0) throws -> GameSession {
         let ground = try Self.ground()
-        var world = GameWorld.newOverseasGame(ground, balance: Money(100_000_000_000))
+        var world = GameWorld.newOverseasGame(ground, balance: Money(100_000_000_000), start: start)
         try world.mapGround()
         let session = GameSession(world: world, language: .traditionalChinese)
         session.railways = try railways()
@@ -126,8 +128,10 @@ final class FukuokaRailwaysTests: XCTestCase {
     /// whole day with no train in a deadlock.
     func testEachLineIsBoughtAndRunsADay() throws {
         // The Kyushu Shinkansen (decision 975) is on sale beside the
-        // subway's three; `KyushuShinkansenTests` buys it and plays its day.
-        XCTAssertEqual(try Self.fukuoka().buyableRealLines.map(\.id).sorted(), ["fksubway:H", "fksubway:K", "fksubway:N", "kyushushinkansen:KS"])
+        // subway's three; `KyushuShinkansenTests` buys it and plays its day,
+        // and `NishiKyushuShinkansenTests` the Nishi-Kyushu Shinkansen's
+        // (decision 998).
+        XCTAssertEqual(try Self.fukuoka().buyableRealLines.map(\.id).sorted(), ["fksubway:H", "fksubway:K", "fksubway:N", "kyushushinkansen:KS", "kyushushinkansen:NK"])
         for line in Self.lines {
             let id = "fksubway:\(line.id)"
             let session = try Self.fukuoka()

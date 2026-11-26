@@ -9,7 +9,7 @@
  "extent": {
   "north": 34.03,
   "south": 32.09,
-  "west": 129.73,
+  "west": 129.34,
   "east": 131.33
  },
  "files": {
@@ -38,15 +38,15 @@
   "T001162_5130.zip": "2c8ea70a354a853d515ab2e29f0c573148082240b1ae4ef21a2c98f59a9d2070",
   "T001162_5131.zip": "585801c1ebbd08da58570906c4a6df679eaf446d86712d1227c79a0b43b2da8e"
  },
- "residents": 9309391,
+ "residents": 9520606,
  "jobs": {
-  "office": 1894081,
-  "shop": 1175826,
-  "civic": 1166110,
-  "leisure": 152199
+  "office": 1933140,
+  "shop": 1199173,
+  "civic": 1200837,
+  "leisure": 155616
  },
  "cells": [
   931,
-  768
+  955
  ]
 }

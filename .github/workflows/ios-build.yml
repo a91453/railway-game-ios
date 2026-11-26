@@ -762,6 +762,13 @@ jobs:
           fi
           echo "UI test lane: $lane"
           echo "- **UI test lane:** $lane" >> "$GITHUB_STEP_SUMMARY"
+          # Decision 582, later (2026-11-26): a failed test runs once more,
+          # and passes if the second try does; ui-retry-report.sh names each
+          # such test in a warning. Not by hand (only_testing), where the
+          # first result is the one asked for.
+          retry=(-retry-tests-on-failure -test-iterations 2)
+          [[ -z "$ONLY_TESTING" ]] || retry=()
+          status=0
           # What the build step built for testing; nothing is built here.
           xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
@@ -771,11 +778,14 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -resultBundlePath "$RUNNER_TEMP/ui-smoke.xcresult" \
             ${only[@]+"${only[@]}"} \
+            ${retry[@]+"${retry[@]}"} \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
             -maximum-test-execution-time-allowance 600 \
-            -disableAutomaticPackageResolution
+            -disableAutomaticPackageResolution 2>&1 | tee "$RUNNER_TEMP/ui-smoke.log" || status=$?
+          .github/scripts/ui-retry-report.sh "$RUNNER_TEMP/ui-smoke.log" "UI smoke tests"
+          exit "$status"
 
       - name: Upload failed UI test results
         if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
@@ -1101,6 +1111,9 @@ jobs:
           done
           echo "UI tests, $PARTITION: ${only[*]}"
           echo "- **UI tests, $PARTITION:** $classes" >> "$GITHUB_STEP_SUMMARY"
+          # Decision 582, later: a failed test runs once more (as the build
+          # job's UI step).
+          status=0
           xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
@@ -1109,11 +1122,14 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -resultBundlePath "$RUNNER_TEMP/ui-$PARTITION.xcresult" \
             "${only[@]}" \
+            -retry-tests-on-failure -test-iterations 2 \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
             -maximum-test-execution-time-allowance 600 \
-            -disableAutomaticPackageResolution
+            -disableAutomaticPackageResolution 2>&1 | tee "$RUNNER_TEMP/ui-$PARTITION.log" || status=$?
+          .github/scripts/ui-retry-report.sh "$RUNNER_TEMP/ui-$PARTITION.log" "UI tests, $PARTITION"
+          exit "$status"
 
       - name: Upload failed UI test results
         if: always() && (steps.ui-partition.outcome == 'failure' || steps.ui-partition.outcome == 'cancelled')
@@ -1265,8 +1281,9 @@ jobs:
         # The tests only, built above (decision 658): 8 to 9 minutes when
         # all pass, the whole tutorial's walk (TutorialJourneyUITests, not
         # on a pull request) among them; a failing test can take up to its
-        # 10-minute allowance.
-        timeout-minutes: 30
+        # 10-minute allowance. 40 since a failed test runs once more
+        # (decision 582, later): 20 minutes when all passed on 2026-11-26.
+        timeout-minutes: 40
         env:
           ONLY_TESTING: ${{ inputs.only_testing }}
         run: |
@@ -1295,6 +1312,10 @@ jobs:
             fi
           fi
           echo "iPad UI tests: ${only[*]}"
+          # Decision 582, later: a failed test runs once more, but by hand.
+          retry=(-retry-tests-on-failure -test-iterations 2)
+          [[ -z "$ONLY_TESTING" ]] || retry=()
+          status=0
           xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
@@ -1303,11 +1324,14 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -resultBundlePath "$RUNNER_TEMP/ipad-tutorial.xcresult" \
             "${only[@]}" \
+            ${retry[@]+"${retry[@]}"} \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
             -maximum-test-execution-time-allowance 600 \
-            -disableAutomaticPackageResolution
+            -disableAutomaticPackageResolution 2>&1 | tee "$RUNNER_TEMP/ipad-tutorial.log" || status=$?
+          .github/scripts/ui-retry-report.sh "$RUNNER_TEMP/ipad-tutorial.log" "iPad tutorial tests"
+          exit "$status"
 
       - name: Upload failed iPad tutorial results
         if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')

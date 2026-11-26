@@ -30,6 +30,49 @@ final class Map3DTHSR700TTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(Map3DTHSR700T.model(.pantograph)).maximum.z, 4.61, accuracy: 0.02)
     }
 
+    /// The bogies stand where the real car's do (3.75 m from a coupling
+    /// face, 17.5 m apart), and each sits in the middle of the opening in
+    /// the skirts that shows its wheels, as wide as the others (the owner, 2026-11-26: the openings stood 0.14 to 0.19 m to one
+    /// side of their wheels, and the cab car's front one was 0.6 m
+    /// narrower than the back one and so shallow that the wheels' tops
+    /// were hidden).
+    func testTheWheelsAreInTheMiddleOfTheirOpenings() throws {
+        for unit in Map3DTHSR700T.Unit.allCases {
+            let model = try XCTUnwrap(Map3DTHSR700T.model(unit))
+            let half = Map3DTHSR700T.length(unit) / 2
+            let wheels = model.vertices.filter { $0.color == Map3DPalette.dark && $0.z < 0.3 }.map(\.x).sorted()
+            var axles: [[Float]] = []
+            for x in wheels {
+                if let last = axles.last?.last, x - last < 0.8 { axles[axles.count - 1].append(x) } else { axles.append([x]) }
+            }
+            XCTAssertEqual(axles.count, 4, unit.rawValue)
+            guard axles.count == 4 else { continue }
+            // The skirts along the side walls: their foot, where each
+            // opening begins and ends, and everything else that is low.
+            let side = model.vertices.filter { $0.color != Map3DPalette.dark && abs($0.y) > 1.3 }
+            let feet = side.filter { abs($0.z - 0.444) < 0.003 }.map(\.x)
+            var centres: [Float] = []
+            for pair in [axles[0] + axles[1], axles[2] + axles[3]] {
+                let low = pair.min() ?? 0, high = pair.max() ?? 0, centre = (low + high) / 2
+                centres.append(centre)
+                let back = try XCTUnwrap(feet.filter { $0 < low }.max(), unit.rawValue)
+                let front = try XCTUnwrap(feet.filter { $0 > high }.min(), "\(unit.rawValue): the skirt runs over the bogie")
+                XCTAssertEqual((front + back) / 2, centre, accuracy: 0.01, "\(unit.rawValue): the opening's middle is the bogie's")
+                XCTAssertEqual(front - back, 4.26, accuracy: 0.01, "\(unit.rawValue): every opening as wide as the others")
+                // The opening's top: the floor, 0.96 m above the rail, or
+                // over the cab car's front bogie 0.70 m, a strip of the
+                // nose's skirt left above the wheels as on the real car.
+                let top = side.filter { $0.x > back + 0.05 && $0.x < front - 0.05 && $0.z > 0.5 }.map(\.z).min() ?? 0
+                XCTAssertGreaterThan(top, 0.69, "\(unit.rawValue): the whole wheel shows")
+            }
+            XCTAssertEqual(centres[1] - centres[0], 17.5, accuracy: 0.01, unit.rawValue)
+            XCTAssertEqual(centres[0], -half + 3.75, accuracy: 0.01, unit.rawValue)
+            if !unit.isCab {
+                XCTAssertEqual(centres[1], half - 3.75, accuracy: 0.01, unit.rawValue)
+            }
+        }
+    }
+
     /// The wheels stand on standard-gauge rails: 1,435 mm between the
     /// rails' inner faces, the wheels' outer faces a little wider.
     func testTheWheelsStandOnStandardGauge() throws {
