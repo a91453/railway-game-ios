@@ -114,6 +114,33 @@ final class RovaniemiRailwaysTests: XCTestCase {
         }
     }
 
+    /// Decision 1007: the people and the jobs are Statistics Finland's (the
+    /// 1 km population grid and Paavo's workplaces by postal area), spread
+    /// over the map's buildings: some 70,000 live and 28,000 work on the
+    /// map. Some 2,000 work round the Lapland Central Hospital, more work
+    /// than live in the Teollisuuskylä industrial estate, and in
+    /// Ounasrinne's houses more live than work.
+    func testThePeopleAndJobsAreStatisticsFinlands() throws {
+        let people = try XCTUnwrap(Self.ground().population)
+        XCTAssertTrue(people.hasJobs)
+        XCTAssertTrue((65_000...75_000).contains(people.total), "\(people.total)")
+        XCTAssertTrue((25_000...32_000).contains(people.totalJobs), "\(people.totalJobs)")
+        func land(_ latitude: Double, _ longitude: Double) throws -> (residents: Int64, jobs: Int64) {
+            // A 2 km world round the place.
+            let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude))
+            let bounds = try WorldBounds(width: 131_072, height: 131_072)
+            let cells = try XCTUnwrap(LandImport.cells(population: people, frame: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds))
+            return (cells.reduce(0) { $0 + $1.residents }, cells.reduce(0) { $0 + $1.jobs })
+        }
+        let hospital = try land(66.4927, 25.7760)
+        XCTAssertGreaterThan(hospital.jobs, 2_000)
+        let estate = try land(66.4927, 25.6448)
+        XCTAssertGreaterThan(estate.jobs, 3 * estate.residents)
+        let houses = try land(66.4844, 25.8365)
+        XCTAssertGreaterThan(houses.residents, 500)
+        XCTAssertGreaterThan(houses.residents, 3 * houses.jobs)
+    }
+
     /// Both lines are on sale on the map, each is bought with its trains
     /// and runs a whole day. The Kemijärvi line's spare train stands at
     /// Kemijärvi from Saturday night to Thursday on the line's own
