@@ -266,4 +266,13 @@ final class Map3DOverheadLineTests: XCTestCase {
         XCTAssertFalse(try wired("奮起湖", "afr_sched"))
         XCTAssertFalse(try wired("市政府", "mrt"))
     }
+
+    /// KYUSHU-OVERHEAD-LINE: every line of the maps outside Taiwan runs
+    /// under an overhead line (a bought Kyushu Shinkansen had none, as
+    /// every real line of a system not named was taken for one without).
+    func testTheMapsOutsideTaiwanAreWired() {
+        for map in OverseasMap.allCases {
+            for system in map.systems { XCTAssertTrue(Map3DScene.wiredSystems.contains(system), "\(map) \(system)") }
+        }
+    }
 }

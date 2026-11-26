@@ -63,7 +63,7 @@ final class Map3DTrackKindsTests: XCTestCase {
             XCTAssertEqual(Map3DTrackKind(type), .ballast, type.rawValue)
         }
         for type in TrainType.allCases where type.spec.family == .railway { XCTAssertEqual(Map3DTrackKind(type), .ballast, type.rawValue) }
-        XCTAssertEqual(Map3DTrackKind.allCases.filter(\.hasOverheadLine), [.ballast, .slab, .embedded])
+        XCTAssertEqual(Map3DTrackKind.allCases.filter(\.hasOverheadLine), [.ballast, .slab, .embedded, .wiredMetro])
         XCTAssertEqual(Map3DTrackKind.allCases.filter { !$0.hasRails }, [.rubber])
     }
 
@@ -140,7 +140,7 @@ final class Map3DTrackKindsTests: XCTestCase {
     /// there), no ballast in a tunnel, and a metro's or a light rail's
     /// viaduct is a metro's.
     func testOnAViaductAndInATunnel() {
-        XCTAssertEqual(Map3DTrackKind.allCases.filter(\.ridesMetroViaduct), [.thirdRail, .rubber, .embedded])
+        XCTAssertEqual(Map3DTrackKind.allCases.filter(\.ridesMetroViaduct), [.thirdRail, .rubber, .embedded, .wiredMetro])
         let world = GameWorld.newGame()
         for kind in [TrackSectionKind.viaduct, .tunnel] {
             for track in [Map3DTrackKind.thirdRail, .rubber, .embedded] {
@@ -155,6 +155,36 @@ final class Map3DTrackKindsTests: XCTestCase {
                 if kind == .tunnel { XCTAssertFalse(base.contains(Map3DPalette.ballast), "\(track)") }
             }
         }
+    }
+
+    /// KYUSHU-OVERHEAD-LINE: a line bought from the Fukuoka City Subway
+    /// runs under an overhead line, as the real one does, on a metro's
+    /// slab and viaduct, with no third rail; the Kyushu Shinkansen's is a
+    /// slab under an overhead line; a metro laid by the player keeps its
+    /// third rail.
+    @MainActor
+    func testTheMetrosWiredFromAboveHaveNoThirdRail() throws {
+        XCTAssertEqual(Map3DTrackKind.wiredMetro.hasOverheadLine, true)
+        let session = try FukuokaRailwaysTests.fukuoka()
+        for id in ["fksubway:K", "kyushushinkansen:KS"] {
+            let line = try XCTUnwrap(session.buyableRealLines.first { $0.id == id }, id)
+            XCTAssertTrue(session.acquireRealLine(session.realLineOffer(for: line)), session.message?.text ?? "")
+        }
+        let world = session.world
+        let edges = Map3DTrackKind.edges(in: world)
+        func kinds(of realLine: String) throws -> Set<Map3DTrackKind> {
+            let id = try XCTUnwrap(world.acquisition(of: realLine)?.line, realLine)
+            let line = try XCTUnwrap(world.line(id: id))
+            var found = Set<Map3DTrackKind>()
+            for leg in GameWorld.legEdges(of: try XCTUnwrap(world.lineJourney(line.id, pattern: nil))) {
+                for edge in leg.edges { found.insert(edges[edge] ?? .ballast) }
+            }
+            return found
+        }
+        XCTAssertEqual(try kinds(of: "fksubway:K"), [.wiredMetro])
+        XCTAssertEqual(try kinds(of: "kyushushinkansen:KS"), [.slab])
+        XCTAssertEqual(Map3DTrackKindSignature(world: world), Map3DTrackKindSignature(world: world))
+        XCTAssertEqual(Map3DTrackKind(.a), .thirdRail)
     }
 
     /// The posts stand every `spacing` metres, half a spacing in.

@@ -30,6 +30,10 @@ enum Map3DTrackKind: Int, Hashable, Sendable, CaseIterable {
     /// on a viaduct or in a tunnel, under an overhead line: a light
     /// rail's (`ntpc-lrt.js`, `kaohsiung-lrt.js`).
     case embedded
+    /// KYUSHU-OVERHEAD-LINE: a slab's concrete bed under an overhead line,
+    /// on a metro's viaduct: the metros that take their power from above
+    /// (``wiredMetros``), the MTR's and the Fukuoka City Subway's lines.
+    case wiredMetro
 
     /// The track a train of `type` runs on: the people mover's
     /// (``TrainType/apm``, drawn as the Wenhu line's trains) its pads, the
@@ -65,7 +69,33 @@ enum Map3DTrackKind: Int, Hashable, Sendable, CaseIterable {
     /// Whether a viaduct carrying it is a metro's (twin narrow girders on
     /// a round column, a bare concrete deck: ``Map3DViaduct/metro``)
     /// rather than the railway's ballasted one.
-    var ridesMetroViaduct: Bool { self == .thirdRail || self == .rubber || self == .embedded }
+    var ridesMetroViaduct: Bool { self == .thirdRail || self == .rubber || self == .embedded || self == .wiredMetro }
+
+    /// KYUSHU-OVERHEAD-LINE: the systems (``RealRailways/System/id``) whose
+    /// metros run under an overhead line, not on a third rail: the MTR
+    /// (1,500 V on its urban lines, 25 kV on the East Rail Line) and the
+    /// Fukuoka City Subway (1,500 V). A metro train on a line bought from
+    /// one runs on ``wiredMetro`` track.
+    static let wiredMetros: Set<String> = ["hkmtr", "fksubway"]
+
+    /// The kind of each of `world`'s trains whose track is not ballast:
+    /// its type's (``init(_:)``), but a metro's on a line bought from one
+    /// of the ``wiredMetros`` ``wiredMetro``.
+    static func trainKinds(in world: GameWorld) -> [TrainID: Map3DTrackKind] {
+        var kinds: [TrainID: Map3DTrackKind] = [:]
+        for train in world.trains {
+            let kind = Map3DTrackKind(train.type)
+            if kind != .ballast { kinds[train.id] = kind }
+        }
+        let wired = Set(world.acquisitions.filter { bought in
+            wiredMetros.contains { bought.realLine.hasPrefix("\($0):") }
+        }.compactMap(\.line))
+        guard !wired.isEmpty else { return kinds }
+        for line in world.lines where wired.contains(line.id) {
+            for train in line.assignedTrains where kinds[train] == .thirdRail { kinds[train] = .wiredMetro }
+        }
+        return kinds
+    }
 
     // MARK: Sizes (metres) and colours
 
@@ -141,11 +171,7 @@ enum Map3DTrackKind: Int, Hashable, Sendable, CaseIterable {
     /// a line elsewhere does not reach their track. Empty when every
     /// train runs on ballast.
     static func edges(in world: GameWorld) -> [TrackEdgeID: Map3DTrackKind] {
-        var kinds: [TrainID: Map3DTrackKind] = [:]
-        for train in world.trains {
-            let kind = Map3DTrackKind(train.type)
-            if kind != .ballast { kinds[train.id] = kind }
-        }
+        let kinds = trainKinds(in: world)
         let own = world.lines.map { kind(of: $0, kinds: kinds) }
         let stations = Set(zip(world.lines, own).filter { $0.1 != nil && $0.1 != .ballast }.flatMap(\.0.stops))
         guard !stations.isEmpty else { return [:] }
@@ -228,7 +254,7 @@ enum Map3DTrackKind: Int, Hashable, Sendable, CaseIterable {
         switch kind {
         case .ballast:
             break
-        case .slab, .thirdRail:
+        case .slab, .thirdRail, .wiredMetro:
             mesh.addRibbon(along: line, width: slabWidth, lift: slabTop, depth: bedDrop + slabTop, top: slabColour, side: slabColour)
             for side in [Float(-1), 1] {
                 mesh.addRibbon(along: line, width: fasteningWidth, offset: side * railOffset, lift: slabTop + 0.02, top: fastening)
@@ -283,11 +309,7 @@ public struct Map3DTrackKindSignature: Hashable, Sendable {
     let lines: [Int]
 
     public init(world: GameWorld) {
-        var kinds: [TrainID: Map3DTrackKind] = [:]
-        for train in world.trains {
-            let kind = Map3DTrackKind(train.type)
-            if kind != .ballast { kinds[train.id] = kind }
-        }
+        let kinds = Map3DTrackKind.trainKinds(in: world)
         var lines: [Int] = []
         var special = false
         for line in world.lines {
