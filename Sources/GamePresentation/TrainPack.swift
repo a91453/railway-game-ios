@@ -5,9 +5,10 @@ import Foundation
 /// them, so a locked pack changes how a train looks and nothing else: not
 /// its speed, its seats or its fares, and not the save.
 ///
-/// Until the App Store sells it, only a test build (Xcode or TestFlight)
-/// unlocks it, with a switch in the settings (``testUnlockKey``); before the
-/// game is on the App Store the switch gives way to the purchase.
+/// Decision 338's later note (2026-11-26): the game goes on the App Store
+/// free and the pack is not sold, so it is unlocked for every player, the
+/// App Store's build too (``isUnlocked``). Before, only a test build's
+/// switch unlocked it.
 ///
 /// Decision 427: the E1000 look of the push-pull Tze-Chiang is the pack's
 /// too, but off by default: an unlocked pack draws the E500 until its own
@@ -24,9 +25,6 @@ public enum TrainPack {
     /// turns on.
     public static let sets: Set<String> = ["threeCarUrban", "fiveSectionLRT", "sevenSectionLRT", "fourCarMetro", "blueSeven", "n700s", "pushPullE1000"]
 
-    /// The settings switch that unlocks the pack in a test build.
-    public static let testUnlockKey = "trainPack.testUnlocked"
-
     /// Decision 427: the settings switch that draws the push-pull
     /// Tze-Chiang as the E1000 once the pack is unlocked; off by default.
     public static let pushPullE1000Key = "trainPack.pushPullE1000"
@@ -38,9 +36,7 @@ public enum TrainPack {
         return pushPullE1000 ? [] : ["pushPullE1000"]
     }
 
-    /// Whether the pack is unlocked: only in a test build, and only with
-    /// its switch on.
-    public static func isUnlocked(testBuild: Bool, switchOn: Bool) -> Bool {
-        testBuild && switchOn
-    }
+    /// Whether the pack is unlocked: for every player, in every build
+    /// (decision 338's later note, 2026-11-26).
+    public static let isUnlocked = true
 }

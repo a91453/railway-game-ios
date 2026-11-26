@@ -299,7 +299,7 @@ final class MapPackDownloadsTests: XCTestCase {
         let manifests = try FileManager.default.contentsOfDirectory(atPath: repository.appendingPathComponent("RailwayGameApp/AssetPacks").path)
             .filter { $0.hasSuffix(".json") }
         XCTAssertEqual(manifests.count, asked.count)
-        XCTAssertEqual(OverseasMap.fukuoka.partFolders, ["fukuoka-saga", "fukuoka-kumamoto"])
+        XCTAssertEqual(OverseasMap.fukuoka.partFolders, ["fukuoka-saga", "fukuoka-kumamoto", "fukuoka-nagasaki"])
     }
 
     /// Decision 991: a pack whose map is cut into parts lists their files

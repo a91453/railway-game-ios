@@ -195,8 +195,8 @@ public enum AirportCatalog {
         // airport survey (令和7年空港管理状況調書). Hours: Kumamoto's
         // 07:30 to 21:30 and Saga's passenger terminal's to 22:00 (its
         // runway is open to midnight for cargo); Kitakyushu, at sea, is
-        // open all day. Nagasaki's and Yamaguchi Ube's airports, in the
-        // corners of the map outside the three prefectures, are left out. Places: their passenger terminals in OpenStreetMap
+        // open all day. Yamaguchi Ube's airport, in a corner of the map
+        // outside the prefectures, is left out. Places: their passenger terminals in OpenStreetMap
         // (ODbL 1.0). Their flights to Taiwan are not named: they are part
         // of their flights abroad.
         Place(key: "kmj", chinese: "熊本機場", english: "Aso Kumamoto Airport",
@@ -212,6 +212,17 @@ public enum AirportCatalog {
         // 08:00 to 20:00.
         Place(key: "axj", chinese: "天草機場", english: "Amakusa Airport",
               latitude: 32.48279, longitude: 130.155351, yearlyPassengers: 35_679, yearlyFlights: 2_660, firstHour: 8, lastHour: 20,
+              isAbroad: true),
+        // Decision 997 (NAGASAKI-PACK): Nagasaki Prefecture's two on the
+        // map, from the same survey. Nagasaki's, on its island in Omura
+        // Bay, flies 07:00 to 22:00; Iki's, ORC's flights to Nagasaki and
+        // Fukuoka, 08:30 to 19:00 (its 2026 operating rules). Goto's and
+        // Tsushima's islands are off the map.
+        Place(key: "ngs", chinese: "長崎機場", english: "Nagasaki Airport",
+              latitude: 32.914029, longitude: 129.922458, yearlyPassengers: 3_215_977, yearlyFlights: 30_228, firstHour: 7, lastHour: 22,
+              isAbroad: true),
+        Place(key: "iki", chinese: "壹岐機場", english: "Iki Airport",
+              latitude: 33.749943, longitude: 129.783969, yearlyPassengers: 30_859, yearlyFlights: 1_322, firstHour: 8, lastHour: 19,
               isAbroad: true),
     ]
 

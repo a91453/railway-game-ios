@@ -108,9 +108,13 @@ public struct CitySkyline: Sendable {
     /// towns) every lot stays full as before: the owner, 2026-11-26, 「但也要顧慮目前照官方的只有日本 日本先做 其他還在使用world pop」
     /// 「我怕會影響精確度」. A map whose people move to an official census
     /// (Taiwan's, Hong Kong's, Finland's, in the same `population.json`
-    /// with its `jobs`) adds its look here in the same pull request:
-    /// Taiwan's did in decision 1002 (official 7.5″ residents and jobs).
-    public static let censusLooks: [Map3DRegionLook.Buildings] = [.japan, .taiwan]
+    /// with its `jobs`) adds its look here in the same pull request.
+    /// Finland's (`.nordic`, Rovaniemi) since decision 1007: Statistics
+    /// Finland's 1 km people and postal areas' jobs, spread over the map's
+    /// buildings on 7.5″ cells. Taiwan's since decision 1002: the official
+    /// smallest statistical areas' residents and the census of industry's
+    /// jobs on 7.5″ cells.
+    public static let censusLooks: [Map3DRegionLook.Buildings] = [.japan, .taiwan, .nordic]
 
     /// Decision 1006: whether a map drawn with `buildings` lays the game's
     /// houses by its cells' people (``censusLooks``).

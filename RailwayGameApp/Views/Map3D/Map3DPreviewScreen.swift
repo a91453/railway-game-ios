@@ -2367,10 +2367,9 @@ private struct Map3DView: UIViewRepresentable {
     /// Draws `scene`'s trains on `view`: with the models once they are
     /// made (decision 546), boxes before.
     private func showTrains(in scene: Map3DScene, on view: Map3DMetalView, context: Context) {
-        // Decision 338: the train pack's sets as before them until it is
-        // unlocked.
-        let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest,
-                                            switchOn: UserDefaults.standard.bool(forKey: TrainPack.testUnlockKey))
+        // Decision 338: the train pack's sets, unlocked for every player
+        // since its later note.
+        let unlocked = TrainPack.isUnlocked
         let pushPullE1000 = UserDefaults.standard.bool(forKey: TrainPack.pushPullE1000Key)
         // Never read before they are made: the main thread would wait for them.
         let feed = feed, models = context.coordinator.hasModels ? Map3DTrainModels.shared.uploaded.map { uploaded in
