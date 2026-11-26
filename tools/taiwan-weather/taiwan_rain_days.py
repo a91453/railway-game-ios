@@ -93,7 +93,9 @@ def cwa(dataset, key, params, rest=False):
     URL is never printed."""
     query = urllib.parse.urlencode({"Authorization": key, **params})
     base = (CWA_REST if rest else CWA_FILE).format(id=dataset)
-    data = get(f"{base}?{query}", headers={"User-Agent": "railway-game-tools", "Authorization": key})
+    # The key goes in the query only: the file API redirects to a storage
+    # bucket that refuses any Authorization header.
+    data = get(f"{base}?{query}")
     if data is None:
         raise RuntimeError(f"{dataset}: not found")
     return data
