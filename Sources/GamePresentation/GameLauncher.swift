@@ -830,8 +830,10 @@ public final class GameLauncher {
     /// Decision 992: on a map that buys its land, the game starts with four
     /// tiles, or with the whole map open when `wholeMap` (counting no
     /// achievements); a demo has the whole map, as on Taiwan.
+    /// Decision 999: on a map with places to begin round
+    /// (``MapPack/Layout/starts``), round the `start`th of them.
     @discardableResult
-    public func startOverseasMap(_ city: OverseasMap, wholeMap: Bool = false) -> Bool {
+    public func startOverseasMap(_ city: OverseasMap, wholeMap: Bool = false, start: Int = 0) -> Bool {
         guard let ground = overseasGrounds.first(where: { $0.city == city }) else {
             // Decision 858: its map pack is not on the device yet.
             let waiting = overseasAwaited.contains { $0.city == city } ? city.notDownloadedText(MapPackDownloads.status(city), in: language) : nil
@@ -841,7 +843,9 @@ public final class GameLauncher {
         // Decision 712: the city's flights open its map.
         guard takeMap(city.rawValue) else { return false }
         let options = newGameOptions
-        var world = GameWorld.newOverseasGame(ground, wholeMap: wholeMap || isDemoMode, balance: options.startingBalance, eventSeed: options.eventSeed())
+        var world = GameWorld.newOverseasGame(
+            ground, wholeMap: wholeMap || isDemoMode, balance: options.startingBalance, eventSeed: options.eventSeed(), start: start
+        )
         options.apply(to: &world)
         if isDemoMode { world.setUnlimitedFunds(true) }
         // Decision 726: on the city's own ground, when its pack has heights.

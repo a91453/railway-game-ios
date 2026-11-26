@@ -9,7 +9,7 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 
 **造型、塗裝、亮窗與玻璃怎麼畫、車頂零件、給作者看的方式、作者自製模型與工作室 GLB 轉進遊戲的做法、新車的水準、網頁版附錄**是獨門做法，2026-11-18 搬到私有素材庫 `a91453/railway-assets-private-2` 的 `docs/studio/skills/rolling-stock.md`（同節號）。**做或改車之前先讀那一份**；這裡只留程式結構、預算、雜湊與工具。做或改模型照 [model-look](../model-look/SKILL.md)。
 
-**作者舊版的車轉新版**（2026-11-26）：送審前跑 `tools/texture-palette/port_check.py` 到全過（用法在腳本開頭），換家審一次就合，小修不開第二輪（model-look §4 的例外；流程在私有那份 §8 第 25 條與 `docs/studio/rolling-stock-studio.md`）。
+**送審與輪數**（2026-11-26，model-look §4）：送審前跑 `tools/texture-palette/port_check.py` 到全過（用法在腳本開頭）。作者舊版的車轉新版審 1 輪，小修不開第二輪（流程在私有那份 §8 第 25 條與 `docs/studio/rolling-stock-studio.md`）；全新的車審 2 輪，第 2 輪換另一家，第 2 輪還退大項才開第 3 輪。
 
 ## 2. 配方放哪
 
