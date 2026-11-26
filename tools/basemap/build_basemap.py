@@ -41,7 +41,9 @@ Tiles are cut as geojson-vt (ISC licence, Copyright (c) 2015, Mapbox;
 https://github.com/mapbox/geojson-vt) does: each feature's points ranked
 once for simplification (its `simplify.js`), then each tile clipped into
 its four children with a buffer (its `clip.js`), ported to Python here.
-The tiles are Mapbox Vector Tiles 2.1 (extent 4096), gzipped, in a PMTiles
+The tiles are Mapbox Vector Tiles 2.1 (extent 4096; no minor roads at zoom
+13, written last by `slim_tiles.py`, decision 1005),
+gzipped, in a PMTiles
 v3 archive (https://github.com/protomaps/PMTiles/blob/main/spec/v3/spec.md),
 both encoded here with the standard library.
 
@@ -1058,6 +1060,9 @@ def main(extract, out, name='Taiwan base map', center=(121.0, 23.7, 7), coastlin
     entries, contents = write_pmtiles(out, [(tid, data) for tid, data in tiles], metadata, lon_lat, center)
     print(f'{out}: {len(tiles)} tiles, {entries} directory entries, {contents} distinct tiles, '
           f'{os.path.getsize(out)} bytes; OSM data to {stamps[-1]}; {time.time() - started:.0f} s')
+    # Decision 1005: zoom 13 without minor roads.
+    import slim_tiles
+    slim_tiles.basemap(out)
     print('glyph ranges the names need from the style (not drawn on the device): '
           + ', '.join(f'{s}-{s + 255} ({n})' for s, n in sorted(glyphs.items())))
 
