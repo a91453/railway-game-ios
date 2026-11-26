@@ -455,6 +455,7 @@ final class DepotReturnReportTests: XCTestCase {
         }
         var lateSoFar: Int64 = 0
         var lateBy: [String: Int] = [:]
+        var sentRuns: Set<String> = []
         while world.clock.now.seconds < end {
             if let at = saveAt, world.clock.now.seconds >= at, let path = environment["DEPOT_RETURN_SAVE"] {
                 try JSONEncoder().encode(SavedGame(world: world)).write(to: URL(fileURLWithPath: path))
@@ -578,6 +579,20 @@ final class DepotReturnReportTests: XCTestCase {
             if world.clock.now.seconds / 3_600 >= hour + 6 {
                 hour = world.clock.now.seconds / 3_600
                 FileHandle.standardError.write(Data("DEPOT_RETURN \(label) hour \(hour - start / 3_600): deadlocked now \(stuck.count), \(String(format: "%.0f", Date().timeIntervalSince(started))) s\n".utf8))
+            }
+            // THSR-SALE: `DEPOT_RETURN_RUNS=1`: each service as it is sent
+            // out, from where and when, to where, and which train.
+            if environment["DEPOT_RETURN_RUNS"] != nil {
+                for line in lines {
+                    for id in line.trains {
+                        guard let train = world.train(id: id), !train.isDeadheading, train.execution != nil,
+                              let first = train.timetable.first, let last = train.timetable.last else { continue }
+                        let key = "\(id.rawValue) \(first.departure.seconds)"
+                        guard sentRuns.insert(key).inserted else { continue }
+                        let names = [first.station, last.station].map { world.station(id: $0)?.name ?? "?" }
+                        FileHandle.standardError.write(Data("DEPOT_RETURN \(label) run \(clock(world.clock.now.seconds)): \(train.name) \(names[0])@\(clock(first.departure.seconds).suffix(5)) to \(names[1])@\(clock(last.arrival.seconds).suffix(5))\n".utf8))
+                    }
+                }
             }
             for line in lines {
                 for id in line.trains {

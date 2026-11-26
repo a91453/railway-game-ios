@@ -176,9 +176,29 @@ public struct RealBranchLine: Hashable, Sendable {
     var overtakeStations: [String] { Self.overtakeStations(system: system, network: network) }
 
     /// ``overtakeStations`` of the line `network` of `system`.
+    ///
+    /// THSR-SALE (decision 993): the Taiwan High Speed Rail's stations of
+    /// four tracks or more, Taipei, Taoyuan, Hsinchu, Miaoli, Taichung,
+    /// Changhua, Yunlin, Chiayi and Tainan (Banqiao, one island and two
+    /// tracks, as every line's station of two). With one track each way,
+    /// under the simple rules a train could not leave for the next station
+    /// while the one ahead stood at its platform (a train standing is
+    /// never followed), and from 07:00 on the first day the line queued
+    /// behind each stop: 59 runs not sent that day, and the next morning's
+    /// trains stood at the southern end.
     static func overtakeStations(system: String, network: String) -> [String] {
-        system == "tymc" && network == "A" ? ["長庚醫院站"] : []
+        if system == "tymc" && network == "A" { return ["長庚醫院站"] }
+        if system == "thsr_sched" && network == "THSR" { return thsrFourTrackStations }
+        return []
     }
+
+    /// THSR-SALE (decision 993): the Taiwan High Speed Rail's stations
+    /// between its ends laid with four tracks (``overtakeStations``): the
+    /// real ones are two side platforms on loops either side of two
+    /// through tracks (Taoyuan, Hsinchu, Miaoli, Changhua, Yunlin, Chiayi,
+    /// Tainan), two islands and four tracks (Taipei), or two islands and
+    /// two through tracks (Taichung).
+    static let thsrFourTrackStations = ["台北", "桃園", "新竹", "苗栗", "台中", "彰化", "雲林", "嘉義", "台南"]
 
     /// Decision 748: its stations (by their names in the timetable) whose
     /// real platform is one island between the line's two ways, laid with
@@ -267,8 +287,11 @@ public struct RealBranchLine: Hashable, Sendable {
     /// than its timetable stands trains at once (`metro_runs.json`'s
     /// `tracks`): Kumamoto's four, its depot holding the sets its two
     /// islands do not.
+    /// THSR-SALE (decision 993): the Taiwan High Speed Rail's four-track
+    /// stations (``thsrFourTrackStations``).
     static func realTracks(of id: String) -> [String: Int] {
-        id == "kyushushinkansen:KS" ? ["博多": 6, "新鳥栖": 4, "筑後船小屋": 3, "熊本": 4] : [:]
+        if id == taiwanHighSpeedRail { return Dictionary(uniqueKeysWithValues: thsrFourTrackStations.map { ($0, 4) }) }
+        return id == "kyushushinkansen:KS" ? ["博多": 6, "新鳥栖": 4, "筑後船小屋": 3, "熊本": 4] : [:]
     }
 
     /// How its stations' loops are laid: a TRA branch line's, a light
@@ -2756,11 +2779,20 @@ extension RealLineLaying {
     /// ``RealBranchLine/keepsRight``), a station between the ends the other
     /// way round: from the terminal's side on the second track, from the
     /// junction's on the main, which then lie on each train's right.
-    static func routePreferences(_ platformsOf: [Int: [TrackPlatform]], stops: Int, keepingRight: Bool = false) -> [LineRoutePreference] {
+    /// THSR-SALE (decision 993): with `onLoops`, a station between the
+    /// ends with a loop outside each track (its platforms the two main
+    /// tracks' and then the loops', ``RealBranchLine/overtakeStations``)
+    /// names the loops: the trains stop beside the side platforms, as the
+    /// real High Speed Rail's do, and the main tracks between stay free
+    /// for the trains that pass. With the stopping trains on the main
+    /// tracks, under simple rules (no block sections) a train passing one
+    /// standing there waited for it to leave, and the line queued.
+    static func routePreferences(_ platformsOf: [Int: [TrackPlatform]], stops: Int, keepingRight: Bool = false, onLoops: Bool = false) -> [LineRoutePreference] {
         var routes: [LineRoutePreference] = []
         for (stop, platforms) in platformsOf.sorted(by: { $0.key < $1.key }) where platforms.count > 1 {
             let between = stop > 0 && stop < stops - 1
-            let (down, up) = between && keepingRight ? (1, 0) : (0, stop == 0 ? 0 : 1)
+            let loops = onLoops && between && platforms.count == 4 ? 2 : 0
+            let (down, up) = between && keepingRight ? (1 + loops, loops) : (loops, stop == 0 ? 0 : 1 + loops)
             if stop > 0 { routes.append(LineRoutePreference(from: stop - 1, to: stop, platform: platforms[down])) }
             if stop < stops - 1 { routes.append(LineRoutePreference(from: stop + 1, to: stop, platform: platforms[up])) }
         }
@@ -2925,7 +2957,10 @@ extension RealLineLaying {
         let onTrack = try acquisition.joins.map { joins throws(GameError) in try Self.routesOnTrack(of: joins, stations: stations, in: world) } ?? []
         try world.setLineRoutePreferences(
             line.id, to: ring ? Self.ringRoutePreferences(platformsOf, stops: stations.count)
-                : Self.routePreferences(platformsOf, stops: stations.count, keepingRight: keepsRight) + onTrack
+                : Self.routePreferences(
+                    platformsOf, stops: stations.count, keepingRight: keepsRight,
+                    onLoops: acquisition.realLine == RealBranchLine.taiwanHighSpeedRail
+                ) + onTrack
         )
         if keepsRight { try world.setLineKeepsRight(line.id, to: true) }
         // Decision 479: the depot, a platform along each siding, the line's.
