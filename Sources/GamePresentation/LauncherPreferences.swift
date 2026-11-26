@@ -39,6 +39,10 @@ public struct LauncherPreferences: Codable, Equatable, Sendable {
     /// Taiwan as a map like the others; `nil` in preferences written
     /// before, which the launcher then brings up to date once.
     public var airMapsChosen: Bool?
+    /// Decision 1010: the map the player plays free (``AirMap/id``), the
+    /// one of their first new game on a real map while the maps unlock is
+    /// for sale; `nil` until then.
+    public var freeMap: String?
     /// Decision 795: the lines that wear the Christmas livery, by the row
     /// of the saves their game is kept in (``GameLauncher/gameRow``); `nil`
     /// before any. Only how trains look: not in any save.

@@ -111,7 +111,7 @@ struct SettingsView: View {
                 if TestBuild.isTest {
                     testSection
                 }
-                purchaseSection
+                if launcher.overseasUnlock != nil { purchaseSection }
                 aboutSection
             }
             .listStyle(.insetGrouped)
@@ -754,11 +754,12 @@ struct SettingsView: View {
         }
     }
 
-    /// Decision 1010: the overseas maps unlock, and Restore Purchases.
+    /// Decision 1010: the maps unlock, the free map, and Restore Purchases.
     private var purchaseSection: some View {
         let language = DisplayLanguage.app
+        let free = launcher.freeMap.map { OverseasUnlock.freeMapText(launcher.freeMapName($0, in: language), in: language) }
         return Section {
-            OverseasUnlockRow(store: .shared, language: language)
+            OverseasUnlockRow(store: .shared, language: language, freeMap: free ?? OverseasUnlock.chooseText(in: language))
         } header: {
             Text(verbatim: language.text("Purchases", "購買"))
         }

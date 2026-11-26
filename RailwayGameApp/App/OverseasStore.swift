@@ -192,31 +192,43 @@ final class OverseasStore {
         opensWithoutStore ? .open : state
     }
 
-    /// Hands the launcher what is known now.
+    /// Hands the launcher what is known now: nothing in a Debug build that
+    /// asks no App Store, so nothing is sold and the maps open as decision
+    /// 712 opens them.
     private func publish() {
-        launcher?.overseasUnlock = shownState
+        launcher?.overseasUnlock = opensWithoutStore ? nil : state
     }
 }
 
-/// Decision 1010: the unlock's row, in the map picker while the overseas
-/// maps are closed and in the settings always: its name, what it opens,
-/// Buy with the price and Restore Purchases; once open, why it is.
+/// Decision 1010: the unlock's row, in the map picker while it is for sale
+/// and in the settings: which map is free, its name, what it opens, Buy
+/// with the price and Restore Purchases; once open, why it is.
 struct OverseasUnlockRow: View {
     let store: OverseasStore
     let language: DisplayLanguage
+    /// The free map's line (``OverseasUnlock/freeMapText(_:in:)``), shown
+    /// while the unlock is for sale.
+    var freeMap: String?
     @Environment(\.purchase) private var purchase
 
     var body: some View {
         let state = store.shownState
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Image(systemName: state.isOpen ? "checkmark.seal.fill" : "globe.europe.africa.fill")
+                Image(systemName: state.isOpen ? "checkmark.seal.fill" : "map.fill")
                     .font(.subheadline)
                     .foregroundStyle(Theme.primary)
                     .accessibilityHidden(true)
                 Text(verbatim: OverseasUnlock.title(in: language))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
+            }
+            if !state.isOpen, let freeMap {
+                Text(verbatim: freeMap)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("overseasUnlock.freeMap")
             }
             Text(verbatim: state.isOpen ? OverseasUnlock.openText(state, in: language) : OverseasUnlock.summary(in: language))
                 .font(.footnote)

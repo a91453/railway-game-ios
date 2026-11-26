@@ -1,9 +1,9 @@
-# OVERSEAS-UNLOCK：0.8.0 內購「海外地圖全解鎖」（決策 1010）
+# OVERSEAS-UNLOCK：0.8.0 內購「全地圖解鎖」（決策 1010）
 
 ## 進度
 
-- 做到哪：程式、測試、決策 1010、獨立審查（#2730 issuecomment-7181932192）與修正都完成；PR #2730 草稿，head `60dd9f4` CI 全綠（Swift CI gate、Xcode build、Release archive，2026-11-26 04:31）。
-- 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`OverseasUnlockTests`（10）、`SharedNetworkTests`、`AirRoutesTests`、`OverseasStartLandTests`、`WhatsNewTests` 過；iOS 編譯由 `ios-build.yml` 過。UNVERIFIED：真的購買／恢復（要 Chien 在 ASC 建好 `overseas_maps`，TestFlight 沙盒測）。
+- 做到哪：程式、測試、決策 1010、獨立審查（#2730 issuecomment-7181932192）與修正都完成；11-26 下午照作者改成「任選一區免費、其他區（含台灣）一次買齊」（決策 1010 開頭的改版），PR #2730 草稿。
+- 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`OverseasUnlockTests`（14）、`SharedNetworkTests`、`AirRoutesTests`、`OverseasStartLandTests`、`WhatsNewTests` 過；iOS 編譯由 `ios-build.yml` 過。UNVERIFIED：真的購買／恢復（要 Chien 在 ASC 建好 `overseas_maps`，TestFlight 沙盒測）。
 - 下一步第一個指令：確認 0.7.0 已「審過」且不再出 0.7.x 修正後，`git fetch origin main && git merge --no-edit origin/main`，把 `Sources/GamePresentation/OverseasUnlock.swift` 的 `firstLockedBuild` 改成最後上傳的 TestFlight build 號 + 1。
 
 ## 派工
@@ -21,6 +21,8 @@
 
 ## 已拍板
 
+- 一區免費：台灣、香港、日本九州、芬蘭羅瓦涅米各一區；第一次在實景地圖開新局就選定（開局前確認一次），不能換。空白地圖、教學、挑戰免費、不算。
+- 買了或老玩家：全部地區立刻能開，不等航線。
 - 匯入的存檔照玩；朋友傳來的海外路網「只看」照舊、「開新局」要解鎖。
 - 冬季活動不另外開羅瓦涅米。
 - 沒有 `.storekit` 檔；購買用 TestFlight 沙盒測。

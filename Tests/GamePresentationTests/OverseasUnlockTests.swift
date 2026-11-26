@@ -3,9 +3,10 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// Decision 1010: the overseas maps unlock. Taiwan is free; a new game on
-/// a map outside it needs the purchase, or the gift of a player who first
-/// downloaded a free version (a build before ``OverseasUnlock/firstLockedBuild``).
+/// Decision 1010: the maps unlock. One map is free, the one of the first
+/// new game on a real map; a new game on any other needs the purchase, or
+/// the gift of a player who first downloaded a free version (a build before
+/// ``OverseasUnlock/firstLockedBuild``).
 @MainActor
 final class OverseasUnlockTests: XCTestCase {
     // MARK: - Who has the gift
@@ -72,53 +73,111 @@ final class OverseasUnlockTests: XCTestCase {
         FileManager.default.temporaryDirectory.appendingPathComponent("OverseasUnlockTests-\(UUID().uuidString)", isDirectory: true)
     }
 
-    /// Without the unlock every overseas row is closed with the way to buy
-    /// it, a new game there is refused and remembers no first map, and
-    /// Taiwan still starts; bought, the rows are as before.
-    func testLockedMapsDoNotStartAndTaiwanDoes() async throws {
+    /// Where no App Store answers (the tests, the headless game, a Debug
+    /// build) nothing is sold: no free map is chosen and the maps open as
+    /// decision 712 opens them.
+    func testNothingIsSoldWithoutAnAppStore() async throws {
         let directory = folder()
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = await launcher(in: directory)
-        XCTAssertTrue(launcher.overseasMapsOpen, "open where there is no App Store")
+        XCTAssertNil(launcher.overseasUnlock)
+        XCTAssertFalse(launcher.sellsAllMaps)
+        XCTAssertFalse(launcher.choosesFreeMap)
+        XCTAssertTrue(launcher.overseasMapRows(in: .english).allSatisfy { !$0.needsPurchase })
+        XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
+        XCTAssertNil(launcher.freeMap)
+    }
+
+    /// The first new game on a real map makes it the free map, kept on the
+    /// device; every other map then needs the unlock, Taiwan too, and a
+    /// refused one is not chosen. A blank map is always free.
+    func testTheFirstNewGameChoosesTheFreeMap() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = await launcher(in: directory)
         launcher.overseasUnlock = .locked
-        XCTAssertFalse(launcher.overseasMapsOpen)
+        XCTAssertTrue(launcher.sellsAllMaps)
+        XCTAssertTrue(launcher.choosesFreeMap)
+        XCTAssertNil(launcher.taiwanClosed(in: .english), "any map can be the free one")
+        XCTAssertTrue(launcher.overseasMapRows(in: .english).allSatisfy { $0.closed == nil })
+
+        XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
+        XCTAssertEqual(launcher.freeMap, OverseasMap.hongKong.rawValue)
+        XCTAssertFalse(launcher.choosesFreeMap)
         let locked = OverseasUnlock.lockedText(in: .english)
         XCTAssertEqual(launcher.overseasMapRows(in: .english), [
-            OverseasMapRow(city: .hongKong, closed: locked, needsPurchase: true),
+            OverseasMapRow(city: .hongKong, closed: nil),
             OverseasMapRow(city: .rovaniemi, closed: locked, needsPurchase: true),
         ])
-        XCTAssertEqual(launcher.overseasStartRows(for: launcher.overseasMapRows(in: .english)[0], in: .english).count, 1)
-        XCTAssertFalse(launcher.startOverseasMap(.hongKong))
-        XCTAssertEqual(launcher.message?.text, OverseasUnlock.refusedText(in: .traditionalChinese))
+        XCTAssertEqual(launcher.taiwanClosed(in: .english), locked)
+        launcher.message = nil
         XCTAssertFalse(launcher.startOverseasMap(.rovaniemi, wholeMap: true))
-        XCTAssertNil(launcher.session)
-        XCTAssertEqual(launcher.preferences.airRoutesOpened ?? [], [], "a refused map is not the first one")
-        // Taiwan's games are not locked.
+        XCTAssertEqual(launcher.message?.text, OverseasUnlock.refusedText(freeMap: "香港", in: .traditionalChinese))
+        XCTAssertFalse(launcher.takeMap(AirMap.taiwan.id), "Taiwan is not the free map")
+        XCTAssertEqual(launcher.freeMap, OverseasMap.hongKong.rawValue)
+        XCTAssertTrue(launcher.startOverseasMap(.hongKong), "the free map again")
+
+        // A blank map is no real map's: free, and chooses nothing.
         launcher.startNewGame()
         XCTAssertNotNil(launcher.session, launcher.message?.text ?? "")
 
+        // Kept on the device.
+        let again = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
+        again.overseasUnlock = .locked
+        XCTAssertEqual(again.freeMap, OverseasMap.hongKong.rawValue)
+        XCTAssertEqual(again.taiwanClosed(in: .english), locked)
+    }
+
+    /// Taiwan as the free map: Hong Kong needs the unlock as well.
+    func testTaiwanAsTheFreeMapLocksHongKong() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = await launcher(in: directory)
+        launcher.overseasUnlock = .locked
+        XCTAssertTrue(launcher.takeMap(AirMap.taiwan.id))
+        XCTAssertEqual(launcher.freeMap, AirMap.taiwan.id)
+        XCTAssertNil(launcher.taiwanClosed(in: .english))
+        XCTAssertTrue(launcher.overseasMapRows(in: .english).allSatisfy(\.needsPurchase))
+        XCTAssertFalse(launcher.startOverseasMap(.hongKong))
+        XCTAssertEqual(launcher.message?.text, OverseasUnlock.refusedText(freeMap: "台灣", in: .traditionalChinese))
+        XCTAssertNil(launcher.session)
+    }
+
+    /// Bought, every map opens at once, with no flights to wait for
+    /// (Hong Kong's would otherwise stay closed after a first map of
+    /// Taiwan), and nothing more is chosen.
+    func testTheUnlockOpensEveryMapAtOnce() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = await launcher(in: directory)
+        launcher.overseasUnlock = .locked
+        XCTAssertTrue(launcher.takeMap(AirMap.taiwan.id))
         launcher.overseasUnlock = OverseasUnlock.State(purchased: true, price: "NT$170")
+        XCTAssertTrue(launcher.allMapsOpen)
+        XCTAssertFalse(launcher.sellsAllMaps)
         XCTAssertEqual(launcher.overseasMapRows(in: .english), [
             OverseasMapRow(city: .hongKong, closed: nil),
             OverseasMapRow(city: .rovaniemi, closed: nil),
         ])
+        XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
         XCTAssertTrue(launcher.startOverseasMap(.rovaniemi), launcher.message?.text ?? "")
     }
 
-    /// A friend's network outside Taiwan: without the unlock it cannot
-    /// become a new game, but it can be looked at; with it, it can. A
-    /// network of Taiwan's is never locked.
-    func testAFriendsOverseasNetworkNeedsTheUnlockForANewGame() async throws {
+    /// A friend's network on a real map: a new game on it is a new game
+    /// there (the free map's, or needing the unlock); looking needs
+    /// nothing; bought, it starts.
+    func testAFriendsNetworkIsANewGameOnItsMap() async throws {
         let directory = folder()
         defer { try? FileManager.default.removeItem(at: directory) }
         let launcher = await launcher(in: directory)
         launcher.overseasUnlock = .locked
+        XCTAssertTrue(launcher.takeMap(AirMap.taiwan.id))
         let hongKong = try SaveLibrary.encode(GameWorld.newOverseasGame(try HongKongMapTests.ground()), at: Date(timeIntervalSince1970: 0))
 
         launcher.receiveNetwork(hongKong)
         await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame).value
         XCTAssertNil(launcher.session)
-        XCTAssertEqual(launcher.message?.text, OverseasUnlock.refusedText(in: .traditionalChinese))
+        XCTAssertEqual(launcher.message?.text, OverseasUnlock.refusedText(freeMap: "台灣", in: .traditionalChinese))
 
         launcher.receiveNetwork(hongKong)
         await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .look).value
@@ -127,13 +186,25 @@ final class OverseasUnlockTests: XCTestCase {
 
         launcher.receiveNetwork(try SaveLibrary.encode(DemoWorld.make(in: .traditionalChinese), at: Date(timeIntervalSince1970: 0)))
         await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame).value
-        XCTAssertFalse(launcher.isLookingAtSharedNetwork, "Taiwan's network starts")
+        XCTAssertFalse(launcher.isLookingAtSharedNetwork, "Taiwan's network starts on the free map")
 
         launcher.overseasUnlock = OverseasUnlock.State(purchased: true)
         launcher.receiveNetwork(hongKong)
         await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame).value
         XCTAssertEqual(launcher.session?.world.stations, GameWorld.newOverseasGame(try HongKongMapTests.ground()).stations)
         XCTAssertFalse(launcher.isLookingAtSharedNetwork)
+    }
+
+    /// A friend's network as the first new game makes its map the free one.
+    func testAFriendsNetworkCanChooseTheFreeMap() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = await launcher(in: directory)
+        launcher.overseasUnlock = .locked
+        launcher.receiveNetwork(try SaveLibrary.encode(GameWorld.newOverseasGame(try HongKongMapTests.ground()), at: Date(timeIntervalSince1970: 0)))
+        await launcher.play(try XCTUnwrap(launcher.receivedNetwork), as: .newGame).value
+        XCTAssertNotNil(launcher.session, launcher.message?.text ?? "")
+        XCTAssertEqual(launcher.freeMap, OverseasMap.hongKong.rawValue)
     }
 
     /// The gift opens the maps as the purchase does.
@@ -144,6 +215,8 @@ final class OverseasUnlockTests: XCTestCase {
         launcher.overseasUnlock = OverseasUnlock.State(freeVersionPlayer: true)
         XCTAssertTrue(launcher.overseasMapRows(in: .english).allSatisfy { $0.closed == nil })
         XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
+        XCTAssertTrue(launcher.startOverseasMap(.rovaniemi), launcher.message?.text ?? "")
+        XCTAssertNil(launcher.freeMap)
     }
 
     /// The demo mode (a test build's) opens every map, as it opens every
@@ -154,7 +227,7 @@ final class OverseasUnlockTests: XCTestCase {
         let launcher = await launcher(in: directory)
         launcher.overseasUnlock = .locked
         launcher.isDemoMode = true
-        XCTAssertTrue(launcher.overseasMapsOpen)
+        XCTAssertTrue(launcher.allMapsOpen)
         XCTAssertTrue(launcher.overseasMapRows(in: .english).allSatisfy { !$0.needsPurchase })
     }
 
@@ -166,5 +239,7 @@ final class OverseasUnlockTests: XCTestCase {
         XCTAssertNil(OverseasUnlock.Outcome.cancelled.text(in: .english))
         XCTAssertEqual(OverseasUnlock.openText(OverseasUnlock.State(purchased: true), in: .traditionalChinese), "已解鎖，謝謝支持！")
         XCTAssertEqual(OverseasUnlock.openText(OverseasUnlock.State(freeVersionPlayer: true), in: .english), "Unlocked as a gift: you downloaded the game while it was free.")
+        XCTAssertEqual(OverseasUnlock.title(in: .traditionalChinese), "全地圖解鎖")
+        XCTAssertEqual(OverseasUnlock.refusedText(freeMap: "香港", in: .traditionalChinese), "你的免費地區是香港。在其他地區開新局，需要「全地圖解鎖」。")
     }
 }

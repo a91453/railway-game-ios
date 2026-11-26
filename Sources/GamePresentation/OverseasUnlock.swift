@@ -1,18 +1,21 @@
 import Foundation
 
-// Decision 1010: the overseas maps unlock, the game's one purchase. Taiwan
-// is free for ever; one non-consumable in-app purchase opens new games on
-// every map outside Taiwan (Japan, Hong Kong, Finland), today's and later
-// ones. A game already saved on one of those maps plays on without it, and
-// a player who downloaded the game while it was free (0.7.x) has it as a
-// gift, read from the App Store's record of the first version they
+// Decision 1010: the maps unlock, the game's one purchase. A player plays
+// one map free, the one of their first new game on a real map (Taiwan,
+// Hong Kong, Japan or Finland), chosen once and kept; one non-consumable
+// in-app purchase opens new games on every map, today's and later ones,
+// with no flights to wait for. A game already saved plays on without it,
+// and a player who downloaded the game while it was free (0.7.x) has it as
+// a gift, read from the App Store's record of the first version they
 // downloaded (`AppTransaction.originalAppVersion`). It is not game state:
 // no save, golden value or replay moves. The App Store side (StoreKit) is
 // the app's, `RailwayGameApp/App/OverseasStore.swift`; this is the rule it
-// hands its answers to, here so a Linux test can check it.
+// hands its answers to, here so a Linux test can check it. (The product
+// and the type keep the name of the first plan, overseas maps only: an App
+// Store product's identifier cannot change.)
 
-/// The overseas maps unlock: its product, who has it and what the map
-/// picker and the settings say about it.
+/// The maps unlock: its product, who has it and what the map picker and
+/// the settings say about it.
 public enum OverseasUnlock {
     /// The product's identifier in App Store Connect (non-consumable).
     public static let productID = "overseas_maps"
@@ -72,11 +75,10 @@ public enum OverseasUnlock {
             self.price = price
         }
 
-        /// Whether new games can start on the overseas maps.
+        /// Whether new games can start on every map.
         public var isOpen: Bool { purchased || freeVersionPlayer }
 
-        /// Every map open: a game run with no App Store (the Linux tests,
-        /// the headless game, a Debug build).
+        /// Every map open, as bought.
         public static let open = State(purchased: true)
 
         /// Nothing bought and no gift.
@@ -85,33 +87,66 @@ public enum OverseasUnlock {
 
     // MARK: - Text
 
-    /// The product's name, as the map picker and the settings call it.
+    /// The product's name, as the map picker and the settings call it (and
+    /// App Store Connect, decision 1010 §4).
     public static func title(in language: DisplayLanguage) -> String {
-        language.text("Unlock Overseas Maps", "海外地圖全解鎖")
+        language.text("Unlock All Maps", "全地圖解鎖")
     }
 
     /// What it opens, under its name.
     public static func summary(in language: DisplayLanguage) -> String {
         language.text(
-            "One purchase opens new games on every map outside Taiwan: Japan, Hong Kong, Finland and the ones still to come. Taiwan stays free. Games you already saved there keep playing either way.",
-            "買一次，台灣以外的地圖都能開新局：日本、香港、芬蘭，以及之後新增的。台灣永遠免費。已經存檔的海外遊戲不買也能繼續玩。"
+            "Unlock every map, including future ones: Taiwan, Hong Kong, Japan and Finland. Games you already saved keep playing either way.",
+            "一次解鎖全部地圖，包含之後新增的：台灣、香港、日本、芬蘭。已經存檔的遊戲不買也能繼續玩。"
         )
     }
 
-    /// Why an overseas map's row is closed until the unlock is bought.
+    /// The line over it while the player has not chosen a free map.
+    public static func chooseText(in language: DisplayLanguage) -> String {
+        language.text(
+            "One map is free: the one you start your first new game on. Choose it below; it cannot be changed later.",
+            "可以先免費選一個地區：第一次開新局的地區就是你的免費地區，選了之後不能換。"
+        )
+    }
+
+    /// The line over it once the free map is chosen.
+    public static func freeMapText(_ name: String, in language: DisplayLanguage) -> String {
+        language.text("Your free map: \(name).", "你的免費地區：\(name)。")
+    }
+
+    /// Why a map's row is closed until the unlock is bought.
     public static func lockedText(in language: DisplayLanguage) -> String {
         language.text(
-            "Buy Unlock Overseas Maps, at the top of this list, to start a new game here.",
-            "購買本頁上方的「海外地圖全解鎖」後，就能在這裡開新局。"
+            "Buy Unlock All Maps, at the top of this list, to start a new game here.",
+            "購買本頁上方的「全地圖解鎖」後，就能在這裡開新局。"
         )
     }
 
-    /// What the player is told when a new game there is refused.
-    public static func refusedText(in language: DisplayLanguage) -> String {
+    /// What the player is told when a new game off their free map is
+    /// refused.
+    public static func refusedText(freeMap name: String, in language: DisplayLanguage) -> String {
         language.text(
-            "New games outside Taiwan need Unlock Overseas Maps.",
-            "在台灣以外開新局，需要「海外地圖全解鎖」。"
+            "Your free map is \(name). New games on other maps need Unlock All Maps.",
+            "你的免費地區是\(name)。在其他地區開新局，需要「全地圖解鎖」。"
         )
+    }
+
+    /// The question before the first new game makes `name` the free map.
+    public static func confirmTitle(_ name: String, in language: DisplayLanguage) -> String {
+        language.text("Make \(name) your free map?", "把\(name)當成你的免費地區？")
+    }
+
+    /// What the question says under it.
+    public static func confirmMessage(in language: DisplayLanguage) -> String {
+        language.text(
+            "It cannot be changed later. New games on the other maps will need Unlock All Maps.",
+            "選了之後不能換。之後在其他地區開新局，需要「全地圖解鎖」。"
+        )
+    }
+
+    /// The question's button.
+    public static func confirmButton(_ name: String, in language: DisplayLanguage) -> String {
+        language.text("Choose \(name)", "選\(name)")
     }
 
     /// The buy button: with its price once the App Store answered.
@@ -150,7 +185,7 @@ public enum OverseasUnlock {
         /// The line shown after it, `nil` when there is nothing to say.
         public func text(in language: DisplayLanguage) -> String? {
             switch self {
-            case .bought: language.text("Overseas maps unlocked. Have a good trip!", "海外地圖已解鎖，祝旅途愉快！")
+            case .bought: language.text("Every map is unlocked. Have a good trip!", "全部地圖已解鎖，祝旅途愉快！")
             case .restored: language.text("Your purchase is restored.", "已恢復購買。")
             case .nothingToRestore: language.text("No purchase was found for this Apple Account.", "這個 Apple 帳號沒有找到購買紀錄。")
             case .pending: language.text("The purchase is waiting for approval. The maps open once it is approved.", "購買正在等待核准，核准後地圖就會打開。")
