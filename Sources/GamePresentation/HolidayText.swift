@@ -52,6 +52,7 @@ extension HolidayKind {
         case .chuseok: language.text("Chuseok", "秋夕")
         case .goldenWeek: language.text("Golden Week", "黃金週")
         case .songkran: language.text("Songkran", "潑水節")
+        case .midsummer: language.text("Midsummer", "仲夏節")
         }
     }
 }

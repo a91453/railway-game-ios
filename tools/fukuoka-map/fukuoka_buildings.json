@@ -39,7 +39,7 @@
   "inNoOutline": 1305038,
   "outlinesMeasured": 432107
  },
- "buildings": 3594324,
+ "buildings": 3594245,
  "leftOut": {
   "small": 200462
  },
@@ -73,7 +73,7 @@
   "of3to5": 240517,
   "of6andMore": 30657
  },
- "rawBytes": 66268191,
- "archiveBytes": 54886796,
- "sha256": "4f3c47252cb3e4f8f4f1488888062f29faeeb7ac92bc3355c6f051e4f55a2623"
+ "rawBytes": 58569918,
+ "archiveBytes": 47541937,
+ "sha256": "93f62d0257f41a57462ab7e464e0a51c1d746415ca25770b353b826419efb76c"
 }

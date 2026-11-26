@@ -249,21 +249,25 @@ extension Map3DScene.Builder {
     /// shops on every house with `lotShops`) on cell (`column`, `row`):
     /// those of the houses laid along the roads near it whose middle falls
     /// in it, on no cell of `blocked`, no road, no no-build land and no
-    /// house laid before.
-    mutating func addFrontage(column: Int, row: Int, density: Int, shops lotShops: Bool, blocked: Set<Map3DScene.ChunkKey>) {
+    /// house laid before. Decision 1006: of a lot whose
+    /// ``CitySkyline/Lot/fill`` is under 1, each house by its own draw
+    /// (``keepsHouse(_:side:index:fill:)``), spread evenly along the road's
+    /// side, the rest of it left open.
+    mutating func addFrontage(column: Int, row: Int, density: Int, shops lotShops: Bool, blocked: Set<Map3DScene.ChunkKey>, fill: Double = 1) {
         let key = Map3DScene.ChunkKey(column: column, row: row)
         let laid: LaidFrontage
         if let done = state.roadside.frontage.laid[key] {
             laid = done
         } else {
-            laid = layFrontage(key, density: density, shops: lotShops, blocked: blocked)
+            laid = layFrontage(key, density: density, shops: lotShops, blocked: blocked, fill: fill)
             state.roadside.frontage.laid[key] = laid
         }
         drawFrontage(laid, column: column, row: row, density: density)
     }
 
     /// Decision 385: lays the houses of cell `key` (``addFrontage``).
-    mutating func layFrontage(_ key: Map3DScene.ChunkKey, density: Int, shops lotShops: Bool, blocked: Set<Map3DScene.ChunkKey>) -> LaidFrontage {
+    mutating func layFrontage(_ key: Map3DScene.ChunkKey, density: Int, shops lotShops: Bool, blocked: Set<Map3DScene.ChunkKey>,
+                              fill: Double = 1) -> LaidFrontage {
         var laid = LaidFrontage()
         guard let near = state.roadside.frontage.byCell[key] else { return laid }
         let cell = Double(Land.cellLength)
@@ -319,6 +323,14 @@ extension Map3DScene.Builder {
                                             front: -out, along: along, width: width - 0.1, depth: depth)
                     guard chunk(of: house.middle) == key else {
                         endRun()
+                        continue
+                    }
+                    // Decision 1006: a house only for the people there are.
+                    // Its shadow and the shops' run stop at the gap.
+                    guard Self.keepsHouse(seed, side: sideSalt, index: number - 1, fill: fill) else {
+                        endRun()
+                        if let open = span { laid.spans.append((open.from, open.to, -out, open.depth)) }
+                        span = nil
                         continue
                     }
                     guard fits(house, near: near, blocked: blocked) else {

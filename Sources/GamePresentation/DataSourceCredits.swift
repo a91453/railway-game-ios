@@ -337,6 +337,23 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
                         ]
                     ),
+                    // Decision 1003: the months' rain and thunder
+                    // (`Disruptions.countryRain`).
+                    DataSourceCredit(
+                        id: "hongKongWeather",
+                        title: language.text("Hong Kong’s weather", "香港的天氣"),
+                        detail: language.text(
+                            "How often it rains or thunders in each month on Hong Kong’s map.",
+                            "香港地圖上每個月多常下雨、打雷。"
+                        ),
+                        notice: language.text(
+                            "Hong Kong Observatory: days with thunderstorms in its monthly normals of 1991–2020, and days with 1 mm of rain or more counted from its daily rainfall of 1991–2020.",
+                            "香港天文台：1991–2020 年月平均值的雷暴日數，與由 1991–2020 年每日雨量算出的 1 毫米以上雨日。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Hong Kong Observatory", "香港天文台"), url: "https://www.hko.gov.hk/en/cis/normal/1991_2020/normals.htm"),
+                        ]
+                    ),
                     // Decision 712: Hong Kong International Airport on
                     // Hong Kong's map (`AirportCatalog.overseasPlaces`).
                     DataSourceCredit(
@@ -429,14 +446,37 @@ public enum DataSourceCredits {
                         id: "rovaniemiPopulation",
                         title: language.text("Rovaniemi’s people", "羅瓦涅米的人口"),
                         detail: language.text(
-                            "Where people live on Rovaniemi’s map, for how many ride from each station.",
-                            "羅瓦涅米地圖上的人住在哪裡，用來算每一站有多少人搭車。"
+                            "Where people live and work on Rovaniemi’s map, for how many ride from each station.",
+                            "羅瓦涅米地圖上的人住在哪裡、在哪裡上班，用來算每一站有多少人搭車。"
+                        ),
+                        // Decision 1007: Statistics Finland's open data,
+                        // spread over the map's buildings (a change the
+                        // licence asks to be said).
+                        notice: language.text(
+                            "Source: Statistics Finland, Population grid data 1 km × 1 km 2025 and Paavo – Open data by postal code area 2025, under the Creative Commons Attribution 4.0 licence; spread over the map’s buildings.",
+                            "資料來源：芬蘭統計局（Statistics Finland）1 公里人口格網 2025 年、郵遞區開放統計 Paavo 2025 年，依創用 CC 姓名標示 4.0 授權使用；已依地圖上的建物細分。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
+                    ),
+                    // Decision 1003: the months' rain and thunder
+                    // (`Disruptions.countryRain`).
+                    DataSourceCredit(
+                        id: "rovaniemiWeather",
+                        title: language.text("Rovaniemi’s weather", "羅瓦涅米的天氣"),
+                        detail: language.text(
+                            "How often it rains, snows or thunders in each month on Rovaniemi’s map.",
+                            "羅瓦涅米地圖上每個月多常下雨、下雪、打雷。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), Finland 2025, 1 km grid, CC BY 4.0.",
-                            "WorldPop（www.worldpop.org），芬蘭 2025 年 1 公里格網，CC BY 4.0。"
+                            "Finnish Meteorological Institute open data, CC BY 4.0: daily precipitation at Rovaniemi airport, 1998–2020, and lightning within 10 km of the town, 2011–2020, counted by month.",
+                            "芬蘭氣象局開放資料，CC BY 4.0：羅瓦涅米機場 1998–2020 年的每日降水，與 2011–2020 年市區 10 公里內的閃電，按月計算。"
                         ),
-                        links: []
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Finnish Meteorological Institute open data", "芬蘭氣象局開放資料"), url: "https://en.ilmatieteenlaitos.fi/open-data"),
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: "https://creativecommons.org/licenses/by/4.0/"),
+                        ]
                     ),
                 ]
             )
@@ -544,6 +584,23 @@ public enum DataSourceCredits {
                             "WorldPop（www.worldpop.org），日本 2025 年 1 公里格網，CC BY 4.0。"
                         ),
                         links: []
+                    ),
+                    // Decision 1003: the months' rain and thunder
+                    // (`Disruptions.countryRain`).
+                    DataSourceCredit(
+                        id: "fukuokaWeather",
+                        title: language.text("Kyushu’s weather", "九州的天氣"),
+                        detail: language.text(
+                            "How often it rains or thunders in each month on Kyushu’s map.",
+                            "九州地圖上每個月多常下雨、打雷。"
+                        ),
+                        notice: language.text(
+                            "Japan Meteorological Agency, normals of 1991–2020 at Fukuoka: days with 1.0 mm of precipitation or more and days with thunder (edited).",
+                            "日本氣象廳 1991–2020 年平年值（福岡）：日降水量 1.0 毫米以上日數與雷日數（經加工）。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Japan Meteorological Agency: normals", "日本氣象廳：平年值"), url: "https://www.data.jma.go.jp/obd/stats/data/mdrr/normal/index.html"),
+                        ]
                     ),
                     // FUKUOKA-OPEN: Fukuoka Airport on Fukuoka's map
                     // (`AirportCatalog.overseasPlaces`).

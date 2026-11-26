@@ -3978,7 +3978,7 @@ private struct TrainPaintRows: View {
     /// while the pack is locked.
     private static var locked: Set<String> {
         let defaults = UserDefaults.standard
-        let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest, switchOn: defaults.bool(forKey: TrainPack.testUnlockKey))
+        let unlocked = TrainPack.isUnlocked
         return TrainPack.locked(unlocked: unlocked, pushPullE1000: defaults.bool(forKey: TrainPack.pushPullE1000Key))
     }
 
