@@ -159,7 +159,7 @@ public enum Map3DKyushu800 {
 
 extension Map3DKyushu800 {
     /// Decision 782: its set, its showcase row (six cars) and its cars'
-    /// triangles (2,572 the cab car, 2,061 the middle car: few enough to be
+    /// triangles (2,606 the cab car, 2,061 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(

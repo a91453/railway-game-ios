@@ -99,6 +99,7 @@ FOOT = 0.461              # 床下箱的底（舊版 y 0.457–0.459）以下
 BOX_FRONT = -7.688        # 頭車床下箱的前端（舊版）：再往前是車鼻，前轉向架在箱子底下
 BOX_SECTION = ((1.4, 1.0), (1.154, 0.459))   # 頭車床下箱的斷面：上緣、下緣（舊版的 x, y）
 RAMP = 0.508              # 頭車床下箱靠後轉向架那頭的斜邊：上緣比下緣往後多少（舊版 6.527 → 7.035）
+FRONT_CEILING = 0.76      # 頭車前開口的頂（舊版 y；遊戲 0.70 m）：轉向架頂 0.56 m 以上留車鼻的白裙板
 
 def rect(x0, y0, x1, y1):
     return [(x0, y0), (x1, y0), (x1, y1), (x0, y1)]
@@ -522,15 +523,17 @@ def openings(triangles):
     return [(runs[i][1], runs[i + 1][0]) for i in range(len(runs) - 1)], (runs[0][0], runs[-1][1])
 
 
-def front_opening(triangles, vertical: float, top: float, foot: float):
+def front_opening(triangles, vertical: float, top: float, foot: float, ceiling: float = FRONT_CEILING):
     """頭車：舊版的前轉向架整個在床下箱底下（側面看不到開口，只露出輪子的下緣）。照
     後轉向架的開口，在床下箱上切一個開口：車鼻那一頭是直的（`vertical`），往車身
-    那一頭是斜的（上緣 `top`、下緣 `foot`），切掉的兩頭補上深色的端板，開口的頂就是
-    原本 y 1.0 的深色底板。座標都是舊版的（多排一格窗以後）。"""
+    那一頭是斜的（上緣 `top`、下緣 `foot`）。開口只切到 `ceiling`：上面留一條車鼻的白
+    裙板（真車的車鼻裙板也蓋住轉向架上緣，只露出轉向架；作者 2026-11-26 看了整個
+    切到 y 1.0 的版本說「車頭前輪看起來有點怪」），切口的頂、兩頭補上深色的板。座標
+    都是舊版的（多排一格窗以後）。"""
     (high_x, high_y), (low_x, low_y) = BOX_SECTION
     at_front = {(round(abs(float(p[0])), 3), round(float(p[1]), 3)) for c, _, _ in triangles
                 for p in c if abs(p[2] - BOX_FRONT) < 1e-3}
-    if not {(high_x, high_y), (low_x, low_y)} <= at_front or not BOX_FRONT < vertical < top < foot:
+    if not {(high_x, high_y), (low_x, low_y)} <= at_front or not BOX_FRONT < vertical < top < foot or not low_y < ceiling < high_y:
         raise SystemExit(f"床下箱的前端不是認得的斷面，或前面的開口放錯：{sorted(at_front)}、{vertical} {top} {foot}")
     box = [face for face in triangles if face[0][:, 1].max() <= high_y + 1e-6 and face[0][:, 1].min() < high_y - 0.01
            and face[0][:, 2].min() > BOX_FRONT - 1e-3]
@@ -540,16 +543,21 @@ def front_opening(triangles, vertical: float, top: float, foot: float):
     behind, cut = clip_plane(inside, (0, run, 1), top + run * high_y)   # 斜的那頭以後留著
     if not cut or any(c[:, 1].max() > high_y + 1e-6 for c, _, _ in cut):
         raise SystemExit("前面的開口切到床下箱以外的東西")
+    kept, _ = clip_plane(cut, (0, 1, 0), ceiling)                   # 開口上面那條裙板留著
+    half = low_x + (high_x - low_x) * (ceiling - low_y) / (high_y - low_y)   # 箱子在 ceiling 的半寬
+    slant = top + run * (high_y - ceiling)                          # 斜的那頭在 ceiling 的位置
     caps = []
-    for (z_high, z_low), facing in (((vertical, vertical), 1), ((top, foot), -1)):
-        quad = [np.array(p, dtype=float) for p in ((high_x, high_y, z_high), (-high_x, high_y, z_high),
-                                                    (-low_x, low_y, z_low), (low_x, low_y, z_low))]
+    for quad, axis, facing in (
+            (((half, ceiling, vertical), (-half, ceiling, vertical), (-low_x, low_y, vertical), (low_x, low_y, vertical)), 2, 1),
+            (((half, ceiling, slant), (-half, ceiling, slant), (-low_x, low_y, foot), (low_x, low_y, foot)), 2, -1),
+            (((half, ceiling, vertical), (-half, ceiling, vertical), (-half, ceiling, slant), (half, ceiling, slant)), 1, -1)):
+        quad = [np.array(p, dtype=float) for p in quad]
         for a, b, c in ((quad[0], quad[1], quad[2]), (quad[0], quad[2], quad[3])):
             triangle = np.array([a, b, c])
-            if np.cross(b - a, c - a)[2] * facing < 0:
+            if np.cross(b - a, c - a)[axis] * facing < 0:
                 triangle = triangle[::-1]
             caps.append((triangle, DARK, -1))
-    return rest + ahead + behind + caps
+    return rest + ahead + behind + kept + caps
 
 
 def build(path: Path, cab: bool, debug_dir: Path | None):
