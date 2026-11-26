@@ -164,11 +164,18 @@ jobs:
 
       # Dark, with the status bar a clean 9:41 should it show.
       - name: Boot the Simulator in dark mode
-        timeout-minutes: 6
+        # A fresh runner's data migration can take minutes, and once the
+        # Simulator had booted `simctl ui` hung until the step's 6 minutes
+        # ran out (run 45752144692): each call after the boot gets two
+        # minutes of its own and only warns when it does not answer.
+        timeout-minutes: ${{ inputs.kind == 'store' && 14 || 6 }}
         run: |
+          within() { local secs=$1; shift; "$@" & local pid=$!
+            ( sleep "$secs"; kill "$pid" 2>/dev/null ) & local watcher=$!
+            wait "$pid"; local status=$?; kill "$watcher" 2>/dev/null; return "$status"; }
           xcrun simctl bootstatus "$SIMULATOR_UDID" -b
-          xcrun simctl ui "$SIMULATOR_UDID" appearance dark
-          xcrun simctl status_bar "$SIMULATOR_UDID" override --time 9:41 --batteryState charged --batteryLevel 100 \
+          within 120 xcrun simctl ui "$SIMULATOR_UDID" appearance dark || echo "::warning::Could not set dark mode"
+          within 120 xcrun simctl status_bar "$SIMULATOR_UDID" override --time 9:41 --batteryState charged --batteryLevel 100 \
             --cellularBars 4 --wifiBars 3 || echo "::warning::Could not set the status bar"
 
       - name: Take the screenshots
