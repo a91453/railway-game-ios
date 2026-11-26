@@ -119,12 +119,12 @@ final class Map3DN700STTests: XCTestCase {
 
     /// The player's high-speed trains: odd the N700ST, even the 700T. The
     /// Taiwan High Speed Rail's own trains all the 700T; the Nishi-Kyushu
-    /// Shinkansen keeps its N700S.
+    /// Shinkansen keeps its own N700S, the Kamome.
     func testWhichTrainsAreTheN700ST() throws {
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), Map3DN700ST.key)
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 2), "HSR")
         XCTAssertEqual(Map3DTrainSet.variant(of: Map3DTHSR700T.key, number: 1), Map3DTHSR700T.key)
-        XCTAssertEqual(Map3DRealTrains.formation(system: "kyushushinkansen", id: "NK", name: "").key, Map3DN700S.key)
+        XCTAssertEqual(Map3DRealTrains.formation(system: "kyushushinkansen", id: "NK", name: "").key, Map3DN700SKamome.key)
         let pack = Map3DModelPack.standard
         let head = try XCTUnwrap(pack.modelIndex(forType: Map3DN700ST.key, carIndex: 0, count: 12))
         XCTAssertEqual(pack.models[head].name, "set-n700st-head")
