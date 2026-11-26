@@ -55,6 +55,9 @@ struct Map3DFootprints: Sendable {
         /// Decision 729: the Lands Department's measured heights (Hong
         /// Kong's map).
         case landsd
+        /// Decision 1009: the National Land Survey of Finland's measured
+        /// heights (Rovaniemi's map).
+        case mml
     }
 
     struct Building: Sendable {

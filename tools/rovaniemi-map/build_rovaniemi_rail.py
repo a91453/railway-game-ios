@@ -325,8 +325,9 @@ SOURCES = {
     "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_rovaniemi_basemap.py)": OSM,
                         "land as far as the extract reaches (no coast)": OURS},
-    "buildings.pmtiles": {"outlines, uses, tagged storeys (build_rovaniemi_buildings.py)": OSM,
-                          "storeys where not tagged (from the tagged buildings and population.json)": OURS},
+    "buildings.pmtiles": {"outlines, use and storeys classes, measured heights (build_rovaniemi_buildings.py, decision 1009)": NLS,
+                          "uses, outlines the survey does not have, tagged storeys": OSM,
+                          "storeys neither measured nor tagged (from those that are and population.json)": OURS},
     "airfields.json": {"runways, taxiways, aprons, stands, control tower (tools/airfields/build_airfields.py)": OSM},
     "no_build.json": {"the airport, military land, cemeteries, golf courses, railway land and the airport's buildings "
                       "(tools/no-build-land/build_no_build.py)": OSM},
@@ -356,8 +357,11 @@ def write_manifest(folder):
     }
     if "population.json" in files:
         licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
-    if "heights.dat" in files:
-        licences[NLS] = "National Land Survey of Finland, Elevation model 10 m, 08/2023, CC BY 4.0"
+    if "heights.dat" in files or "buildings.pmtiles" in files:
+        licences[NLS] = ("National Land Survey of Finland, " + ", ".join(
+            name for name, present in (("Elevation model 10 m, 08/2023", "heights.dat" in files),
+                                       ("Topographic Database and Buildings 3D (2022)", "buildings.pmtiles" in files))
+            if present) + ", CC BY 4.0")
     write(folder, "pack.json", {
         "id": "rovaniemi", "system": SYSTEM, "decision": 789,
         "english": "Rovaniemi", "chinese": "羅瓦涅米",

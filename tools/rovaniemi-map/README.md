@@ -10,6 +10,7 @@
 |---|---|---|
 | `finland.pbf` | OpenStreetMap 芬蘭整包，`https://osmtoday.com/europe/finland.pbf`（約 853 MB，會轉到 geo2day.com），用 `osmium extract` 切成 `rovaniemi.pbf`（約 7 MB） | ODbL 1.0，© OpenStreetMap 貢獻者 |
 | `digitraffic_trains.json`（這個資料夾裡） | Fintraffic Digitraffic，`https://rata.digitraffic.fi/api/v1/trains/<日期>` 與 `metadata/stations` | CC BY 4.0：「Source: Fintraffic / digitraffic.fi, licence CC 4.0 BY」 |
+| 地形資料庫（Maastotietokanta）的 `<圖幅>L_mtk.zip`、`<圖幅>R_mtk.zip`（72 個）與 3D 建物（Rakennukset 3D）2022 羅瓦涅米 LoD2 的 `<圖幅><A–H>.zip`（64 個） | 芬蘭國土測量局（MML），從 Kapsi 的鏡像 `https://kartat.kapsi.fi/files/maastotietokanta/kaikki/etrs89/gml/` 與 `https://kartat.kapsi.fi/files/3D-rakennukset/kaikki/2022/etrs89/citygml/Rovaniemi/LOD2/` 抓（約 300 MB 與 18 MB；`mml_buildings.py fetch`，決策 1009） | MML 開放資料授權＝CC BY 4.0（可商用）；署名「Contains data from the National Land Survey of Finland Topographic Database and Buildings 3D (2022)」 |
 | `fin_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop 芬蘭 2025，constrained，1 km | CC BY 4.0，WorldPop |
 | `T4312.tif` … `T5223.tif`（36 張） | 芬蘭國土測量局（Maanmittauslaitos）10 m 高程模型（Korkeusmalli 10 m，雷射測量的地面，ETRS-TM35FIN、N2000），2023 年 8 月版，從 Kapsi 的鏡像 `https://kartat.kapsi.fi/files/korkeusmalli/hila_10m/etrs-tm35fin-n2000/` 抓（各約 9 MB，共 322 MB；`fetch_nls_dem.py`）。CSC Paituli 的鏡像 `https://www.nic.funet.fi/index/geodata/mml/dem10m/2019/` 有 2019 年版，檔名相同 | 芬蘭國土測量局開放資料授權＝CC BY 4.0（可商用）；署名「National Land Survey of Finland, Elevation model 10 m, 08/2023」 |
 
@@ -44,8 +45,11 @@ pip install tifffile imagecodecs numpy
 python3 -I tools/rovaniemi-map/fetch_nls_dem.py /tmp/rv/nls    # 36 張，約 2 分鐘
 python3 -I tools/rovaniemi-map/build_rovaniemi_ground_grids.py /tmp/rv/nls /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
 
-# 5b. 建物（決策 799；約 20 秒，先要有第 3 步的人口）。
-python3 -I tools/rovaniemi-map/build_rovaniemi_buildings.py /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
+# 5b. 建物（決策 799、1009；約 1 分鐘，先要有第 3 步的人口）。MML 的輪廓與實測高度，OSM 補用途與新建物。
+#     osmtoday.com 連不上時，OSM 改抓 https://download.openstreetmap.fr/extracts/europe/finland/lapland-latest.osm.pbf 再切。
+pip install shapely
+python3 -I tools/rovaniemi-map/mml_buildings.py fetch /tmp/rv/mml    # 約 320 MB
+python3 -I tools/rovaniemi-map/build_rovaniemi_buildings.py /tmp/rv/mml /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
 
 # 6. 機場與不蓋區（台灣那兩支工具），最後重寫 pack.json。
 python3 -I tools/airfields/build_airfields.py /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi/airfields.json

@@ -394,19 +394,21 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
-                    // Decision 799: the pack's buildings.
+                    // Decisions 799 and 1009: the pack's buildings, the
+                    // National Land Survey's with OpenStreetMap's uses.
                     DataSourceCredit(
                         id: "rovaniemiBuildings",
                         title: language.text("Rovaniemi’s buildings", "羅瓦涅米的建物"),
                         detail: language.text(
-                            "On Rovaniemi’s map, the outlines and uses of the buildings on the 3D map, and their storeys where they are recorded.",
-                            "羅瓦涅米地圖上，3D 地圖裡建物的外形與用途，有記錄的還有樓層數。"
+                            "On Rovaniemi’s map, the outlines, uses and heights of the buildings on the 3D map, and the uses and newer buildings the survey does not have.",
+                            "羅瓦涅米地圖上，3D 地圖裡建物的外形、用途與高度，以及測量局沒有的用途與新建物。"
                         ),
                         notice: language.text(
-                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Storeys that are not recorded are this game’s estimate.",
-                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。沒有記錄的樓層數是本遊戲的估計。"
+                            "Contains data from the National Land Survey of Finland Topographic Database and Buildings 3D (2022), under the Creative Commons Attribution 4.0 licence. Uses and newer buildings: © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Storeys that are neither measured nor recorded are this game’s estimate.",
+                            "含芬蘭國土測量局（Maanmittauslaitos）地形資料庫與 3D 建物（2022）的資料，依創用 CC 姓名標示 4.0 授權使用。用途與新建物：© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。沒有實測也沒有記錄的樓層數是本遊戲的估計。"
                         ),
                         links: [
+                            DataSourceCredit.Link(title: language.text("National Land Survey open data licence", "芬蘭國土測量局開放資料授權"), url: "https://www.maanmittauslaitos.fi/en/opendata-licence-cc40"),
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
