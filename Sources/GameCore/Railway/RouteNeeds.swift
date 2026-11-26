@@ -203,6 +203,24 @@ extension GameWorld {
     /// way whole or following, another platform's whole (decision 57), or
     /// past a standing train (decisions 571, 212).
     func takingAnyDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
+        // Decision 980: kept from its way by the same train as when it was
+        // last asked, with no way round still, without asking again.
+        if let holder = stillHolder(of: candidate, memo: &memo) {
+            if let audit = Self.answerAudit {
+                audit.heldNotAsked += 1
+                guard case .held(let asked) = askingAnyDeparture(candidate, memo: &memo), asked == holder else {
+                    preconditionFailure("a departure was kept from its way without asking where asking answers otherwise")
+                }
+            }
+            return .held(by: holder)
+        }
+        return askingAnyDeparture(candidate, memo: &memo)
+    }
+
+    /// ``takingAnyDeparture(_:memo:)`` worked out, whatever `memo` keeps
+    /// of the departure (decision 980's ``DirectionMemo/HeldDeparture``,
+    /// which it keeps when the departure is kept from its way).
+    func askingAnyDeparture(_ candidate: Train, memo: inout DirectionMemo) -> Reserving {
         let planned = reserving(candidate, following: true, memo: &memo)
         guard isTrafficControlEnabled, case .held = planned,
               case .travellingToStop(let stop, let cycle)? = candidate.execution
@@ -231,7 +249,10 @@ extension GameWorld {
         // it may never follow) keep it from its route, the shortest route to
         // a berth of the station that only they block, followed behind the
         // trains ahead on it.
-        guard blockSections else { return planned }
+        guard blockSections else {
+            keepHeld(candidate, to: station, memo: &memo)
+            return planned
+        }
         let standing = Set(trains.filter { train in
             guard case .travellingToStop? = train.execution, train.movement.rate > 0 else { return true }
             return false
@@ -243,6 +264,71 @@ extension GameWorld {
               case .granted(let granted) = reserving(rerouted(candidate, along: alternative, stop: stop, cycle: cycle), following: true, memo: &memo)
         else { return planned }
         return .granted(granted)
+    }
+
+    /// Decision 980 (TICK-HELD-ASK-ONCE): the train ``takingAnyDeparture(_:memo:)``
+    /// answers `candidate` is kept from its way by, where `memo` knows it
+    /// without asking again; or `nil`, to ask. Without block sections only.
+    ///
+    /// A departure kept from its way is asked again every second with the
+    /// same candidate but for its times, which nothing asked here reads.
+    /// The last asking that found it kept, with no way round
+    /// (``stillHasNoDetour(_:to:memo:)``), kept a train in its way that it
+    /// could not follow (``DirectionMemo/HeldDeparture``). While that
+    /// train holds or fouls track of the candidate's envelope still, some
+    /// train holds it (``holder(of:except:holders:)``, asked here as
+    /// ``reserving(_:following:memo:)`` asks it, so the train named is the
+    /// same); while that train cannot be followed still
+    /// (``isLeading(_:onto:for:)``, asked of this world),
+    /// ``followingAuthority(of:route:limit:memo:)`` gives no train, since
+    /// it gives none as soon as one train in the way cannot be followed;
+    /// so the planned way is kept from it. While there is no way round
+    /// still, neither another berth nor one against the planned way is
+    /// found, and the answer is that the planned way is kept from it.
+    func stillHolder(of candidate: Train, memo: inout DirectionMemo) -> TrainID? {
+        guard isTrafficControlEnabled, !blockSections, let known = memo.heldDepartures[candidate.id] else { return nil }
+        var asked = candidate
+        asked.times = known.candidate.times
+        guard asked == known.candidate, trains.indices.contains(known.witness) else { return nil }
+        let witness = trains[known.witness]
+        guard witness.id == known.witnessID, witness.position != nil else { return nil }
+        let holders = trackHolders(memo: &memo)
+        guard let holder = holder(of: known.envelope, except: candidate.id, holders: holders),
+              holders.firstHolding(known.envelope, except: candidate.id, among: [known.witnessID], fouling: true, in: network) != nil,
+              !isLeading(witness, onto: known.envelope, followerWays: known.ways),
+              stillHasNoDetour(candidate, to: known.station, memo: &memo)
+        else { return nil }
+        return holder
+    }
+
+    /// Decision 980: keeps in `memo`, for `candidate` just found kept from
+    /// its way to `station` with no way round, without block sections, a
+    /// train in its way that it cannot follow (see
+    /// ``stillHolder(of:memo:)``), when there is one: one standing first,
+    /// which is asked the quickest. A departure kept only by trains that
+    /// wait for its track, or that it could follow but for the room, is
+    /// asked again each time.
+    func keepHeld(_ candidate: Train, to station: StationID, memo: inout DirectionMemo) {
+        memo.heldDepartures[candidate.id] = nil
+        guard let known = memo.noDetours[candidate.id], known.start == candidate.position,
+              known.station == station, known.length == candidate.length
+        else { return }
+        let route = routeStretches(of: candidate)
+        guard route.moves else { return }
+        let stretches = bodyStretches(of: candidate) + route.stretches
+        let envelope = cover(of: stretches)
+        let ways = Set(stretches.map(\.traversal))
+        let holding = trackHolders(memo: &memo).holding(envelope, except: candidate.id, fouling: true, in: network)
+        func isStanding(_ train: Train) -> Bool {
+            guard case .travellingToStop? = train.execution, train.movement.rate > 0 else { return true }
+            return false
+        }
+        let inTheWay = trains.indices.filter { holding[$0] && trains[$0].id != candidate.id && trains[$0].position != nil }
+        guard let witness = inTheWay.first(where: { isStanding(trains[$0]) })
+            ?? inTheWay.first(where: { !isLeading(trains[$0], onto: envelope, followerWays: ways) })
+        else { return }
+        memo.heldDepartures[candidate.id] = DirectionMemo.HeldDeparture(
+            candidate: candidate, station: station, envelope: envelope, ways: ways, witness: witness, witnessID: trains[witness].id)
     }
 
     /// Decision 885 (SHALUN-ONE-ISLAND): whether `candidate`, a service

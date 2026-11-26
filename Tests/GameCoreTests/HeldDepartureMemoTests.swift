@@ -5,14 +5,17 @@ import XCTest
 /// Decision 980 (TICK-HELD-ASK-ONCE): a departure kept from its way is
 /// asked again every second, and its way round the trains in its way is
 /// not searched for again while every step the last search was kept from
-/// is kept from it still (``GameWorld/stillHasNoDetour(_:to:memo:)``).
+/// is kept from it still (``GameWorld/stillHasNoDetour(_:to:memo:)``);
+/// nor is it asked again at all while, besides, a train in its way that
+/// it cannot follow stays so (``GameWorld/stillHolder(of:memo:)``, the
+/// decision's later part).
 ///
 /// Here a memo carried from second to second, as an advance carries its
 /// own, answers every due departure as a memo that knows nothing does, on
 /// a single track between two fans of berths (trains waiting at both
 /// ends) and on the long-leg replay's ring (following, head-on meets and
-/// a deadlock), and each search left out is checked against the search
-/// itself (``GameWorld/AnswerAudit``, as `AnswerAuditTests` checks the
+/// a deadlock), and each search or asking left out is checked against
+/// the search or asking itself (``GameWorld/AnswerAudit``, as `AnswerAuditTests` checks the
 /// recorded streams and `SavedWorldTickReportTests` a saved game).
 final class HeldDepartureMemoTests: XCTestCase {
     private static func text(_ reserving: GameWorld.Reserving) -> String {
@@ -61,6 +64,8 @@ final class HeldDepartureMemoTests: XCTestCase {
             }
             XCTAssertGreaterThan(held, 500, "\(name): departures are held")
             XCTAssertGreaterThan(audit.detoursNotSearched, 200, "\(name): a held departure's way round is not searched for every second")
+            // 549 on the fan and 192 on the ring when this was written.
+            XCTAssertGreaterThan(audit.heldNotAsked, name == "fan" ? 300 : 100, "\(name): a held departure is not asked again while the train in its way stays")
         }
     }
 }
