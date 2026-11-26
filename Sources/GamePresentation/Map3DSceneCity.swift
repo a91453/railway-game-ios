@@ -14,6 +14,52 @@ extension Map3DScene.Builder {
     /// (``addFrontage``); a factory keeps its hall and yard.
     static let frontedUses: Set<LandUse> = [.residential, .commercial, .office, .civic, .leisure]
 
+    /// Decision 1006: whether the `index`th house along one side of a
+    /// street (or one row of a lot), `side` naming that side on a lot
+    /// seeded `seed`, stands on a lot ``CitySkyline/Lot/fill`` of whose
+    /// houses do: all of them on a full lot; else those whose place in a
+    /// van der Corput sequence, from a start drawn for the side, is under
+    /// the share. Any run of 2ⁿ houses along the side holds one in each
+    /// 2⁻ⁿ of the shares, so the houses kept are spread evenly along the
+    /// road, not bunched (the owner, 2026-11-26: 「但記得建物還是需要沿著路平均分散」),
+    /// and a lot whose people grow keeps (nearly all) the houses it had and
+    /// adds to them.
+    static func keepsHouse(_ seed: (Int32, Int32), side: Int32, index: Int32, fill: Double) -> Bool {
+        guard fill < 1 else { return true }
+        let start = UInt32(map3DRandom(seed.0 &+ 104_729, seed.1 &- 7_919, salt: side) * 65_536)
+        return radicalInverse(start &+ UInt32(bitPattern: index)) < fill
+    }
+
+    /// Decision 1006: the storeys a real building between the game's
+    /// houses is counted at: those cells are thinly built
+    /// (``RealCover/thinShare``), houses and sheds.
+    static let realFloors = 2.0
+
+    /// Decision 1006: what is left of a lot's ``CitySkyline/Lot/fill``
+    /// for the game's houses where real buildings (the official ones', the
+    /// footprints') cover `realShare` of its cell already: their floor,
+    /// ``realFloors`` storeys over that share of its 4,096 m², taken from
+    /// the floor its people and jobs need (D1's 3,072 m² at a fill of 1).
+    /// The real ones first; the game's own fill in only what they leave.
+    static func fillLeft(_ fill: Double, realShare: Double) -> Double {
+        guard realShare > 0 else { return fill }
+        let cellArea = Double(Land.cellArea) / Double(WorldCoordinate.unitsPerMetre * WorldCoordinate.unitsPerMetre)
+        let real = realShare * cellArea * realFloors / Double(Building.floorArea * BuildingDensity.d1.floors)
+        return max(0, fill - real)
+    }
+
+    /// Decision 1006: `n`'s bits mirrored about the binary point (the van
+    /// der Corput sequence in base 2), 0 up to 1.
+    static func radicalInverse(_ n: UInt32) -> Double {
+        var bits = n
+        bits = (bits << 16) | (bits >> 16)
+        bits = ((bits & 0x00FF_00FF) << 8) | ((bits & 0xFF00_FF00) >> 8)
+        bits = ((bits & 0x0F0F_0F0F) << 4) | ((bits & 0xF0F0_F0F0) >> 4)
+        bits = ((bits & 0x3333_3333) << 2) | ((bits & 0xCCCC_CCCC) >> 2)
+        bits = ((bits & 0x5555_5555) << 1) | ((bits & 0xAAAA_AAAA) >> 1)
+        return Double(bits) / 4_294_967_296
+    }
+
     mutating func addCity(_ skyline: CitySkyline, clearOf cleared: Set<ChunkKey>, takenBy taken: Set<ChunkKey> = [],
                           besideRoads: Set<ChunkKey> = [], thinlyBuilt: Set<ChunkKey> = []) {
         let cell = Double(Land.cellLength)
@@ -44,8 +90,12 @@ extension Map3DScene.Builder {
             // cell's middle (the real schools and temples stand where
             // they are, from the footprints and the temples).
             if state.roadside.streetFrontage, !lot.isOpenGround, !cleared.contains(key), Self.frontedUses.contains(lot.use), lot.density <= 2 {
+                // Decision 1006: between real buildings, houses only for
+                // the people they leave without a home or a job.
+                let fill = thin && CitySkyline.housesByPeople(look.buildings) ? Self.fillLeft(lot.fill, realShare: (state.realCover.tileCover.share[key] ?? 0)
+                    + (state.realCover.footprintCover.share[key] ?? 0)) : lot.fill
                 addFrontage(column: lot.column, row: lot.row, density: lot.density, shops: lot.use == .commercial || lot.use == .office,
-                            blocked: blocked)
+                            blocked: blocked, fill: fill)
                 continue
             }
             // Decision 723: nothing else of the game's among footprints.
@@ -87,7 +137,7 @@ extension Map3DScene.Builder {
             case .residential, .commercial:
                 if lot.density <= 2 {
                     addRowHouses(base: base, side: side, density: lot.density, shops: lot.use == .commercial, seed: seed,
-                                 fronts: streetFronts(column: lot.column, row: lot.row))
+                                 fronts: streetFronts(column: lot.column, row: lot.row), fill: lot.fill)
                 } else {
                     addBlock(base: base, side: side, density: lot.density, walls: Self.pickWall(seed), facade: .flatWindows, seed: seed,
                              commercial: lot.use == .commercial)
@@ -227,7 +277,13 @@ extension Map3DScene.Builder {
     /// density 2) with an arcade (騎樓) on most shops, a parapet and a
     /// water tank on many roofs (`city_world_reference` `pickType`,
     /// `floorsFor`, `widthFor`, `waterTank`).
-    mutating func addRowHouses(base: Map3DPoint, side: Float, density: Int, shops lotShops: Bool, seed: (Int32, Int32), fronts: RowFronts? = nil) {
+    ///
+    /// Decision 1006: of a lot whose ``CitySkyline/Lot/fill`` is under 1,
+    /// only its share of the houses stand, spread evenly along each row
+    /// (``keepsHouse(_:side:index:fill:)``), the rest of it left open, so
+    /// a few people have a house or two.
+    mutating func addRowHouses(base: Map3DPoint, side: Float, density: Int, shops lotShops: Bool, seed: (Int32, Int32), fronts: RowFronts? = nil,
+                               fill: Double = 1) {
         var depth = min(16, side / 2 - 1)
         // Decision 263: on seeded streets, each row's front at its
         // street's pavement (back to back where it has none), from the
@@ -245,6 +301,9 @@ extension Map3DScene.Builder {
         var blades: [Map3DSign] = []
         let flats = density >= 2
         let far = isFar
+        // Decision 1006: each house standing on a lot not full, for its
+        // own shadow: (its middle, width) by the way its row faces.
+        var standing: [(facing: Float, middle: Map3DPoint, width: Float)] = []
         mesh(at: base) { mesh in
             for facing: Float in [-1, 1] {
                 // From the west end along the row.
@@ -256,10 +315,16 @@ extension Map3DScene.Builder {
                     var width = flats ? 6.5 + r(1) * 6 : 4.4 + r(1) * 2.2
                     width = min(width, span.1 - x)
                     guard width >= 3.2 else { break }
+                    guard Self.keepsHouse(seed, side: Int32(facing > 0 ? 100 : 300), index: number, fill: fill) else {
+                        x += width
+                        number += 1
+                        continue
+                    }
                     let wall = Self.pickWall((seed.0 &+ salt, seed.1))
                     let middleX = x + width / 2
                     let front = Map3DPoint(0, 0, facing) // the way the house faces
                     let rowMiddle = base + Map3DPoint(middleX, 0, facing * (frontAt(facing) - depth / 2))
+                    if fill < 1 { standing.append((facing, rowMiddle, width)) }
                     // Decision 267: a shop below on a commercial lot, and
                     // on a busy street's houses now and then.
                     let shops = lotShops || r(13) < (fronts?.shopShare(facing: facing) ?? 0)
@@ -303,14 +368,19 @@ extension Map3DScene.Builder {
                 }
             }
         }
-        // Decision 232: a shadow round each row.
-        for facing: Float in [-1, 1] {
+        // Decision 232: a shadow round each row; decision 1006: round each
+        // house on a lot not full.
+        for house in standing {
+            addShadow(centre: house.middle, forward: Map3DPoint(1, 0, 0), length: house.width, width: depth + 0.5, spread: 3, darkness: 0.3)
+        }
+        for facing: Float in [-1, 1] where fill >= 1 {
             addShadow(centre: base + Map3DPoint((span.0 + span.1) / 2, 0, facing * (frontAt(facing) - depth / 2)), forward: Map3DPoint(1, 0, 0),
                       length: span.1 - span.0, width: depth + 0.5, spread: 3, darkness: 0.3)
         }
         // Decision 259: shoppers along the shops' fronts (decision 267:
         // and along a busy street's).
-        for facing: Float in [-1, 1] where lotShops || (fronts?.shopShare(facing: facing) ?? 0) > 0 {
+        for facing: Float in [-1, 1] where (lotShops || (fronts?.shopShare(facing: facing) ?? 0) > 0)
+            && (fill >= 1 || standing.contains { $0.facing == facing }) {
             let out = facing * (frontAt(facing) + 1.2)
             addShopLife(from: base + Map3DPoint(span.0 + 0.5, 0.05, out), to: base + Map3DPoint(span.1 - 0.5, 0.05, out), density: density)
         }

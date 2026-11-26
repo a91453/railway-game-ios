@@ -14,7 +14,7 @@ import base64
 import json
 import sys
 
-COUNTRIES = "AE AU BR CA CN DE FR GB HK ID IN JP KR MX NL NZ PL SA SG TH TW US VN ZA".split()
+COUNTRIES = "AE AU BR CA CN DE FI FR GB HK ID IN JP KR MX NL NZ PL SA SG TH TW US VN ZA".split()
 TOLERANCE = 0.01  # degrees, about a kilometre
 SCALE = 1000      # thousandths of a degree
 

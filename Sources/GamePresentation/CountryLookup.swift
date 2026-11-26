@@ -102,3 +102,21 @@ public enum CountryLookup {
         }
     }
 }
+
+extension CountryLookup {
+    /// Decision 1003: a game on a real-world map that began before the
+    /// lookup knew its country (Rovaniemi's, before Finland was added) was
+    /// given Taiwan's holidays and weather, typhoons and all. Opened again,
+    /// it gets its own country's; its level and seed stay. A challenge
+    /// keeps its fixed rules, and every other game is left as it is.
+    public static func withMapCountry(_ world: GameWorld) -> GameWorld {
+        guard world.scenario == nil, let disruptions = world.disruptions,
+              disruptions.country == HolidayCalendar.home, let anchor = world.geoAnchor else { return world }
+        let country = country(at: anchor)
+        guard country != disruptions.country,
+              let own = Disruptions(level: disruptions.level, country: country, seed: disruptions.seed) else { return world }
+        var world = world
+        world.setDisruptions(own)
+        return world
+    }
+}

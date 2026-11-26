@@ -119,7 +119,12 @@ final class HongKongAirportTests: XCTestCase {
         places.noBuild = try Self.pack().noBuildLand(airfields: false)
         let closed = try XCTUnwrap(LandImport.cells(population: population, places: places, water: ground.water, frame: frame,
                                                     bounds: GameWorld.newGameBounds))
-        return (GameWorld.newGame(anchor: anchor, land: open), open, closed, frame)
+        // An older game's land is WorldPop's (before decision 1008), which put
+        // people on the airport: every lot at least a D1 home's table (56),
+        // so decision 1006 draws them full and their ground tinted.
+        let older = open.map { LandCell(row: $0.row, column: $0.column, use: $0.use, residents: max($0.residents, 56),
+                                        jobs: $0.jobs, coverage: $0.coverage) }
+        return (GameWorld.newGame(anchor: anchor, land: older), open, closed, frame)
     }
 
     // MARK: - The scene

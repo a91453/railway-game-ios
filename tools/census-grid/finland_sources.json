@@ -1,0 +1,289 @@
+{
+ "decision": 1007,
+ "tables": {
+  "vaestoruutu:vaki2025_1km": "Väestöruutuaineisto 1 km x 1 km 2025 (population on 31 December 2024)",
+  "postialue:pno_tilasto_2025": "Paavo-tilastoaineisto ja -postinumeroalueet 2025 (workplaces by industry, TOL 2008)"
+ },
+ "wfs": "https://geo.stat.fi/geoserver/wfs",
+ "licence": "CC BY 4.0",
+ "credit": "Source: Statistics Finland, Population grid data 1 km × 1 km 2025 and Paavo – Open data by postal code area 2025",
+ "extent": {
+  "north": 66.8,
+  "south": 66.3,
+  "west": 25.2,
+  "east": 27.6
+ },
+ "files": {
+  "pno_tilasto_2025.json": "744bcc1c52f1cefca22929ab3822ea2226a96583812f09e1e5f315bdb58b17d3",
+  "vaki2025_1km.json": "f31358841051c4d8945288f78c19261dec4a49890bbc343fb390e9f305cece13"
+ },
+ "buildings.pmtiles": "0f490140f0b8f1bb85af09e2f6401b08ec22e05479e8cf0ee716312c7e7df42e",
+ "residents": 69768,
+ "jobs": {
+  "office": 10224,
+  "shop": 4369,
+  "civic": 12561,
+  "leisure": 1381
+ },
+ "cells": [
+  240,
+  1152
+ ],
+ "postalAreas": {
+  "95355": {
+   "name": "Koivu-Peura",
+   "workplaces": 17,
+   "kept": 0.0
+  },
+  "96100": {
+   "name": "Rovaniemi Keskus",
+   "workplaces": 6806,
+   "kept": 1.0
+  },
+  "96190": {
+   "name": "Lapinrinne-Ahokangas",
+   "workplaces": 670,
+   "kept": 1.0
+  },
+  "96200": {
+   "name": "Sahanperä-Ratantaus",
+   "workplaces": 3155,
+   "kept": 1.0
+  },
+  "96300": {
+   "name": "Niemelänkangas-Korvanniemi",
+   "workplaces": 2843,
+   "kept": 0.99
+  },
+  "96320": {
+   "name": "Teollisuuskylä",
+   "workplaces": 2979,
+   "kept": 1.0
+  },
+  "96400": {
+   "name": "Pullinranta-Kiiruna",
+   "workplaces": 3461,
+   "kept": 1.0
+  },
+  "96440": {
+   "name": "Ounasrinne",
+   "workplaces": 638,
+   "kept": 1.0
+  },
+  "96460": {
+   "name": "Pöykkölä",
+   "workplaces": 218,
+   "kept": 1.0
+  },
+  "96500": {
+   "name": "Korkalovaara",
+   "workplaces": 343,
+   "kept": 1.0
+  },
+  "96600": {
+   "name": "Koskenkylä",
+   "workplaces": 153,
+   "kept": 1.0
+  },
+  "96700": {
+   "name": "Niskanperä",
+   "workplaces": 220,
+   "kept": 1.0
+  },
+  "96800": {
+   "name": "Ylikylä-Patosaari",
+   "workplaces": 357,
+   "kept": 1.0
+  },
+  "96900": {
+   "name": "Saarenkylä",
+   "workplaces": 1753,
+   "kept": 1.0
+  },
+  "96910": {
+   "name": "Syväsenvaara",
+   "workplaces": 627,
+   "kept": 0.975
+  },
+  "96930": {
+   "name": "Napapiiri Rovaniemi",
+   "workplaces": 758,
+   "kept": 1.0
+  },
+  "96960": {
+   "name": "Someroharju",
+   "workplaces": 714,
+   "kept": 1.0
+  },
+  "97110": {
+   "name": "Rautionsaari",
+   "workplaces": 53,
+   "kept": 0.98
+  },
+  "97130": {
+   "name": "Hirvas",
+   "workplaces": 82,
+   "kept": 1.0
+  },
+  "97140": {
+   "name": "Muurola",
+   "workplaces": 258,
+   "kept": 0.83
+  },
+  "97170": {
+   "name": "Jaatila",
+   "workplaces": 15,
+   "kept": 0.0
+  },
+  "97220": {
+   "name": "Sinettä",
+   "workplaces": 223,
+   "kept": 1.0
+  },
+  "97240": {
+   "name": "Sonka",
+   "workplaces": 33,
+   "kept": 0.717
+  },
+  "97280": {
+   "name": "Tapio",
+   "workplaces": 41,
+   "kept": 1.0
+  },
+  "97290": {
+   "name": "Marraskoski",
+   "workplaces": 8,
+   "kept": 0.699
+  },
+  "97510": {
+   "name": "Vikajärvi",
+   "workplaces": 13,
+   "kept": 1.0
+  },
+  "97520": {
+   "name": "Nampa",
+   "workplaces": 1,
+   "kept": 1.0
+  },
+  "97530": {
+   "name": "Nampa-Yli-Nampa",
+   "workplaces": 4,
+   "kept": 0.593
+  },
+  "97580": {
+   "name": "Misi",
+   "workplaces": 11,
+   "kept": 1.0
+  },
+  "97610": {
+   "name": "Oikarainen",
+   "workplaces": 58,
+   "kept": 1.0
+  },
+  "97620": {
+   "name": "Viiri-Tennirova",
+   "workplaces": 4,
+   "kept": 1.0
+  },
+  "97625": {
+   "name": "Vanttauskoski",
+   "workplaces": 73,
+   "kept": 1.0
+  },
+  "97630": {
+   "name": "Pekkala",
+   "workplaces": 12,
+   "kept": 1.0
+  },
+  "97635": {
+   "name": "Juuniemi",
+   "workplaces": 18,
+   "kept": 1.0
+  },
+  "97645": {
+   "name": "Juujärvi",
+   "workplaces": 1,
+   "kept": 1.0
+  },
+  "97650": {
+   "name": "Juotas",
+   "workplaces": 7,
+   "kept": 0.874
+  },
+  "97655": {
+   "name": "Autti",
+   "workplaces": 8,
+   "kept": 0.694
+  },
+  "97665": {
+   "name": "Pohjasperä",
+   "workplaces": 26,
+   "kept": 0.0
+  },
+  "97670": {
+   "name": "Kivitaipale",
+   "workplaces": 37,
+   "kept": 0.929
+  },
+  "97675": {
+   "name": "Narkaus-Kämät",
+   "workplaces": 10,
+   "kept": 0.404
+  },
+  "97690": {
+   "name": "Sulaoja",
+   "workplaces": 2,
+   "kept": 0.0
+  },
+  "97815": {
+   "name": "Pernu-Suorsa",
+   "workplaces": 3,
+   "kept": 0.0
+  },
+  "97850": {
+   "name": "Ristilä",
+   "workplaces": 1,
+   "kept": 0.0
+  },
+  "98100": {
+   "name": "Kemijärvi Keskus",
+   "workplaces": 1255,
+   "kept": 0.996
+  },
+  "98120": {
+   "name": "Särkikangas",
+   "workplaces": 360,
+   "kept": 1.0
+  },
+  "98230": {
+   "name": "Luusua-Karsimus",
+   "workplaces": 6,
+   "kept": 1.0
+  },
+  "98310": {
+   "name": "Karvakko",
+   "workplaces": 197,
+   "kept": 1.0
+  },
+  "98400": {
+   "name": "Isokylä-Ryti-Lehtola",
+   "workplaces": 45,
+   "kept": 0.518
+  },
+  "98420": {
+   "name": "Ryti-Lehtola",
+   "workplaces": 1,
+   "kept": 0.0
+  },
+  "98440": {
+   "name": "Kallaanvaara",
+   "workplaces": 110,
+   "kept": 1.0
+  },
+  "98450": {
+   "name": "Kostamo",
+   "workplaces": 11,
+   "kept": 0.655
+  }
+ }
+}

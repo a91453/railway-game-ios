@@ -319,10 +319,13 @@ def write(folder, name, value):
         f.write("\n")
 
 
-OSM, FINTRAFFIC, OURS, WORLDPOP = "OpenStreetMap", "Fintraffic / Digitraffic", "this project", "WorldPop"
+OSM, FINTRAFFIC, OURS = "OpenStreetMap", "Fintraffic / Digitraffic", "this project"
+# Decision 1007: the people and jobs (tools/census-grid/finland_census_grid.py).
+STATFIN, WORLDPOP = "Statistics Finland", "WorldPop"
 NLS = "National Land Survey of Finland"
 SOURCES = {
-    "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
+    "population.json": {"runs (residents of the 1 km population grid 2025) and jobs (workplaces of Paavo 2025), on 7.5 arc-second cells": STATFIN,
+                        "where in each 1 km cell or postal area (by the floor area of buildings.pmtiles)": OURS},
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_rovaniemi_basemap.py)": OSM,
                         "land as far as the extract reaches (no coast)": OURS},
     "buildings.pmtiles": {"outlines, uses, tagged storeys (build_rovaniemi_buildings.py)": OSM,
@@ -355,7 +358,15 @@ def write_manifest(folder):
         FINTRAFFIC: "Source: Fintraffic / digitraffic.fi, licence CC 4.0 BY",
     }
     if "population.json" in files:
-        licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
+        with open(os.path.join(folder, "population.json"), encoding="utf-8") as f:
+            people = json.load(f)
+        if people["source"].startswith("WorldPop"):
+            # The backup (build_rovaniemi_ground.py, decision 789's people).
+            files["population.json"]["sources"] = {"runs (people per 30 arc-second cell, rounded)": WORLDPOP}
+            licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
+        else:
+            licences[STATFIN] = ("Source: Statistics Finland, Population grid data 1 km × 1 km 2025 and Paavo – Open data "
+                                 "by postal code area 2025, CC BY 4.0")
     if "heights.dat" in files:
         licences[NLS] = "National Land Survey of Finland, Elevation model 10 m, 08/2023, CC BY 4.0"
     write(folder, "pack.json", {

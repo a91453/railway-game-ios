@@ -63,6 +63,8 @@ public enum HolidayKind: String, CaseIterable, Codable, Sendable {
     case chuseok
     case goldenWeek
     case songkran
+    /// Finland's Midsummer (Juhannus), decision 1003.
+    case midsummer
 }
 
 /// One of a country's holidays: what it is, the month and day of the
@@ -176,6 +178,19 @@ public enum HolidayCalendar {
             Holiday(.newYear, 1, 1, days: 1, boost: 50),
             Holiday(.easter, 4, 5, days: 2, boost: 100),
             Holiday(.christmas, 12, 25, days: 2, boost: 100),
+        ],
+        // Decision 1003: Finland's days as in 2026 (Good Friday to Easter
+        // Monday, May Day, Midsummer's Eve and Day, Independence Day,
+        // Christmas Eve to St Stephen's Day), with the boosts of the
+        // countries above; Epiphany, Ascension and All Saints' Day are
+        // left out, a quiet day each.
+        "FI": [
+            Holiday(.newYear, 1, 1, days: 1, boost: 50),
+            Holiday(.easter, 4, 3, days: 4, boost: 100),
+            Holiday(.labourDay, 5, 1, days: 1, boost: 80),
+            Holiday(.midsummer, 6, 19, days: 2, boost: 100),
+            Holiday(.nationalDay, 12, 6, days: 1, boost: 100),
+            Holiday(.christmas, 12, 24, days: 3, boost: 100),
         ],
         "FR": [
             Holiday(.newYear, 1, 1, days: 1, boost: 50),

@@ -85,11 +85,52 @@ extension Disruptions {
 
     /// Each month's chance of rain and of a thunderstorm, in thousandths:
     /// a plum-rain spring and afternoon thunderstorms in summer, as a
-    /// Taiwanese year has them (this project's, used for every country).
+    /// Taiwanese year has them (this project's), for Taiwan and every
+    /// country ``countryRain`` has no table for.
     static let monthlyRain: [(rain: Int64, storm: Int64)] = [
         (250, 0), (300, 0), (300, 20), (300, 50), (450, 80), (450, 120),
         (200, 250), (200, 250), (200, 150), (200, 30), (200, 0), (200, 0),
     ]
+
+    /// Decision 1003: the months of the countries whose maps the game has
+    /// outside Taiwan, from their weather offices' 1991–2020 figures. A
+    /// month's chance of a storm is its days with thunder over its days;
+    /// its chance of rain is its days with 1 mm of rain or more over its
+    /// days, less the storm's (a day with thunder is a stormy one), each
+    /// rounded to the nearest thousandth.
+    ///
+    /// - Hong Kong: the Hong Kong Observatory's days with thunderstorms
+    ///   (its 1991–2020 normals, Table 3) and its days of 1 mm or more,
+    ///   counted from its daily rainfall of 1991–2020 (the same record
+    ///   gives the normals' days of 0.1 mm or more exactly).
+    /// - Japan: the Japan Meteorological Agency's 1991–2020 normals at
+    ///   Fukuoka (47807), days of 1.0 mm or more (element 4600) and days
+    ///   with thunder (5700); the game's Japan is Kyushu.
+    /// - Finland: the Finnish Meteorological Institute's open data at
+    ///   Rovaniemi airport (137190), days of 1 mm or more in 1998–2020
+    ///   (its daily record there starts in 1998), and days with a lightning
+    ///   stroke within 10 km of the town in 2011–2020 (a thunder day, as
+    ///   thunder is heard that far). Rain falls as snow there in the 3D
+    ///   map (decision 799).
+    static let countryRain: [String: [(rain: Int64, storm: Int64)]] = [
+        "HK": [
+            (99, 7), (132, 21), (151, 44), (154, 104), (189, 189), (270, 271),
+            (253, 257), (199, 287), (213, 169), (135, 27), (106, 6), (109, 0),
+        ],
+        "JP": [
+            (271, 29), (280, 32), (274, 52), (273, 50), (235, 42), (320, 67),
+            (184, 171), (126, 190), (230, 93), (193, 26), (233, 50), (242, 32),
+        ],
+        "FI": [
+            (384, 0), (365, 0), (245, 0), (260, 0), (278, 6), (257, 63),
+            (232, 123), (248, 65), (306, 17), (329, 0), (420, 0), (400, 0),
+        ],
+    ]
+
+    /// `country`'s months (decision 1003): its own, or ``monthlyRain``.
+    static func monthlyRain(of country: String) -> [(rain: Int64, storm: Int64)] {
+        countryRain[country] ?? monthlyRain
+    }
 
     /// The countries typhoons reach.
     static let typhoonCountries: Set<String> = ["TW", "CN", "HK", "JP", "KR", "VN"]
@@ -113,7 +154,7 @@ extension Disruptions {
         guard let seed, day >= Self.calmDays else { return .clear }
         let year = FinancePeriod.year.days
         let month = Int(((day % year) + year) % year / FinancePeriod.month.days)
-        let chances = Self.monthlyRain[month]
+        let chances = Self.monthlyRain(of: country)[month]
         let roll = SeedDraw(seed: seed).roll("weather.\(day)", in: 0...999)
         if roll < chances.storm { return .thunderstorm }
         return roll < chances.storm + chances.rain ? .rain : .clear

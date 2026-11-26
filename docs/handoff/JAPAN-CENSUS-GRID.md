@@ -54,6 +54,5 @@ python3 -I tools/census-grid/japan_census_grid.py build /tmp/estat RailwayGameAp
   村里或二級發布區的從業員工數；沒有的話保留 OSM places（`taiwan_places.json`）。注意台灣的 places、分區（決策 93）、不蓋區
   都和 `taiwan_population.json` 共用 30″ 格網：換成 7.5″ 要一起重做 `build_place_grid.py`、`build_zone_grid.py`。
 - **香港**：做完了，決策 1008（`tools/census-grid/hongkong_census_grid.py`）。
-- **芬蘭**：統計局 Statistics Finland 的格網資料庫：250 m 人口格（Väestöruudukko）與 1 km 的上班人數（Työpaikat），
-  CC BY 4.0，WFS `geo.stat.fi`。格網是 ETRS-TM35FIN（公尺），要重投影到經緯度正方格；羅瓦涅米在北緯 66.5°，
-  7.5″ 經度只有約 93 m，可以用 15″ 或 30″。
+- **芬蘭**：做完了（決策 1007，`tools/census-grid/finland_census_grid.py`）。統計局的 250 m 格與上班格網是付費的，
+  改用開放的 1 km 人口格＋郵遞區（Paavo）工作人數，依包內建物分到 7.5″ 格。

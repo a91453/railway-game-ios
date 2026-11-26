@@ -34,6 +34,8 @@ final class CountryLookupTests: XCTestCase {
             ("多倫多", 43.6532, -79.3832, "CA"), ("溫哥華", 49.2827, -123.1207, "CA"),
             ("墨西哥城", 19.4326, -99.1332, "MX"), ("聖保羅", -23.5505, -46.6333, "BR"), ("約翰尼斯堡", -26.2041, 28.0473, "ZA"),
             ("雪梨", -33.8688, 151.2093, "AU"), ("奧克蘭", -36.8485, 174.7633, "NZ"),
+            // Decision 1003: Finland, Rovaniemi's country.
+            ("羅瓦涅米", 66.5039, 25.7294, "FI"), ("赫爾辛基", 60.1699, 24.9384, "FI"),
         ]
         for (name, latitude, longitude, expected) in cities {
             XCTAssertEqual(country(latitude, longitude), expected, name)
@@ -52,5 +54,24 @@ final class CountryLookupTests: XCTestCase {
         XCTAssertEqual(GameWorld.newGame(anchor: tokyo).disruptions, Disruptions(level: .light, country: "JP", seed: 1))
         XCTAssertEqual(GameWorld.newGame().disruptions, Disruptions(level: .light, country: "TW", seed: 1))
         XCTAssertNil(GameWorld.newGame(challenge: .threeTowns, eventSeed: 1).disruptions)
+    }
+
+    /// Decision 1003: a Rovaniemi game begun when Finland was taken for
+    /// Taiwan gets Finland's holidays and weather when it is opened, its
+    /// level and seed kept; one already right, and a blank map, stay.
+    @MainActor func testAGameTakenForTaiwanGetsItsOwnCountry() throws {
+        let rovaniemi = GeoAnchor(latitude: 665_039_000, longitude: 257_294_000)!
+        var old = GameWorld.newGame(anchor: rovaniemi)
+        XCTAssertEqual(old.disruptions?.country, "FI")
+        old.setDisruptions(Disruptions(level: .standard, country: "TW", seed: 41))
+        XCTAssertEqual(CountryLookup.withMapCountry(old).disruptions, Disruptions(level: .standard, country: "FI", seed: 41))
+        XCTAssertEqual(GameSession(world: old).world.disruptions?.country, "FI")
+        let tokyo = GameWorld.newGame(anchor: GeoAnchor(latitude: 356_812_000, longitude: 1_397_671_000)!)
+        XCTAssertEqual(CountryLookup.withMapCountry(tokyo).disruptions, tokyo.disruptions)
+        let blank = GameWorld.newGame()
+        XCTAssertEqual(CountryLookup.withMapCountry(blank).disruptions, blank.disruptions)
+        // Without holidays and weather it stays without them.
+        old.setDisruptions(nil)
+        XCTAssertNil(CountryLookup.withMapCountry(old).disruptions)
     }
 }
