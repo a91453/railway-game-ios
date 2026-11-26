@@ -43,9 +43,10 @@ public enum Map3DPalette {
         case forest, field, meadow, bareGround, marsh
 
         /// A lot's ground: none for open ground, which draws its own park
-        /// or field.
+        /// or field. Decision 1006: none for a lot with a house or two
+        /// (``CitySkyline/thinFill``), whose ground is the land cover's.
         init?(_ lot: CitySkyline.Lot) {
-            guard !lot.isOpenGround else { return nil }
+            guard !lot.isOpenGround, lot.fill >= CitySkyline.thinFill else { return nil }
             self = lot.use == .residential && lot.density <= 2 ? .yard : .paved
         }
 
