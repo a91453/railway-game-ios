@@ -141,7 +141,7 @@ public enum Map3DN700S {
         public func triangles(side: Float) -> Range<Int> { side > 0 ? left : right }
 
         /// Whether `point` is on this door, on the side wall its `y` is on.
-        public func contains(_ point: Map3DPoint, margin: Float = 0.002) -> Bool {
+        public func contains(_ point: Map3DPoint, margin: Float = 0.0005) -> Bool {
             abs(point.y) > 1.5 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
                 && point.z >= z.lowerBound - margin && point.z <= z.upperBound + margin
         }
@@ -153,9 +153,9 @@ public enum Map3DN700S {
     public static func doors(_ unit: Unit) -> [Door] {
         switch unit {
         case .cab:
-            [Door(x: 4.998...5.496, z: 1.341...2.791, crew: true, left: 4304..<4427, right: 4614..<4737),
-             Door(x: 3.987...4.727, z: 1.272...2.905, crew: false, left: 4427..<4521, right: 4737..<4831),
-             Door(x: -10.976 ... -10.236, z: 1.252...2.982, crew: false, left: 4521..<4614, right: 4831..<4924)]
+            [Door(x: 4.998...5.498, z: 1.341...2.791, crew: true, left: 4201..<4324, right: 4511..<4678),
+             Door(x: 3.987...4.727, z: 1.272...2.906, crew: false, left: 4324..<4418, right: 4678..<4772),
+             Door(x: -10.976 ... -10.236, z: 1.252...2.982, crew: false, left: 4418..<4511, right: 4772..<4865)]
         case .middle:
             [Door(x: 10.141...10.876, z: 1.265...2.954, crew: false, left: 2292..<2380, right: 2456..<2550),
              Door(x: -9.155 ... -8.414, z: 1.253...2.980, crew: false, left: 2380..<2456, right: 2550..<2664)]
@@ -183,8 +183,8 @@ extension Map3DPalette {
 
 extension Map3DN700S {
     /// Decision 782: its set, its showcase row (twelve cars) and its cars'
-    /// triangles (4,924 the cab car, 2,664 the middle car, 2,898 the car
-    /// under the pantograph: a twelve-car train some 35,000, few enough
+    /// triangles (4,865 the cab car, 2,664 the middle car, 2,898 the car
+    /// under the pantograph: a twelve-car train some 37,000, few enough
     /// to be drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(

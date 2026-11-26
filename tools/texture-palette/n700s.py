@@ -415,14 +415,55 @@ def build(path: Path, debug_dir: Path | None, cab: bool = False):
         out = real_cab(out)
     out += hoods(out, (-1,) if cab else (-1, 1))
     out = [(corners, kind, door) for corners, kind, door in out if door != GANGWAY]
-    if cab:
-        out = mirrored(out)
     # 放到格點上以後再補一次：格點上才離隔壁的邊零點幾毫米的頂點也接上。
-    return name_doors(snap(mend(snap(mend(out))))), digest
+    out = snap(mend(snap(mend(out))))
+    if cab:
+        out = even_lamps(out)
+    return name_doors(out), digest
 
 
 BOGIE = -2    # 轉向架的面（「門」那一欄）：`real_cab` 整個平移，不切、不拉
 GANGWAY = -3  # 舊版的通道幌：量車長用，全周幌做好就拿掉
+
+
+# `mend` 認作「在邊上」的距離：舊版網格有幾處相鄰的面本來就差零點幾毫米（切出來
+# 的頂點離隔壁的邊 0.26 mm），放到毫米的格點上一樣會疊出細條。
+TOUCH = 4e-4
+# 鄰面夾角這麼多度以內才補：同一平面上會疊出細條；車鼻的曲面上，夾角幾度的兩面
+# 之間會裂一條縫（乘務員門上量到 14 mm²）。
+FOLD = 30
+
+
+def even_lamps(triangles):
+    """兩肩的燈切成一樣多面。舊版頭車兩側的網格三角形排法不一樣，右肩頭燈的前下角
+    多切出一條 8.6 mm 的細條，左右成了 11 與 12 面（工作室 r1）。面多的那一肩，把燈
+    外緣最短的一條邊收成一點（邊的兩端併成一個頂點，用到它的面跟著動，夾在中間的
+    面拿掉），直到兩肩一樣多。只動那一個頂點，車殼還是舊版的形狀（不拿另一側的
+    鏡像：舊版兩側本來就差到 15 cm）。"""
+    key = lambda point: tuple(int(round(v * 1000)) for v in point)
+    for lamp in (HEAD, TAIL):
+        while True:
+            sides = {sign: [n for n, (c, kind, _) in enumerate(triangles) if kind == lamp and np.sign(c[:, 2].mean()) == sign]
+                     for sign in (-1, 1)}
+            if len(sides[-1]) == len(sides[1]):
+                break
+            more = sides[max(sides, key=lambda sign: len(sides[sign]))]
+            edges = {}
+            for n in more:
+                c = triangles[n][0]
+                for i in range(3):
+                    edge = frozenset((key(c[i]), key(c[(i + 1) % 3])))
+                    edges.setdefault(edge, []).append((c[i], c[(i + 1) % 3]))
+            rim = [pair[0] for edge, pair in edges.items() if len(pair) == 1]
+            a, b = min(rim, key=lambda pair: float(np.linalg.norm(pair[0] - pair[1])))
+            gone, into = key(b), a
+            moved = []
+            for corners, kind, door in triangles:
+                corners = np.array([into if key(p) == gone else p for p in corners])
+                if len({key(p) for p in corners}) == 3:
+                    moved.append((corners, kind, door))
+            triangles = moved
+    return triangles
 
 
 # `mend` 認作「在邊上」的距離：舊版網格有幾處相鄰的面本來就差零點幾毫米（切出來

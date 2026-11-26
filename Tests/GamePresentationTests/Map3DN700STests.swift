@@ -220,14 +220,28 @@ final class Map3DN700STests: XCTestCase {
         for (lens, faces) in [(Map3DTrainStyle.headlamp, 11), (Map3DPalette.lantern, 9)] {
             let lamps = cab.vertices.filter { $0.color == lens }
             XCTAssertGreaterThan(lamps.map(\.x).min() ?? 0, Map3DN700S.pitch * 0.3, "the lamps on the nose")
-            // The same lamp on each shoulder: as many faces, the one the
-            // other's mirror image.
+            // The same lamp on each shoulder: as many faces, each where the
+            // other's mirror image is to 5 mm (the old car's two sides are
+            // a few millimetres apart).
             for sign in [Float(1), -1] {
                 XCTAssertEqual(lamps.filter { $0.y * sign > 0.5 }.count, 3 * faces, "\(lens) on the \(sign) shoulder")
             }
-            let left = Set(lamps.filter { $0.y > 0 }.map { [$0.x, $0.y, $0.z].map { ($0 * 1000).rounded() } })
-            let right = Set(lamps.filter { $0.y < 0 }.map { [$0.x, -$0.y, $0.z].map { ($0 * 1000).rounded() } })
-            XCTAssertEqual(left, right, "\(lens): the shoulders mirror each other")
+            // The lamp's middle, its faces weighed by their areas.
+            func middle(_ side: [Map3DVertex]) -> Map3DPoint {
+                var sum = Map3DPoint(0, 0, 0), total: Float = 0
+                for first in stride(from: 0, to: side.count, by: 3) {
+                    let a = side[first], b = side[first + 1], c = side[first + 2]
+                    let p = Map3DPoint(a.x, abs(a.y), a.z), q = Map3DPoint(b.x, abs(b.y), b.z), r = Map3DPoint(c.x, abs(c.y), c.z)
+                    let area = (q - p).cross(r - p).length / 2
+                    sum = sum + (p + q + r) * (area / 3)
+                    total += area
+                }
+                return sum * (1 / total)
+            }
+            let left = middle(lamps.filter { $0.y > 0 }), right = middle(lamps.filter { $0.y < 0 })
+            XCTAssertEqual(left.x, right.x, accuracy: 0.005, "\(lens)")
+            XCTAssertEqual(left.y, right.y, accuracy: 0.005, "\(lens)")
+            XCTAssertEqual(left.z, right.z, accuracy: 0.005, "\(lens)")
         }
         // The windscreen over the nose, on the car's centre line too.
         XCTAssertFalse(cab.vertices.filter { $0.color == Map3DTrainStyle.glass && $0.x > 5.5 && abs($0.y) < 0.3 }.isEmpty)

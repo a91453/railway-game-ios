@@ -12,7 +12,7 @@
 白色車身、窗下兩道藍線（上寬下細）、灰裙板、深色轉向架；車端的全周幌（車身色，口是深灰）；車頭一片前窗、鼻端兩肩各一組燈（白頭燈、紅尾燈）。色票平塗，不畫文字與標誌。
 
 - 來源：作者舊版 SwiftRailMac 的模型（作者自己的內容），舊版型錄的 N700S「のぞみ」：頭車 `c264b30b`、中間車 `2cf2255b`、集電弓車 `8d903762`。原始 GLB 與貼圖不進這個公開庫。
-- 轉換：`tools/texture-palette/n700s.py` 把貼圖切成色票面（頭車 4,924 面、中間車 2,664 面、集電弓車 2,898 面），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DN700SMesh.swift`。材質順序寫在 `Map3DN700S.swift`。
+- 轉換：`tools/texture-palette/n700s.py` 把貼圖切成色票面（頭車 4,865 面、中間車 2,664 面、集電弓車 2,898 面），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DN700SMesh.swift`。材質順序寫在 `Map3DN700S.swift`。
 - 用在：列車包的第二款高鐵車（原來的 N700S-G），十二節；車庫在「高鐵」類。
 - 決策：`docs/decisions/979.md`。
 
@@ -31,7 +31,7 @@ python3 -I tools/train-models/glb_to_swift.py --enum Map3DN700S \
 
 每扇門（門板連門框、門窗、門上那一段藍線）照外框從牆面切開：GLB 裡各是一個 mesh 與 node（`n700s-cab-door-left-1`…，由車頭端往後編號；頭車每側 3 扇，第 1 扇是乘務員門，其他車每側 2 扇），`report.json` 的 `doors` 列出範圍與每扇門從第幾個面起（`first`、`triangles`）。寫成 Swift 時各 node 照順序接在車身後面，遊戲裡 `Map3DN700S.doors(_:)` 記每扇門左右兩側是模型的第幾個到第幾個三角形；之後要做開門動畫，照這些範圍把門的面挑出來就可以，不用再切，也不用框選。拿掉一扇門，牆上剛好是門框外緣的開口。
 
-存成毫米以前先把 T 形接點補上（`mend`），頂點放到毫米的格點上，沒有面積或翻了面的細條拿掉：不同顏色的面不會疊在同一平面上，也沒有朝內的碎面。頭車的右半是左半的鏡像（舊版兩側差幾公釐，車鼻兩肩的燈原本切成 11 與 12 面）。
+存成毫米以前先把 T 形接點補上（`mend`），頂點放到毫米的格點上，沒有面積或翻了面的細條拿掉：不同顏色的面不會疊在同一平面上，也沒有朝內的碎面。車鼻兩肩的燈切成一樣多面（舊版兩側的網格排法不同，右肩頭燈多一條細條，`even_lamps` 把它收掉）。送審前跑 `tools/texture-palette/port_check.py OUT --old <頭車原檔> --nose-scale 1.19036,0.99310,1.2 --nose-from 4.9` 到全過。
 
 材質名 `navy` 是轉檔工具裡的格位名，遊戲裡這一格是 `Map3DPalette.shinkansenBlue`。
 
