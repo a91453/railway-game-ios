@@ -15,11 +15,17 @@ as the others':
   the environment variable CWA_API_KEY and never printed), counted per
   station and month: days of 1.0 mm or more over the days with a reading;
 - thunder: the CWA's platform has no thunder record of more than a few
-  months, so the days with thunder are NOAA's Global Summary of the Day
-  (public domain), whose FRSHTT flag is set from the same CWA stations'
-  synoptic reports; Taiwan's stations are in it in full up to 1998 only,
-  so it takes the years 1981-1998 with a nearly full record (330 days or
-  more). Tamsui has no record there and takes Taipei's.
+  months. A station within some 20 km of an airport takes the airport's
+  days with thunder (TS or VCTS in a METAR or SPECI) of 2015-2024, from
+  the Iowa Environmental Mesonet's archive of the airports' reports. The
+  others take their own days with thunder in NOAA's Global Summary of the
+  Day (public domain; the FRSHTT flag, set from the CWA stations'
+  synoptic reports, which are in it in full up to 1998 only: the years
+  1981-1998 with 330 days or more), times the ratio of the airports'
+  days to the GSOD days at Taipei and Taichung, where the station and the
+  airport share a basin: a few synoptic reports a day miss about half of
+  the afternoon storms. Hsinchu's GSOD record is the air base's own
+  hourly reports and is taken as it is.
 
 It also reads the CWA's 1991-2020 normals (C-B0027-001) to print each
 station's days of 0.1 mm or more beside the counts, as a check.
@@ -51,7 +57,7 @@ GSOD = "https://www.ncei.noaa.gov/data/global-summary-of-the-day/access/{year}/{
 
 # The 19 stations of decision 1004, in its order: the CWA name, and the
 # NOAA (ISD) station whose position the game uses and whose GSOD record
-# gives the thunder days (None: none there, take `THUNDER_FROM`'s).
+# gives the thunder days where no airport is near (`AIRPORT`).
 STATIONS = [
     ("淡水", "466900"), ("臺北", "466920"), ("基隆", "466940"),
     ("花蓮", "466990"), ("蘇澳", "467060"), ("宜蘭", "467080"),
@@ -61,8 +67,17 @@ STATIONS = [
     ("成功", "467610"), ("日月潭", "467650"), ("臺東", "467660"),
     ("梧棲", "467770"),
 ]
-THUNDER_FROM = {"淡水": "臺北"}
-NO_GSOD = {"淡水"}
+IEM = ("https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?station={icao}&data=wxcodes"
+       "&year1=2015&month1=1&day1=1&year2=2025&month2=1&day2=1&tz=Asia%2FTaipei&format=onlycomma"
+       "&latlon=no&missing=empty&trace=empty&report_type=3&report_type=4")
+# The stations near an airport, and the airport (5-16 km away).
+AIRPORT = {"臺北": "RCSS", "淡水": "RCSS", "臺中": "RCMQ", "梧棲": "RCMQ",
+           "臺南": "RCNN", "高雄": "RCKH", "臺東": "RCFN"}
+# Where the station and the airport share a basin: the ratio of their
+# thunder days scales the other stations' GSOD days.
+SCALE_PAIRS = ("臺北", "臺中")
+# A GSOD record that is an airfield's hourly reports, taken as it is.
+AIRFIELD_GSOD = {"新竹"}
 THUNDER_YEARS = range(1981, 1999)
 FULL_YEAR = 330
 # A month's days in the game's 30-day months are not used: the chance is a
@@ -297,6 +312,31 @@ def thunder_days(usaf):
     return [thunder[m] / seen[m] * MONTH_DAYS[m] if seen[m] else 0.0 for m in range(12)], years
 
 
+def airport_thunder_days(icao):
+    """Days with thunder by month at an airport, 2015-2024, and the years."""
+    blob = get(IEM.format(icao=icao))
+    if not blob:
+        raise RuntimeError(f"{icao}: no reports")
+    days, storms = set(), set()
+    for row in csv.DictReader(io.StringIO(blob.decode("utf-8", "replace"))):
+        day = row["valid"][:10]
+        days.add(day)
+        if "TS" in (row.get("wxcodes") or ""):
+            storms.add(day)
+    per_year = {}
+    for day in days:
+        per_year[day[:4]] = per_year.get(day[:4], 0) + 1
+    years = sorted(y for y, n in per_year.items() if n >= FULL_YEAR and "2015" <= y <= "2024")
+    seen = [0] * 12
+    thunder = [0] * 12
+    for day in days:
+        if day[:4] in years:
+            seen[int(day[5:7]) - 1] += 1
+            if day in storms:
+                thunder[int(day[5:7]) - 1] += 1
+    return [thunder[m] / seen[m] * MONTH_DAYS[m] if seen[m] else 0.0 for m in range(12)], [int(y) for y in years]
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", required=True)
@@ -319,13 +359,22 @@ def main():
         print(f"C-B0027-001 not read ({err}); the check column is left empty")
         normals = {}
 
-    thunder = {}
+    airports = {icao: airport_thunder_days(icao) for icao in sorted(set(AIRPORT.values()))}
+    gsod = {name: thunder_days(usaf) for name, usaf in STATIONS if name not in AIRPORT or name in SCALE_PAIRS}
+    scale = sum(sum(airports[AIRPORT[n]][0]) for n in SCALE_PAIRS) / sum(sum(gsod[n][0]) for n in SCALE_PAIRS)
+    print(f"\nthunder days a year: airports {', '.join(f'{k} {sum(v[0]):.1f} ({v[1][0]}-{v[1][-1]})' for k, v in airports.items())}")
+    print(f"GSOD at {', '.join(f'{n} {sum(gsod[n][0]):.1f}' for n in SCALE_PAIRS)}; scale {scale:.3f}")
+    thunder, thunder_source = {}, {}
     for name, usaf in STATIONS:
-        if name in NO_GSOD:
-            continue
-        thunder[name] = thunder_days(usaf)
-    for name, source in THUNDER_FROM.items():
-        thunder[name] = thunder[source]
+        if name in AIRPORT:
+            days, years = airports[AIRPORT[name]]
+            thunder[name] = (days, years)
+            thunder_source[name] = f"METAR {AIRPORT[name]}"
+        else:
+            days, years = gsod[name]
+            factor = 1.0 if name in AIRFIELD_GSOD else scale
+            thunder[name] = ([d * factor for d in days], years)
+            thunder_source[name] = f"GSOD {usaf}" + ("" if name in AIRFIELD_GSOD else f" x {scale:.3f}")
 
     stations = []
     for name, usaf in STATIONS:
@@ -357,7 +406,7 @@ def main():
             "rain_days_1mm": [round(x, 1) for x in rain1],
             "rain_days_0_1mm": [round(x, 1) for x in rain01],
             "normal_days_0_1mm_1991_2020": normals.get(name),
-            "thunder_from": THUNDER_FROM.get(name, name),
+            "thunder_from": thunder_source[name],
             "thunder_years": [storm_years[0], storm_years[-1], len(storm_years)] if storm_years else None,
             "thunder_days": [round(x, 1) for x in storm_days],
             "chances": chances,
@@ -366,7 +415,8 @@ def main():
     result = {
         "decision": 1013,
         "rain": "CWA open data C-B0025-002, days of 1.0 mm or more over days with a reading",
-        "thunder": "NOAA GSOD FRSHTT thunder flag, 1981-1998 years with 330 days or more",
+        "thunder": "airport METAR/SPECI TS or VCTS days 2015-2024 (Iowa Environmental Mesonet) near an airport; "
+                   "elsewhere NOAA GSOD FRSHTT thunder days 1981-1998 times the Taipei and Taichung airport/GSOD ratio",
         "stations": stations,
     }
     with open(args.out, "w", encoding="utf-8") as f:
