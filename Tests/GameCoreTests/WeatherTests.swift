@@ -55,12 +55,13 @@ final class WeatherTests: XCTestCase {
     }
 
     func testTheWeatherIsTheSeedsAndTheDaysAndCalmAtFirst() {
-        let a = Disruptions(level: .standard, country: "TW", seed: 7)!, b = Disruptions(level: .light, country: "JP", seed: 7)!
+        let a = Disruptions(level: .standard, country: "TW", seed: 7)!, b = Disruptions(level: .light, country: "GB", seed: 7)!
         let other = Disruptions(level: .standard, country: "TW", seed: 8)!
         // The first 30 days are clear.
         XCTAssertTrue((0..<Disruptions.calmDays).allSatisfy { a.weather(onDay: $0) == .clear })
-        // The same seed and day give the same weather, whatever the level
-        // or the country; another seed other weather.
+        // The same seed and day give the same weather, whatever the level,
+        // in Taiwan and a country without months of its own (decision
+        // 1003); another seed other weather.
         let year = (Int64(360)..<720)
         XCTAssertEqual(year.map(a.weather(onDay:)), year.map(b.weather(onDay:)))
         XCTAssertNotEqual(year.map(a.weather(onDay:)), year.map(other.weather(onDay:)))
@@ -75,6 +76,40 @@ final class WeatherTests: XCTestCase {
         XCTAssertTrue((350...550).contains(share(.rain, month: 4)), "May: \(share(.rain, month: 4))")
         XCTAssertTrue((180...320).contains(share(.thunderstorm, month: 6)), "July: \(share(.thunderstorm, month: 6))")
         XCTAssertEqual(share(.thunderstorm, month: 0), 0)
+    }
+
+    /// Decision 1003: Hong Kong, Japan and Finland have their own months,
+    /// from their weather offices' figures; every other country Taiwan's.
+    func testEachCountryHasItsOwnMonths() {
+        for (country, months) in Disruptions.countryRain {
+            XCTAssertEqual(months.count, 12, country)
+            XCTAssertTrue(months.allSatisfy { $0.rain >= 0 && $0.storm >= 0 && $0.rain + $0.storm <= 1_000 }, country)
+            XCTAssertNotNil(HolidayCalendar.countries[country], country)
+        }
+        XCTAssertEqual(Set(Disruptions.countryRain.keys), ["HK", "JP", "FI"])
+        XCTAssertEqual(Disruptions.monthlyRain(of: "TW").map(\.storm), Disruptions.monthlyRain.map(\.storm))
+        XCTAssertEqual(Disruptions.monthlyRain(of: "GB").map(\.rain), Disruptions.monthlyRain.map(\.rain))
+        /// The share of `month`'s days over forty years with `weather`, in
+        /// thousandths.
+        func share(_ country: String, _ weather: Weather, month: Int64) -> Int64 {
+            let disruptions = Disruptions(level: .standard, country: country, seed: 7)!
+            let days = (0..<40).flatMap { y in (0..<30).map { 360 * (y + 1) + month * 30 + Int64($0) } }
+            return Int64(days.count { disruptions.weather(onDay: $0) == weather }) * 1_000 / Int64(days.count)
+        }
+        // Rovaniemi: no thunder from October to April, some in July; Hong
+        // Kong: thunderstorms one day in four in August, a dry winter;
+        // Fukuoka: the plum rains of June.
+        for month in [0, 1, 2, 3, 9, 10, 11] as [Int64] {
+            XCTAssertEqual(share("FI", .thunderstorm, month: month), 0, "FI month \(month + 1)")
+        }
+        XCTAssertTrue((70...180).contains(share("FI", .thunderstorm, month: 6)), "FI July: \(share("FI", .thunderstorm, month: 6))")
+        XCTAssertTrue((220...360).contains(share("HK", .thunderstorm, month: 7)), "HK August: \(share("HK", .thunderstorm, month: 7))")
+        XCTAssertTrue((60...150).contains(share("HK", .rain, month: 11) + share("HK", .thunderstorm, month: 11)), "HK December")
+        XCTAssertTrue((300...480).contains(share("JP", .rain, month: 5) + share("JP", .thunderstorm, month: 5)), "JP June")
+        // The same seed gives each country its own days.
+        let taiwan = Disruptions(level: .standard, country: "TW", seed: 7)!, finland = Disruptions(level: .standard, country: "FI", seed: 7)!
+        let year = Int64(360)..<720
+        XCTAssertNotEqual(year.map(taiwan.weather(onDay:)), year.map(finland.weather(onDay:)))
     }
 
     func testRainLowersTheWholeNetworksDemand() throws {

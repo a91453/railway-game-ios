@@ -366,11 +366,11 @@ final class RealRailwaysTests: XCTestCase {
                 "platformNameBoards",
                 "proceduralTokyo", "polyHaven", "music", "runningSound", "dieselSound", "motorSound", "weatherSound",
                 // Decision 712: Hong Kong's, open since its third pull request.
-                "hongKongMTR", "hongKongMap", "hongKongTerrain", "hongKongLandUse", "hongKongBuildings", "hongKongPeople", "hongKongAirport",
+                "hongKongMTR", "hongKongMap", "hongKongTerrain", "hongKongLandUse", "hongKongBuildings", "hongKongPeople", "hongKongWeather", "hongKongAirport",
                 // Decision 818: Rovaniemi's, open for the winter event.
-                "rovaniemiVR", "rovaniemiMap", "rovaniemiBuildings", "rovaniemiTerrain", "rovaniemiPopulation",
+                "rovaniemiVR", "rovaniemiMap", "rovaniemiBuildings", "rovaniemiTerrain", "rovaniemiPopulation", "rovaniemiWeather",
                 // Decision 854 (FUKUOKA-OPEN): Fukuoka's.
-                "fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport", "kyushuAirports",
+                "fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaWeather", "fukuokaAirport", "kyushuAirports",
             ])
             XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
             for credit in credits {

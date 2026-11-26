@@ -1388,7 +1388,9 @@ public final class GameSession {
         // Decision 695: a free game on a real-world map saved before there
         // were airports gets its map's.
         // Decision 880: and one saved before its map had sights gets them.
-        let world = AttractionCatalog.withSights(AirportCatalog.withAirports(Self.withCityRidership(world)))
+        // Decision 1003: and one whose map's country was taken for Taiwan's
+        // gets its own holidays and weather.
+        let world = CountryLookup.withMapCountry(AttractionCatalog.withSights(AirportCatalog.withAirports(Self.withCityRidership(world))))
         self.world = world
         self.commandLog = CommandLog(start: world)
         self.language = language

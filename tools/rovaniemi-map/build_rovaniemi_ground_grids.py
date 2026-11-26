@@ -16,8 +16,10 @@ steep slopes alone are made again (how the model was changed in decision
 971, without moving a lake's shore under a game already played).
 
 The grid is Taiwan's: 1.875″ cells (16 × 16 to each of WorldPop's 30″
-cells, the pack's `population.json`), from that grid's corner, over the
-pack's extent.
+cells), from the corner of WorldPop's grid as the pack's `population.json`
+had it until decision 1007 (`LATTICE`; the pack's people are now Statistics
+Finland's on 7.5″ cells, which would move this grid), over the pack's
+extent.
 
 Water (`build_water_grid.py`'s rule): a cell is water when its middle is
 inside a body of water of OpenStreetMap's (the Kemijoki and Ounasjoki, the
@@ -68,6 +70,12 @@ NLS_LICENCE = "the National Land Survey of Finland's open data licence, CC BY 4.
 OUNASVAARA = (66.4989, 25.8028, 204)
 KEMIJOKI = (66.4990, 25.7390)
 CHECK_METRES = 15
+
+
+# WorldPop's 30″ grid as cut to the map (decision 789's `population.json`),
+# the corner the heights and water have stood on since; decision 1007 put
+# the pack's people on another grid, so it is kept here.
+LATTICE = {'north': 66.8000000688, 'west': 25.199999179200027, 'cellDegrees': 0.0083333333}
 
 
 def mosaic(folder):
@@ -128,8 +136,7 @@ def mean_heights(dem, dem_west, dem_north, north, west, step, rows, columns):
 
 def main(dem_folder, extract, folder):
     dem, dem_west, dem_north, digests = mosaic(dem_folder)
-    population = json.load(open(os.path.join(folder, 'population.json'), encoding='utf-8'))
-    north, west, step, rows, columns = build_hk_ground_grids.grid_box(population, build_rovaniemi_rail.EXTENT)
+    north, west, step, rows, columns = build_hk_ground_grids.grid_box(LATTICE, build_rovaniemi_rail.EXTENT)
     latitudes = north - (np.arange(rows) + 0.5) * step
 
     # Water: the bodies of water; no coast. Or the pack's own, as it is.

@@ -11,7 +11,8 @@
 | `finland.pbf` | OpenStreetMap 芬蘭整包，`https://osmtoday.com/europe/finland.pbf`（約 853 MB，會轉到 geo2day.com），用 `osmium extract` 切成 `rovaniemi.pbf`（約 7 MB） | ODbL 1.0，© OpenStreetMap 貢獻者 |
 | `digitraffic_trains.json`（這個資料夾裡） | Fintraffic Digitraffic，`https://rata.digitraffic.fi/api/v1/trains/<日期>` 與 `metadata/stations` | CC BY 4.0：「Source: Fintraffic / digitraffic.fi, licence CC 4.0 BY」 |
 | 地形資料庫（Maastotietokanta）的 `<圖幅>L_mtk.zip`、`<圖幅>R_mtk.zip`（72 個）與 3D 建物（Rakennukset 3D）2022 羅瓦涅米 LoD2 的 `<圖幅><A–H>.zip`（64 個） | 芬蘭國土測量局（MML），從 Kapsi 的鏡像 `https://kartat.kapsi.fi/files/maastotietokanta/kaikki/etrs89/gml/` 與 `https://kartat.kapsi.fi/files/3D-rakennukset/kaikki/2022/etrs89/citygml/Rovaniemi/LOD2/` 抓（約 300 MB 與 18 MB；`mml_buildings.py fetch`，決策 1009） | MML 開放資料授權＝CC BY 4.0（可商用）；署名「Contains data from the National Land Survey of Finland Topographic Database and Buildings 3D (2022)」 |
-| `fin_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop 芬蘭 2025，constrained，1 km | CC BY 4.0，WorldPop |
+| `vaki2025_1km.json`、`pno_tilasto_2025.json` | 芬蘭統計局（Tilastokeskus）開放 WFS `https://geo.stat.fi/geoserver/wfs`：1 km 人口格 2025（2024 年底的住民）與郵遞區統計 Paavo 2025 的工作人數（依行業）；`tools/census-grid/finland_census_grid.py fetch`（決策 1007） | CC BY 4.0：「Source: Statistics Finland, Population grid data 1 km × 1 km 2025 and Paavo – Open data by postal code area 2025」 |
+| `fin_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop 芬蘭 2025，constrained，1 km（決策 1007 起只當備用，與第 5b 步猜樓層） | CC BY 4.0，WorldPop |
 | `T4312.tif` … `T5223.tif`（36 張） | 芬蘭國土測量局（Maanmittauslaitos）10 m 高程模型（Korkeusmalli 10 m，雷射測量的地面，ETRS-TM35FIN、N2000），2023 年 8 月版，從 Kapsi 的鏡像 `https://kartat.kapsi.fi/files/korkeusmalli/hila_10m/etrs-tm35fin-n2000/` 抓（各約 9 MB，共 322 MB；`fetch_nls_dem.py`）。CSC Paituli 的鏡像 `https://www.nic.funet.fi/index/geodata/mml/dem10m/2019/` 有 2019 年版，檔名相同 | 芬蘭國土測量局開放資料授權＝CC BY 4.0（可商用）；署名「National Land Survey of Finland, Elevation model 10 m, 08/2023」 |
 
 這些在雲端容器都連得到（2026-11-15）。芬蘭國土測量局（MML）自己的下載服務要 API 金鑰（401），所以高程從上面兩個公開鏡像抓（2026-11-25）。決策 971 之前用的是 Copernicus DEM GLO-30：它是地表模型，量到的是樹頂，拉普蘭整片是林，鐵路、道路、空地在裡面都成了 10–20 m 深的溝。每次讀了什麼寫在 `rovaniemi_sources.json`。
@@ -33,7 +34,7 @@ python3 -I tools/rovaniemi-map/build_rovaniemi_rail.py /tmp/rv/osm/rovaniemi.pbf
   tools/rovaniemi-map/digitraffic_trains.json RailwayGameApp/Resources/MapPacks/rovaniemi 2026-12-14
 python3 -I tools/rovaniemi-map/extract_rovaniemi_runs.py RailwayGameApp/Resources/MapPacks/rovaniemi
 
-# 3. 人口。
+# 3. 人口（暫用 WorldPop：第 5b 步的建物要它猜樓層；第 5c 步再換成統計局的）。
 curl -L -o /tmp/rv/pop/fin.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/FIN/v1/1km_ua/constrained/fin_pop_2025_CN_1km_R2025A_UA_v1.tif
 python3 -I tools/rovaniemi-map/build_rovaniemi_ground.py /tmp/rv/pop/fin.tif RailwayGameApp/Resources/MapPacks/rovaniemi
 
@@ -50,6 +51,11 @@ python3 -I tools/rovaniemi-map/build_rovaniemi_ground_grids.py /tmp/rv/nls /tmp/
 pip install shapely
 python3 -I tools/rovaniemi-map/mml_buildings.py fetch /tmp/rv/mml    # 約 320 MB
 python3 -I tools/rovaniemi-map/build_rovaniemi_buildings.py /tmp/rv/mml /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
+
+# 5c. 住與上班的人（決策 1007）：芬蘭統計局 1 km 人口格＋Paavo 郵遞區工作人數，依第 5b 步的建物分到 7.5″ 格。
+pip install shapely
+python3 -I tools/census-grid/finland_census_grid.py fetch RailwayGameApp/Resources/MapPacks/rovaniemi /tmp/rv/statfin
+python3 -I tools/census-grid/finland_census_grid.py build /tmp/rv/statfin RailwayGameApp/Resources/MapPacks/rovaniemi
 
 # 6. 機場與不蓋區（台灣那兩支工具），最後重寫 pack.json。
 python3 -I tools/airfields/build_airfields.py /tmp/rv/osm/rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi/airfields.json

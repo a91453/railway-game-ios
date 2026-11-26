@@ -1,0 +1,2 @@
+en: On the Japan map, the 3D view no longer fills fields with houses: each spot has as many homes as people live and work there.
+zh: 日本地圖的 3D 不再在田裡蓋滿房子，房子多少照當地住和上班的人數。
