@@ -45,7 +45,7 @@ main `c5a6892`（#2770 合併後）沒有找到遊戲的 bug：新功能測試�
 
 ## 下一步
 
-1. `ci.yml` 的 `timetable-checkup` 的 `timeout-minutes: 60` 調到 90（本串在同一分支另開一張 PR；若沒合到，接手的人照做）。之後可以考慮把台灣高鐵拆成自己的一組體檢，讓它和捷運平行跑。
+1. `ci.yml` 的 `timetable-checkup` 的 `timeout-minutes: 60` 調到 90（第二張 PR 已改；若沒合到，接手的人照做）。之後可以考慮把台灣高鐵拆成自己的一組體檢，讓它和捷運平行跑。
 2. 等夜間 `ci.yml` 與 full lane 跑在 main 上（cron 17:37／18:17 UTC，常延遲數小時；main 若一直在合拆分 PR，就由統籌串挑送審 commit 手動各跑一次）。
 3. 看 full lane 的 iPad 教學 job：若 `testTraditionalChineseTutorialNavigation` 又是 springboard 等 60 秒、超過 8 分鐘，開一張 CI 單（不是 App bug），先別擋送審。
 4. 福岡尖峰間隔 +4 剛好等於預算，下次重鋪福岡地圖包時要手動跑一次體檢（決策 582「後來」已記）。
