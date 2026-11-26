@@ -13,8 +13,9 @@ Taiwan's `taiwan_heights.dat`, `taiwan_water.json` and
         RailwayGameApp/Resources/MapPacks/hongkong
 
 The grid is Taiwan's: 1.875″ cells (16 × 16 to each of WorldPop's 30″
-cells, the pack's `population.json`), from that grid's corner, over the
-pack's extent.
+cells, the pack's `population.json` until decision 1008), from that grid's
+corner (`WORLDPOP_GRID`, written here since the census's 7.5″ grid took
+its place), over the pack's extent.
 
 Water (`build_water_grid.py`'s rule): a cell is water when its middle is
 outside the land of OpenStreetMap's coastline or inside a body of water.
@@ -62,6 +63,10 @@ import build_terrain  # noqa: E402
 import build_water_grid  # noqa: E402
 
 CUTS = 16
+# Decision 1008: the corner and cell of WorldPop's 30″ grid of Hong Kong
+# (`build_hk_ground.py`), which the heights, water and land cover grids
+# are cut from; `population.json` is now the census's 7.5″ grid.
+WORLDPOP_GRID = {'north': 22.5583335791, 'west': 113.83333215800003, 'cellDegrees': 0.0083333333}
 SHORE = build_slope_grid.SHORE
 # The zip as downloaded (2026-11-13), and the GeoTIFF in it.
 ZIP_SHA256 = '6dbcdfb50bbc4bc520828eec574e5235c887b02cfeaff3dd24d85e87621bd1af'
@@ -166,8 +171,7 @@ def main(dtm_path, extract, folder):
         sys.exit(f'{dtm_path}: sha256 {digest}, expected {DTM_SHA256} (a newer model: check it, then change DTM_SHA256)')
     dtm = tifffile.imread(dtm_path)
     assert dtm.shape == (9601, 12751), f'the model is {dtm.shape}, not 9,601 × 12,751 samples of 5 m'
-    population = json.load(open(os.path.join(folder, 'population.json'), encoding='utf-8'))
-    north, west, step, rows, columns = grid_box(population, build_hk_mtr.EXTENT)
+    north, west, step, rows, columns = grid_box(WORLDPOP_GRID, build_hk_mtr.EXTENT)
 
     # Water.
     rings, _, coast_stamp = build_hk_basemap.coastline(extract)

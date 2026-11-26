@@ -319,22 +319,34 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
-                    // Decision 712: the people of Hong Kong's map
-                    // (`MapPacks/hongkong/population.json`).
+                    // Decisions 712 and 1008: the people and jobs of Hong
+                    // Kong's map (`MapPacks/hongkong/population.json`,
+                    // `tools/census-grid/hongkong_census_grid.py`).
                     DataSourceCredit(
                         id: "hongKongPeople",
                         title: language.text("Hong Kong’s people", "香港的人口"),
                         detail: language.text(
-                            "On Hong Kong’s map, how many people live round each station, which sets how many ride from it and where the city’s buildings stand.",
-                            "香港地圖上每座車站周圍住了多少人，決定有多少人從那裡搭車，以及城市的建物蓋在哪裡。"
+                            "On Hong Kong’s map, how many people live and work round each station, which sets how many ride from it and where they go.",
+                            "香港地圖上每座車站周圍住了多少人、有多少人在那裡上班，決定有多少人從那裡搭車、往哪裡去。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), University of Southampton: population estimates per square kilometre of Hong Kong, 2025 (R2025A), under the Creative Commons Attribution 4.0 International licence (CC BY 4.0). Each cell is rounded to whole people.",
-                            "WorldPop（www.worldpop.org），英國南安普敦大學：香港 2025 年每平方公里人口估計（R2025A），依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）。每格四捨五入到整數人。"
+                            "Residents: 2021 Population Census, Census and Statistics Department. Jobs: Quarterly Survey of Employment and Vacancies, 2021, Census and Statistics Department. Tertiary Planning Units and land use: Planning Department. All Government of the Hong Kong SAR, via DATA.GOV.HK and the CSDI Portal (Common Spatial Data Infrastructure), used under their Terms and Conditions of Use. Spread over the homes and workplaces for the game.",
+                            "住的人：2021 年人口普查，政府統計處。上班的人：2021 年就業及職位空缺按季統計調查，政府統計處。小規劃統計區與土地用途：規劃署。都是香港特別行政區政府的資料，經「資料一線通」（DATA.GOV.HK）與空間數據共享平台（CSDI）提供，依兩者的使用條款使用；為遊戲分配到住宅與工作的地方。"
                         ),
                         links: [
-                            DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
-                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                            DataSourceCredit.Link(
+                                title: language.text("2021 Population Census", "2021 年人口普查"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-censtatd-census_geo-2021-population-census-by-ssg"
+                            ),
+                            DataSourceCredit.Link(
+                                title: language.text("Persons engaged by Tertiary Planning Unit", "按小規劃統計區劃分的就業人數"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-censtatd-tablechart-215-16009"
+                            ),
+                            DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
+                            DataSourceCredit.Link(
+                                title: language.text("CSDI Portal Terms and Conditions of Use", "空間數據共享平台使用條款"),
+                                url: "https://portal.csdi.gov.hk/csdi-webpage/doc/TNC"
+                            ),
                         ]
                     ),
                     // Decision 1003: the months' rain and thunder
