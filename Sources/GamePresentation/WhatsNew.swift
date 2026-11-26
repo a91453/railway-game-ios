@@ -57,6 +57,10 @@ public enum WhatsNew {
                     chinese: "九州新幹線各站照真實月台鋪：博多 6 股、新鳥栖與熊本 4 股、筑後船小屋 3 股。"
                 ),
                 Line(
+                    english: "On the Japan map you can now buy the Nishi-Kyushu Shinkansen from Takeo-Onsen to Nagasaki by itself: five stations, 42 trains a day of six-car N700S sets.",
+                    chinese: "日本地圖可以單獨買西九州新幹線（武雄溫泉—長崎）：5 站，6 節 N700S 一天 42 班。"
+                ),
+                Line(
                     english: "The Japan map has 54 more sights across Fukuoka, Saga and Kumamoto, from Dazaifu and Mojiko to Kumamoto Castle and Mount Aso.",
                     chinese: "日本地圖多了福岡、佐賀、熊本三縣 54 個景點，太宰府、門司港、熊本城、阿蘇山都在。"
                 ),
@@ -111,6 +115,14 @@ public enum WhatsNew {
                 Line(
                     english: "The track card is simpler: track type, gauge, double track and Lay Track up front, the rest under More options.",
                     chinese: "鋪軌卡片變簡單：軌道種類、軌距、複線和鋪設在前面，其他收進「更多選項」。"
+                ),
+                Line(
+                    english: "Buildings on the Rovaniemi map now follow Finland's official survey: real outlines, and real heights in the town.",
+                    chinese: "羅瓦涅米地圖的建物改用芬蘭官方測量資料：外形照實際，市區的大樓照實際高度。"
+                ),
+                Line(
+                    english: "Buildings across Taiwan now take their storeys from official records (the usage permits of New Taipei, Taipei, Tainan and Hsinchu City, and the real-price registry of home sales), so towers stand at their real height.",
+                    chinese: "全台建物樓層改用官方紀錄（新北、臺北、臺南、新竹市的使用執照與內政部實價登錄），大樓照實際高度。"
                 ),
                 Line(
                     english: "The Japan map packs are about 12 MB smaller to download, and the app itself takes less space.",
