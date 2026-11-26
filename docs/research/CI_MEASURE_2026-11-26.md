@@ -89,3 +89,17 @@ rest 剩約 1,165 s。用同一套 `deal_part` 分法拿兩次 run 的類別時�
 1. 下一次完整 `ci.yml`：rest-1、rest-2 都在 12 分以內，最長的一片不超過 campaigns-8。
 2. `Map3DFarViewTests.testTheFarthestViewOfTaipeiIsWithinBudget` 一支 287–440 s，是整套最慢的一支（11-18 量是 98 s）：建一整片台北最遠視野、Linux 上 GamePresentation 是 -Onone。它在 GamePresentation tier 也落在一片裡（那片 20 分）。要快得改建景本身或測試的範圍，這輪沒動，寫成下一輪的第一項。
 3. Mac runner 上線後：PR 的 iOS 排隊時間、Mac 上 build job 的時間（預估比 3 核心的 hosted 快）、工作室有沒有被拖慢。
+
+## 6. 發版日（0.6.0 (148)）的 PR CI
+
+發版 PR #2744（`WhatsNew.swift` 條目、刪 `WhatsNewNext/*.txt`、換 `.github/testflight-whats-new.md`）從第一次推（06:55）到合（10:30）約 3.6 小時，中間推了 8 次，每次的 `ci.yml` 約 31 分。
+
+- 最慢的一段是 hosted 的 iOS build job：29.9 分（建置佔大半）。改到 `WhatsNew.swift` 就算 App 的改動，所以只改發版說明也整個重建、跑 gate 的 UI 測試；gate 等它。
+- Swift 部分跑了完整 tier（約 21 分），因為那天為了繞過 SaveMutationChecks 的選錯加了 `full-ci` 標籤；#2748 合了之後不用再加。
+- 同一個 build job 在作者的 Mac（`chien-mac`）上量是 9.8 分（#2750）。
+
+下一步（依省下的時間排）：
+
+1. 只改發版說明的 PR 走快速路線（`docs/handoff/CIOPT-17.md` 第 1 項）：只跑 `WhatsNewTests`、`testflight-checks.yml`、`doc-numbers`，不跑 iOS build。每推一次從約 31 分降到幾分鐘。
+2. MAC-RUNNER（決策 1014，#2750）：其他 PR 的 iOS build 在 Mac 有空時約 10 分，也不再排 hosted macOS 的隊。作者要在 runner 加 `xcode-27.2` 標籤、關掉 Xcode 自動更新，Mac 才會被選到。
+3. 發版 PR 不再加 `full-ci`（#2748 已修選錯的原因）：Swift 部分照縮小後的範圍跑。

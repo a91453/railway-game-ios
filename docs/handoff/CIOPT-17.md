@@ -2,9 +2,10 @@
 
 ## 進度
 
-- 做到哪：#2747（rest 重排）、#2748（受影響測試選到基底類別）已合；MAC-RUNNER（決策 1014）是這個檔所在的 PR。
+- 做到哪：#2747（rest 重排）、#2748（受影響測試選到基底類別）、#2750（MAC-RUNNER，決策 1014）已合。發版日的量測在量測檔 §6。
 - 已驗證：#2747 自己的完整 tier，rest-1 12.6 分、rest-2 12.0 分（11-26 夜間是 19.9 分）。
-- 下一步：開新的一串做下面的「只改發版說明的 PR」，本串已壓縮一次，依規則不再接新工作。
+- 下一步：開新的一串做下面的「只改發版說明的 PR」（量測檔 §6：發版 PR 推 8 次、每次約 31 分，卡在 hosted iOS build 29.9 分）。本串已壓縮兩次，停手。
+- 等作者：runner 加 `xcode-27.2` 標籤、關掉 Mac 的 Xcode 自動更新（`docs/MAC_RUNNER.md`）；在那之前 PR 的 iOS build 都照舊用 hosted。
 
 ## 做了什麼
 
@@ -32,3 +33,4 @@
 3. MAC-RUNNER 上線一週後量 PR 的 iOS 排隊時間和 Mac 上 build job 的時間，寫回決策 1014 的「下一步」。
 4. `website-screenshots.yml` 也接 `pick-mac.yml`（等 #2726 合）。
 5. `Map3DFarViewTests.testTheFarthestViewOfTaipeiIsWithinBudget` 一支要 287–440 s，見量測檔 §5。
+6. 發版 PR 不再加 `full-ci` 標籤（#2748 已修 SaveMutationChecks 選錯），寫進發版例行的步驟。
