@@ -1,0 +1,104 @@
+name: Pick the Mac or a hosted runner
+
+# CIOPT-17 (2026-11-26). The account has five hosted macOS runners, and on
+# 2026-11-26 a pull request's iOS build waited up to 73 minutes for one
+# (docs/research/CI_MEASURE_2026-11-26.md). The owner's Mac can take a
+# job as a self-hosted runner with the label chien-mac. GitHub does not
+# fall back from a self-hosted label to a hosted one: a job sent to an
+# offline runner waits for it (up to a day). So a job that may use the Mac
+# first calls this workflow, which says where it should run:
+#
+# - the Mac when the variable MAC_RUNNER is not "off", the event is one the
+#   Mac takes (the caller's input allow: ios-build.yml allows a pull
+#   request from a branch of this repository and only_testing by hand,
+#   never the full lane), a runner labelled chien-mac is online and not busy, and the
+#   secret RUNNER_STATUS_TOKEN can read the repository's runners;
+# - otherwise xcode-27, the hosted image every macOS job used before.
+#
+# This repository is public: a pull request from a fork never runs on the
+# Mac (its code would run on the owner's computer), and the repository's
+# setting "Require approval for all external contributors" holds a fork's
+# runs until the owner looks. GITHUB_TOKEN cannot list runners, so
+# RUNNER_STATUS_TOKEN is a fine-grained token of this repository only
+# with Administration: Read and nothing else; without it (a fork's run gets
+# no secrets) the answer is xcode-27. Anything that fails here answers
+# xcode-27 too, so the Mac can only ever be skipped, never waited for.
+#
+# Turn the Mac off without a terminal: Settings, Secrets and variables,
+# Actions, Variables, MAC_RUNNER = off. Or stop the runner on the Mac
+# (./svc.sh stop): offline, it is not picked.
+
+on:
+  workflow_call:
+    inputs:
+      allow:
+        description: Whether this run may use the Mac at all.
+        type: boolean
+        default: false
+    outputs:
+      runs-on:
+        description: The runs-on value as JSON, for fromJSON().
+        value: ${{ jobs.pick.outputs.runs-on }}
+      where:
+        description: mac or hosted.
+        value: ${{ jobs.pick.outputs.where }}
+    secrets:
+      RUNNER_STATUS_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  pick:
+    name: Pick the Mac or a hosted runner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      runs-on: ${{ steps.pick.outputs.runs-on }}
+      where: ${{ steps.pick.outputs.where }}
+    steps:
+      - name: Is the Mac online and free?
+        id: pick
+        env:
+          TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+          SWITCH: ${{ vars.MAC_RUNNER }}
+          ALLOW: ${{ inputs.allow }}
+          EVENT: ${{ github.event_name }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPO: ${{ github.repository }}
+          LABEL: chien-mac
+        run: |
+          hosted() {
+            echo "runs-on=\"xcode-27\"" >>"$GITHUB_OUTPUT"
+            echo "where=hosted" >>"$GITHUB_OUTPUT"
+            echo "A hosted macOS runner (xcode-27): $1" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          }
+          [[ "$SWITCH" != off ]] || hosted "MAC_RUNNER is off."
+          [[ "$ALLOW" == true ]] || hosted "this run does not use the Mac ($EVENT)."
+          if [[ "$EVENT" == pull_request && "$HEAD_REPO" != "$REPO" ]]; then
+            hosted "a pull request from another repository never runs on the Mac."
+          fi
+          [[ -n "$TOKEN" ]] || hosted "no RUNNER_STATUS_TOKEN."
+          if ! runners="$(curl --fail --silent --show-error --max-time 20 \
+              -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/$REPO/actions/runners?per_page=100")"; then
+            hosted "the runner list could not be read."
+          fi
+          state="$(jq -r --arg label "$LABEL" '
+            [.runners[]? | select(any(.labels[]?; .name == $label))] as $mine
+            | if ($mine | length) == 0 then "none"
+              elif any($mine[]; .status == "online" and (.busy | not)) then "free"
+              elif any($mine[]; .status == "online") then "busy"
+              else "offline" end' <<<"$runners" 2>/dev/null || echo unreadable)"
+          case "$state" in
+            free)
+              echo "runs-on=[\"self-hosted\",\"macOS\",\"$LABEL\"]" >>"$GITHUB_OUTPUT"
+              echo "where=mac" >>"$GITHUB_OUTPUT"
+              echo "The Mac ($LABEL): online and free." | tee -a "$GITHUB_STEP_SUMMARY" ;;
+            busy) hosted "the Mac is running another job." ;;
+            offline) hosted "the Mac is offline." ;;
+            none) hosted "no runner is labelled $LABEL." ;;
+            *) hosted "the runner list was not understood." ;;
+          esac
