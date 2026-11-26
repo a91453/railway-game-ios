@@ -111,7 +111,7 @@ extension DataSourceCredits {
                         "資料來源：交通部民用航空局「民航統計年報」114 年與「國內定期航線班機時刻表」。航廈位置：OpenStreetMap 貢獻者。"
                     ),
                     links: [
-                        DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
+                        civilAviation(in: language),
                     ]
                 ),
                 // Decision 1004: how often it rains in each part of
@@ -159,7 +159,7 @@ extension DataSourceCredits {
                         DataSourceCredit.Link(title: language.text("Attribution", "出處"), url: overtureAttributionURL),
                         DataSourceCredit.Link(title: language.text("East Asian buildings", "東亞建物資料"), url: eastAsianBuildingsURL),
                         DataSourceCredit.Link(title: "ODbL 1.0", url: odblURL),
-                        DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ccByLicense,
                     ]
                 ),
             ]

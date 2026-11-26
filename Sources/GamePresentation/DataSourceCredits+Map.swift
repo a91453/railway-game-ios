@@ -134,7 +134,7 @@ extension DataSourceCredits {
                     ),
                     links: [
                         DataSourceCredit.Link(title: "ESA WorldCover", url: worldCoverURL),
-                        DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ccByLicense,
                     ]
                 ),
                 // Decision 262: where the large cities' main stations
