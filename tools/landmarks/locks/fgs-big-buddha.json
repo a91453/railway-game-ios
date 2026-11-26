@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark fgs-big-buddha: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "fgs-big-buddha" : {
+      "hash" : "78e1a822c72ba327",
+      "triangles" : 2924
+    },
+    "fgs-big-buddha-far" : {
+      "hash" : "e8a5bbd188ab054c",
+      "triangles" : 948
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark fgs-main-hall: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "fgs-main-hall" : {
+      "hash" : "d33157ae35824928",
+      "triangles" : 1760
+    },
+    "fgs-main-hall-far" : {
+      "hash" : "a517a888c433a719",
+      "triangles" : 772
+    }
+  }
+}

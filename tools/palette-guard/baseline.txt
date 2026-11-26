@@ -31,7 +31,6 @@ Map3DAlishan.swift 8E9496
 Map3DAlishan.swift 97A6AB
 Map3DAlishan.swift B83230
 Map3DAlishan.swift C9CED0
-Map3DAlishan.swift E9E1CF
 Map3DAlishan.swift F2C230
 Map3DBreezyBlueCoaches.swift 30383B
 Map3DBreezyBlueCoaches.swift 315B6B
@@ -46,7 +45,6 @@ Map3DBuildings.swift 6B5A3E
 Map3DBuildings.swift 8C7449
 Map3DBuildings.swift C9746A
 Map3DC381.swift D9473F
-Map3DCableCar.swift 12A08F
 Map3DCableCar.swift 2F3338
 Map3DCableCar.swift 3A4048
 Map3DCableCar.swift 5E6A78
@@ -438,7 +436,6 @@ Map3DTaoyuanAirport.swift 8D444D
 Map3DTaoyuanAirport.swift 9B73AC
 Map3DTaoyuanAirport.swift ADB5BC
 Map3DTaoyuanAirport.swift C4C9CD
-Map3DTourismEMU500.swift 5A5F65
 Map3DTrainLights.swift 405560
 Map3DTrainLights.swift FFEDC2
 Map3DTrainLocomotives.swift 2A2F33

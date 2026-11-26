@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark hk-wong-tai-sin-gate: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "hk-wong-tai-sin-gate" : {
+      "hash" : "669b6f44a2103888",
+      "triangles" : 952
+    },
+    "hk-wong-tai-sin-gate-far" : {
+      "hash" : "ac55c9563d3f9b59",
+      "triangles" : 408
+    }
+  }
+}
