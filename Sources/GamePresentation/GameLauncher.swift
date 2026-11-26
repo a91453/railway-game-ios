@@ -578,9 +578,9 @@ public final class GameLauncher {
     /// Starts a new game: on a blank map, bought tile by tile as the
     /// railway grows (decision 160), or with `anchor` on a real-world map
     /// with its middle there (Stage E2). A place of Taiwan, with the app's
-    /// people, is the island bought tile by tile from the 16 km round it
-    /// (decision 167, ``RealWorldExpansion``); any other place is a 16 km
-    /// map.
+    /// people, is the island bought tile by tile from the 32 km round it
+    /// (decision 167, ``RealWorldExpansion``; 16 km before decision 992);
+    /// any other place is a 16 km map.
     ///
     /// Decision 177: it starts with the player's ``newGameOptions``
     /// (standard unless changed): the cash, the disruptions, the rules
@@ -826,8 +826,12 @@ public final class GameLauncher {
     /// its map pack says, its land read in round each station as it is
     /// built. `false`, with a message, while the city's ground is not read
     /// (the real-world data still loading, or the city not open).
+    ///
+    /// Decision 992: on a map that buys its land, the game starts with four
+    /// tiles, or with the whole map open when `wholeMap` (counting no
+    /// achievements); a demo has the whole map, as on Taiwan.
     @discardableResult
-    public func startOverseasMap(_ city: OverseasMap) -> Bool {
+    public func startOverseasMap(_ city: OverseasMap, wholeMap: Bool = false) -> Bool {
         guard let ground = overseasGrounds.first(where: { $0.city == city }) else {
             // Decision 858: its map pack is not on the device yet.
             let waiting = overseasAwaited.contains { $0.city == city } ? city.notDownloadedText(MapPackDownloads.status(city), in: language) : nil
@@ -837,7 +841,7 @@ public final class GameLauncher {
         // Decision 712: the city's flights open its map.
         guard takeMap(city.rawValue) else { return false }
         let options = newGameOptions
-        var world = GameWorld.newOverseasGame(ground, balance: options.startingBalance, eventSeed: options.eventSeed())
+        var world = GameWorld.newOverseasGame(ground, wholeMap: wholeMap || isDemoMode, balance: options.startingBalance, eventSeed: options.eventSeed())
         options.apply(to: &world)
         if isDemoMode { world.setUnlimitedFunds(true) }
         // Decision 726: on the city's own ground, when its pack has heights.
@@ -946,8 +950,9 @@ public final class GameLauncher {
         // Decision 266: nor do the lessons count.
         // 2026-11-14: nor the whole of Taiwan, open from the start, as
         // the map picker says (fair to the maps bought tile by tile).
+        // Decision 992: nor a city's map opened whole.
         guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, !session.world.economy.unlimitedFunds,
-              !session.world.isWholeTaiwan else { return }
+              !session.world.isWholeTaiwan, !session.world.wholeMapOpen else { return }
         let facts = AchievementFacts(world: session.world)
         let scope = Self.achievementScope(of: session.world)
         let unlocked = achievements.unlock(meeting: facts, at: date, only: scope)

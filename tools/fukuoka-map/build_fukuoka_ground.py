@@ -6,14 +6,16 @@ in the formats of Taiwan's, Hong Kong's and Rovaniemi's, with the tools
 they share (`tools/overseas-map/overseas_ground.py`).
 
     python3 -I tools/fukuoka-map/build_fukuoka_ground.py population /tmp/fk/pop/jpn.tif RailwayGameApp/Resources/MapPacks/fukuoka
-    python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka
-    python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka
+    python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka
+    python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka
 
 People: WorldPop's 1 km grid of Japan (2025, constrained, R2025A v1,
 CC BY 4.0), cut to the extent (`build_fukuoka_rail.EXTENT`).
 
 Base map: Taiwan's tiles (`tools/basemap/build_basemap.py`) from the
-Kyushu extract cut to the map. Kyushu's shore runs out of the extract on
+Kyushu extract cut to the map; since decision 991, Kyushu's and Chugoku's
+merged (`osmium merge`), so the map's north-east corner has Shimonoseki
+across the strait from Kitakyushu. Kyushu's shore runs out of the extract on
 every side, so the open coastline is cut to the extract's box and closed
 along its edge (`overseas_ground.coast_in_box`); Nokonoshima and the other
 islands are closed rings of their own.
@@ -64,7 +66,7 @@ POPULATION_SHA256 = '0e6e4155c86d5e87f61a837ad3bd90f993dd19b7a34c475f7a05cb36d63
 POPULATION_URL = ('https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/JPN/v1/1km_ua/constrained/'
                   'jpn_pop_2025_CN_1km_R2025A_UA_v1.tif')
 # The extract's box (west, south, east, north), as cut with osmium.
-BOX = (130.25, 32.66, 130.94, 33.75)
+BOX = (129.69, 32.05, 131.37, 34.07)
 SEA_MARGIN = 0.05
 GSI_CREDIT = '国土地理院の標高タイルを加工して作成'
 GSI_TERMS = '国土地理院コンテンツ利用規約 (https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html), compatible with CC BY 4.0'
@@ -104,7 +106,7 @@ def basemap(extract, folder):
     build_fukuoka_rail.write_manifest(folder)
     record(os.path.basename(extract) + ' (basemap, water.json)', {
         'sha256': hashlib.sha256(open(extract, 'rb').read()).hexdigest(),
-        'from': 'https://osmtoday.com/asia/japan/kyushu.pbf, cut with osmium extract -b '
+        'from': 'https://osmtoday.com/asia/japan/kyushu.pbf and chugoku.pbf (osmium merge), cut with osmium extract -b '
                 + ','.join(f'{v:g}' for v in BOX) + ' -s smart',
         'licence': 'ODbL 1.0, © OpenStreetMap contributors'})
 
@@ -280,7 +282,7 @@ def buildings(extract, folder):
     overseas_buildings.make(
         extract, folder, build_fukuoka_rail.EXTENT, title='Fukuoka building footprints', use_of=use_of,
         report_path=os.path.join(HERE, 'fukuoka_buildings.json'),
-        extract_from='https://osmtoday.com/asia/japan/kyushu.pbf, cut with osmium extract -b '
+        extract_from='https://osmtoday.com/asia/japan/kyushu.pbf and chugoku.pbf (osmium merge), cut with osmium extract -b '
                      + ','.join(f'{v:g}' for v in BOX) + ' -s smart',
         decision=854, write_manifest=build_fukuoka_rail.write_manifest)
 

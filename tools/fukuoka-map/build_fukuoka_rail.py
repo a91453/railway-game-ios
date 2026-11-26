@@ -147,11 +147,30 @@ CHOICE = 40
 # Hashimoto in the west to the airport in the east, Hakata Bay and Kaizuka
 # in the north, with room to the north for Nishitetsu's Kaizuka Line
 # (NISHITETSU-KAIZUKA, later); some 17.6 km by 22.2 km.
-# The map now (KUMAMOTO-GROUND: south and east to Kumamoto, decision 969) and
-# what it was before it grew, oldest first (`pack.json`'s `earlier`): the
-# north and west edges never move.
-EXTENT = {"north": 33.72, "south": 32.69, "west": 130.29, "east": 130.90}
-EARLIER = [{"north": 33.72, "south": 33.52, "west": 130.29, "east": 130.48}]
+# The map now and what it was before it grew, oldest first (`pack.json`'s
+# `earlier`). Decision 991 (JAPAN-PREFECTURE-PACKS): the whole of Fukuoka,
+# Saga and Kumamoto Prefectures (their land as OpenStreetMap's roads reach
+# it; Okinoshima, 60 km out at sea, left out), cut into a pack for each
+# prefecture (`split_prefectures.py`). Its north and west edges moved, so
+# the map is laid anew round it (no `earlier`), a new game owning the 2 x 2
+# tiles round one of `STARTS` (the middle of Fukuoka, Saga or Kumamoto
+# City; the first unless the player picks another); the games laid over the map before
+# stay on `OLDER`, which keeps their north-west corner and grows to the new
+# south and east edges (decision 969's rule).
+EXTENT = {"north": 34.03, "south": 32.09, "west": 129.73, "east": 131.33}
+EARLIER = []
+STARTS = [
+    {"name": "福岡", "english": "Fukuoka", "latitude": 33.62, "longitude": 130.385},
+    {"name": "佐賀", "english": "Saga", "latitude": 33.264, "longitude": 130.30},
+    {"name": "熊本", "english": "Kumamoto", "latitude": 32.80, "longitude": 130.71},
+]
+OLDER = [{
+    "extent": {"north": 33.72, "south": 32.09, "west": 130.29, "east": 131.33},
+    "earlier": [
+        {"north": 33.72, "south": 33.52, "west": 130.29, "east": 130.48},
+        {"north": 33.72, "south": 32.69, "west": 130.29, "east": 130.90},
+    ],
+}]
 SKIPPED_SERVICE = {"yard", "siding", "spur", "crossover"}
 
 
@@ -495,7 +514,9 @@ def write_manifest(folder):
                    "railways, read from this folder alone. Made by tools/fukuoka-map (README.md there).",
         "bytes": sum(f["bytes"] for f in files.values()),
         "extent": EXTENT,
-        "earlier": EARLIER,
+        **({"earlier": EARLIER} if EARLIER else {}),
+        "starts": STARTS,
+        "older": OLDER,
         "licences": licences,
         "files": files,
     })

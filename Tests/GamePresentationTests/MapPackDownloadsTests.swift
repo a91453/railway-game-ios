@@ -282,7 +282,55 @@ final class MapPackDownloadsTests: XCTestCase {
             XCTAssertEqual(city.assetPackManifestPath, "MapPacks/\(city.packFolder)/pack.json")
             let policy = try XCTUnwrap(object["downloadPolicy"] as? [String: Any])
             XCTAssertEqual(Array(policy.keys), ["prefetch"])
+            // Decision 991: each part of the city's map an asset pack of its
+            // own, its folder beside the city's.
+            XCTAssertEqual(city.assetPackIDs, [city.assetPackID] + city.partFolders.map { "mappack-\($0)" })
+            for part in city.partFolders {
+                let file = repository.appendingPathComponent("RailwayGameApp/AssetPacks/\(part).json")
+                let object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any], part)
+                XCTAssertEqual(object["assetPackID"] as? String, "mappack-\(part)")
+                XCTAssertEqual(object["fileSelectors"] as? [[String: String]], [["directory": "MapPacks/\(part)"]])
+                XCTAssertEqual(city.assetPackPath(of: "\(part)/basemap.pmtiles"), "MapPacks/\(part)/basemap.pmtiles")
+            }
+            XCTAssertEqual(city.assetPackPath(of: "pack.json"), city.assetPackManifestPath)
         }
+        // No manifest of a pack the app does not ask for.
+        let asked = OverseasMap.allCases.filter(OverseasMaps.open.contains).flatMap(\.assetPackIDs)
+        let manifests = try FileManager.default.contentsOfDirectory(atPath: repository.appendingPathComponent("RailwayGameApp/AssetPacks").path)
+            .filter { $0.hasSuffix(".json") }
+        XCTAssertEqual(manifests.count, asked.count)
+        XCTAssertEqual(OverseasMap.fukuoka.partFolders, ["fukuoka-saga", "fukuoka-kumamoto"])
+    }
+
+    /// Decision 991: a pack whose map is cut into parts lists their files
+    /// with the part's folder in the name; they are looked for in that
+    /// folder beside the pack's, read the pack's own first, and the pack is
+    /// whole only with every part's.
+    func testThePartsOfAPacksMapAreReadFromTheirFoldersBesideIt() throws {
+        let top = FileManager.default.temporaryDirectory.appendingPathComponent("mappack-parts-\(UUID().uuidString)")
+        folders.append(top)
+        let root = top.appendingPathComponent("city"), part = top.appendingPathComponent("city-south")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: part, withIntermediateDirectories: true)
+        let manifest = #"{"files":{"basemap.pmtiles":{"bytes":1},"city-south/basemap.pmtiles":{"bytes":1},"city-south/buildings.pmtiles":{"bytes":1}}}"#
+        try Data(manifest.utf8).write(to: root.appendingPathComponent("pack.json"))
+        try Data([1]).write(to: root.appendingPathComponent("basemap.pmtiles"))
+        try Data([2]).write(to: part.appendingPathComponent("basemap.pmtiles"))
+        XCTAssertEqual(MapPack.place(of: "city-south/basemap.pmtiles", root: root).standardizedFileURL, part.appendingPathComponent("basemap.pmtiles").standardizedFileURL)
+        XCTAssertEqual(MapPack.place(of: "basemap.pmtiles", root: root), root.appendingPathComponent("basemap.pmtiles"))
+        XCTAssertFalse(MapPack.isWhole(root), "a part's file is missing")
+        try Data([3]).write(to: part.appendingPathComponent("buildings.pmtiles"))
+        XCTAssertTrue(MapPack.isWhole(root))
+
+        let pack = MapPack(root: root)
+        XCTAssertEqual(pack.listedFiles, ["basemap.pmtiles", "city-south/basemap.pmtiles", "city-south/buildings.pmtiles"])
+        XCTAssertEqual(pack.baseMapFiles.map { try? Data(contentsOf: $0) }, [Data([1]), Data([2])], "the pack's own first")
+        XCTAssertEqual(pack.buildingsFiles.map { try? Data(contentsOf: $0) }, [Data([3])], "the parts' alone when the pack has none")
+        // A file handed out where it lies (decision 819) is read from there.
+        let elsewhere = top.appendingPathComponent("elsewhere.pmtiles")
+        try Data([4]).write(to: elsewhere)
+        let located = MapPack(root: root, files: ["city-south/basemap.pmtiles": elsewhere])
+        XCTAssertEqual(located.baseMapFiles.map { try? Data(contentsOf: $0) }, [Data([1]), Data([4])])
     }
 
     /// Decision 776, later: the app keeps how each download stands; the

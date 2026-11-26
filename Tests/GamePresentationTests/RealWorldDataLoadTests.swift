@@ -139,9 +139,10 @@ final class RealWorldDataLoadTests: XCTestCase {
     }
 
     /// A place of Taiwan after the load (decision 167) is the island bought
-    /// tile by tile: the first tile's people, off its water (decision 105),
-    /// with their real coverage (decision 147), as the 16 km square's are,
-    /// and the milestone for the next tile follows the people.
+    /// tile by tile: the first four tiles' people (decision 992), off their
+    /// water (decision 105), with their real coverage (decision 147), as the
+    /// 16 km square's are, and the milestone for the next tile follows the
+    /// people of one tile's worth round the pick.
     func testAPlaceOfTaiwanAfterTheLoadIsBoughtTileByTile() async throws {
         let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .english)
         await launcher.loadRealWorldData { RealWorldData.load(pack: HongKongRailwaysTests.pack, file: Self.file) }.value
@@ -151,7 +152,7 @@ final class RealWorldDataLoadTests: XCTestCase {
         let world = try XCTUnwrap(launcher.session?.world)
         let population = try XCTUnwrap(launcher.population)
         let water = try XCTUnwrap(launcher.water)
-        let blocks = Set(layout.start.landBlocks(in: layout.bounds))
+        let blocks = Set(layout.startTiles.flatMap { $0.landBlocks(in: layout.bounds) })
         let imported = LandImport.cells(in: blocks, population: population, places: launcher.places, water: water, frame: layout.frame, bounds: layout.bounds)
         let expected = try XCTUnwrap(launcher.coverage).covering(imported, frame: layout.frame)
         XCTAssertFalse(expected.isEmpty)
@@ -160,7 +161,9 @@ final class RealWorldDataLoadTests: XCTestCase {
             water: water.cells(frame: layout.frame, bounds: layout.bounds, in: blocks), steep: water.steepCells(frame: layout.frame, bounds: layout.bounds, in: blocks)
         ))
         XCTAssertEqual(world.landBlocks, blocks.sorted())
-        XCTAssertEqual(world.mapExpansion?.ridersStep, RealWorldExpansion.ridersStep(forResidents: imported.reduce(0) { $0 + $1.residents }))
+        // The milestone: the people of one tile's worth round the pick.
+        let middle = LandImport.cells(in: layout.middleBlocks, population: population, places: launcher.places, water: water, frame: layout.frame, bounds: layout.bounds)
+        XCTAssertEqual(world.mapExpansion?.ridersStep, RealWorldExpansion.ridersStep(forResidents: middle.reduce(0) { $0 + $1.residents }))
         XCTAssertEqual(world.mapExpansion?.ridersStep, layout.ridersStep(population: population, places: launcher.places, water: water))
     }
 

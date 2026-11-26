@@ -313,7 +313,7 @@ final class SharedStationLayoutTests: XCTestCase {
                     XCTAssertLessThan(over, -4, "\(order): the subway's platform under the ground")
                 }
             }
-            XCTAssertEqual(world.network.platforms(of: hakata).filter { laidBy[$0] == shinkansen }.count, 2, "\(order)")
+            XCTAssertEqual(world.network.platforms(of: hakata).filter { laidBy[$0] == shinkansen }.count, 6, "\(order): its six tracks (decision 995)")
             // The subway's two lines there as they stand without it.
             let subway = try XCTUnwrap(Self.between("fksubway:K", "fksubway:N", at: hakata, in: laid), "\(order)")
             XCTAssertLessThanOrEqual(subway.height, 0.5, "\(order): the subway's two lines at one height")

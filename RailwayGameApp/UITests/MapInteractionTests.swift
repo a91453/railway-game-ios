@@ -422,18 +422,20 @@ final class MapInteractionTests: XCTestCase {
         network.tap()
         let map = app.descendants(matching: .any)["map"].firstMatch
         XCTAssertTrue(map.appears(within: 10))
+        // NETWORK-PANEL-SIMPLE: Clear shows once a start is picked.
         let clear = app.buttons["Clear"]
-        XCTAssertTrue(clear.exists)
-        XCTAssertFalse(clear.isEnabled)
+        let card = app.buttons["network.system"].firstMatch
+        XCTAssertTrue(card.appears(within: 10), "The network tool's card opens")
+        XCTAssertFalse(clear.exists)
 
         // In the map's leading half: the details card floats over its
         // trailing side while a tool is chosen (decision 106).
         let start = map.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         let end = map.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: end)
-        XCTAssertFalse(clear.isEnabled, "Dragging must not pick a track anchor")
+        XCTAssertFalse(clear.exists, "Dragging must not pick a track anchor")
         map.pinch(withScale: 3, velocity: 1)
-        XCTAssertFalse(clear.isEnabled, "Pinching must not pick a track anchor")
+        XCTAssertFalse(clear.exists, "Pinching must not pick a track anchor")
         // Decision 123: on a phone the zoom buttons give way beside the
         // details card, which a chosen tool keeps open. Fold the card to
         // read them, then open it again for the tool's buttons. Each tap is
@@ -462,8 +464,8 @@ final class MapInteractionTests: XCTestCase {
         XCTAssertTrue(app.buttons["Zoom out"].isEnabled)
         if zoomHidden {
             toggleControls(to: "Hide Controls")
-            XCTAssertTrue(clear.appears(within: 10))
-            XCTAssertFalse(clear.isEnabled)
+            XCTAssertTrue(card.appears(within: 10))
+            XCTAssertFalse(clear.exists)
         }
 
         // After a pinch to the closest zoom an accessibility query can hold
@@ -478,7 +480,7 @@ final class MapInteractionTests: XCTestCase {
         func anchored() -> Bool {
             let signal = cardFolds
                 ? XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "Show Controls"), object: controls)
-                : XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: clear)
+                : XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true"), object: clear)
             return XCTWaiter().wait(for: [signal], timeout: 10) == .completed
         }
         anchor.tap()
@@ -963,9 +965,13 @@ final class MapInteractionTests: XCTestCase {
         network.waitUntilSettled()
         network.tap()
 
-        // Decision 383: beside Double, with the options folded. A toggle
+        // NETWORK-PANEL-SIMPLE: among the folded options, first. A toggle
         // with its own style: a toggle (value 1 or 0) or a selected
         // button, as the system reads it.
+        let more = app.descendants(matching: .any)["network.advanced"].firstMatch
+        XCTAssertTrue(more.appears(within: 10))
+        XCTAssertTrue(more.becomesHittable(within: 5))
+        more.tap()
         let snap = app.descendants(matching: .any)["network.snap"].firstMatch
         XCTAssertTrue(snap.appears(within: 10))
         // The options open below the fold of the details card, which

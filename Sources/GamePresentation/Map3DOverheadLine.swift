@@ -12,8 +12,9 @@ import GameCore
 // track either side hangs its wires from its neighbours' masts. On a
 // real-world map, none on track laid along a real line run without one:
 // the four diesel branch lines (`main-reference.js` `DIESEL_BRANCH_IDS`),
-// the forest railway, and the metros, on a third rail or none. None
-// either where the ground is drawn over the track.
+// the forest railway, and Taiwan's metros, on a third rail or none; the
+// lines of the maps outside Taiwan all have one (KYUSHU-OVERHEAD-LINE).
+// None either where the ground is drawn over the track.
 
 extension Map3DPalette {
     /// Decision 326: the masts' steel and the wires (the rail-3d viaduct
@@ -25,8 +26,13 @@ extension Map3DPalette {
 extension Map3DScene {
     /// Decision 326: the systems whose lines run under an overhead line
     /// (``RealRailways/System/id``): TRA's, the high-speed line's and the
-    /// two light rails' in New Taipei.
-    static let wiredSystems: Set<String> = ["tra_sched", "thsr_sched", "ntdlrt", "ntalrt"]
+    /// two light rails' in New Taipei. KYUSHU-OVERHEAD-LINE: and every
+    /// line of the maps outside Taiwan, all of them electrified from
+    /// above: the Kyushu Shinkansen (25 kV), the Fukuoka City Subway's
+    /// three lines (1,500 V), the MTR's (25 kV on the East Rail Line,
+    /// 1,500 V on the others) and VR's two lines at Rovaniemi (25 kV).
+    static let wiredSystems: Set<String> = ["tra_sched", "thsr_sched", "ntdlrt", "ntalrt",
+                                            "kyushushinkansen", "fksubway", "hkmtr", "vr"]
     /// TRA's lines run by diesel railcars (`DIESEL_BRANCH_IDS`: pingxi,
     /// shenao, jiji, neiwan), by the start of their names; the Neiwan Line
     /// only past Zhuzhong, where the Liujia Line's wires end.

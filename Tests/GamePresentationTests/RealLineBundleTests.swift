@@ -245,12 +245,15 @@ final class RealLineBundleTests: XCTestCase {
 
     /// On a map bought tile by tile, a bundle is bought from the land
     /// that reaches any of its lines: that one is laid first, and its
-    /// land reaches the others. From Neiwan, the far end of the Neiwan
-    /// Line, the Liujia Line (listed first) is out of reach on its own.
+    /// land reaches the others. From the land round Neiwan, the far end of
+    /// the Neiwan Line, the Liujia Line (listed first) is out of reach on
+    /// its own. The pick is some 8 km south-east of Neiwan, so the four
+    /// tiles a game starts with (decision 992) reach as far west and north
+    /// of it as the one tile round Neiwan did.
     func testTheLandThatReachesOneLineBuysTheBundle() async throws {
         let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let neiwan = try BundledRealData.station("內灣", in: "tra_sched").coordinate
-        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: neiwan.latitude, longitudeDegrees: neiwan.longitude))
+        let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: neiwan.latitude - 0.07, longitudeDegrees: neiwan.longitude + 0.08))
         var world = GameLauncher.newWorld(at: anchor, options: NewGameOptions(), data: GameLauncher.NewWorldData(
             population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights
         ))
@@ -267,7 +270,7 @@ final class RealLineBundleTests: XCTestCase {
         let bundle = try XCTUnwrap(session.realLineBundles.first { $0.lines.contains { $0.id == "tra:NEIWAN" } })
         XCTAssertEqual(bundle.lines.map(\.id), ["tra:LIUJIA", "tra:NEIWAN"])
         let liujia = session.realLineOffer(for: bundle.first)
-        try XCTSkipIf(liujia.problem != GameSession.landProblem(in: .traditionalChinese), "the first tile reaches the Liujia Line too")
+        try XCTSkipIf(liujia.problem != GameSession.landProblem(in: .traditionalChinese), "the first tiles reach the Liujia Line too")
 
         session.refreshRealLineAvailability()
         await session.realLineAvailabilityChecked()

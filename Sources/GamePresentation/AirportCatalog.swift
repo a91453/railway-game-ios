@@ -186,6 +186,33 @@ public enum AirportCatalog {
               latitude: 33.597347, longitude: 130.448069, yearlyPassengers: 28_400_000, yearlyFlights: 195_000, firstHour: 7, lastHour: 22,
               routes: [Route("tpe", 1_134_359, 5_238), Route("khh", 241_044, 1_566)],
               isAbroad: true),
+        // Decision 991 (JAPAN-PREFECTURE-PACKS): the other airports with
+        // scheduled flights on Fukuoka's map, now that it holds the whole
+        // of Fukuoka, Saga and Kumamoto Prefectures, after Fukuoka's so
+        // the airports before them keep their numbers. Passengers and
+        // movements (twice the landings) of 2025, the calendar year: the
+        // Ministry of Land, Infrastructure, Transport and Tourism's
+        // airport survey (令和7年空港管理状況調書). Hours: Kumamoto's
+        // 07:30 to 21:30 and Saga's passenger terminal's to 22:00 (its
+        // runway is open to midnight for cargo); Kitakyushu, at sea, is
+        // open all day. Nagasaki's and Yamaguchi Ube's airports, in the
+        // corners of the map outside the three prefectures, are left out. Places: their passenger terminals in OpenStreetMap
+        // (ODbL 1.0). Their flights to Taiwan are not named: they are part
+        // of their flights abroad.
+        Place(key: "kmj", chinese: "熊本機場", english: "Aso Kumamoto Airport",
+              latitude: 32.835798, longitude: 130.861338, yearlyPassengers: 3_854_269, yearlyFlights: 44_952, firstHour: 7, lastHour: 22,
+              isAbroad: true),
+        Place(key: "hsg", chinese: "佐賀機場", english: "Kyushu Saga International Airport",
+              latitude: 33.153274, longitude: 130.303328, yearlyPassengers: 628_786, yearlyFlights: 7_884, firstHour: 7, lastHour: 22,
+              isAbroad: true),
+        Place(key: "kkj", chinese: "北九州機場", english: "Kitakyushu Airport",
+              latitude: 33.839572, longitude: 131.031804, yearlyPassengers: 1_236_950, yearlyFlights: 17_732, firstHour: 0, lastHour: 24,
+              isAbroad: true),
+        // Amakusa's flights are Amakusa Airlines' to Fukuoka and Kumamoto,
+        // 08:00 to 20:00.
+        Place(key: "axj", chinese: "天草機場", english: "Amakusa Airport",
+              latitude: 32.48279, longitude: 130.155351, yearlyPassengers: 35_679, yearlyFlights: 2_660, firstHour: 8, lastHour: 20,
+              isAbroad: true),
     ]
 
     /// Where `place`'s flights go: its main destinations in its order,

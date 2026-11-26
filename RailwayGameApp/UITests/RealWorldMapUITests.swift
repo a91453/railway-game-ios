@@ -681,7 +681,13 @@ final class RealWorldMapUITests: XCTestCase {
         // One line of footnote text in a bordered button: "複線"'s height.
         let double = app.descendants(matching: .any)["network.double"].firstMatch
         XCTAssertTrue(double.appears(within: 10), "No 複線 button")
-        for name in ["network.advanced", "network.snap", "network.trace"] {
+        // NETWORK-PANEL-SIMPLE: snapping is among the folded options.
+        for name in ["network.advanced", "network.trace", "network.snap"] {
+            if name == "network.snap" {
+                let more = app.descendants(matching: .any)["network.advanced"].firstMatch
+                XCTAssertTrue(more.becomesHittable(within: 5))
+                more.tap()
+            }
             let button = app.descendants(matching: .any)[name].firstMatch
             XCTAssertTrue(button.appears(within: 5), "No \(name) button")
             XCTAssertLessThanOrEqual(
@@ -690,6 +696,8 @@ final class RealWorldMapUITests: XCTestCase {
             )
             XCTAssertGreaterThan(button.frame.width, button.frame.height, "\(name) is a column: \(button.frame)")
         }
+        // Folded again, as the stretch below was drawn before.
+        app.descendants(matching: .any)["network.advanced"].firstMatch.tap()
 
         // A stretch across the middle of the map, as in the platform test.
         let hudBottom = app.buttons["hud.menu"].frame.maxY
