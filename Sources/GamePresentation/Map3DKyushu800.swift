@@ -87,45 +87,8 @@ public enum Map3DKyushu800 {
     /// outline is this box; the driver's door's top is lower towards the
     /// nose (``top``), and the outline follows it. The same shape as the
     /// N700S's doors (`Map3DN700S.Door`).
-    public struct Door: Sendable, Equatable {
-        /// Along the car, metres from its middle, the cab's end positive.
-        public let x: ClosedRange<Float>
-        /// Over the rail, metres.
-        public let z: ClosedRange<Float>
-        /// The driver's own door, by the cab.
-        public let crew: Bool
-        /// The wall it is on: 1 the left (+y), -1 the right.
-        public let side: Float
-        /// A slanted top, from the door's back to its front: (along the car,
-        /// over the rail). Empty for a square top at `z`'s upper bound.
-        public let top: [SIMD2<Float>]
-
-        init(x: ClosedRange<Float>, z: ClosedRange<Float>, crew: Bool, side: Float, top: [SIMD2<Float>] = []) {
-            self.x = x
-            self.z = z
-            self.crew = crew
-            self.side = side
-            self.top = top
-        }
-
-        /// How high the door reaches at `along` the car.
-        public func height(at along: Float) -> Float {
-            guard let first = top.first, let last = top.last else { return z.upperBound }
-            if along <= first.x { return first.y }
-            for (a, b) in zip(top, top.dropFirst()) where along <= b.x {
-                return a.y + (b.y - a.y) * (along - a.x) / (b.x - a.x)
-            }
-            return last.y
-        }
-
-        /// Whether `point` is on this door. Half a millimetre of slack, no
-        /// more: some of the wall's faces next to a door's outline are a
-        /// millimetre wide.
-        public func contains(_ point: Map3DPoint, margin: Float = 0.0005) -> Bool {
-            point.y * side > 1.5 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
-                && point.z >= z.lowerBound - margin && point.z <= height(at: point.x) + margin
-        }
-    }
+    /// SPLIT-HOTSPOTS-2: the doors every ported car shares (``Map3DCarDoor``).
+    public typealias Door = Map3DCarDoor
 
     /// `unit`'s doors, from its front to its back, the left wall's before
     /// the right's at each place. As `tools/texture-palette/kyushu_800.py`

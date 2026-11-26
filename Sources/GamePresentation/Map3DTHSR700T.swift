@@ -116,18 +116,8 @@ public enum Map3DTHSR700T {
     /// is wholly a door's or wholly the wall's (the tool writes each door
     /// as a node of its own too): the doors can be moved apart from the
     /// wall, to open at a station, without the mesh being cut again.
-    public struct Door: Sendable, Equatable {
-        /// Along the car, metres from its middle, the cab's end positive.
-        public let x: ClosedRange<Float>
-        /// Over the rail, metres.
-        public let z: ClosedRange<Float>
-
-        /// Whether `point` is on this door, on the side wall its `y` is on.
-        public func contains(_ point: Map3DPoint, margin: Float = 0.002) -> Bool {
-            abs(point.y) > 1.5 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
-                && point.z >= z.lowerBound - margin && point.z <= z.upperBound + margin
-        }
-    }
+    /// SPLIT-HOTSPOTS-2: the doors every ported car shares (``Map3DCarDoor``).
+    public typealias Door = Map3DCarDoor
 
     /// `unit`'s doors, from its front to its back; each is on both sides.
     /// As `tools/texture-palette/thsr_700t.py` reports them.

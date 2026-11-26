@@ -59,24 +59,8 @@ public enum Map3DKeikyuNew1000 {
     /// doors can be moved apart from the wall one day without the mesh
     /// being cut again. The same shape as the 800 series' doors
     /// (``Map3DKyushu800/Door``), on a car 2.80 m wide.
-    public struct Door: Sendable, Equatable {
-        /// Along the car, metres from its middle, the cab's end positive.
-        public let x: ClosedRange<Float>
-        /// Over the rail, metres.
-        public let z: ClosedRange<Float>
-        /// The driver's own door, by the cab.
-        public let crew: Bool
-        /// The wall it is on: 1 the left (+y), -1 the right.
-        public let side: Float
-
-        /// Whether `point` is on this door. Half a millimetre of slack, no
-        /// more (the 800 series' second review: at 2 mm a door took in
-        /// faces of the wall's).
-        public func contains(_ point: Map3DPoint, margin: Float = 0.0005) -> Bool {
-            point.y * side > 1.2 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
-                && point.z >= z.lowerBound - margin && point.z <= z.upperBound + margin
-        }
-    }
+    /// SPLIT-HOTSPOTS-2: the doors every ported car shares (``Map3DCarDoor``).
+    public typealias Door = Map3DCarDoor
 
     /// The near cab car's doors (`cab: true`) or the middle car's, from
     /// the front back, the left wall's before the right's at each place,
@@ -87,8 +71,8 @@ public enum Map3DKeikyuNew1000 {
         let places: [ClosedRange<Float>] = cab
             ? [5.174...6.61, -0.442...0.893, -5.809 ... -4.461]
             : [4.819...6.219, -0.77...0.625, -6.278 ... -4.883]
-        let crew: [Door] = cab ? [1, -1].map { Door(x: 8.065...8.76, z: 1.16...3.055, crew: true, side: $0) } : []
-        return crew + places.flatMap { x in [1, -1].map { Door(x: x, z: z, crew: false, side: $0) } }
+        let crew: [Door] = cab ? [1, -1].map { Door(x: 8.065...8.76, z: 1.16...3.055, crew: true, side: $0, wall: 1.2) } : []
+        return crew + places.flatMap { x in [1, -1].map { Door(x: x, z: z, crew: false, side: $0, wall: 1.2) } }
     }
 
     /// Decision 782: its set, near and far, its showcase row and its cars'

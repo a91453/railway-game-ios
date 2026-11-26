@@ -69,20 +69,8 @@ public enum Map3DKyushuN700 {
     /// its box is only its place and the tool's node its piece. Either
     /// way the box holds every face of its door and no whole face of the
     /// wall's.) As the N700S has them (decision 979).
-    public struct Door: Sendable, Equatable {
-        /// Along the car, metres from its middle, the cab's end positive.
-        public let x: ClosedRange<Float>
-        /// Over the rail, metres.
-        public let z: ClosedRange<Float>
-        /// The driver's own door, by the cab.
-        public let crew: Bool
-
-        /// Whether `point` is on this door, on the side wall its `y` is on.
-        public func contains(_ point: Map3DPoint, margin: Float = 0.002) -> Bool {
-            abs(point.y) > 1.5 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
-                && point.z >= z.lowerBound - margin && point.z <= z.upperBound + margin
-        }
-    }
+    /// SPLIT-HOTSPOTS-2: the doors every ported car shares (``Map3DCarDoor``).
+    public typealias Door = Map3DCarDoor
 
     /// `unit`'s doors, from its front to its back; each is on both sides.
     /// As `tools/texture-palette/kyushu_n700.py` reports them.
