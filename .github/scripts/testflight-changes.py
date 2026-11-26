@@ -34,8 +34,11 @@ import urllib.error
 import urllib.request
 
 
-# testflight.yml's job that numbers, signs and uploads the build.
-UPLOAD_JOB = "Archive, sign, export, check and upload"
+# testflight.yml's jobs that number the build and upload it (decision 1016;
+# up to run 150 one job, ONE_JOB, did both).
+ARCHIVE_JOB = "Archive, sign, export and check"
+UPLOAD_JOB = "Upload the build to App Store Connect"
+ONE_JOB = "Archive, sign, export, check and upload"
 WORKFLOW = "testflight.yml"
 LIMIT = 4000
 # The last TestFlight run whose first attempt still uploaded "<n>.1"; later
@@ -136,16 +139,27 @@ def build_label(offset, run_number, attempt):
 
 
 def upload_attempt(repository, run_id):
-    """The attempt whose upload job succeeded, which names the build (see build_label).
+    """The attempt whose archive job numbered the build that was uploaded (see build_label).
 
     The run's own run_attempt is its latest attempt: after only the processing
     job is run again it reads 2, while the build that was uploaded is still
-    the first attempt's.
+    the first attempt's. Since decision 1016 the archive job numbers the
+    build and the upload job sends it, so after only the upload job is run
+    again (attempt 2) the build is still the first attempt's: the latest
+    successful archive at or before the successful upload.
     None when GitHub does not list the jobs."""
     answer = github(f"/repos/{repository}/actions/runs/{run_id}/jobs?filter=all&per_page=100")
-    attempts = [int(job.get("run_attempt") or 0) for job in (answer or {}).get("jobs") or []
-                if job.get("name") == UPLOAD_JOB and job.get("conclusion") == "success"]
-    return max(attempts, default=0) or None
+    jobs = (answer or {}).get("jobs") or []
+
+    def succeeded(name):
+        return [int(job.get("run_attempt") or 0) for job in jobs
+                if job.get("name") == name and job.get("conclusion") == "success"]
+
+    uploads = succeeded(UPLOAD_JOB)
+    if uploads:
+        last = max(uploads)
+        return max((a for a in succeeded(ARCHIVE_JOB) if a <= last), default=0) or None
+    return max(succeeded(ONE_JOB), default=0) or None
 
 
 def git(repo, *args, check=True):

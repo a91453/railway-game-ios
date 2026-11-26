@@ -495,6 +495,16 @@ extension GameWorld {
         lineAccounts = book
     }
 
+    /// Decision 993: line `id`'s day `day` books `fee`, its share of its
+    /// monthly fee, as upkeep.
+    mutating func recordLineFee(_ fee: Money, of id: LineID, day: Int64) {
+        guard var book = lineAccounts else { return }
+        var tally = LineTally()
+        tally.maintenanceCost = fee
+        book.lines[book.index(of: id)].record(tally, day: day)
+        lineAccounts = book
+    }
+
     mutating func removeLineAccounts(of id: LineID) {
         lineAccounts?.lines.removeAll { $0.line == id }
     }

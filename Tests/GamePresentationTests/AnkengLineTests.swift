@@ -26,10 +26,15 @@ final class AnkengLineTests: XCTestCase {
     /// first run of the morning leaves for. The Taoyuan Airport MRT's
     /// positioning runs are its real ones in the timetable (decision 556),
     /// not ones made up for a train standing overnight, so it is not asked.
+    /// Nor is the High Speed Rail (decision 993): its positioning runs take
+    /// a set from whichever end depot has one spare to where the real
+    /// timetable's next run leaves (Taichung, where the real sets stand at
+    /// the Wuri depot, and Taipei), chosen for the fewest sets and runs
+    /// (`extract_thsr_runs.py --sets`), not for the end they face.
     func testATrainStandingAtAStationBetweenComesInFromBeyondIt() throws {
         let railways = try BundledRealData.railways()
         XCTAssertNotNil(railways.metroRuns["ntalrt:K"], "the Ankeng LRT's runs")
-        for (id, line) in railways.metroRuns where id != "tymc:A" {
+        for (id, line) in railways.metroRuns where id != "tymc:A" && id != RealBranchLine.taiwanHighSpeedRail {
             let stops = line.stops
             for run in line.runs where run.positioning {
                 guard let last = run.calls.last?.station, let first = run.calls.first?.station,

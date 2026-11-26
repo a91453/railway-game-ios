@@ -196,8 +196,12 @@ jobs:
             # added since), and as the event had them if that cannot be read.
             labels="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '.labels[].name' 2>/dev/null || true) $EVENT_LABELS"
           fi
+          # A pull request that changes only the release notes runs only the
+          # tests that read them (decision 1017, release-notes-only.py).
+          notes_base=""
+          [[ "$EVENT" != pull_request || "$listed" != true ]] || notes_base="$base"
           # Each file's tier and the tests chosen go to the log.
-          decision="$(LISTED="$listed" LABELS="$labels" .github/scripts/swift-shards.sh decide <<<"${files:-}")"
+          decision="$(LISTED="$listed" LABELS="$labels" NOTES_BASE="$notes_base" .github/scripts/swift-shards.sh decide <<<"${files:-}")"
           echo "$decision" >> "$GITHUB_OUTPUT"
           swift="$(sed -n 's/^swift=//p' <<<"$decision")"
           tier="$(sed -n 's/^tier=//p' <<<"$decision")"
@@ -531,7 +535,9 @@ jobs:
   stack-frames:
     name: Stack frames over 32 KB (reminder)
     needs: changes
-    if: needs.changes.outputs.swift == 'true' && github.event_name == 'pull_request'
+    # Not for the release notes alone (decision 1017): string literals add
+    # no frames.
+    if: needs.changes.outputs.swift == 'true' && needs.changes.outputs.tier != 'notes' && github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     continue-on-error: true

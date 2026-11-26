@@ -249,14 +249,61 @@ extension Map3DScene.Builder {
     }
 
     /// Decision 407: the player's track high-speed lines run on.
+    ///
+    /// HSR-TURNOUT-ZFIGHT (0.6.0 build 151): every stopping pattern's
+    /// way, not the line's first alone; a track no line runs on whose two
+    /// ends are on it (a crossover); and from it the track no line runs
+    /// on (a loop, a station's end, a depot's sidings) up to where another
+    /// line's track begins. Left out, such a track was laid on a
+    /// railway's ballasted deck level with the high-speed deck beside it,
+    /// and the two fought on the iPhone.
     mutating func highSpeedTrack() -> Set<TrackEdgeID> {
         if let highSpeedEdges = state.elevated.highSpeedEdges { return highSpeedEdges }
-        var edges = Set<TrackEdgeID>()
-        for line in world.lines where line.isHighSpeed {
-            guard let journey = world.lineJourney(line.id) else { continue }
-            for (traversal, _, _) in LineMap.pieces(of: journey, in: world.network) { edges.insert(traversal.edge) }
-        }
+        let edges = Self.highSpeedTrack(in: world)
         state.elevated.highSpeedEdges = edges
+        return edges
+    }
+
+    static func highSpeedTrack(in world: GameWorld) -> Set<TrackEdgeID> {
+        func runs(_ line: ServiceLine) -> Set<TrackEdgeID> {
+            var edges = Set<TrackEdgeID>()
+            for pattern in [nil] + line.patterns.indices.map(Optional.some) {
+                guard let journey = world.lineJourney(line.id, pattern: pattern) else { continue }
+                for (traversal, _, _) in LineMap.pieces(of: journey, in: world.network) { edges.insert(traversal.edge) }
+            }
+            return edges
+        }
+        var edges = Set<TrackEdgeID>()
+        for line in world.lines where line.isHighSpeed { edges.formUnion(runs(line)) }
+        guard !edges.isEmpty else { return edges }
+        // The other lines' track, and the nodes on it, which the high-speed
+        // track's spreads no further than.
+        var others = Set<TrackEdgeID>()
+        for line in world.lines where !line.isHighSpeed { others.formUnion(runs(line)) }
+        others.subtract(edges)
+        var at: [TrackNodeID: [TrackEdge]] = [:]
+        var held = Set<TrackNodeID>(), reached = Set<TrackNodeID>()
+        for edge in world.network.edges {
+            at[edge.from, default: []].append(edge)
+            at[edge.to, default: []].append(edge)
+            if others.contains(edge.id) { held.formUnion([edge.from, edge.to]) }
+            if edges.contains(edge.id) { reached.formUnion([edge.from, edge.to]) }
+        }
+        // A track no line runs on whose two ends are on it (a crossover).
+        for edge in world.network.edges where !others.contains(edge.id) && reached.contains(edge.from) && reached.contains(edge.to) {
+            edges.insert(edge.id)
+        }
+        // And from it along the track no line runs on (a loop, a station's
+        // end, a siding), up to where another line's track begins.
+        var open = Array(reached.subtracting(held))
+        while let node = open.popLast() {
+            for edge in at[node] ?? [] where !others.contains(edge.id) {
+                edges.insert(edge.id)
+                let next = edge.from == node ? edge.to : edge.from
+                guard !held.contains(next), reached.insert(next).inserted else { continue }
+                open.append(next)
+            }
+        }
         return edges
     }
 

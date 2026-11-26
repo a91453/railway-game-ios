@@ -1,6 +1,6 @@
 # GitHub Actions → TestFlight
 
-目前的發佈路線是在 GitHub 託管的 macOS runner（`xcode-27` 映像，選 Xcode 27.2、iOS 27 SDK；決策 857，2026-11-18 之前是 `macos-26` 的 Xcode 26.6）上完成以下步驟，再上傳到 TestFlight。手動執行時可選 `internal`（僅內部測試）或 `external`（可加入 External Testing 群組並送 Beta App Review）：
+目前的發佈路線是在 macOS runner 上完成以下步驟：作者 Mac 上發版專用的 runner（`chien-mac-release`，決策 1016）在線又有空時用它，否則用 GitHub 託管的 `xcode-27` 映像（選 Xcode 27.2、iOS 27 SDK；決策 857，2026-11-18 之前是 `macos-26` 的 Xcode 26.6），再上傳到 TestFlight。手動執行時可選 `internal`（僅內部測試）或 `external`（可加入 External Testing 群組並送 Beta App Review）：
 
 1. Archive（Release）
 2. 簽章
@@ -9,7 +9,7 @@
 5. 上傳 App Store Connect
 6. 在 Linux 上等 App Store Connect 處理完，把結果寫在執行頁面，並把上次成功發佈以來合併的 PR 標題填進 TestFlight 的 What to Test
 
-匯出與上傳失敗時會自動再試（最多 3 次），不必重做 Archive。整個流程不需要自己的 Mac。Xcode Cloud 暫緩，[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md) 保留供日後使用。
+匯出與上傳失敗時會自動再試（最多 3 次），不必重做 Archive。2026-11-26 起（決策 1016）封存、地圖包、上傳 build 是三個 job：其中一個失敗時按 **Re-run failed jobs**，只重跑那一段。Mac 不在時整個流程照舊不需要自己的 Mac。Xcode Cloud 暫緩，[XCODE_CLOUD_ONBOARDING.md](XCODE_CLOUD_ONBOARDING.md) 保留供日後使用。
 
 官方文件查閱日期：**2026-09-28**（來源列在文末）。
 
@@ -35,7 +35,10 @@ Actions → TestFlight → Run workflow（只允許 main）
   ├─ preflight（Linux，數秒）
   │    分支與觸發方式、每個必要設定是否存在且格式正確；
   │    缺少就一次列出全部並停止，不啟動 macOS runner
-  ├─ release（xcode-27）
+  ├─ pick（Linux，數秒；決策 1016）
+  │    作者 Mac 上的發版 runner（chien-mac-release）在線又有空就用它，
+  │    否則用 hosted 的 xcode-27；下面三個 job 都照這個選擇
+  ├─ archive（Mac 或 xcode-27）
   │    再檢查一次設定，並依這次執行的 attempt 決定 build number
   │    → 暫存 keychain + API key 檔（權限 600）
   │    → Archive：Release、generic iOS device、已提交的專案與 shared scheme、
@@ -47,15 +50,20 @@ Actions → TestFlight → Run workflow（只允許 main）
   │      失敗時再試，最多 3 次
   │    → 檢查 IPA：bundle ID、版本、build number、Team 與 application identifier、
   │      發佈憑證、App Store 描述檔（無裝置清單、不可除錯）、結構
-  │    → 上傳有變的地圖包（asset packs，決策 776、858）：**一定在上傳 build 之前**（#2423）。
-  │      138 的 build 比新的香港地圖包早幾分鐘出來，手機留著 137 的舊包；
-  │      改順序時要保持「地圖包先、App 後」。
-  │      只上傳和上一次成功發版不同的那幾包（每上傳一次就多一個要審的版本；
-  │      `testflight-map-packs.py`，要全部重傳時 `map_packs` 選 `all`）。
-  │      App 不再帶地圖資料，所以該傳的沒傳成功，發版在這裡停、build 不上傳
+  │    → archive 加密後存成 artifact 交給 upload（`testflight-bundle.sh`，留 3 天）
+  │    → 清理（成功、失敗、取消都執行）；在 Mac 上另外把工作目錄的品牌還原
+  ├─ map-packs（Mac 或 xcode-27，和 archive 同時開始）
+  │    上傳有變的地圖包（asset packs，決策 776、858）：**一定在上傳 build 之前**（#2423）。
+  │    138 的 build 比新的香港地圖包早幾分鐘出來，手機留著 137 的舊包；
+  │    改順序時要保持「地圖包先、App 後」：upload 要等這個 job 成功。
+  │    只上傳和上一次成功發版不同的那幾包（每上傳一次就多一個要審的版本；
+  │    `testflight-map-packs.py`，要全部重傳時 `map_packs` 選 `all`）。
+  │    App 不再帶地圖資料，所以該傳的沒傳成功，這個 job 紅、build 不上傳
+  ├─ upload（Mac 或 xcode-27；archive 與 map-packs 都成功才開始）
+  │    → 暫存 keychain + API key 檔；下載加密的 archive，比對 SHA-256 後解密
   │    → 上傳：同一份 archive、相同設定再以 xcodebuild -exportArchive
   │      （destination=upload，API key）送到 App Store Connect；
-  │      只在 IPA 檢查通過後執行；失敗時再試，最多 3 次
+  │      失敗時再試，最多 3 次
   │    → 清理（成功、失敗、取消都執行）
   └─ processing（Linux；上傳開始之後才執行，上傳步驟失敗也執行）
        → 列出上次成功的 TestFlight 執行以來合併進 main 的 PR（What to Test 的內容）
@@ -72,12 +80,15 @@ Actions → TestFlight → Run workflow（只允許 main）
 | `.github/scripts/testflight-archive.sh` | Archive，以及匯出（export）與上傳（upload）兩份 ExportOptions |
 | `.github/scripts/testflight-verify-ipa.sh` | 上傳前的 IPA 檢查 |
 | `.github/scripts/testflight-retry.sh` | 匯出與上傳失敗時再試 |
+| `.github/scripts/testflight-bundle.sh` | archive 加密交給 upload job、upload job 比對雜湊後解密（決策 1016） |
+| `.github/workflows/pick-mac.yml` | 選作者的 Mac 或 hosted runner（決策 1014、1016） |
 | `.github/scripts/testflight-changes.py` | 列出上次成功發佈以來合併的 PR（What to Test 的文字） |
 | `.github/scripts/testflight-processing.py` | 等 App Store Connect 處理完、回報結果、填 What to Test |
 | `.github/workflows/testflight-checks.yml` | PR 檢查：lint、腳本測試、macOS dry run、合成 IPA 測試、假的 App Store Connect；不需帳號、不用 secrets |
 | `.github/scripts/testflight-selftest*.sh`、`testflight-selftest-processing.py` | 上述檢查用的測試（只用假值） |
 
-- **只允許一個發佈同時進行**：release job 使用 `concurrency: testflight-release`，而且不取消進行中的上傳。執行中再按一次，新的 release job 會排隊；排隊時又按一次，GitHub 會用最新的取代排隊中的那一個。等 processing 的 job 不在這個群組裡，不會擋住下一次發佈。
+- **只允許一個上傳同時進行**：upload job 使用 `concurrency: testflight-release`，map-packs job 使用 `testflight-map-packs`，都不取消進行中的上傳。執行中再按一次，新的上傳會排隊；排隊時又按一次，GitHub 會用最新的取代排隊中的那一個。archive 不在群組裡，兩次發版可以同時封存（在 Mac 上一次只跑一個 job，本來就會排隊）。等 processing 的 job 不在這些群組裡，不會擋住下一次發佈。
+- **失敗了怎麼重跑**（決策 1016）：按 **Re-run failed jobs**。地圖包失敗只重跑地圖包，成功後自動跑 upload；upload 失敗只重跑 upload，用同一份 archive 與同一個 build number；archive 失敗才重新封存。重跑失敗的 job 時 pick 不會重選：選了 Mac 而 Mac 中途關機、job 一直等時，取消這次執行，改按 **Re-run all jobs**（會重選，也會拿新的 build number）或新的 Run workflow。
 - **TestFlight 範圍**（Run workflow 的 `testing_scope` 選項）：`internal` 為預設，保留原本僅內部測試行為；`external` 會上傳可供 External Testing 使用的新 build。外部測試仍需在 App Store Connect 將該 build 加入外部群組並通過 Beta App Review。
 - **Archive 簽章方式**（Run workflow 的 `archive_signing` 選項）：
   - `adhoc`（預設，第一個選項）：以 ad hoc（`-`）簽章封存，不需要開發憑證或開發描述檔。適合 CI 與沒有已註冊開發裝置的新團隊。
@@ -146,7 +157,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - run 119 以前第一次執行也帶 `.1`（例如 `119.1`）；`testflight-changes.py` 的 `LAST_DOTTED_RUN` 照這個寫上一版的號碼。
   - 版本號（目前 0.6.0）來自 `project.yml` 的 `MARKETING_VERSION`，不由 workflow 改動。
 - **GitHub**：run number 每次新執行加一、重跑不變；run attempt 每次重跑加一。所以每次執行與重跑都會得到從未用過的 build number，新的執行一定比舊的大。
-  - release job 會自己依當下的 attempt 重新計算 build number。所以只按「Re-run failed jobs」重跑失敗的 release job 時，也會拿到新的號碼，不會沿用 preflight job 上一次算出的值。
+  - archive job 會自己依當下的 attempt 重新計算 build number。所以只按「Re-run failed jobs」重跑失敗的 archive job 時，也會拿到新的號碼，不會沿用 preflight job 上一次算出的值。只重跑 upload 時沿用 archive 那一次的號碼（傳的是同一份 archive），What to Test 的「上次是哪個 build」也照這樣找（`testflight-changes.py`，決策 1016）。
 - **Apple**：
   - `CFBundleVersion` 使用整數段；Apple 對第一段限制最多 4 位、第二段最多 2 位，所以 `120` 與 `120.2` 都合法，而 workflow 會拒絕第一段大於 9999 或 attempt 大於 99。
   - App Store Connect 要求版本號與 build number 的組合不重複，並把 build number 當成以點分開的整數一段一段比，缺的段當 0，所以 `120` < `120.2` < `120.3` < `121`（`119.1` < `120`）。第一次執行不用 `.1`，因此沒有兩次 attempt 會得到同一個號碼。
@@ -166,7 +177,7 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 
 **處理檢查**（`testflight-processing.py`，processing job，Linux）
 
-- release job 開始上傳之後才執行；上傳步驟失敗也執行（理由見上一點），取消時不執行。
+- upload job 開始上傳之後才執行；上傳步驟失敗也執行（理由見上一點），取消時不執行。
 - 用同一把 Team API key 簽 ES256 的 JWT（每次最多 15 分鐘），以 App Store Connect API 的 List Builds（`filter[app]`、`filter[version]`＝build number、`filter[preReleaseVersion.version]`＝版本號）每 30 秒查一次 `processingState`，最多等 60 分鐘。
 - `VALID`：讀出 TestFlight 的內部、外部測試狀態（`internalBuildState`、`externalBuildState`，例如 `MISSING_EXPORT_COMPLIANCE`、`READY_FOR_BETA_TESTING`），寫在執行頁面，接著填 What to Test。
 - `INVALID` 或 `FAILED`：job 失敗。原因在 Apple 寄給 Account Holder 的信裡；API 不提供。
@@ -225,7 +236,8 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
   - 還原原本的 keychain 搜尋清單與預設 keychain；
   - 刪除暫存 keychain、key 檔、這次新增的描述檔、archive 與 IPA（IPA 內含描述檔）。
   - 清理可以重複執行，setup 失敗或只完成一半時也安全。
-- **不會存成 artifact**：IPA、archive、描述檔、憑證、key 都不會上傳成 artifact。
+- **artifact 只有加密過的 archive**（決策 1016）：IPA、描述檔、憑證、key 都不會上傳成 artifact。archive 要從 archive job 交給 upload job，只能用 artifact，而公開 repository 的 artifact 登入 GitHub 的人都能下載，所以先加密（AES-256，金鑰是這次 run 的 ID 加 `ASC_PRIVATE_KEY` 的 SHA-256，只有 `testflight` environment 的 job 算得出來，不寫進 log、output 或指令列），upload job 比對 archive job 給的 SHA-256 才解密；留 3 天。
+- **作者的 Mac**（決策 1016）：發版只用 Mac 上另一個標準帳號（`cirelease`）的 runner，標籤 `chien-mac-release`；PR 的 build 用的是 `cirunner` 帳號（`chien-mac`），兩邊互不排到對方。PR 的程式不在發版的帳號裡跑，留不下東西去讀之後寫出的 key。簽章照舊用 API key，不用 Xcode 裡登入的 Apple 帳號。設定：`docs/MAC_RUNNER.md` §6。
 - **上傳的內容**：先檢查一份本地匯出的 IPA；上傳步驟再從**同一份 archive** 以相同 ExportOptions（只差 `destination`）與相同簽章方式重新匯出並直接上傳。它不是宣稱逐位元上傳剛才檢查的那個 IPA；上傳步驟只在本地 IPA 檢查通過後才執行。`internal` 模式的兩份 ExportOptions 都設 `testFlightInternalTestingOnly=true`；`external` 模式則都省略該鍵。
 - **Log 是公開的**：這個 repository 公開，Actions log 任何人都看得到。
   - 腳本只印出「是否存在、格式是否正確、yes/no、版本資訊」，不印秘密，也不印含帳號持有人姓名的憑證或描述檔名稱。
@@ -271,7 +283,11 @@ Apple 沒有明文保證 iPad Safari 能操作下列網頁，但它們都是一�
 | 匯出時出現 `…_Managed is unknown` 或權限錯誤 | 確認 key 是 **Team** key、角色是 **Admin**；見下方〈備案〉 |
 | 找不到 App 或 Bundle ID | 先完成步驟 2、3；Bundle ID 必須與 `project.yml` 相同 |
 | IPA 檢查失敗 | 看錯誤列出的項目；IPA 不會被上傳 |
-| 匯出或上傳 3 次都失敗 | 看最後一次的錯誤。不是斷線的錯誤依本表其他列處理；斷線就按 Re-run failed jobs（會拿到新的 build number） |
+| 匯出 3 次都失敗 | 看最後一次的錯誤。不是斷線的錯誤依本表其他列處理；斷線就按 Re-run failed jobs（重跑 archive，會拿到新的 build number） |
+| 上傳 3 次都失敗 | 同上；按 Re-run failed jobs 只重跑 upload，同一份 archive、同一個 build number（決策 1016） |
+| 地圖包上傳失敗 | build 沒有上傳。按 Re-run failed jobs：只重跑地圖包，成功後自動上傳 build，不重新封存 |
+| upload 說找不到加密的 archive | artifact 超過 3 天被刪了：按新的 Run workflow |
+| 選了 Mac，job 一直在等 runner | Mac 睡著、關機或 `cirelease` 沒登入。取消這次執行，叫醒 Mac 後按 Re-run all jobs，或直接按新的 Run workflow（Mac 不在就用 hosted） |
 | 上傳再試之後被拒：build number 重複 | 第一次上傳其實已經送到 Apple；看 processing job 的結果，不必重跑 |
 | 上傳被拒：build number 重複或較小 | 不要重跑舊的執行；按新的 Run workflow，必要時設定 `BUILD_NUMBER_OFFSET` |
 | 上傳被拒：SDK / Xcode 太舊 | 2027 年 4 月起需要 Xcode 27（iOS 27 SDK）以上；workflow 一開始就會檢查（決策 857） |

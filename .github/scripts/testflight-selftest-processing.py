@@ -485,6 +485,29 @@ class ChangesTests(Fixture):
         query = dict(urllib.parse.parse_qsl(result.requests[1]["raw_query"]))
         self.assertEqual(query.get("filter"), "all")
 
+    def test_names_the_archive_attempt_when_only_the_upload_was_run_again(self):
+        # Decision 1016: run 160's archive job numbered build 160 in
+        # attempt 1; its upload job failed and passed when run again alone
+        # (attempt 2). The build App Store Connect has is 160, not 160.2.
+        archive = "Archive, sign, export and check"
+        upload = "Upload the build to App Store Connect"
+        jobs = [{"name": archive, "conclusion": "success", "run_attempt": 1},
+                {"name": upload, "conclusion": "failure", "run_attempt": 1},
+                {"name": upload, "conclusion": "success", "run_attempt": 2}]
+        result = self.run_changes(self.github(self.runs(number=160, attempt=2), {}, jobs=jobs))
+        self.assertTrue(result.stdout.startswith("Changes since build 160:\n"), result.stdout)
+
+    def test_names_the_archive_attempt_that_was_run_again(self):
+        # The archive job failed in attempt 1 and passed in attempt 2 (build
+        # 161.2), then its upload passed in attempt 2 too.
+        archive = "Archive, sign, export and check"
+        upload = "Upload the build to App Store Connect"
+        jobs = [{"name": archive, "conclusion": "failure", "run_attempt": 1},
+                {"name": archive, "conclusion": "success", "run_attempt": 2},
+                {"name": upload, "conclusion": "success", "run_attempt": 2}]
+        result = self.run_changes(self.github(self.runs(number=161, attempt=2), {}, jobs=jobs))
+        self.assertTrue(result.stdout.startswith("Changes since build 161.2:\n"), result.stdout)
+
     def test_same_commit_as_the_last_release(self):
         result = self.run_changes(self.github(self.runs(sha=self.head), {}))
         self.assertEqual(result.stdout, "No changes since build 51.1: the same commit.\n")

@@ -66,6 +66,10 @@ jobs:
       - name: Retry tests (fake command and sleep)
         run: .github/scripts/testflight-selftest-retry.sh
 
+      # Decision 1016: the archive goes to the upload job encrypted.
+      - name: Archive hand-over tests (fake archive and secret)
+        run: .github/scripts/testflight-selftest-bundle.sh
+
       # A fake App Store Connect and GitHub on 127.0.0.1, a throwaway key and
       # a throwaway git history.
       - name: Processing and What to Test tests (fakes only)
@@ -78,7 +82,7 @@ jobs:
       - name: Map pack choice tests (throwaway repository)
         run: python3 -I .github/scripts/testflight-map-packs.py --selftest
 
-  # The macOS dry run takes two unsigned archives (the longest check a pull
+  # The macOS dry run takes an unsigned archive (the longest check a pull
   # request has). A pull request that only rewrites the What to Test text
   # changes nothing it reads, so it runs only for the release workflow, this
   # workflow and the scripts; the text itself is checked by the Linux job.
@@ -124,8 +128,9 @@ jobs:
     # Two unsigned archives: 7 and 5 minutes on 2026-10-14, 20 and 9 minutes
     # on 2026-11-07 (#1915, where 30 minutes stopped it before the IPA check),
     # 25 and 27 on 2026-11-15, 32 and more than 28 on 2026-11-18 (#2423,
-    # where 60 minutes stopped it in the second archive).
-    timeout-minutes: 100
+    # where 60 minutes stopped it in the second archive). Since decision
+    # 1016 one archive: the external scope rewrites only the options.
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -168,15 +173,45 @@ jobs:
           TESTFLIGHT_SCOPE: internal
         run: .github/scripts/testflight-selftest-macos.sh tools
 
-      - name: Archive the committed project (unsigned, external TestFlight)
-        run: |
-          rm -rf "$ARCHIVE_PATH"
-          .github/scripts/testflight-archive.sh unsigned external
+      # The archive does not depend on the scope, only the options do, so
+      # the external scope rewrites the options for the same archive
+      # (decision 1016: this was a second 28-minute archive).
+      - name: Write the external TestFlight options for the same archive
+        env:
+          TESTFLIGHT_OPTIONS_ONLY: "1"
+        run: .github/scripts/testflight-archive.sh unsigned external
 
       - name: Check external TestFlight export options and Xcode tools
         env:
           TESTFLIGHT_SCOPE: external
         run: .github/scripts/testflight-selftest-macos.sh tools
+
+      # Decision 1016: the real (unsigned) archive through the same
+      # encryption the archive job uses and back, with LibreSSL, bsdtar and
+      # bash 3.2; it must come back file for file, links included.
+      - name: Hand the archive over encrypted and back (fake secret)
+        env:
+          BUNDLE_SECRET: fake-secret-for-the-dry-run
+        run: |
+          digest() {
+            (cd "$1" && find . \( -type f -o -type l \) | LC_ALL=C sort | while IFS= read -r f; do
+              if [[ -L "$f" ]]; then echo "link $f $(readlink "$f")"; else echo "file $f $(shasum -a 256 <"$f" | cut -c1-64)"; fi
+            done)
+          }
+          before="$(digest "$ARCHIVE_PATH"; shasum -a 256 <"$UPLOAD_OPTIONS")"
+          sha="$(.github/scripts/testflight-bundle.sh pack "$RUNNER_TEMP/archive.bin")"
+          echo "Encrypted archive: $(du -h "$RUNNER_TEMP/archive.bin" | cut -f1)."
+          rm -rf "$ARCHIVE_PATH" "$UPLOAD_OPTIONS"
+          .github/scripts/testflight-bundle.sh unpack "$RUNNER_TEMP/archive.bin" "$sha"
+          after="$(digest "$ARCHIVE_PATH"; shasum -a 256 <"$UPLOAD_OPTIONS")"
+          rm -f "$RUNNER_TEMP/archive.bin"
+          if [[ "$before" != "$after" ]]; then
+            echo "::error::The archive did not come back the same."
+            diff <(echo "$before") <(echo "$after") | head -n 40
+            exit 1
+          fi
+          echo "The archive came back file for file ($(wc -l <<<"$before") entries)."
+          .github/scripts/testflight-selftest-bundle.sh
 
       - name: Simulate a failing release step
         id: simulated-failure

@@ -111,6 +111,10 @@ public enum LedgerItem: String, CaseIterable, Codable, Sendable {
     /// The stations' upkeep by the length of their platforms, out
     /// (decision 736; native), with the annual taxes.
     case stationUpkeep
+    /// What a line bought with a monthly fee pays for its upkeep, out, a
+    /// thirtieth of the fee a day (decision 993; native): the Taiwan High
+    /// Speed Rail's.
+    case lineFee
 }
 
 /// One line of a ledger row's breakdown.
@@ -206,6 +210,9 @@ public struct LedgerEntry: Hashable, Sendable {
         case annualLandTax
         /// A day's upkeep of the stations' platforms (decision 736).
         case dailyStationUpkeep
+        /// A day's share of the monthly fees of the lines bought with one
+        /// (decision 993).
+        case dailyLineFee
     }
 
     public let kind: Kind
@@ -268,7 +275,7 @@ public struct DayAccount: Hashable, Sendable {
             switch line.item {
             case .fareRevenue: fareRevenue = fareRevenue + line.amount
             case .operatingCost: operatingCost = operatingCost + cost
-            case .maintenanceCost, .depotUpkeep, .stationUpkeep: maintenanceCost = maintenanceCost + cost
+            case .maintenanceCost, .depotUpkeep, .stationUpkeep, .lineFee: maintenanceCost = maintenanceCost + cost
             case .routeEnergy, .trainEnergy: energyCost = energyCost + cost
             case .stationStaff, .trainStaff: staffCost = staffCost + cost
             case .loanInterest: interestCost = interestCost + cost

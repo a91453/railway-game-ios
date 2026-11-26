@@ -156,7 +156,13 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         let fukuoka = Set(try Self.fukuoka(rules: .simple).buyableRealLines.map(\.id))
         let text = "TIMETABLE_CHECKUP on sale: Taiwan \(taiwan.sorted()), Hong Kong \(hongKong.sorted()), Rovaniemi \(rovaniemi.sorted()), Fukuoka \(fukuoka.sorted())\n"
         FileHandle.standardError.write(Data(text.utf8))
-        XCTAssertEqual(taiwan.count, 15)
+        // Decision 993: the High Speed Rail is on sale only under the
+        // realistic rules (block sections), so not in this simple list.
+        XCTAssertEqual(taiwan.count, 15, "without the High Speed Rail (decision 993)")
+        XCTAssertFalse(taiwan.contains(RealBranchLine.taiwanHighSpeedRail))
+        let realisticTaiwan = Set(try Self.wholeTaiwan(rules: .realistic).buyableRealLines.map(\.id))
+        XCTAssertEqual(realisticTaiwan.subtracting(taiwan), [RealBranchLine.taiwanHighSpeedRail], "the High Speed Rail under the realistic rules")
+        XCTAssertEqual(realisticTaiwan.subtracting(taiwanAlone), [], "Taiwan lines on sale no world buys alone")
         XCTAssertEqual(hongKong.count, 6)
         XCTAssertEqual(rovaniemi.count, 2)
         XCTAssertEqual(taiwan.subtracting(taiwanAlone), [], "Taiwan lines on sale no world buys alone")

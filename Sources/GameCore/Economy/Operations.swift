@@ -482,6 +482,9 @@ extension GameWorld {
         // Decision 736: with the annual taxes, the stations' upkeep by
         // the length of their platforms.
         settleStationUpkeep(day: day, time: time)
+        // Decision 993: a thirtieth of the monthly fee of each line bought
+        // with one.
+        settleLineFees(day: day, time: time)
         // Decision 94: the company's buildings' rent, upkeep and tax.
         settleProperty(day: day, time: time)
         settleTourism(day: day, time: time)
@@ -695,6 +698,7 @@ extension GameWorld {
         case .annualHouseTax: [.houseTax]
         case .annualLandTax: [.propertyTax]
         case .dailyStationUpkeep: [.stationUpkeep]
+        case .dailyLineFee: [.lineFee]
         }
         guard entry.breakdown.map(\.item) == items,
               entry.breakdown.allSatisfy({ $0.item == .fareRevenue || $0.item == .propertyRent || $0.item == .freightRevenue || $0.item == .subsidiarySales || $0.item == .tourismRevenue || $0.item == .stationCommerceRevenue || $0.item == .subsidy || $0.item == .dayPassSales || $0.item == .busFares || $0.item == .cablewayFares || $0.item == .ferryFares || $0.item == .airFares || $0.item == .drivingBonus ? $0.amount >= .zero : $0.amount <= .zero }),

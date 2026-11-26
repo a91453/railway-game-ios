@@ -289,6 +289,11 @@ extension GameWorld {
     /// the line runs on.
     func fitsGauge(_ type: TrainType?, on line: ServiceLine) -> Bool {
         if type?.gauge == nil, anyModelRunsEverywhere { return true }
+        // THSR-SALE (decision 993): a train that runs on every edge of
+        // ordinary track runs on those of the line, without working out
+        // its services' journeys (169 on the High Speed Rail, for each of
+        // its 40 sets as the purchase assigns them).
+        if !network.edges.contains(where: { !$0.system.isGuideway && !TrackCompatibility.runs(type, onGauge: $0.gauge) }) { return true }
         return trackGauges(of: line).allSatisfy { TrackCompatibility.runs(type, onGauge: $0) }
     }
 

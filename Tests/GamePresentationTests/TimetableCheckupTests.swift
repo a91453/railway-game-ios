@@ -11,8 +11,13 @@ enum TimetableCheckupWorlds {
     /// A Taiwan line bought in a game round it (as the depot reports buy
     /// it, ``DepotReturnReportTests/bought(_:rules:side:)``).
     static func taiwan(_ id: String, rules: NewGameRules) throws -> GameWorld {
-        // The Taoyuan Airport MRT needs a map wide enough for it (decision 556).
-        try DepotReturnReportTests.bought(id, rules: rules, side: id == "tymc:A" ? 1 << 22 : 1 << 21)
+        // The Taoyuan Airport MRT needs a map wide enough for it (decision
+        // 556), the High Speed Rail one as long as Taiwan, and the money
+        // for it (decision 993).
+        if id == ThsrSaleTests.id {
+            return try DepotReturnReportTests.bought(id, rules: rules, side: 1 << 25, balance: Money(1_000_000_000_000))
+        }
+        return try DepotReturnReportTests.bought(id, rules: rules, side: id == "tymc:A" ? 1 << 22 : 1 << 21)
     }
 
     /// Hong Kong's MTR lines `ids` (`"SIL"`, ...) bought on its map.
@@ -197,7 +202,11 @@ final class TimetableCheckupFullTests: XCTestCase {
             !$0.hasPrefix("hkmtr:") && !$0.hasPrefix("vr:") && !$0.hasPrefix("fksubway:") && !$0.contains(" after ")
         }.sorted()
         for id in ids {
-            for (label, rules) in Self.rules { try check("\(id) \(label)", TimetableCheckupWorlds.taiwan(id, rules: rules)) }
+            // Decision 993: the High Speed Rail is on sale only with
+            // realistic rules.
+            for (label, rules) in Self.rules where id != RealBranchLine.taiwanHighSpeedRail || rules == .realistic {
+                try check("\(id) \(label)", TimetableCheckupWorlds.taiwan(id, rules: rules))
+            }
         }
     }
 

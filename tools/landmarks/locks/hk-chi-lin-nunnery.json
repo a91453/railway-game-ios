@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark hk-chi-lin-nunnery: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "hk-chi-lin-nunnery" : {
+      "hash" : "843d3e39e2f3e1be",
+      "triangles" : 3904
+    },
+    "hk-chi-lin-nunnery-far" : {
+      "hash" : "a15a7c90e4e3dfa6",
+      "triangles" : 1356
+    }
+  }
+}

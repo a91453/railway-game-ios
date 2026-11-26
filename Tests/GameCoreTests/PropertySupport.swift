@@ -506,6 +506,7 @@ enum WorldInvariants {
             case .annualHouseTax: [.houseTax]
             case .annualLandTax: [.propertyTax]
             case .dailyStationUpkeep: [.stationUpkeep]
+            case .dailyLineFee: [.lineFee]
             }
             var sum: Int64 = 0
             for line in entry.breakdown {

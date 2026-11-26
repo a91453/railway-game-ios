@@ -33,6 +33,8 @@
 #   UPLOAD_OPTIONS                    from testflight-signing.sh
 #   APPLE_TEAM_ID                     adhoc, automatic
 #   BUILD_NUMBER                      optional: CFBundleVersion of this build
+#   TESTFLIGHT_OPTIONS_ONLY           dry run only: 1 writes the options for
+#                                     the archive already made, no archive
 # The optional second argument selects TestFlight scope and defaults to
 # "internal" for backward compatibility. External mode deliberately omits
 # Apple's testFlightInternalTestingOnly export option.
@@ -98,7 +100,19 @@ if [[ -n "${BUILD_NUMBER:-}" ]]; then
   args+=("CURRENT_PROJECT_VERSION=$BUILD_NUMBER")
 fi
 
-xcodebuild "${args[@]}"
+# testflight-checks.yml's dry run: the archive does not depend on the
+# TestFlight scope, only the options below do, so its second scope rewrites
+# the options for the archive it already made instead of archiving again
+# (half an hour; decision 1016). The release never sets this.
+if [[ "${TESTFLIGHT_OPTIONS_ONLY:-}" == 1 ]]; then
+  if [[ ! -d "$archive_path" ]]; then
+    echo "::error::TESTFLIGHT_OPTIONS_ONLY=1 needs the archive that was already made at $archive_path." >&2
+    exit 1
+  fi
+  echo "Options only: the archive at $archive_path is kept."
+else
+  xcodebuild "${args[@]}"
+fi
 
 # App Store Connect distribution, signed automatically by xcodebuild at
 # export (cloud-managed distribution certificate when no local one exists).
