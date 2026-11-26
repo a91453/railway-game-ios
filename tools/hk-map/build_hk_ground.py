@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 """Hong Kong's people, as the pack's `population.json` (decision 712).
 
+Since decision 1008 the pack's `population.json` is the 2021 census's, with
+jobs (`tools/census-grid/hongkong_census_grid.py`); this stays as the
+fallback. Run it and `build_hk_mtr.SOURCES['population.json']` and the
+WorldPop licence in `write_manifest` must say WorldPop again.
+
     pip install tifffile imagecodecs numpy
     curl -L -o /tmp/hk/pop/hkg.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/HKG/v1/1km_ua/constrained/hkg_pop_2025_CN_1km_R2025A_UA_v1.tif
     python3 -I tools/hk-map/build_hk_ground.py /tmp/hk/pop/hkg.tif RailwayGameApp/Resources/MapPacks/hongkong

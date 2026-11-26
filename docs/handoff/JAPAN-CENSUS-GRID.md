@@ -53,8 +53,7 @@ python3 -I tools/census-grid/japan_census_grid.py build /tmp/estat RailwayGameAp
   相容，可商用）。做法：多邊形依面積分到 7.5″ 正方格（要 shapely）。上班：主計總處工業及服務業普查（110 年）在 SEGIS 有
   村里或二級發布區的從業員工數；沒有的話保留 OSM places（`taiwan_places.json`）。注意台灣的 places、分區（決策 93）、不蓋區
   都和 `taiwan_population.json` 共用 30″ 格網：換成 7.5″ 要一起重做 `build_place_grid.py`、`build_zone_grid.py`。
-- **香港**：政府統計處 2021 人口普查，街段（Street Block）或小規劃統計區（TPU）的人口；上班地點有按地區的「工作地點」
-  統計。資料一線通（data.gov.hk）的條款可商用、要標出處。做法同台灣（多邊形 → 正方格）。
+- **香港**：做完了，決策 1008（`tools/census-grid/hongkong_census_grid.py`）。
 - **芬蘭**：統計局 Statistics Finland 的格網資料庫：250 m 人口格（Väestöruudukko）與 1 km 的上班人數（Työpaikat），
   CC BY 4.0，WFS `geo.stat.fi`。格網是 ETRS-TM35FIN（公尺），要重投影到經緯度正方格；羅瓦涅米在北緯 66.5°，
   7.5″ 經度只有約 93 m，可以用 15″ 或 30″。

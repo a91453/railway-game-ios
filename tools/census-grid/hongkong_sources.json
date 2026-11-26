@@ -1,0 +1,83 @@
+{
+ "pages": {
+  "residents": "https://data.gov.hk/en-data/dataset/hk-censtatd-census_geo-2021-population-census-by-ssg",
+  "jobs": "https://data.gov.hk/en-data/dataset/hk-censtatd-tablechart-215-16009",
+  "units": "https://data.gov.hk/en-data/dataset/hk-pland-pland1-boundaries-of-tpu-sb-vc",
+  "land use": "https://data.gov.hk/en-data/dataset/hk-pland-pland1-land-utilization-in-hong-kong-raster-grid"
+ },
+ "files": {
+  "ssug.geojson": {
+   "from": "https://portal.csdi.gov.hk/csdi-webpage/file-api?dataset_id=censtatd_rcd_1635933365202_19171&format=geojson&layer_name=SSUG_21C",
+   "sha256": "8462c80bec50a70deff2d6bf10f6112eaa7b10d5533072f808816cc1d6d5fce5"
+  },
+  "tpusu.geojson": {
+   "from": "https://portal.csdi.gov.hk/csdi-webpage/file-api?dataset_id=pland_rcd_1634022783366_65050&format=geojson&layer_name=TPUSU_2021",
+   "sha256": "f7f6a64d2816e5c5987ddf9822f252f0c9f6da3eb4d1e69954d5af3ec60ad25d"
+  },
+  "215-16009.json": {
+   "from": "https://www.censtatd.gov.hk/api/get.php?id=215-16009&lang=en&full_series=1",
+   "sha256": "447d8d8d8c46e8e04a22f146723a2028ccf6c87958aede850250c98317f2cb9c"
+  }
+ },
+ "land use tiles": {
+  "tile_800000_800000.png": "3ce08b07717c8db532d65d995aaefcb41486d3a9872cb7a871d94032a92f3b8a",
+  "tile_800000_824000.png": "e3ef36db414afa37328aebafa2d2874aa862e65a63c5093b96e8e500d0189966",
+  "tile_832000_800000.png": "c9bce55106253b5e5c954a44cd959ccdba04681f67adf1b1244fa0d03b22aeb3",
+  "tile_832000_824000.png": "877d0890b2a2f32c508bf2c79e4fec8bd7cc7822216ab460d7679407fa02436c"
+ },
+ "year of jobs": "2021",
+ "licence": "DATA.GOV.HK Terms and Conditions of Use; CSDI Portal Terms and Conditions of Use (commercial use allowed, the source identified)",
+ "credit": "2021 Population Census and Quarterly Survey of Employment and Vacancies, Census and Statistics Department; Tertiary Planning Units and Land Utilization, Planning Department; Government of the Hong Kong SAR, via DATA.GOV.HK and the CSDI Portal. Processed for the game.",
+ "extent": {
+  "north": 22.5584,
+  "south": 22.15,
+  "west": 113.8333,
+  "east": 114.4417
+ },
+ "industries": {
+  "office": [
+   "B",
+   "C",
+   "D",
+   "E",
+   "H",
+   "J",
+   "K",
+   "L",
+   "M",
+   "N"
+  ],
+  "shop": [
+   "G",
+   "I"
+  ],
+  "civic": [
+   "P",
+   "Q"
+  ],
+  "leisure": [
+   "R",
+   "S"
+  ]
+ },
+ "residents in the census": 7411945,
+ "residents": 7411945,
+ "residents off the map": 0,
+ "jobs in the table": {
+  "office": 1132890,
+  "shop": 935430,
+  "civic": 415940,
+  "leisure": 118230
+ },
+ "jobs": {
+  "office": 1132890,
+  "shop": 935430,
+  "civic": 415940,
+  "leisure": 118230
+ },
+ "jobs off the map": 0,
+ "cells": [
+  196,
+  292
+ ]
+}
