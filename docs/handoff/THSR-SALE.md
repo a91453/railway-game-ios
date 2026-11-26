@@ -2,11 +2,10 @@
 
 ## 進度
 
-- 做到哪：台灣高鐵（南港–左營 12 站）可以在台灣新局整條收購。第一串鋪好線、高架、班次與兩端機廠；第二串（分支 `claude/project-thread-9t5f5d`）修好擬實規則的死結（台中折返渡線）、加烏日基地、兩端改 7 股、加每月維護費（GameCore）並定價。決策檔 `docs/decisions/993.md`。
-- 已驗證（雲端 Linux release，`-warnings-as-errors`）：建置乾淨；`LineAcquisitionTests` 19 個全過；擬實規則一天檢查（兩端 7 股）沒發 0、晚點 36、出庫晚 10、尖峰 +12 分；收支（從台北開局，帶每月 1 億維護費）第 0、1、2 天公司現金 +955 萬、+903 萬、+905 萬（一年約 33 億；含地 136.6 億約 4.1 年回本、不含地約 2.3 年）。之前以為「每晚結的費用 994 萬」其實是**每天結的所得稅**（`dailyTax`）。
-- **沒過：簡易規則（新局預設）一天檢查。** 兩端 5 股沒發 59；改 7 股後沒發 62、晚點 83、出庫晚 25、尖峰 +30 分，沒卡死。所以不是端點股數的問題。沒發的班從第二天 06:55 左營開始，之後兩端整天都有。簡易規則入庫 175 次，擬實 143 次。
-- 這串在 11-26 壓縮第 2 次停手。作者把 0.7.0 延到 11/27 晚上（「好好做，不用趕」）。
-- 下一步的第一個指令：見下面「還要做的」。
+- 做到哪：台灣高鐵（南港–左營 12 站）可以在台灣新局整條收購，**只在寫實規則（閉塞區間）的局**（Chien 11-26「用對遊戲最好的方式」，由第三串定案）。第一串鋪線、高架、班次與兩端機廠；第二串修擬實規則的死結（台中折返渡線）、烏日基地、兩端 7 股、每月維護費（GameCore）並定價；第三串（分支 `claude/project-thread-cmg93c`）把台北到台南九站改成四股、停站的車進側線月台，並讓簡易規則的局不賣高鐵。決策檔 `docs/decisions/993.md`。
+- 已驗證（雲端 Linux release）：擬實規則一天檢查（四股）沒發 0、晚點 38、出庫晚 9、尖峰 +11.7 分（預算已寫）。
+- **簡易規則還沒好**：兩端 5 股沒發 59、7 股 62、九站四股 51、再加側線月台 44（共 202 班），沒卡死。所以簡易規則的局先不賣。
+- 下一步：「還要做的」第 1 項（另一張單，GameCore）。
 
 ## 派工與範圍
 
@@ -43,30 +42,17 @@ THSR_SALE_PROFIT=3 $B GamePresentationTests.ThsrSaleTests/testProfit   # 一天�
 
 ## 還要做的（照順序）
 
-1. **修簡易規則的沒發（擋住開賣的唯一一項）。** 已排除：端點股數（5→7 沒變好）、卡死（0）。嫌疑依序：
-   - 決策 297、609：簡易規則沒有閉塞區間，`countsSurplus(blockSections:)`／`runDepotEntryCandidates` 把端點「多出來」或擋路的車送回機廠，送進烏日或另一端，第二天早上該端就缺車。先比兩種規則在第 1 天 05:00（時鐘 104400）每組車停在哪裡：
-     ```sh
-     DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=thsr DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_CONTROLLED=1 DEPOT_RETURN_EPISODES=1 DEPOT_RETURN_SAVE=<檔>.json DEPOT_RETURN_SAVE_AT=104400 DEPOT_RETURN_UNTIL=104460 $B GamePresentationTests.DepotReturnReportTests/testTheHighSpeedRail
-     # 拿掉 SIMPLE、CONTROLLED 兩個變數就是擬實規則的對照
-     ```
-     **量過了（11-26，兩端 7 股）：第 1 天 05:00 每組車停在哪**（`DEPOT_RETURN_SAVE` 存的世界，照每列車所在的邊數）：
-
-     | | 南港留置線 | 烏日基地 | 左營機廠 | 站的月台上 |
-     | --- | ---: | ---: | ---: | --- |
-     | 真實時刻表（`overnight`） | 10（南港） | 0 | 30（左營） | — |
-     | 擬實規則 | 6 | 6 | 28 | 0 |
-     | 簡易規則＋行車控制 | **2** | 3 | 30 | 左營 3、**台南 2** |
-
-     簡易規則的早上北端只有 2 組車（擬實 6、真實 10），33 組擠在左營那頭，還有 2 組睡在台南的月台：所以第二天一早南港發的班沒車，左營那頭的車又出不去。**下一步是查第 0 天晚上為什麼車往南收**：簡易規則下哪幾班回送（`positioning`）沒開、或被決策 297／609 改送到最近的機廠。照 `DEPOT_RETURN_EPISODES=1` 的輸出看第 0 天 20:00 以後每次入庫是哪組車、進哪座機廠，對照 `metro_runs.json` 的回送班。這次的兩個報告（約 15 分、38 分）存在 scratchpad，串結束就沒了，要重跑；位置用的小程式就是讀存檔的 `world.trains[].position.onEdge.edge` 對 `network.platforms[].edge` 的站。
-   - 簡易規則跑得比擬實快，車提早到端點，在「下一班的車」還沒輪到時就被當成多的車送走。
-   - 修法候選：高鐵的端點不做「多的車回機廠」（只對高鐵或只對有 `endLevels` 3 的端），或讓入庫照時刻表的回送班，不照當下的多寡。
-   - 修好後，用 `TIMETABLE_CHECKUP … THSR simple` 量，把預算寫進 `CheckupBudgets/Taiwan.swift`。
-   - **到 11/27 下午還修不好**：把 `RealBranchLine.urbanLines` 的高鐵那一列拿掉（程式、月費、測試留著；`testTheRunsAreTheRealDay` 不靠清單），PR 改成「高鐵先不開賣」再交協調者合。
+1. **讓簡易規則也能賣高鐵（另一張單，要改 GameCore）。** 第三串量到的原因：簡易規則沒有閉塞區間，一班車要出發時，它往**下一個停站**的路上只要有一班車停著（停站、折返、收班），或那班車自己也在跟前車，它就不能出發（`RouteFollowing.swift` 的 `followingAuthority(of:route:limit:memo:)` 與 `isLeading(_:onto:for:)`：「A train standing, turning round, ending its service or following another itself, it waits for whole」；`holdsToItsApproach` 是唯一的例外）。高鐵站距長，直達車往下一停站一段就跨好幾站，路上幾乎總有一班在跟車，所以後面的車常常出不去，誤點一路傳下去，過了最晚的發車時間就算沒發。
+   - 已排除／已做：端點股數（5→7 股沒變好）；卡死（0）；第 1 天早上車都在南邊是結果不是原因。九站四股＋停站車進側線月台（`RealLineAcquisition.routePreferences(_:stops:keepingRight:onLoops:)`）把 62 降到 44。
+   - 修法候選：簡易規則下讓一班車可以跟「自己也在跟車、但路一直在動」的車（一列一列接著跟），或在中間站的月台前讓後車先開到前一站停（像閉塞區間只在站與站之間）。都會動到每條線的簡易規則，要量全部 `timetable-checkup` 與 golden。
+   - 修好後：拿掉 `RealBranchLine.onSale` 的 `world.blockSections` 條件、`TimetableCheckupFullTests.testTaiwanMetroLines` 對高鐵只跑寫實的那行，量 `TIMETABLE_CHECKUP … THSR simple` 寫預算。
+   - 量的時候：`DEPOT_RETURN_RUNS=1` 會印每班派出的時間與車；`DEPOT_RETURN_WATCH=<秒>-<秒> DEPOT_RETURN_WATCH_AT=<站名>` 印那站每列車在等誰（簡易規則的量法要 `THSR_` 或 `DEPOT_RETURN_SIMPLE` 測試先把 `onSale` 的條件拿掉，不然會 skip）。
 2. 常駐測試：買得下、跑得完一天（`RealLineBoughtAgainTests`、`SharedStationLayoutTests` 若和台鐵共站）。
-3. 夜間 `timetable-checkup` 的台灣捷運那個 job 會多約 25 分（擬實）＋1 小時（簡易）：看要不要把高鐵移到自己的 job。
-4. `real-line-laying` skill 加一行：月台比待避線長就鋪不下（`holding(half:)`）；中間站有班次起訖要折返渡線；端點股數不是簡易規則沒發的原因（5→7 股沒變好）。
+3. 夜間 `timetable-checkup` 的台灣捷運那個 job 多約 25–40 分（只有擬實）：看要不要把高鐵移到自己的 job。
+4. `real-line-laying` skill 加一行：月台比待避線長就鋪不下（`holding(half:)`）；中間站有班次起訖要折返渡線；端點股數不是簡易規則沒發的原因；停站的車進側線月台（`onLoops`）。
 5. 分段買（高鐵與九州新幹線）是另一張單。
-6. 併 main 時（決策 995 加了 `RealLineLayout.highSpeed`，`RealBranchLine.stationLayout` 照車種選），高鐵刻意留在量過的 `.metro` 鋪法（`stationLayout` 排除 `isTaiwanHighSpeedRail`）。改成 `.highSpeed`（待避線一座島寬、更真實）要重量兩種一天檢查與共站，之後再做。
+6. 高鐵刻意留在量過的 `.metro` 鋪法（`stationLayout` 排除 `isTaiwanHighSpeedRail`）。改成決策 995 的 `.highSpeed`（待避線一座島寬、更真實）要重量，之後再做。
+7. 真實的台中是兩座島式月台＋兩股通過線（六股），遊戲是四股；板橋是一座島式兩股，照舊。
 
 ## UNVERIFIED
 

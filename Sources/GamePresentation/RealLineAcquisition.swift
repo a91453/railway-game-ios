@@ -899,7 +899,7 @@ extension GameSession {
     /// The lines on sale and those the map holds only part of, worked out
     /// again only when what they come from changes.
     var realLineSale: RealLineSale {
-        let key = BuyableRealLinesKey(bounds: world.bounds, anchor: world.geoAnchor, bought: world.acquisitions, railways: railwaysRevision)
+        let key = BuyableRealLinesKey(bounds: world.bounds, anchor: world.geoAnchor, bought: world.acquisitions, railways: railwaysRevision, blockSections: world.blockSections)
         if let memo = buyableRealLinesMemo, memo.key == key { return memo.sale }
         let sale = workOutRealLineSale()
         buyableRealLinesMemo = (key, sale)
@@ -3177,6 +3177,9 @@ struct BuyableRealLinesKey: Equatable {
     let bought: [LineAcquisition]
     /// ``GameSession/railwaysRevision``.
     let railways: Int
+    /// THSR-SALE: the High Speed Rail is sold only with block sections
+    /// (``RealBranchLine/onSale(_:in:railways:)``).
+    let blockSections: Bool
 }
 
 /// The real lines of a map (decision 336): on sale, held only in part,

@@ -202,7 +202,11 @@ final class TimetableCheckupFullTests: XCTestCase {
             !$0.hasPrefix("hkmtr:") && !$0.hasPrefix("vr:") && !$0.hasPrefix("fksubway:") && !$0.contains(" after ")
         }.sorted()
         for id in ids {
-            for (label, rules) in Self.rules { try check("\(id) \(label)", TimetableCheckupWorlds.taiwan(id, rules: rules)) }
+            // Decision 993: the High Speed Rail is on sale only with
+            // realistic rules.
+            for (label, rules) in Self.rules where id != RealBranchLine.taiwanHighSpeedRail || rules == .realistic {
+                try check("\(id) \(label)", TimetableCheckupWorlds.taiwan(id, rules: rules))
+            }
         }
     }
 

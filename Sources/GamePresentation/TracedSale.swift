@@ -137,7 +137,7 @@ extension GameSession {
     /// The real way of each line for sale, worked out again only when the
     /// lines for sale may change (``buyableRealLines``).
     var saleLineWays: [SaleLineWay] {
-        let key = BuyableRealLinesKey(bounds: world.bounds, anchor: world.geoAnchor, bought: world.acquisitions, railways: railwaysRevision)
+        let key = BuyableRealLinesKey(bounds: world.bounds, anchor: world.geoAnchor, bought: world.acquisitions, railways: railwaysRevision, blockSections: world.blockSections)
         if let memo = saleLineWaysMemo, memo.key == key { return memo.ways }
         let lines = buyableRealLines
         var ways: [SaleLineWay] = []

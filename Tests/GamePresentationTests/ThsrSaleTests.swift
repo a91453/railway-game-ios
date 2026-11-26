@@ -11,11 +11,15 @@ final class ThsrSaleTests: XCTestCase {
     static let id = "thsr_sched:THSR"
     static let stops = ["南港", "台北", "板橋", "桃園", "新竹", "苗栗", "台中", "彰化", "雲林", "嘉義", "台南", "左營"]
 
-    /// A new Taiwan game round `latitude`, `longitude`, as the launcher opens it.
+    /// A new Taiwan game round `latitude`, `longitude`, as the launcher
+    /// opens it with the realistic rules, the only ones it is sold with
+    /// (decision 993).
     static func game(at latitude: Double, _ longitude: Double) throws -> GameSession {
         let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude))
-        let world = GameLauncher.newWorld(at: anchor, options: NewGameOptions(), data: GameLauncher.NewWorldData(
+        var options = NewGameOptions()
+        options.rules = .realistic
+        let world = GameLauncher.newWorld(at: anchor, options: options, data: GameLauncher.NewWorldData(
             population: data.population, places: data.places, water: data.water, coverage: data.coverage, heights: data.heights
         ))
         XCTAssertNotNil(world.mapExpansion, "bought tile by tile")
@@ -37,6 +41,27 @@ final class ThsrSaleTests: XCTestCase {
         XCTAssertEqual(runs.overnight, ["南港": 10, "左營": 30])
         XCTAssertEqual(RealLineDepotSite.sites(of: Self.id).map(\.chinese), ["南港留置線", "烏日基地", "左營機廠"])
         XCTAssertEqual(TrackGauge.ofRealLine(Self.id), .shinkansen)
+    }
+
+    /// Decision 993: on sale only where the trains run in block sections
+    /// (realistic rules); a game with simple rules is not offered it, and
+    /// is again once the rules turn realistic.
+    func testOnSaleOnlyWithBlockSections() throws {
+        let session = try Self.game(at: 25.047882, 121.517219)
+        XCTAssertTrue(session.world.blockSections)
+        XCTAssertTrue(session.buyableRealLines.contains { $0.id == Self.id })
+        session.perform { (world: inout GameWorld) throws(GameError) -> String in
+            NewGameRules.simple.apply(to: &world)
+            return ""
+        }
+        XCTAssertFalse(session.world.blockSections)
+        XCTAssertFalse(session.buyableRealLines.contains { $0.id == Self.id })
+        XCTAssertFalse(session.buyableRealLines.isEmpty, "the other lines still on sale")
+        session.perform { (world: inout GameWorld) throws(GameError) -> String in
+            world.setBlockSections(true)
+            return ""
+        }
+        XCTAssertTrue(session.buyableRealLines.contains { $0.id == Self.id })
     }
 
     /// `THSR_SALE_REPORT=1`: from Taipei, the offer's price item by item,
