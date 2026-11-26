@@ -7,6 +7,12 @@ import XCTest
 /// that the screen they photograph is there.
 @MainActor
 final class WebsiteScreenshotTests: XCTestCase {
+    /// A title or button the tests look for, in the language the workflow's
+    /// `language` input runs them in (the App Store's English screenshots).
+    static func shown(_ chinese: String, _ english: String) -> String {
+        ProcessInfo.processInfo.environment["SCREENSHOT_LANGUAGE"] == "en" ? english : chinese
+    }
+
     /// Decision 536: a train of a real line bought, the Neiwan Line's and
     /// the Danhai light rail's, followed: its card says what it is, the
     /// lines list what the line runs, and the 3D map draws the real line's
@@ -39,7 +45,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        XCTAssertTrue(app.navigationBars[Self.shown("路線", "Lines")].firstMatch.appears(within: 10), "The lines panel opens")
         settle(seconds: 3)
         keep("bought-lines-list", app)
     }
@@ -288,7 +294,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        XCTAssertTrue(app.navigationBars[Self.shown("路線", "Lines")].firstMatch.appears(within: 10), "The lines panel opens")
         let rebuild = app.buttons["line.rebuildAsReal"]
         if !rebuild.appears(within: 5) {
             let row = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH 'line.row.'")).firstMatch
@@ -313,7 +319,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         settle(seconds: 2)
         keep("tymc-rebuild-panel-after", app)
 
-        let close = app.navigationBars.buttons["完成"].firstMatch
+        let close = app.navigationBars.buttons[Self.shown("完成", "Done")].firstMatch
         XCTAssertTrue(close.becomesHittable(within: 10), "The panel can be closed")
         close.tap()
         XCTAssertTrue(close.disappears(within: 10), "The panel closes")
@@ -1370,7 +1376,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         settle(seconds: 2)
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
@@ -3947,7 +3953,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let ankeng = app.buttons["line.acquire.K"]
@@ -3996,7 +4002,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let together = app.buttons["line.acquire.LIUJIA"]
@@ -4313,7 +4319,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
@@ -4366,7 +4372,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         settle(seconds: 2)
         keep("lines-list", app)
@@ -4408,7 +4414,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         settle(seconds: 2)
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
@@ -4461,7 +4467,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         settle(seconds: 2)
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
@@ -4514,7 +4520,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         settle(seconds: 2)
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
@@ -4584,7 +4590,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
@@ -4722,7 +4728,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         XCTAssertTrue(app.dragUntilWhollyOnScreen(entries, in: list), "The trips by hour come into view")
         settle()
         keep("chart-station-hourly", app)
-        let done = app.navigationBars.buttons["完成"].firstMatch
+        let done = app.navigationBars.buttons[Self.shown("完成", "Done")].firstMatch
         if done.exists, done.isHittable {
             done.tap()
             settle()
@@ -4733,7 +4739,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let linesList = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
@@ -4786,7 +4792,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        let bar = app.navigationBars["路線"].firstMatch
+        let bar = app.navigationBars[Self.shown("路線", "Lines")].firstMatch
         XCTAssertTrue(bar.appears(within: 10), "The lines panel opens")
         let list = app.collectionViews.allElementsBoundByIndex.first { $0.frame.midX >= bar.frame.minX && $0.frame.midX <= bar.frame.maxX }
         let report = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "line.report.")).firstMatch
@@ -5431,7 +5437,7 @@ final class WebsiteScreenshotTests: XCTestCase {
         let lines = app.buttons["entry.lines"]
         lines.waitUntilSettled()
         lines.tap()
-        XCTAssertTrue(app.navigationBars["路線"].firstMatch.appears(within: 10), "The lines panel opens")
+        XCTAssertTrue(app.navigationBars[Self.shown("路線", "Lines")].firstMatch.appears(within: 10), "The lines panel opens")
         settle(seconds: 3)
         keep("\(name)-panel" + upright(app), app)
     }
@@ -5661,8 +5667,13 @@ final class WebsiteScreenshotTests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
+        // The workflow's `language` input en puts every test in English
+        // (the App Store's English screenshots).
+        let english = english || ProcessInfo.processInfo.environment["SCREENSHOT_LANGUAGE"] == "en"
         let language = english ? ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"] : ["-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"]
-        app.launchArguments = ["-ui-testing"] + language + extra
+        // Kind store: no frame rate or gesture hint over the 3D map.
+        let clean = ProcessInfo.processInfo.environment["SCREENSHOT_CLEAN"] == "1" && !extra.contains("-screenshot-3d-clean")
+        app.launchArguments = ["-ui-testing"] + language + extra + (clean ? ["-screenshot-3d-clean"] : [])
         app.launch()
         return app
     }
