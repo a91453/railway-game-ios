@@ -623,14 +623,14 @@ public enum DataSourceCredits {
                     // (`AirportCatalog.overseasPlaces`).
                     DataSourceCredit(
                         id: "kyushuAirports",
-                        title: language.text("Kumamoto, Saga, Kitakyushu and Amakusa Airports", "熊本、佐賀、北九州、天草機場"),
+                        title: language.text("Kumamoto, Saga, Kitakyushu, Amakusa, Nagasaki and Iki Airports", "熊本、佐賀、北九州、天草、長崎、壹岐機場"),
                         detail: language.text(
                             "On Fukuoka’s map, how many passengers and flights each of these airports has in a day.",
-                            "福岡地圖上這四座機場一天各有多少旅客與航班。"
+                            "福岡地圖上這六座機場一天各有多少旅客與航班。"
                         ),
                         notice: language.text(
                             "Passengers and flights of 2025: the Ministry of Land, Infrastructure, Transport and Tourism (Japan), airport survey 2025. Positions: OpenStreetMap contributors. The game is not affiliated with the airports.",
-                            "2025 年的旅客與航班：日本國土交通省《令和 7 年空港管理狀況調書》。位置：OpenStreetMap 貢獻者。本遊戲與這四座機場沒有任何關係。"
+                            "2025 年的旅客與航班：日本國土交通省《令和 7 年空港管理狀況調書》。位置：OpenStreetMap 貢獻者。本遊戲與這六座機場沒有任何關係。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("MLIT: airport figures", "國土交通省：空港管理狀況"), url: "https://www.mlit.go.jp/koku/15_bf_000185.html"),

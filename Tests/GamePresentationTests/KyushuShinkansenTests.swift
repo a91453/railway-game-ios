@@ -88,7 +88,9 @@ final class KyushuShinkansenTests: XCTestCase {
         let session = try FukuokaRailwaysTests.fukuoka()
         let listing = try XCTUnwrap(session.realLineListings.first { $0.bundle.lines.map(\.id) == [Self.id] }, "sold by itself")
         XCTAssertTrue(listing.isBuyable)
-        XCTAssertEqual(Double(listing.metres), 1_107, accuracy: 50, "Hakata, from the middle of the first land")
+        // Decision 997: the tiles laid again from the four prefectures'
+        // middle, so Fukuoka's first four lie some 1.5 km further off.
+        XCTAssertEqual(Double(listing.metres), 2_577, accuracy: 50, "Hakata, from the middle of the first land")
         XCTAssertEqual(session.world.mapExpansion?.owned.count, 4)
 
         let real = try XCTUnwrap(session.buyableRealLines.first { $0.id == Self.id })

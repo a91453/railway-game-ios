@@ -32,8 +32,11 @@ public struct FootprintTiles: Sendable {
     }
 
     static let zoom = 16
-    /// A tile's units a side, as a vector tile's extent.
+    /// A tile's units a side, as a vector tile's extent: what
+    /// ``Map3DFootprints/decode(_:)`` gives, whichever version it read.
     static let extent = 4096
+    /// Decision 1005: the units a side `footprints/3` writes.
+    static let writtenExtent = 2048
 }
 
 /// The buildings of the footprint tiles over a part of a real-world map.
@@ -180,8 +183,10 @@ struct Map3DFootprints: Sendable {
     static let duplicateShare = 0.8
     static let duplicateSizes = 1.4
 
-    /// A tile's buildings, in its own units (`footprints/2`, the tool's
-    /// `encode_tile`).
+    /// A tile's buildings, in ``FootprintTiles/extent`` units a side
+    /// (the tool's `encode_tile`): `footprints/2` wrote those units,
+    /// `footprints/3` (decision 1005) half as many, 2048 a side, about
+    /// 0.25 m, which are scaled up here.
     static func decode(_ bytes: [UInt8]) throws(Failure) -> [(storeys: Int, storeysFrom: StoreysFrom, use: Int, rings: [[(x: Int, y: Int)]])] {
         var at = 0
         func varint() throws(Failure) -> Int {
@@ -199,7 +204,12 @@ struct Map3DFootprints: Sendable {
             let value = try varint()
             return (value >> 1) ^ -(value & 1)
         }
-        guard try varint() == 2 else { throw .malformed }
+        let unit: Int
+        switch try varint() {
+        case 2: unit = 1
+        case 3: unit = FootprintTiles.extent / FootprintTiles.writtenExtent
+        default: throw .malformed
+        }
         let count = try varint()
         guard count <= bytes.count else { throw .malformed }
         var cursor = (x: 0, y: 0)
@@ -218,7 +228,7 @@ struct Map3DFootprints: Sendable {
                 for _ in 0..<points {
                     cursor.x += try signed()
                     cursor.y += try signed()
-                    ring.append(cursor)
+                    ring.append((cursor.x * unit, cursor.y * unit))
                 }
                 rings.append(ring)
             }

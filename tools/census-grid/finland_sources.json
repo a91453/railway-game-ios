@@ -14,10 +14,10 @@
   "east": 27.6
  },
  "files": {
-  "pno_tilasto_2025.json": "25fb32afecfb927c73dcae55b6c37fd2897eff5dc784b5229e9d33d48a1d840c",
-  "vaki2025_1km.json": "96d4c243681e19a55cc0cb7d84c5ea214bae4a7cb1d0345466af2e8777a71cae"
+  "pno_tilasto_2025.json": "d122cc6ba89efcbdeca8b96cda367ccd02697fe945827123f70639d9e9d75069",
+  "vaki2025_1km.json": "a5c1aa77ba4d405a43dc482ff9beb43a3d070564b39fd02e64728c0c1dfef68a"
  },
- "buildings.pmtiles": "4d4b9205607de553e7db355c61f5b7e2cde4068f2aeef0e1fa34efbaef75e875",
+ "buildings.pmtiles": "638d4669281700a1e76dd0e6a778d444e23e310ed6855d68502109585cceeaf3",
  "residents": 69768,
  "jobs": {
   "office": 10223,
@@ -153,7 +153,7 @@
   "97290": {
    "name": "Marraskoski",
    "workplaces": 8,
-   "kept": 0.67
+   "kept": 0.66
   },
   "97510": {
    "name": "Vikajärvi",

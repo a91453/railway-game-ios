@@ -5,7 +5,7 @@ buildings are OpenStreetMap's alone, shared so a new map does not copy
 `tools/rovaniemi-map/build_rovaniemi_buildings.py` (whose docstring says
 what the rule is) but calls `make` with its own table of uses.
 
-The tiles are Taiwan's (`tools/overture-footprint-tiles/`, `footprints/2`),
+The tiles are Taiwan's (`tools/overture-footprint-tiles/`, `footprints/3`, decision 1005),
 written by that tool's encoder as Hong Kong's are
 (`tools/hk-map/build_hk_buildings.py`, whose reader of the extract and
 table of uses this runs).
@@ -106,7 +106,7 @@ def make(extract, folder, extent, *, title, use_of, report_path, extract_from, d
         raw_bytes += len(raw)
         entries.append((tile_id(tiles.ZOOM, key[0], key[1]), gzip.compress(raw, 9, mtime=0)))
     metadata = {'name': title, 'format': f'footprints/{tiles.VERSION}', 'zoom': tiles.ZOOM,
-                'extent': tiles.EXTENT, 'tolerance': TOLERANCE, 'uses': tiles.USES, 'storeysFrom': tiles.STOREYS_FROM,
+                'extent': tiles.WRITTEN_EXTENT, 'tolerance': TOLERANCE, 'uses': tiles.USES, 'storeysFrom': tiles.STOREYS_FROM,
                 'attribution': 'Outlines, uses and tagged storeys: © OpenStreetMap contributors (ODbL 1.0). Storeys where '
                                'not tagged: this project, from the tagged buildings and WorldPop (CC BY 4.0)',
                 'newestEdit': newest}

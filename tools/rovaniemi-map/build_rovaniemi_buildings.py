@@ -6,7 +6,7 @@
     python3 -I tools/rovaniemi-map/build_rovaniemi_buildings.py \\
         /tmp/rv/mml rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
 
-The tiles are Taiwan's (`tools/overture-footprint-tiles/`, `footprints/2`:
+The tiles are Taiwan's (`tools/overture-footprint-tiles/`, `footprints/3`, decision 1005:
 one gzipped z16 tile of outlines, storeys and uses, in a PMTiles archive),
 written by that tool's own encoder as Hong Kong's are
 (`tools/hk-map/build_hk_buildings.py`), so the 3D map's one reader
@@ -245,7 +245,7 @@ def main(mml_folder, extract, folder):
         raw_bytes += len(raw)
         entries.append((tile_id(tiles.ZOOM, key[0], key[1]), gzip.compress(raw, 9, mtime=0)))
     metadata = {'name': 'Rovaniemi building footprints', 'format': f'footprints/{tiles.VERSION}', 'zoom': tiles.ZOOM,
-                'extent': tiles.EXTENT, 'tolerance': overseas_buildings.TOLERANCE, 'uses': tiles.USES,
+                'extent': tiles.WRITTEN_EXTENT, 'tolerance': overseas_buildings.TOLERANCE, 'uses': tiles.USES,
                 'storeysFrom': STOREYS_FROM,
                 'attribution': 'Outlines, use classes, storeys classes and measured heights: contains data from the '
                                'National Land Survey of Finland Topographic Database and Buildings 3D (2022), '

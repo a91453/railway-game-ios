@@ -62,7 +62,7 @@ gzip at level 9 without a time stamp.
 A tile (before gzip), every number an unsigned LEB128 varint, signed ones
 zigzagged:
 
-    version (2), buildings
+    version (3; 2 before decision 1005), buildings
     each building:
         attributes: storeys << 8 | from << 5 | use << 1 | source
             storeys: 1–255; 0 when unknown
@@ -74,9 +74,13 @@ zigzagged:
             zigzag x and y step from the last point written in the tile
             (the first from 0, 0)
 
-x and y are the tile's own units, 4096 a side (as a vector tile's extent;
-0.137–0.140 m on the ground in Taiwan), east and south of its north-west
-corner; a building belongs to the tile its centroid is in, so a large one
+x and y are the tile's own units, 2048 a side (0.27–0.28 m on the ground
+in Taiwan, 0.25 m in Kyushu; decision 1005: version 2's 4096 a side,
+0.14 m, made the archives a seventh larger for nothing the 3D map shows,
+and 1024 a side widened the hairline between two houses wall to wall to
+half a metre of ground), east and south of its north-west corner; the
+tool works in 4096 a side (`EXTENT`) and rounds to 2048 last
+(`coarse_rings`); a building belongs to the tile its centroid is in, so a large one
 reaches past the edges. Outlines run counter-clockwise seen from above,
 holes clockwise. A multipolygon is one building a polygon.
 
@@ -113,7 +117,11 @@ USES = ['agricultural', 'civic', 'commercial', 'education', 'entertainment', 'in
 # Where a building's storeys came from (3 bits); `nlsc` is kept for the
 # national 3D buildings, used once the owner has asked for them.
 STOREYS_FROM = ['guess', 'tags', 'cityMap', 'permits', 'nlsc']
-VERSION = 2
+VERSION = 3
+# Decision 1005: the working units (`EXTENT`) to a written unit, so a
+# tile holds WRITTEN_EXTENT a side. Version 2 wrote the working units.
+COARSE = 2
+WRITTEN_EXTENT = EXTENT // COARSE
 # Rings smaller than these (m²) after simplifying are dropped.
 SMALLEST_OUTLINE = 2.0
 SMALLEST_HOLE = 1.0
@@ -312,8 +320,7 @@ def encode_tile(key, rows, tolerance, storeys=None):
     sum |area change| (m²), buildings whose area moved over 5 %, largest
     relative change]."""
     tx, ty = key
-    lat = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (ty + 0.5) / (1 << ZOOM)))))
-    metre = 1 / (UNIT * math.cos(math.radians(lat)))  # tile units a metre
+    metre = metre_of(ty)  # working units a metre
     sq_tolerance = (tolerance * metre) ** 2
     stats = [0, 0, 0, 0, 0.0, 0.0, 0, 0.0]
     buildings = []
@@ -349,6 +356,11 @@ def encode_tile(key, rows, tolerance, storeys=None):
                 after += sign * size
             if not rings:
                 continue
+            outline = rings[0]
+            rings = coarse_rings(rings, metre)
+            if rings is None:
+                stats[1] += 1
+                continue
             stats[0] += 1
             stats[3] += sum(len(r) for r in rings)
             stats[4] += before
@@ -356,16 +368,43 @@ def encode_tile(key, rows, tolerance, storeys=None):
             change = abs(after - before) / before if before > 0 else 0
             stats[6] += change > 0.05
             stats[7] = max(stats[7], change)
-            cx = sum(x for x, _ in rings[0]) / len(rings[0])
-            cy = sum(y for _, y in rings[0]) / len(rings[0])
+            cx = sum(x for x, _ in outline) / len(outline)
+            cy = sum(y for _, y in outline) / len(outline)
             buildings.append(((int(cy) >> 8, int(cx) >> 8, int(cy), int(cx), _id), attributes, rings))
     # Rows of 256 units, alternating direction, so steps stay short.
     buildings.sort(key=lambda b: (b[0][0], b[0][1] if b[0][0] % 2 == 0 else -b[0][1], b[0][2:]))
+    return written(b[1:] for b in buildings), stats
+
+
+def coarse_rings(rings, metre):
+    """Decision 1005: a building's rings in working units (`EXTENT` a
+    side, outline counter-clockwise first) on whole written units
+    (`WRITTEN_EXTENT`), or None when its outline goes: a ring rounding to
+    less than its smallest area (`SMALLEST_OUTLINE`, `SMALLEST_HOLE`, m²
+    at `metre` working units a metre) or turning over is dropped."""
+    out = []
+    square = (metre / COARSE) ** 2
+    for index, ring in enumerate(rings):
+        simple = snap([(x / COARSE, y / COARSE) for x, y in ring])
+        twice = area(simple) if len(simple) >= 3 else 0
+        if twice == 0 or (twice > 0) != (index == 0) \
+                or abs(twice) / 2 / square < (SMALLEST_OUTLINE if index == 0 else SMALLEST_HOLE):
+            if index == 0:
+                return None
+            continue
+        out.append(simple)
+    return out
+
+
+def written(buildings):
+    """A tile's bytes (before gzip) of (attributes, rings in written
+    units) in order."""
+    buildings = list(buildings)
     out = bytearray()
     varint(VERSION, out)
     varint(len(buildings), out)
     cursor = (0, 0)
-    for _, attributes, rings in buildings:
+    for attributes, rings in buildings:
         varint(attributes, out)
         varint(len(rings), out)
         for ring in rings:
@@ -374,12 +413,33 @@ def encode_tile(key, rows, tolerance, storeys=None):
                 varint(zigzag(x - cursor[0]), out)
                 varint(zigzag(y - cursor[1]), out)
                 cursor = (x, y)
-    return bytes(out), stats
+    return bytes(out)
+
+
+def metre_of(ty):
+    """Working units a metre in row `ty` of the z16 tiles."""
+    lat = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (ty + 0.5) / (1 << ZOOM)))))
+    return 1 / (UNIT * math.cos(math.radians(lat)))
+
+
+def coarsened(data, ty):
+    """Decision 1005: a version 2 tile's bytes (unzipped) of row `ty` as
+    version 3, its buildings in the same order; a version 3 tile as it is."""
+    if data[0] == VERSION:
+        return data
+    metre = metre_of(ty)
+    kept = []
+    for storeys, use, source, rings, origin in decode_tile(data):
+        rings = coarse_rings(rings, metre)
+        if rings is not None:
+            kept.append((storeys << 8 | origin << 5 | use << 1 | source, rings))
+    return written(kept)
 
 
 def decode_tile(data):
-    """The buildings of a tile's bytes (unzipped): (storeys, use, source,
-    rings of (x, y) tile units, where the storeys came from)."""
+    """The buildings of a tile's bytes (unzipped), version 2 or 3:
+    (storeys, use, source, rings of (x, y) working units (`EXTENT` a side),
+    where the storeys came from)."""
     at = 0
 
     def read():
@@ -397,7 +457,9 @@ def decode_tile(data):
         v = read()
         return (v >> 1) ^ -(v & 1)
 
-    assert read() == VERSION
+    version = read()
+    assert version in (2, VERSION)
+    scale = 1 if version == 2 else COARSE
     cursor = [0, 0]
     out = []
     for _ in range(read()):
@@ -408,7 +470,7 @@ def decode_tile(data):
             for _ in range(read()):
                 cursor[0] += signed()
                 cursor[1] += signed()
-                ring.append(tuple(cursor))
+                ring.append((cursor[0] * scale, cursor[1] * scale))
             rings.append(ring)
         out.append((attributes >> 8, attributes >> 1 & 15, attributes & 1, rings, attributes >> 5 & 7))
     assert at == len(data)
@@ -490,7 +552,7 @@ def build(extract_path, out, tolerance='0.5', storeys_path=None):
         east = (max(k[0] for k in keys) + 1) / (1 << ZOOM) * 360 - 180
         north = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * min(k[1] for k in keys) / (1 << ZOOM)))))
         south = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (max(k[1] for k in keys) + 1) / (1 << ZOOM)))))
-        metadata = {'name': 'Taiwan building footprints', 'format': f'footprints/{VERSION}', 'zoom': ZOOM, 'extent': EXTENT,
+        metadata = {'name': 'Taiwan building footprints', 'format': f'footprints/{VERSION}', 'zoom': ZOOM, 'extent': WRITTEN_EXTENT,
                     'tolerance': tolerance, 'uses': USES, 'storeysFrom': STOREYS_FROM,
                     'attribution': 'Overture Maps Foundation (ODbL 1.0): OpenStreetMap contributors (ODbL 1.0), '
                                    'Shi et al., East Asian buildings, doi:10.5281/zenodo.8174931 (CC BY 4.0)'

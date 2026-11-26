@@ -15,11 +15,14 @@ reference's terrain (`rail-3d/integration/map3d.js`: a `raster-dem` source,
 Terrarium-encoded, 512 pixels, under a `hillshade` layer lit from 315°):
 each pixel's height in metres is red × 256 + green + blue / 256 − 32768,
 as PNG (written here with the standard library and numpy). Zooms 0 to
-MAX_ZOOM, whose 512-pixel tiles (some 70 m a pixel in Taiwan at zoom 10)
-are about as fine as the heights' 1.875″ cells (some 58 m); MapLibre draws them
-larger past it. A pixel takes the heights bilinearly at its middle, the
-mean of SAMPLES × SAMPLES such points below MAX_ZOOM so the hills do not
-flicker; only tiles with land in them are written.
+LAST_ZOOM; MAX_ZOOM's 512-pixel tiles (some 70 m a pixel in Taiwan at zoom
+10) would be about as fine as the heights' 1.875″ cells (some 58 m), but
+decision 1005 leaves them out: they were two thirds of the file for hills
+a little sharper when the 2D map is closest, and the game reads its heights
+from the grid, not from these. MapLibre draws LAST_ZOOM larger past it. A
+pixel takes the heights bilinearly at its middle, the mean of SAMPLES ×
+SAMPLES such points below MAX_ZOOM so the hills do not flicker; only tiles
+with land in them are written.
 """
 import os
 import struct
@@ -33,6 +36,8 @@ from build_basemap import tile_id, unproject, write_pmtiles  # noqa: E402
 
 SIZE = 512
 MAX_ZOOM = 10
+# Decision 1005: the last zoom written.
+LAST_ZOOM = 9
 SAMPLES = 4
 
 
@@ -132,7 +137,7 @@ def main(heights_path, out, name='Taiwan terrain',
     left, right = west + land_columns[0] * cell, west + (land_columns[-1] + 1) * cell
 
     tiles = []
-    for z in range(MAX_ZOOM + 1):
+    for z in range(LAST_ZOOM + 1):
         n = 1 << z
         def tx(lon):
             return int((lon / 360 + 0.5) * n)
@@ -163,7 +168,7 @@ def main(heights_path, out, name='Taiwan terrain',
         'description': f'The game\'s ground heights ({os.path.basename(heights_path)}, decision 124), Terrarium-encoded',
     }
     entries, contents = write_pmtiles(out, tiles, metadata, (west, south, east, north), ((west + east) / 2, (north + south) / 2, 7),
-                                      tile_type=2, tile_compression=1, zooms=(0, MAX_ZOOM))
+                                      tile_type=2, tile_compression=1, zooms=(0, LAST_ZOOM))
     print(f'{out}: {len(tiles)} tiles, {entries} directory entries, {os.path.getsize(out)} bytes')
 
 
