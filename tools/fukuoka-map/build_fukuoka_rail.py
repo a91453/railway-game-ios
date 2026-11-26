@@ -535,6 +535,26 @@ def write_manifest(folder):
     })
 
 
+def refresh_manifest(folder):
+    """`pack.json` again once a tool has written files of the pack: whole
+    (``write_manifest``), or, for a pack already cut along the prefectures
+    (decision 991, `split_prefectures.py`), with only the sizes of the
+    files in this folder changed, its parts kept (decision 998)."""
+    path = os.path.join(folder, "pack.json")
+    with open(path, encoding="utf-8") as f:
+        manifest = json.load(f)
+    if not manifest.get("parts"):
+        write_manifest(folder)
+        return
+    for name, entry in manifest["files"].items():
+        if "/" not in name:
+            entry["bytes"] = os.path.getsize(os.path.join(folder, name))
+    manifest["bytes"] = sum(entry["bytes"] for entry in manifest["files"].values())
+    # As split_prefectures.py writes it.
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, separators=(",", ":"))
+
+
 def write_times(out, lines):
     write(out, "fksubway_times.json", {
         "system": "FKSUBWAY", "estimated": True,

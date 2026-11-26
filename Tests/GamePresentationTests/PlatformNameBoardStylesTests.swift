@@ -58,7 +58,9 @@ final class PlatformNameBoardStylesTests: XCTestCase {
     /// English name the pack's, and the platform of each line gets that
     /// line's number and colour.
     func testFukuokasStationsGetTheirSigns() throws {
-        let signs = try Self.signs(FukuokaRailwaysTests.fukuoka())
+        // Decision 998: the Nishi-Kyushu Shinkansen, far from Fukuoka's
+        // first land, left unbought.
+        let signs = try Self.signs(FukuokaRailwaysTests.fukuoka(), buying: ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS"])
         XCTAssertEqual(signs.count, 36)
         let hakata = try XCTUnwrap(signs["博多"])
         let k = try XCTUnwrap(hakata.board(realLine: "fksubway:K")), n = try XCTUnwrap(hakata.board(realLine: "fksubway:N"))

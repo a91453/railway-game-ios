@@ -43,6 +43,18 @@ public enum Map3DFarDetail {
     /// phones.
     public static let budget = 1_000_000
 
+    /// How much of a building's height counts in its size from afar.
+    /// From ``from`` out the camera looks straight down
+    /// (``Map3DCamera/flatFrom``), so a building shows its roof, and its
+    /// walls only as far as the view's perspective leans them: at most
+    /// this share of its height, at a corner of the widest view (a phone
+    /// held sideways, 874 by 402 points, ``Map3DCamera/fieldOfView`` high:
+    /// tan 17.5° × √(1 + 2.17²)). Counted whole, a tower 40 m tall on a
+    /// plot 15 m across was drawn from 12 km as a 40 m thing where it
+    /// shows at most 30 m (decisions 709 and 1011: the real-price
+    /// registry's storeys put Taipei's farthest view over ``budget``).
+    public static let heightSeen: Float = 0.755
+
     /// The size, in metres, of the smallest thing drawn from `distance`.
     public static func smallest(distance: Float) -> Float {
         max(0, distance - from) * slope

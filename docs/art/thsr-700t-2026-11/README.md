@@ -13,6 +13,7 @@
 - 轉換：`tools/texture-palette/thsr_700t.py` 直接在車身上畫色塊（700T 的位置在實車照片上量，700 系的位置照舊版貼圖量），再由 `tools/train-models/glb_to_swift.py` 寫成 `Map3DTHSR700TMesh.swift` 與 `Map3DSeries700Mesh.swift`。材質順序寫在 `Map3DTHSR700T.swift`、`Map3DSeries700.swift`。
 - 用在：700T 是高鐵路線的車（set `highSpeed`，十二節）；700 系是車庫「高鐵」類的一款車（set `series700`，十六節）。
 - 決策：`docs/decisions/988.md`、`docs/decisions/989.md`。
+- 輪罩（2026-11-26）：轉向架照真車放（離連結面 3.75 m、相距 17.5 m），每個開口正中對到轉向架，頭車前開口下緣和後開口一樣寬、頂到離軌面 0.70 m（決策 988 第 5.2 節）。總覽圖是那之前拍的。
 
 ## 重做
 

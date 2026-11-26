@@ -1,0 +1,51 @@
+name: Taiwan rain and thunder days
+
+# Counts Taiwan's rain days of 1 mm or more per weather station from the
+# Central Weather Administration's open data (daily rainfall of the last
+# nine years, C-B0025-002) and the thunder days from NOAA's Global Summary
+# of the Day, for `Disruptions.weatherStations` (decision 1013,
+# tools/taiwan-weather/taiwan_rain_days.py). The CWA platform needs a key:
+# the repository secret CWA_API_KEY, used here only; the game never reads
+# it. The log shows the tables; the JSON is the artifact `taiwan-weather`.
+#
+# Runs by hand (Actions -> Taiwan rain and thunder days -> Run workflow)
+# and on pull requests from this repository that change the tool or this
+# file (a fork's pull request gets no secret and stops at the key check).
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/taiwan-weather.yml
+      - tools/taiwan-weather/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: taiwan-weather-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Count
+        env:
+          CWA_API_KEY: ${{ secrets.CWA_API_KEY }}
+        run: |
+          if [ -z "$CWA_API_KEY" ]; then
+            echo "CWA_API_KEY is not available here (a fork's pull request?); nothing to count."
+            exit 0
+          fi
+          mkdir -p out
+          python3 -I tools/taiwan-weather/taiwan_rain_days.py --out out/taiwan_rain_days.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: taiwan-weather
+          path: out/
+          if-no-files-found: ignore
+          retention-days: 7

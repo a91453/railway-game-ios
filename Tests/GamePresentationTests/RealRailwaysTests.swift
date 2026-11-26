@@ -359,7 +359,7 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertEqual(credits.map(\.id), [
                 "realRailways", "tra", "thsr", "afr", "taipeiMetro", "newTaipeiMetro", "taoyuanMetro", "taichungMetro", "kaohsiungMetro", "operators",
                 "tdx", "realBuses", "realCoaches", "traOpenData", "nlsc", "openStreetMap",
-                "worldPop", "ridership", "travelSurvey", "sightVisitors", "airports", "taiwanWeather", "overtureBuildings",
+                "taiwanCensus", "ridership", "travelSurvey", "sightVisitors", "airports", "taiwanWeather", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "moiTerrain", "copernicusDEM", "esaWorldCover", "wikidata", "worldUrbanizationProspects",
                 "map3DGround", "temples", "taipeiTempleModels", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "highSpeed700Model", "coalBunkerModel", "meshy", "kenney", "taipeiGarbageTrucks", "slopNewYork",
                 // Decision 882: the platforms' name boards' letters.
@@ -428,10 +428,11 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertTrue(ridership.notice.contains(language.text("New Taipei Metro Corporation", "新北大眾捷運股份有限公司")), ridership.notice)
             XCTAssertTrue(ridership.notice.contains(language.text("Taoyuan Metro Corporation", "桃園大眾捷運股份有限公司")), ridership.notice)
             XCTAssertEqual(ridership.links.map(\.url).filter { $0.hasPrefix("https://data.gov.tw/dataset/") }.count, 4)
-            let worldPop = try XCTUnwrap(credits.first { $0.id == "worldPop" })
-            XCTAssertTrue(worldPop.notice.contains("CC BY 4.0"))
-            XCTAssertTrue(worldPop.notice.contains("10.5258/SOTON/WP00840"))
-            XCTAssertTrue(worldPop.links.contains { $0.url == "https://creativecommons.org/licenses/by/4.0/" })
+            // Decision 1002: Taiwan's people and jobs, the government's own.
+            let census = try XCTUnwrap(credits.first { $0.id == "taiwanCensus" })
+            XCTAssertTrue(census.notice.contains(language.text("Open Government Data License, version 1.0", "政府資料開放授權條款第 1 版")), census.notice)
+            XCTAssertTrue(census.notice.contains("ODbL 1.0"), census.notice)
+            XCTAssertEqual(census.links.map(\.url).filter { $0.hasPrefix("https://data.gov.tw/dataset/") }.count, 3)
             // Decision 332: the travel survey, as its dataset asks to be
             // credited, and its licence.
             let survey = try XCTUnwrap(credits.first { $0.id == "travelSurvey" })
@@ -446,9 +447,13 @@ final class RealRailwaysTests: XCTestCase {
             }
             XCTAssertTrue(overture.links.contains { $0.url == "https://doi.org/10.5281/zenodo.8174931" })
             // Decision 389: the storeys' sources, the two city maps under
-            // the Open Government Data License and GHSL under CC BY 4.0.
+            // the Open Government Data License and GHSL under CC BY 4.0;
+            // decision 1011: the two cities' usage permits and door numbers.
             let storeys = try XCTUnwrap(credits.first { $0.id == "buildingStoreys" })
+            XCTAssertTrue(storeys.links.contains { $0.url == "https://data.gov.tw/dataset/123639" })
+            XCTAssertTrue(storeys.links.contains { $0.url == "https://data.gov.tw/dataset/128203" })
             for part in [language.text("Taichung building map", "臺中市建物圖"), language.text("Taipei building permit map", "臺北市建築執照套繪圖"),
+                         language.text("New Taipei building permits", "新北市建築執照存查"), "OpenAddresses",
                          language.text("Open Government Data License, version 1.0", "政府資料開放授權條款第 1 版"), "GHS-BUILT-H R2023A", "CC BY 4.0"] {
                 XCTAssertTrue(storeys.notice.contains(part), part)
             }

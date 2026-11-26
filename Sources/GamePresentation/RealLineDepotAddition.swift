@@ -278,7 +278,7 @@ extension RealLineDepotAddition {
         }
 
         // The ground under it, read in on a copy, as the purchase reads it.
-        let length = Int64(urban.network == "BR" ? 4 + 1 : DemoRealLines.cars(ofSystem: urban.system) + 1) * Train.carLength
+        let length = Int64(urban.network == "BR" ? 4 + 1 : DemoRealLines.cars(ofLine: "\(urban.system)|\(urban.network)", system: urban.system) + 1) * Train.carLength
         var draft = world.pricingCopy()
         let step = 32 * RealLineAcquisition.metre, side = 16 * RealLineAcquisition.metre
         let lead = WorldPath([start, into] + Array(points.dropFirst()))

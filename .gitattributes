@@ -12,3 +12,6 @@ tools/train-models/pack.lock.txt merge=union
 # Decision 976: one layer of the 3D scene's state a line, the same way
 # (Map3DSceneLayerRegistryTests checks the result).
 Sources/GamePresentation/Map3DSceneLayerList.swift merge=union
+# TRAIN-OWN-GLASS-LIST: one train that marks its own glass a line, the same
+# way (Map3DTrainOwnGlassListTests checks the result).
+Tests/GamePresentationTests/Map3DTrainOwnGlassList.swift merge=union

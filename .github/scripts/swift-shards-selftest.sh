@@ -718,6 +718,105 @@ expect_decision true presentation 'GamePresentationTests' "a label that only loo
 expect_decision false none none "a pull request of docs skips" EVENT=pull_request LISTED=true -- docs/ROADMAP.md README.md
 expect_decision true full full "a pull request whose files could not be listed" EVENT=pull_request LISTED=false --
 
+# A pull request's narrowed tier (decision 1012, affected-tests.py): the
+# classes whose code names what a changed source file declares, the helpers
+# that do and their users, and the smoke classes (here GoldenScenarioTests,
+# ReplayFixtureTests and SavedGameTests of the tree above); the broad tier
+# when that cannot be followed or is not under half of it. A push to main
+# keeps the broad tier. Map3DFarViewTests (375 s) makes the broad tier
+# heavy enough to undercut.
+mkdir -p "$tree/Sources/GamePresentation"
+cat >"$tree/Sources/GamePresentation/TrainPack.swift" <<'SWIFT'
+/// The pack of extra trains.
+public struct TrainPack {
+    public var isUnlocked: Bool
+    private var cache = 0
+}
+
+extension Map3DScene {
+    func drawPackTrains() {}
+}
+SWIFT
+cat >"$tree/Sources/GamePresentation/MatchOperator.swift" <<'SWIFT'
+public func ~= (pattern: TrainKind, value: Int) -> Bool { false }
+SWIFT
+cat >"$tree/Sources/GamePresentation/Catalogue.swift" <<'SWIFT'
+enum Catalogue {
+    static let file = "Catalogue/stations.json"
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/TrainPackTests.swift" <<'SWIFT'
+@testable import GamePresentation
+import XCTest
+
+final class TrainPackTests: XCTestCase {
+    func testTheLock() { XCTAssertTrue(TrainPack(isUnlocked: true).isUnlocked) }
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/PackSupport.swift" <<'SWIFT'
+@testable import GamePresentation
+
+func packedSession() -> Int { _ = TrainPack(isUnlocked: false); return 0 }
+
+func unrelatedHelper() -> Int { 1 }
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/PackUserTests.swift" <<'SWIFT'
+import XCTest
+
+final class PackUserTests: XCTestCase {
+    func testThroughTheHelper() { XCTAssertEqual(packedSession(), 0) }
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/CatalogueTests.swift" <<'SWIFT'
+import XCTest
+
+final class CatalogueTests: XCTestCase {
+    private func load() -> String { Catalogue.file }
+    func testItLoads() { XCTAssertFalse(load().isEmpty) }
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/Map3DFarViewTests.swift" <<'SWIFT'
+import XCTest
+
+/// Calls unrelatedHelper only, and names a pack in a comment: TrainPack.
+final class Map3DFarViewTests: XCTestCase {
+    func testFar() { XCTAssertEqual(unrelatedHelper(), 1) }
+}
+SWIFT
+mkdir -p "$tree/Sources/GameCore"
+cat >"$tree/Sources/GameCore/Scan.swift" <<'SWIFT'
+public struct ScanThing {}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/SourceScanTests.swift" <<'SWIFT'
+import XCTest
+
+final class SourceScanTests: XCTestCase {
+    func testNoPrint() { _ = "Sources/GameCore" }
+}
+SWIFT
+smoke='GoldenScenarioTests ReplayFixtureTests SavedGameTests'
+expect_decision true affected "{\"include\":[{\"shard\":\"selected\",\"tests\":\"GoldenScenarioTests PackUserTests ReplayFixtureTests SavedGameTests TrainPackTests\",\"part\":\"1/1\"}]}" \
+  "a pull request of a source file runs the tests that name it, through a helper too" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/TrainPack.swift docs/ROADMAP.md
+expect_decision true affected "\"tests\":\"CatalogueTests $smoke TrainPackTests\"" \
+  "a pull request of a changed test file and bundled data a source file names" \
+  EVENT=pull_request LISTED=true -- Tests/GamePresentationTests/TrainPackTests.swift RailwayGameApp/Resources/Catalogue/stations.json
+expect_decision true affected "\"tests\":\"GoldenScenarioTests ReplayFixtureTests SavedGameTests SourceScanTests\"" \
+  "a test that reads a source folder by its path runs when a file in it changes" \
+  EVENT=pull_request LISTED=true -- Sources/GameCore/Scan.swift
+expect_decision true presentation '"shard":"selected-8"' "a push to main of the same file keeps the broad tier" \
+  EVENT=push LISTED=true -- Sources/GamePresentation/TrainPack.swift
+expect_decision true presentation '"shard":"selected-8"' "a top-level operator cannot be followed by name" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/TrainPack.swift Sources/GamePresentation/MatchOperator.swift
+expect_decision true presentation '"shard":"selected-8"' "bundled data no Swift file names" \
+  EVENT=pull_request LISTED=true -- RailwayGameApp/Resources/Unknown/thing.bin
+expect_decision true presentation '"shard":"selected-8"' "a deleted source file" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/Gone.swift
+expect_decision true full full "the package beside a source file" EVENT=pull_request LISTED=true -- \
+  Sources/GamePresentation/TrainPack.swift Package.swift
+expect_decision true full full "full-ci beside a source file" EVENT=pull_request LISTED=true LABELS="full-ci" -- \
+  Sources/GamePresentation/TrainPack.swift
+
 # decide's docs output (decision 830): the number check runs when a listed
 # file is one doc_numbers.py reads, and always when the files are not listed.
 # expect_docs <true|false> <description> <VAR=value...> -- <path>...

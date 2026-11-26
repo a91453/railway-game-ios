@@ -111,9 +111,10 @@ final class PopTravelTests: XCTestCase {
         let grid = try Self.bundled()
         let frame = try Self.taipeiFrame()
         let heatmap = PopulationHeatmap(grid: grid, frame: frame)
-        // A cell is about 1 km (64,000 units): at 1 point a kilometre a
-        // block of 8 is the first at least 6 points wide.
-        XCTAssertEqual(heatmap.blockSize(pointsPerUnit: 1.0 / 64_000), 8)
+        // A cell is about 230 m (decision 1002: 7.5″, some 15,000 units):
+        // at 1 point a kilometre a block of 32 is the first at least 6
+        // points wide.
+        XCTAssertEqual(heatmap.blockSize(pointsPerUnit: 1.0 / 64_000), 32)
         XCTAssertEqual(heatmap.blockSize(pointsPerUnit: 1.0 / 640), 1)
         let northWest = frame.worldPosition(latitude: 25.30, longitude: 121.30)
         let southEast = frame.worldPosition(latitude: 24.80, longitude: 121.80)
@@ -135,7 +136,7 @@ final class PopTravelTests: XCTestCase {
         let heatmap = PopulationHeatmap(grid: grid, frame: frame)
         let info = try XCTUnwrap(heatmap.cellInfo(atX: frame.middleX, y: frame.middleY))
         XCTAssertGreaterThan(info.people, 0)
-        XCTAssertEqual(info.squareKilometres, 0.77, accuracy: 0.02, "a cell of 30″ is about 0.92 km by 0.84 km at Taipei")
+        XCTAssertEqual(info.squareKilometres, 0.048, accuracy: 0.002, "a cell of 7.5″ is about 0.23 km by 0.21 km at Taipei")
         XCTAssertEqual(info.density, Double(info.people) / info.squareKilometres)
         let lines = info.lines(in: .english)
         XCTAssertEqual(lines.count, 2)

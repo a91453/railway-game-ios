@@ -49,3 +49,7 @@ swift test --skip-build --filter 'Map3DSeries700Tests|Map3DTHSR700TTests|Map3DTr
 - UNVERIFIED：Linux 上的建置與測試、寫進鎖檔的雜湊（Mac 算的）交給 CI；`Map3DModelPackLockTests.testEveryModelIsAsLocked` 在 Mac 上本來就有三十幾個無關模型是紅的，這兩款車不在其中；iPhone 上沒看過。
 
 工作用的資料夾（照片、各輪輸出、看圖與排總覽圖的小程式）在作者的 Mac 上，不在任何 repo；位置記在那台 Mac 的 session 記憶裡。
+
+## 2026-11-26：輪罩開口對準轉向架（小修）
+
+作者看了九州的車說輪子沒在輪罩正中，這兩款也一樣。轉向架照真車放（離連結面 3.75 m、相距 17.5 m），頭車前開口下緣照後開口的寬重做、頂挖到 0.70 m（上面留一條車鼻的裙板，800 系的經驗），每個開口平移到轉向架正中（決策 988 第 5.2 節）。重做的指令照 `docs/art/thsr-700t-2026-11/README.md`，產出和工具一致；鎖檔在 Linux 重產。`port_check.py` 這兩款車本來就不過的幾項（全周幌／接縫偏航 4° 相碰、燈左右面數、門 node 拿掉後牆面、集電弓車共面）沒動，要另開一張單。

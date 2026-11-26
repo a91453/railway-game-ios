@@ -383,10 +383,22 @@ extension GameWorld {
     /// of the follower's way the other way round comes towards it and is
     /// never followed.
     func isLeading(_ train: Train, onto route: TrackCover, for follower: Train) -> Bool {
+        isLeading(train, onto: route, followerWays: ways(of: follower))
+    }
+
+    /// The traversals `follower` stands on and those of its route: what
+    /// ``isLeading(_:onto:for:)`` asks of a train that would follow.
+    func ways(of follower: Train) -> Set<TrackTraversal> {
+        Set((bodyStretches(of: follower) + routeStretches(of: follower).stretches).map(\.traversal))
+    }
+
+    /// ``isLeading(_:onto:for:)`` with the follower's ``ways(of:)`` given,
+    /// worked out only when they are asked.
+    func isLeading(_ train: Train, onto route: TrackCover, followerWays: @autoclosure () -> Set<TrackTraversal>) -> Bool {
         guard case .travellingToStop(let stop, let cycle)? = train.execution, train.movement.rate > 0,
               routeStretches(of: train).moves, blockSections || !isFollowing(train) || holdsToItsApproach(train)
         else { return false }
-        let ways = Set((bodyStretches(of: follower) + routeStretches(of: follower).stretches).map(\.traversal))
+        let ways = followerWays()
         for stretch in bodyStretches(of: train) + routeStretches(of: train).stretches where ways.contains(stretch.traversal.reversed) {
             return false
         }

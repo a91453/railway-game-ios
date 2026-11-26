@@ -383,8 +383,9 @@ public struct Map3DMesh: Sendable {
 
     /// Decision 709: how far the vertices from `fromVertex` on and the
     /// boxes from `fromBox` on reach, in metres: the longest of their
-    /// box's three sides; 0 with none.
-    func extent(fromVertex: Int, fromBox: Int) -> Float {
+    /// box's three sides, the height counted at `heightShare` of itself
+    /// (``Map3DFarDetail/heightSeen``); 0 with none.
+    func extent(fromVertex: Int, fromBox: Int, heightShare: Float = 1) -> Float {
         var low = Map3DPoint(.infinity, .infinity, .infinity), high = Map3DPoint(-.infinity, -.infinity, -.infinity)
         for vertex in vertices[fromVertex...] {
             low = Map3DPoint(min(low.x, vertex.x), min(low.y, vertex.y), min(low.z, vertex.z))
@@ -396,7 +397,7 @@ public struct Map3DMesh: Sendable {
             high = Map3DPoint(max(high.x, bounds.max.x), max(high.y, bounds.max.y), max(high.z, bounds.max.z))
         }
         guard low.x <= high.x else { return 0 }
-        return max(high.x - low.x, high.y - low.y, high.z - low.z)
+        return max(high.x - low.x, (high.y - low.y) * heightShare, high.z - low.z)
     }
 
     /// Decision 709: the same triangles and boxes in another order

@@ -81,6 +81,42 @@ final class Map3DKyushu800Tests: XCTestCase {
         XCTAssertEqual(doors[1].x.upperBound - doors[1].x.lowerBound, 1.163, accuracy: 0.01, "the door itself as wide as it was")
     }
 
+    /// The bogies stand where the real car's do (3.75 m from a coupling
+    /// face, 17.5 m apart), and each sits in the middle of the opening in
+    /// the skirts that shows its wheels (the owner, 2026-11-26: the cab
+    /// car's front bogie had no opening at all, the skirt ran over it, and
+    /// the other openings stood up to 0.19 m to one side of their wheels).
+    func testTheWheelsAreInTheMiddleOfTheirOpenings() throws {
+        for unit in Map3DKyushu800.Unit.allCases {
+            let model = try XCTUnwrap(Map3DKyushu800.model(unit))
+            let half = unit.pitch / 2
+            let wheels = model.vertices.filter { $0.color == Map3DPalette.dark && $0.z < 0.3 }.map(\.x).sorted()
+            var axles: [[Float]] = []
+            for x in wheels {
+                if let last = axles.last?.last, x - last < 0.8 { axles[axles.count - 1].append(x) } else { axles.append([x]) }
+            }
+            XCTAssertEqual(axles.count, 4, unit.rawValue)
+            guard axles.count == 4 else { continue }
+            // The foot of the skirts along the side walls: where each
+            // opening begins and ends.
+            let feet = model.vertices.filter { $0.color != Map3DPalette.dark && abs($0.z - 0.422) < 0.003 && abs($0.y) > 1.3 }.map(\.x)
+            var centres: [Float] = []
+            for pair in [axles[0] + axles[1], axles[2] + axles[3]] {
+                let low = pair.min() ?? 0, high = pair.max() ?? 0, centre = (low + high) / 2
+                centres.append(centre)
+                let back = try XCTUnwrap(feet.filter { $0 < low }.max(), unit.rawValue)
+                let front = try XCTUnwrap(feet.filter { $0 > high }.min(), "\(unit.rawValue): the skirt runs over the bogie")
+                XCTAssertEqual((front + back) / 2, centre, accuracy: 0.01, "\(unit.rawValue): the opening's middle is the bogie's")
+                XCTAssertGreaterThan(front - back, 3.1, unit.rawValue)
+            }
+            XCTAssertEqual(centres[1] - centres[0], 17.5, accuracy: 0.01, unit.rawValue)
+            XCTAssertEqual(centres[0], -half + 3.75, accuracy: 0.01, unit.rawValue)
+            if unit == .middle {
+                XCTAssertEqual(centres[1], half - 3.75, accuracy: 0.01)
+            }
+        }
+    }
+
     /// The wheels stand on standard-gauge rails: 1,435 mm between the
     /// rails' inner faces, the wheels' outer faces a little wider.
     func testTheWheelsStandOnStandardGauge() throws {
