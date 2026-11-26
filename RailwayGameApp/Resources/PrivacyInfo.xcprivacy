@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  The app's privacy manifest. It tracks no one and collects no data; the
-  only required-reason API it uses is UserDefaults (@AppStorage settings,
-  read and written by the app itself: CA92.1). The freezes and exits the
+  The app's privacy manifest. It tracks no one and collects no data. The
+  required-reason APIs it uses: UserDefaults (@AppStorage settings, read
+  and written by the app itself: CA92.1), and a file's modification date
+  (the save library's header cache tells a changed save from an unchanged
+  one by its size, date and file number, SaveLibrary.swift HeaderCache;
+  only the game's own saves, in its container or its iCloud container:
+  C617.1). The freezes and exits the
   system records (decision 418) stay in the app's own files and leave the
   device only in a problem report the player sends, so no data type is
   collected. See
@@ -25,6 +29,14 @@
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
 				<string>CA92.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
 			</array>
 		</dict>
 	</array>

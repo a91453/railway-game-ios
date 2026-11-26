@@ -233,6 +233,7 @@ Archive action 使用 scheme 的 Archive 設定，即 **Release** configuration�
 - Privacy manifest：`RailwayGameApp/Resources/PrivacyInfo.xcprivacy`（2026-10-23 加入；`Resources` 整個資料夾已是 App target 的來源，XcodeGen 把它當資源放進 App）。內容照程式碼實際用到的宣告：
   - `NSPrivacyTracking` 為 false，沒有 tracking domain，`NSPrivacyCollectedDataTypes` 是空的（開發者不收任何資料；問題回報是玩家自己用分享選單寄的）。
   - required reason API 只有 `UserDefaults`（約 27 個檔用 `@AppStorage` / `UserDefaults` 存設定，只有 App 自己讀寫）：`NSPrivacyAccessedAPICategoryUserDefaults`，理由 `CA92.1`。
+  - 檔案時間戳（2026-11-26，REVIEW-L37 補）：存檔清單的標頭快取（`SaveLibrary.swift` 的 `HeaderCache.Stamp`）用 `attributesOfItem` 讀存檔的大小、`modificationDate` 與檔案編號，分辨存檔有沒有改過；只讀遊戲自己的存檔（App 容器或它的 iCloud 容器）：`NSPrivacyAccessedAPICategoryFileTimestamp`，理由 `C617.1`。下一行 10-23 的「沒有用到」在這之前寫的。
   - 查過沒有用到的（2026-10-23，`RailwayGameApp/` 與 `Sources/`）：檔案時間戳（`creationDate`、`modificationDate`、`attributesOfItem`、`stat` 系列、`resourceValues`；存檔清單只用 `contentsOfDirectory(atPath:)` 讀檔名；決策 397 的 iCloud 存檔只讀 `ubiquitousItemDownloadingStatusKey`，不是時間戳，比對用檔案內容的指紋）、系統開機時間（`systemUptime`、`mach_absolute_time`；3D 地圖用的 `CACurrentMediaTime` 不在 Apple 的清單上）、磁碟空間、目前鍵盤。MapLibre 的 xcframework 自帶它自己的 privacy manifest，不寫進 App 的這一份。
   - `release-archive.yml` 確認封存的 App 裡有這個檔，並照舊列出二進位檔裡疑似的 required reason API 引用；新出現的引用，或 App Store Connect 寄來 ITMS-91053，就依實際用途加一項，不為消除警告而虛構宣告。
 - App Privacy（隱私營養標籤）是提交 App Store 審查時填寫的資訊；本輪只做內部 TestFlight，不送審。
