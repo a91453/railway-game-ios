@@ -30,6 +30,8 @@ kit 的測試（面數、封底、接點、決定性）只查「有沒有做錯�
 
 清單每條都過，而且至少做滿三輪；最後由作者或另一個 session 看總覽圖判，做的人不自己打分。測試全綠不是停的理由。
 
+**例外：舊版車轉新版**（作者 2026-11-26：「審查 過了就合併吧 合併前不需要再審查吧」）。作者舊版的列車轉進遊戲時，不跑三輪：找舊版模型 → 調成真車比例 → 套車頭規則 → `tools/texture-palette/port_check.py` 全過 → 換家審一次 → 過了就合。只退局部小修就修好、自動檢查再過即合，不開第二輪；只有換底模或改結構（車鼻重做、窗數或車長改了、編組改了）才再審。全文在私有素材庫 `docs/studio/rolling-stock-studio.md`「舊版轉新版：審一次就合」。
+
 ## 5. 交付
 
 - 重檔（模型、viewer、各輪大圖、照片）放目前收新素材的素材庫（`docs/ASSET_REPOSITORIES.md`）的 `game-art-previews/docs/art/<資料夾>/`，照那邊的 `AGENTS.md`：先跑 `python3 tools/asset_guard.py --base origin/main`，新一輪同 PR 刪上一輪重檔。

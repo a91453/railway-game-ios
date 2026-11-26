@@ -9,6 +9,8 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 
 **造型、塗裝、亮窗與玻璃怎麼畫、車頂零件、給作者看的方式、作者自製模型與工作室 GLB 轉進遊戲的做法、新車的水準、網頁版附錄**是獨門做法，2026-11-18 搬到私有素材庫 `a91453/railway-assets-private-2` 的 `docs/studio/skills/rolling-stock.md`（同節號）。**做或改車之前先讀那一份**；這裡只留程式結構、預算、雜湊與工具。做或改模型照 [model-look](../model-look/SKILL.md)。
 
+**作者舊版的車轉新版**（2026-11-26）：送審前跑 `tools/texture-palette/port_check.py` 到全過（用法在腳本開頭），換家審一次就合，小修不開第二輪（model-look §4 的例外；流程在私有那份 §8 第 25 條與 `docs/studio/rolling-stock-studio.md`）。
+
 ## 2. 配方放哪
 
 - **模型包**：`Map3DModelPack.standard`（`Map3DModels.swift`）。App 第一次開 3D 前把它整包建好、CPU 與 GPU 各留一份，所以**遊戲不畫的靜態展示模型**（單元、整列、角色，沒有 set 接它們）放 `Map3DModelPack.studies`，只給工具與 `hashes.lock.json` 讀（審查 K1-1）。`standard` 的模型數與總頂點數由 `Map3DModelPackSizeTests` 對 `tools/train-models/pack.lock.txt`（一個模型一行，`merge=union`）與 `hashes.lock.json` 加總比對（決策 782 起不算註冊車，見 §2.1；2026-11-25 起不再有要改的總數）：手寫進 `standard` 的車在 `pack.lock.txt` 加自己的行（`MAP3D_WRITE_PACK_LOCK=1 swift test --filter Map3DModelPackLockTests/testTheOrderAndTheLampsAreAsBefore` 重寫，看 diff 只多了自己的行），並在 PR 寫多了多少；註冊車只在 PR 寫。每個模型有名字、`vertices`（三個一組，各帶這個三角形自己的平面法線）、`minimum`／`maximum`。座標：**+x 車頭、+y 左、+z 上、軌面 z = 0、公尺、車廂中心 x = 0**。
