@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-castles-kokura: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-castles-kokura" : {
+      "hash" : "b6612bccefaca29f",
+      "triangles" : 6872
+    },
+    "jp-castles-kokura-far" : {
+      "hash" : "fec99632513fef8f",
+      "triangles" : 512
+    }
+  }
+}
