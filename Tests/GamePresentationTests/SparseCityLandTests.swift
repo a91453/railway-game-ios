@@ -52,6 +52,10 @@ final class SparseCityLandTests: XCTestCase {
         let length = Double(Land.cellLength)
         // Decision 91: offices, shops, schools and sights, each its own.
         func jobs(_ cell: GridCounts.Cell) -> [Int64] {
+            // Decision 1000: a grid with its own jobs gives them.
+            if population.hasJobs {
+                return [PopulationGrid.JobKind.office, .shop, .civic, .leisure].map { Int64(population.jobs(of: $0, in: cell)) }
+            }
             guard let places else { return [0, 0, 0, 0] }
             func count(_ kind: PlaceGrid.Kind) -> Int64 {
                 Int64(places.layers[kind]?.counts[cell] ?? 0) * (LandImport.jobsPerPlace[kind] ?? 0)
@@ -100,23 +104,27 @@ final class SparseCityLandTests: XCTestCase {
                 : inside.contains(where: { $0.zone == nil }) ? inside.indices.filter { inside[$0].zone == nil }
                 : inside.contains(where: { $0.zone == .farmland }) ? inside.indices.filter { inside[$0].zone == .farmland }
                 : inside.indices.filter { inside[$0].zone == .industrial }
+            // Decision 1002: a census of workplaces' jobs work in the
+            // factories too.
+            let jobHosts = population.hasJobs ? inside.indices.filter { hosts.contains($0) || inside[$0].zone == .industrial } : hosts
             let residents = keptBefore(people), placeJobs = keptBefore(work.reduce(0, +))
-            func share(_ total: Int64, _ host: Int) -> Int64 {
-                let (base, extra) = total.quotientAndRemainder(dividingBy: Int64(hosts.count))
+            func share(_ total: Int64, _ host: Int, of count: Int) -> Int64 {
+                let (base, extra) = total.quotientAndRemainder(dividingBy: Int64(count))
                 return min(Land.maximumPerCell, base + (Int64(host) < extra ? 1 : 0))
             }
             for (index, cell) in inside.enumerated() {
-                let host = hosts.firstIndex(of: index)
-                var cellResidents = host.map { share(residents, $0) } ?? 0
-                var cellJobs = host.map { share(placeJobs, $0) } ?? 0
+                var cellResidents = hosts.firstIndex(of: index).map { share(residents, $0, of: hosts.count) } ?? 0
+                var cellJobs = jobHosts.firstIndex(of: index).map { share(placeJobs, $0, of: jobHosts.count) } ?? 0
                 var cellUse = use
-                switch parksOnly ? nil : cell.zone {
+                switch parksOnly && residents + placeJobs > 0 ? nil : cell.zone {
                 case .park?:
                     cells.append(LandCell(row: cell.row, column: cell.column, use: .park, residents: 0, jobs: 0))
                     continue
                 case .industrial?:
                     cellUse = .industrial
-                    cellJobs = min(Land.maximumPerCell, cellJobs + LandImport.industrialJobsPerCell)
+                    if !population.hasJobs {
+                        cellJobs = min(Land.maximumPerCell, cellJobs + LandImport.industrialJobsPerCell)
+                    }
                 case .farmland?:
                     cellUse = .agricultural
                     cellJobs = min(Land.maximumPerCell, cellJobs + LandImport.farmJobsPerCell)

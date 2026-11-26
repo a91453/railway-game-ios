@@ -110,11 +110,17 @@ final class WaterGridTests: XCTestCase {
         // (map, water cells, land cells without and with water, residents
         // lost where a WorldPop cell's part in the map is all water, jobs
         // of factories and farms gone with their cells.)
+        // Decision 1002: on the census's 7.5″ cells, fewer cells of land
+        // (no one is counted on the empty hillsides and banks WorldPop's
+        // 1 km cells spread people over), the few people of a cell all on
+        // water lost, and the factories bring no jobs of their own to lose
+        // (before: 64,829, 61,017, 0, 1,109; 35,437, 32,424, 0, 1,537;
+        // 48,310, 43,912, 7, 3,948; 19,166, 15,631, 0, 173).
         let maps: [(String, Double, Double, Int, Int, Int, Int64, Int64)] = [
-            ("Taipei", 25.047882, 121.517219, 4_048, 64_829, 61_017, 0, 1_109),
-            ("Keelung", 25.1330324, 121.7392299, 18_806, 35_437, 32_424, 0, 1_537),
-            ("Kaohsiung", 22.6395321, 120.3025585, 21_113, 48_310, 43_912, 7, 3_948),
-            ("Magong", 23.5655, 119.5793, 47_130, 19_166, 15_631, 0, 173),
+            ("Taipei", 25.047882, 121.517219, 4_048, 53_311, 52_105, 0, 7),
+            ("Keelung", 25.1330324, 121.7392299, 18_806, 17_954, 17_356, 11, 72),
+            ("Kaohsiung", 22.6395321, 120.3025585, 21_113, 36_690, 35_444, 45, 4),
+            ("Magong", 23.5655, 119.5793, 47_130, 8_966, 8_509, 4, 0),
         ]
         for (name, latitude, longitude, waterCells, before, after, lost, jobsLost) in maps {
             let frame = try Self.frame(latitude, longitude)
@@ -155,12 +161,14 @@ final class WaterGridTests: XCTestCase {
         // (map, steep cells, land cells on them.) Decision 943: from the
         // Ministry of the Interior's terrain model but Magong's (Penghu is
         // not on its sheet).
+        // Decision 1002: the census's cells put fewer people on the
+        // hillsides (before: 2,500, 2,958, 734, 6 and 4,147 cells).
         let maps: [(String, Double, Double, Int, Int)] = [
-            ("Taipei", 25.047882, 121.517219, 2_677, 2_500),
-            ("Keelung", 25.1330324, 121.7392299, 7_182, 2_958),
-            ("Kaohsiung", 22.6395321, 120.3025585, 734, 734),
-            ("Magong", 23.5655, 119.5793, 20, 6),
-            ("Alishan", 23.5106, 120.8048, 52_388, 4_147),
+            ("Taipei", 25.047882, 121.517219, 2_677, 1_290),
+            ("Keelung", 25.1330324, 121.7392299, 7_182, 832),
+            ("Kaohsiung", 22.6395321, 120.3025585, 734, 339),
+            ("Magong", 23.5655, 119.5793, 20, 3),
+            ("Alishan", 23.5106, 120.8048, 52_388, 719),
         ]
         for (name, latitude, longitude, steepCells, landOnSteep) in maps {
             let frame = try Self.frame(latitude, longitude)

@@ -51,6 +51,13 @@ import GameCore
 /// and the cell keeps only its zone's own (a port's factory jobs). Where
 /// every dry cell of a WorldPop cell is such land, it hosts them as before,
 /// so no one is lost.
+///
+/// Decision 1002 (TAIWAN-CENSUS-GRID): Taiwan's grid is the census's, on
+/// 7.5″ cells (some 230 × 210 m, the zones' own cut), with its own jobs
+/// (decision 1000). Its jobs count the factories', so industrial land adds
+/// no ``industrialJobsPerCell`` of its own; farms keep ``farmJobsPerCell``
+/// (the census of industry and services counts no farming). Zone cells
+/// where no one lives or works are laid out as before.
 public enum LandImport {
     /// The jobs of each kind of place: a shop or restaurant 25, an office
     /// 500, a school 300 (its staff and pupils draw trips alike), a sight
@@ -190,6 +197,14 @@ public enum LandImport {
             }
             // Zone cells are never negative, and cut WorldPop's cells.
             sources.formUnion(places.zoneOfCell.keys.map { GridCounts.Cell(row: $0.row / places.zoneCuts, column: $0.column / places.zoneCuts) })
+        } else if population.hasJobs, zoned, let places, let zones = places.zones.values.first {
+            // Decision 1002: a grid of its own jobs on another cut (Taiwan's
+            // census on the zones' own 7.5″ cells) still lays the zones where
+            // no one lives or works: each zone cell's middle finds its cell.
+            sources.formUnion(places.zoneOfCell.keys.map { cell in
+                let middle = zones.middle(of: cell)
+                return grid.cell(latitude: middle.latitude, longitude: middle.longitude)
+            })
         }
         let cellArea = length * length / Double(WorldCoordinate.unitsPerMetre * WorldCoordinate.unitsPerMetre)
         let lastRow = rows - 1, lastColumn = columns - 1
@@ -255,32 +270,54 @@ public enum LandImport {
             func hosts(_ zone: PlaceGrid.Zone?) -> Bool {
                 parksOnly || zone == hostZone
             }
+            // Decision 1002: a census of workplaces counts the factories'
+            // jobs, so they work in its industrial cells too.
+            func jobHosts(_ zone: PlaceGrid.Zone?) -> Bool {
+                hosts(zone) || (population.hasJobs && zone == .industrial)
+            }
             let hostCount = Int64(openZones.filter(hosts).count)
+            let jobHostCount = Int64(openZones.filter(jobHosts).count)
             let (residents, placeJobs) = (kept(people), kept(allJobs))
-            func share(_ total: Int64, _ index: Int) -> Int64 {
-                let (base, extra) = total.quotientAndRemainder(dividingBy: hostCount)
+            func share(_ total: Int64, _ index: Int, of count: Int64) -> Int64 {
+                let (base, extra) = total.quotientAndRemainder(dividingBy: count)
                 return min(Land.maximumPerCell, base + (Int64(index) < extra ? 1 : 0))
             }
-            var host = 0
+            var host = 0, jobHost = 0
             for row in rowSpan {
                 for column in columnSpan {
                     let index = (row - rowSpan.lowerBound) * columnSpan.count + column - columnSpan.lowerBound
                     let cellZone = zones[index]
                     // Water has no land (decision 105).
                     let isHost = !wetCells[index] && !closedCells[index] && hosts(cellZone)
-                    defer { if isHost { host += 1 } }
+                    let isJobHost = !wetCells[index] && !closedCells[index] && jobHosts(cellZone)
+                    defer {
+                        if isHost { host += 1 }
+                        if isJobHost { jobHost += 1 }
+                    }
                     if wetCells[index] { continue }
                     if let blocks, !blocks.contains(LandBlock(cellRow: row, column: column)) { continue }
                     var (cellUse, cellResidents, cellJobs) = (use, Int64(0), Int64(0))
                     if isHost {
-                        (cellResidents, cellJobs) = (share(residents, host), share(placeJobs, host))
+                        cellResidents = share(residents, host, of: hostCount)
+                    }
+                    if isJobHost {
+                        cellJobs = share(placeJobs, jobHost, of: jobHostCount)
                     }
                     // A park-only WorldPop cell's parks host everyone; land
-                    // no one lives on keeps its zone (decision 385 (續)).
-                    switch parksOnly && !closedCells[index] ? nil : cellZone {
+                    // no one lives on keeps its zone (decision 385 (續)),
+                    // and so does a park-only cell with no one (decision
+                    // 1002: a census cell is one zone cell).
+                    switch parksOnly && !closedCells[index] && residents + placeJobs > 0 ? nil : cellZone {
                     case .industrial?:
                         cellUse = .industrial
-                        cellJobs = min(Land.maximumPerCell, cellJobs + industrialJobsPerCell)
+                        // Decision 1002: a census of workplaces counts the
+                        // factories' jobs already, shared out above; a
+                        // factory it counts no one at is left empty.
+                        if population.hasJobs {
+                            guard cellResidents + cellJobs > 0 else { continue }
+                        } else {
+                            cellJobs = min(Land.maximumPerCell, cellJobs + industrialJobsPerCell)
+                        }
                     case .farmland?:
                         cellUse = .agricultural
                         cellJobs = min(Land.maximumPerCell, cellJobs + farmJobsPerCell)
