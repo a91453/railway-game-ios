@@ -78,8 +78,9 @@ def get(url, headers=None, tries=4):
         except urllib.error.HTTPError as err:
             if err.code == 404:
                 return None
-            if attempt == tries - 1:
-                raise RuntimeError(f"HTTP {err.code}") from None
+            if err.code in (401, 403) or attempt == tries - 1:
+                body = err.read()[:200].decode("utf-8", "replace")
+                raise RuntimeError(f"HTTP {err.code}: {body!r}") from None
         except (urllib.error.URLError, TimeoutError, ConnectionError) as err:
             if attempt == tries - 1:
                 raise RuntimeError(f"network: {type(err).__name__}") from None
@@ -270,6 +271,12 @@ def main():
     if not key:
         sys.exit("CWA_API_KEY is not set")
 
+    # Whether this machine reaches the platform at all: a wrong key is
+    # 401 there, a refused machine something else.
+    try:
+        get(CWA_REST.format(id="C-B0027-001") + "?Authorization=CWA-00000000-0000-0000-0000-000000000000", tries=1)
+    except RuntimeError as err:
+        print(f"probe with a made-up key: {err}")
     daily = cwa_daily(key)
     print(f"  stations read: {len(daily)}")
     try:
