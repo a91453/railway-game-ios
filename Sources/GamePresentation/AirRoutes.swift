@@ -307,8 +307,9 @@ extension GameLauncher {
         let cities = Set(overseasGrounds.map(\.city)).union(overseasAwaited.map(\.city))
         let all = AirRoutes(cities: cities)
         return AirRoutes(
-            // Decision 1010: and every one once the unlock is bought.
-            cities: cities, opened: allMapsOpen ? Set(all.maps.map(\.id)) : Set(preferences.airRoutesOpened ?? []),
+            // Decision 1010: and every one where the App Store answers:
+            // there the free map and the unlock open maps, not flights.
+            cities: cities, opened: allMapsOpen || overseasUnlock != nil ? Set(all.maps.map(\.id)) : Set(preferences.airRoutesOpened ?? []),
             best: preferences.airRouteBest ?? [:]
         )
     }
@@ -365,7 +366,18 @@ extension GameLauncher {
     /// them on the device and says so in the game; and hands the game what
     /// is open. A demo, the tutorial and the lessons open none: their
     /// trains are not the player's.
+    ///
+    /// Decision 1010: where the App Store answers (the maps unlock is sold
+    /// or bought), flights open no map: a player plays their free map, or
+    /// every map once bought. The airports, the air routes and their
+    /// riders stay the game's; only the counting towards a map and its
+    /// news go.
     func checkAirRoutes(of session: GameSession) {
+        guard overseasUnlock == nil else {
+            session.airRoutes = AirRoutes()
+            session.onAirRouteBought = nil
+            return
+        }
         var routes = airRoutes
         routes.here = airMap(of: session.world)
         defer {

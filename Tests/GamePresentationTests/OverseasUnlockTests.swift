@@ -195,6 +195,24 @@ final class OverseasUnlockTests: XCTestCase {
         XCTAssertFalse(launcher.isLookingAtSharedNetwork)
     }
 
+    /// Where the unlock is sold, flights open no map: a player whose
+    /// flights had opened only Taiwan can still choose Hong Kong free, and
+    /// a game counts no flights towards a map.
+    func testFlightsOpenNoMapWhereTheUnlockIsSold() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = await launcher(in: directory)
+        launcher.setAirMapsForScreenshot(AirMap.taiwan.id)
+        XCTAssertFalse(launcher.airRoutes.canStart(OverseasMap.hongKong.rawValue), "decision 712 without an App Store")
+        launcher.overseasUnlock = .locked
+        XCTAssertTrue(launcher.startOverseasMap(.hongKong), launcher.message?.text ?? "")
+        XCTAssertEqual(launcher.freeMap, OverseasMap.hongKong.rawValue)
+        let session = try XCTUnwrap(launcher.session)
+        launcher.checkAirRoutes(of: session)
+        XCTAssertTrue(session.airRoutes.routes.isEmpty)
+        XCTAssertNil(session.onAirRouteBought)
+    }
+
     /// A friend's network as the first new game makes its map the free one.
     func testAFriendsNetworkCanChooseTheFreeMap() async throws {
         let directory = folder()
