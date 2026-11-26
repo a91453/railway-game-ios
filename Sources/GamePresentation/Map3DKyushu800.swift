@@ -113,8 +113,10 @@ public enum Map3DKyushu800 {
             return last.y
         }
 
-        /// Whether `point` is on this door.
-        public func contains(_ point: Map3DPoint, margin: Float = 0.002) -> Bool {
+        /// Whether `point` is on this door. Half a millimetre of slack, no
+        /// more: some of the wall's faces next to a door's outline are a
+        /// millimetre wide.
+        public func contains(_ point: Map3DPoint, margin: Float = 0.0005) -> Bool {
             point.y * side > 1.5 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
                 && point.z >= z.lowerBound - margin && point.z <= height(at: point.x) + margin
         }

@@ -293,16 +293,17 @@ final class Map3DKyushu800Tests: XCTestCase {
                 let points = model.vertices[first..<first + 3].map { Map3DPoint($0.x, $0.y, $0.z) }
                 if points.allSatisfy({ abs($0.y) > 1.5 }) { walls.append((points, model.vertices[first].color)) }
             }
-            var faces = 0
-            for door in Map3DKyushu800.doors(unit) {
+            // Each door's faces, as many as the tool's node of it holds
+            // (`report.json`): the doors from the front, the left's before
+            // the right's.
+            let nodes = unit.isCab ? [52, 50, 59, 59] : [52, 52, 52, 52]
+            for (door, node) in zip(Map3DKyushu800.doors(unit), nodes) {
                 XCTAssertGreaterThan(door.x.upperBound - door.x.lowerBound, 0.7, unit.rawValue)
                 XCTAssertGreaterThan(door.z.upperBound - door.z.lowerBound, 1.8, unit.rawValue)
                 do {
                     var own = 0, glass = 0, frame = 0
                     for (triangle, color) in walls where triangle[0].y * door.side > 0 {
-                        // (Half a millimetre: the wall's faces come up to the door's
-                        // outline, some a millimetre wide.)
-                        if triangle.allSatisfy({ door.contains($0, margin: 0.0005) }) {
+                        if triangle.allSatisfy({ door.contains($0) }) {
                             own += 1
                             if color == Map3DTrainStyle.glass { glass += 1 }
                             if color == Map3DPalette.steel { frame += 1 }
@@ -311,14 +312,24 @@ final class Map3DKyushu800Tests: XCTestCase {
                                            "\(unit.rawValue): a triangle crosses the door at x \(door.x)")
                         }
                     }
-                    faces += own
-                    XCTAssertGreaterThan(own, 30, "\(unit.rawValue): the door at x \(door.x), side \(door.side): \(own)")
+                    XCTAssertEqual(own, node, "\(unit.rawValue): the door at x \(door.x), side \(door.side)")
                     XCTAssertGreaterThan(glass, 0, unit.rawValue)
                     XCTAssertGreaterThan(frame, 5, "\(unit.rawValue): \(frame)")
                 }
             }
-            // As many as the tool's door nodes hold: no face of the wall's.
-            XCTAssertEqual(faces, unit.isCab ? 220 : 208, "\(unit.rawValue): the doors' faces")
         }
+        // The wall's faces a millimetre wide along the right driver's door's
+        // front edge (x 6.19 to 6.191) are the wall's, not the door's.
+        let cab = try XCTUnwrap(Map3DKyushu800.model(.cab))
+        let door = try XCTUnwrap(Map3DKyushu800.doors(.cab).first { $0.crew && $0.side < 0 })
+        var strip = 0
+        for first in stride(from: 0, to: cab.vertices.count, by: 3) {
+            let points = cab.vertices[first..<first + 3].map { Map3DPoint($0.x, $0.y, $0.z) }
+            guard points.allSatisfy({ $0.y < -1.5 && $0.x > 6.1895 && $0.x < 6.1915 }) else { continue }
+            strip += 1
+            XCTAssertEqual(cab.vertices[first].color, Map3DPalette.tileWhite)
+            XCTAssertFalse(points.allSatisfy { door.contains($0) }, "a face of the wall's taken for the door's")
+        }
+        XCTAssertGreaterThan(strip, 5, "the narrow faces by the door")
     }
 }
