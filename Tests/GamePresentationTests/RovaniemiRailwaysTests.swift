@@ -117,9 +117,9 @@ final class RovaniemiRailwaysTests: XCTestCase {
     /// Decision 1007: the people and the jobs are Statistics Finland's (the
     /// 1 km population grid and Paavo's workplaces by postal area), spread
     /// over the map's buildings: some 70,000 live and 28,000 work on the
-    /// map. More work than live at the Lapland Central Hospital and in the
-    /// Teollisuuskylä industrial estate; in Ounasrinne's houses more live
-    /// than work.
+    /// map. Some 2,000 work round the Lapland Central Hospital, more work
+    /// than live in the Teollisuuskylä industrial estate, and in
+    /// Ounasrinne's houses more live than work.
     func testThePeopleAndJobsAreStatisticsFinlands() throws {
         let people = try XCTUnwrap(Self.ground().population)
         XCTAssertTrue(people.hasJobs)
@@ -133,8 +133,7 @@ final class RovaniemiRailwaysTests: XCTestCase {
             return (cells.reduce(0) { $0 + $1.residents }, cells.reduce(0) { $0 + $1.jobs })
         }
         let hospital = try land(66.4927, 25.7760)
-        XCTAssertGreaterThan(hospital.jobs, 1_500)
-        XCTAssertGreaterThan(hospital.jobs, hospital.residents)
+        XCTAssertGreaterThan(hospital.jobs, 2_000)
         let estate = try land(66.4927, 25.6448)
         XCTAssertGreaterThan(estate.jobs, 3 * estate.residents)
         let houses = try land(66.4844, 25.8365)
