@@ -2,9 +2,9 @@
 
 ## 進度
 
-- 做到哪：PR 1 的程式、測試和 997 草稿已經推上分支（WIP commit，還沒開 PR）。地面和四包還沒重做；PR 2 是共用資料夾 `nagasaki-pack/pr2-nishi-kyushu-wk-nk.patch`。
-- 已驗證：沒有。這兩張 PR 的 Swift 測試都還沒跑過；重合 KS 會得到一模一樣的地圖包，這點核對過。
-- 下一步的第一個指令：`osmium extract -b 129.30,32.05,131.37,34.07 kyushu.pbf -o /tmp/fk/osm/four.pbf`，接著抓標高（下面「PR 1 的狀態」）。
+- 做到哪：**PR 1 做完**（2026-11-26 台灣時間 09:40，第二串）：地面整個重做、切成四包、997 的數字填好、測試改好。PR 2 還沒開始，整份是共用資料夾 `nagasaki-pack/pr2-nishi-kyushu-wk-nk.patch`。
+- 已驗證：PR 1 本機 `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨，`FukuokaGroundTests`、`FukuokaRailwaysTests`、`KyushuShinkansenTests`、`MapGrowthLayoutTests`、`MapPackDownloadsTests`、`OverseasSightsTests`、`BaseMapStyleTests`、`MapPackExtentsTests` 等日本相關的測試都過。其餘留給 CI。
+- 下一步：PR 1 合併後，從 main 重開分支 `git apply` PR 2 的 patch（下面「PR 2 的狀態」）。**PR 2 的 patch 是在舊地面上做的**：它的 `KyushuShinkansenTests` 那段要留 PR 1 的 2,577 m，地圖包的檔（`MapPacks/`）留 main 的、只重跑 `build_kyushu_shinkansen.py merge` 與 `extract_fukuoka_runs.py`。
 
 2026-11-26（台灣時間 08:40），雲端 session，分支 `claude/project-thread-dzwmgt`。上一串對話被壓縮兩次，照規則停手。
 作者：「那還要補長崎縣嗎 這樣西九州新幹線就能用了」；後來又說「對了西九州我舊版有做塗裝」「直接用n700s套上塗裝就行了吧」。
@@ -26,7 +26,7 @@
 - WhatsNew 檔。
 - `docs/decisions/997.md` 的草稿，§3 和 §4 的數字還是 TODO。
 
-**還沒做的是地面，地圖包也還沒重切**：`MapPacks/` 和 `fukuoka_buildings.json`、`fukuoka_sources.json` 都還是 main 上的樣子，所以這個 WIP 的 CI 會紅（範圍 129.34 對不上）。接手的串照下面做：
+**（已做完，留作重做的步驟）**地面與四包：`MapPacks/` 和 `fukuoka_buildings.json`、`fukuoka_sources.json` 都還是 main 上的樣子，所以這個 WIP 的 CI 會紅（範圍 129.34 對不上）。接手的串照下面做：
 
 ```sh
 # 1. OSM：osmtoday 的 Kyushu 抽取，範圍多切 0.04°
