@@ -228,6 +228,10 @@ public final class GameSession {
     /// The tutorial's staffing plan of a line, kept for the world it was
     /// worked out for (see ``tutorialStaffingPlan(_:)``).
     @ObservationIgnored var tutorialStaffingMemo: (revision: Int, line: LineID, plan: LineStaffingPlan?)?
+    /// The kinds and gauges of a line's track (``lineTrack(ofLine:)``),
+    /// kept for the line and the ``commandRevision`` they were worked out
+    /// for.
+    @ObservationIgnored var lineTrackMemo: [LineID: (revision: Int, track: LineTrack)] = [:]
     /// The platform track menu's choices with their costs (each a dry run
     /// on a copy of the world), kept for the platform and the
     /// ``commandRevision`` they were worked out for.

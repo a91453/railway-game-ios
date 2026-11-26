@@ -56,7 +56,10 @@ extension GameSession {
     /// it, and none of them on ordinary track.
     public func trainTypeMenuChoices(for id: TrainID) -> [MenuChoice<TrainType?>] {
         var types = trainTypes
-        if let line = world.assignedLine(of: id) { types = types.filter { world.runsOnTrack($0, ofLine: line) } }
+        if let line = world.assignedLine(of: id) {
+            let track = lineTrack(ofLine: line)
+            types = types.filter { track.carries($0) }
+        }
         if let own = world.train(id: id)?.type, !types.contains(own) { types.append(own) }
         return types.map { type in
             MenuChoice(id: type, title: Train.typeText(type, in: language), detail: world.trainTypeMenuText(type, for: id, in: language))
@@ -75,7 +78,21 @@ extension GameSession {
     /// ``trainTypeCardChoices`` that line `id`'s track carries (decision
     /// 955, ``GameWorld/runsOnTrack(_:ofLine:)``).
     public func trainTypeCardChoices(forLine id: LineID) -> [MenuChoice<TrainType>] {
-        trainTypeCardChoices.filter { world.runsOnTrack($0.id, ofLine: id) }
+        let track = lineTrack(ofLine: id)
+        return trainTypeCardChoices.filter { track.carries($0.id) }
+    }
+
+    /// ``GameWorld/lineTrack(ofLine:)``, kept for the line and the
+    /// ``commandRevision`` it was worked out for (TAP-FREEZE-151): it
+    /// drives the line's journeys, and the line panel asks for it each
+    /// time it is drawn. A tick neither lays track nor changes a line's
+    /// stops.
+    public func lineTrack(ofLine id: LineID) -> LineTrack {
+        if let memo = lineTrackMemo[id], memo.revision == commandRevision { return memo.track }
+        let track = world.lineTrack(ofLine: id)
+        lineTrackMemo = lineTrackMemo.filter { $0.value.revision == commandRevision }
+        lineTrackMemo[id] = (commandRevision, track)
+        return track
     }
 
     private var trainTypes: [TrainType?] {

@@ -23,10 +23,28 @@ public struct RollingStockCatalog: Equatable, Sendable {
         /// The lesson that opens it, while it is shut (decision 374), or
         /// `nil` when it can be chosen.
         public let opensInLesson: Int?
+        /// TAP-FREEZE-151: the set the 3D map draws it as on the line the
+        /// catalog chooses for, when that is a real line the company bought
+        /// and the type is its trains' (decision 536,
+        /// ``RealLineStock``): the Nishi-Kyushu Shinkansen's N700S, not
+        /// the 700T of the high-speed type elsewhere. `nil` otherwise.
+        public var stock: String? = nil
         public var id: TrainType { type }
 
         /// Whether it can be chosen now.
         public var isOpen: Bool { opensInLesson == nil }
+
+        /// The key its picture is drawn by: the line's own stock's, or the
+        /// type's (``TrainPortrait/key(of:)``).
+        public var portraitKey: String { stock ?? TrainPortrait.key(of: type) }
+
+        /// Its name: the type's, and the line's own stock after it
+        /// ("高鐵列車（N700S）") when it has one with a name.
+        public func title(in language: DisplayLanguage) -> String {
+            let name = type.title(in: language)
+            guard let stock, let own = RealLineStock.lineName(ofSet: stock, in: language) else { return name }
+            return language.text("\(name) (\(own))", "\(name)（\(own)）")
+        }
     }
 
     public let entries: [Entry]
@@ -52,18 +70,34 @@ public struct RollingStockCatalog: Equatable, Sendable {
     /// (``GameSession/trainTypeCardChoices(forLine:)``).
     public init(world: GameWorld, line: LineID? = nil) {
         let all = world.offeredTrainTypes
-        let offered = line.map { line in all.filter { world.runsOnTrack($0, ofLine: line) } } ?? all
+        // TAP-FREEZE-151: the line's track walked once, not once a type.
+        let track = line.map { world.lineTrack(ofLine: $0) }
+        let offered = track.map { track in all.filter { track.carries($0) } } ?? all
         self.line = line
         leavesOutForTrack = offered.count < all.count
-        carriesStandardCar = line.map { world.runsOnTrack(nil, ofLine: $0) } ?? true
+        carriesStandardCar = track?.carries(nil) ?? true
+        let stock = line.flatMap { Self.stock(ofLine: $0, in: world) }
         entries = Family.allCases.flatMap { family in
-            offered.filter { Family($0) == family }.map {
+            offered.filter { Family($0) == family }.map { type in
                 Entry(
-                    type: $0, family: family, card: world.trainTypeCard($0), doorsPerCar: $0.doorsPerCar,
-                    opensInLesson: world.lessonUnlocking($0)
+                    type: type, family: family, card: world.trainTypeCard(type), doorsPerCar: type.doorsPerCar,
+                    opensInLesson: world.lessonUnlocking(type),
+                    stock: stock.flatMap { $0.types.contains(type) ? $0.key : nil }
                 )
             }
         }
+    }
+
+    /// TAP-FREEZE-151: the set line `id`'s trains are drawn as when it is
+    /// a real line the company bought (``RealLineStock/setKey(ofRealLine:)``),
+    /// and the types its trains are; `nil` for any other line.
+    static func stock(ofLine id: LineID, in world: GameWorld) -> (key: String, types: Set<TrainType>)? {
+        guard let bought = world.acquisitions.first(where: { $0.kind == .railway && $0.line == id }),
+              let key = RealLineStock.setKey(ofRealLine: bought.realLine),
+              let line = world.line(id: id)
+        else { return nil }
+        let types = Set(line.assignedTrains.compactMap { world.train(id: $0)?.type })
+        return types.isEmpty ? nil : (key, types)
     }
 
     /// What the catalog says over its list while it leaves types out for
