@@ -21,7 +21,7 @@
 
 切法照 geojson-vt（ISC，Copyright (c) 2015, Mapbox）：每個圖形的點先排一次簡化的順序，再由上一層的圖磚切成四塊、留 64 單位的邊；移植成 Python。MVT 2.1 與 PMTiles v3 的編碼都用標準函式庫寫在同一個檔裡。zoom 7 以下各塊交給工作行程，四核心約 3.5 分鐘。
 
-瘦身（決策 1005）：`build_basemap.py` 寫完後呼叫 `slim_tiles.basemap`，z14 的座標從 4096 進位到 2048 單位（約 0.5 m → 1 m），z13 不放 `minor` 道路（巷弄在 2D 晚一級出現）。已經做好的檔可以就地轉，範圍、中心、zoom 照舊：
+瘦身（決策 1005）：`build_basemap.py` 寫完後呼叫 `slim_tiles.basemap`，z13 不放 `minor` 道路（巷弄在 2D 晚一級出現）；z14 不動，因為 3D 地圖、道路格、公車路網讀它。已經做好的檔可以就地轉，範圍、中心、zoom 照舊：
 
 ```sh
 python3 tools/basemap/slim_tiles.py basemap <底圖.pmtiles>

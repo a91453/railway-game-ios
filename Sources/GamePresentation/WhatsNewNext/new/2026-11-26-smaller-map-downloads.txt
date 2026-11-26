@@ -1,2 +1,2 @@
-en: The Japan map packs are about 16 MB smaller to download, and the app itself takes less space.
-zh: 日本地圖包下載小了約 16 MB，App 本身也變小。
+en: The Japan map packs are about 12 MB smaller to download, and the app itself takes less space.
+zh: 日本地圖包下載小了約 12 MB，App 本身也變小。

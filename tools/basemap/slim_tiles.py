@@ -8,13 +8,12 @@ archives in place, keeping their header's bounds, centre and zooms:
 
 `basemap` (a base map `build_basemap.py` wrote, Taiwan's or a map pack's):
 
-- zoom 14, the most detailed, which the 3D map, the road cells and the
-  buses read: every point on whole units of 2048 a side, not 4096 (0.5 m
-  to 1 m in Taiwan and Kyushu; the roads are simplified to 2 units of
-  4096 there anyway). A line or ring that rounds to nothing goes.
-- zoom 13: no `minor` roads (`transportation` class `minor`, the streets
-  `build_basemap.ROADS` gives zoom 13); the 2D map draws them from
-  zoom 14's tiles, a zoom closer.
+zoom 13: no `minor` roads (`transportation` class `minor`, the streets
+`build_basemap.ROADS` gives zoom 13); the 2D map draws them from zoom
+14's tiles, a zoom closer. Only the 2D map reads zoom 13. Zoom 14 stays
+as it is: the 3D map, the road cells and the buses read it, and on 2048
+units a side (1 m) the 3D map's road surfaces met at 5 more sites and
+bus stops moved (decision 1005, §2).
 
 `buildings` (footprint tiles, `footprints/2`): every tile as `footprints/3`
 (`build_footprint_tiles.coarsened`, 2048 units a side, about 0.25 m),
@@ -39,8 +38,6 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, '..', 'overture-footprint-tiles'))
 import build_basemap as base  # noqa: E402
 
-# The most detailed zoom's units a side.
-FINE_EXTENT = 2048
 # The zoom whose minor roads go.
 NO_MINOR_ZOOM = 13
 
@@ -200,98 +197,6 @@ def encode_tile(layers):
     return b''.join(base.field_bytes(3, encode_layer(layer)) for layer in layers)
 
 
-def _signed(v):
-    return (v >> 1) ^ -(v & 1)
-
-
-def parts(geometry):
-    """A feature's geometry as parts of absolute points, each (points,
-    closed)."""
-    out, at, x, y = [], 0, 0, 0
-    while at < len(geometry):
-        command, count = geometry[at] & 7, geometry[at] >> 3
-        at += 1
-        if command == 7:
-            out[-1] = (out[-1][0], True)
-            continue
-        for _ in range(count):
-            x += _signed(geometry[at])
-            y += _signed(geometry[at + 1])
-            at += 2
-            if command == 1:
-                out.append(([(x, y)], False))
-            else:
-                out[-1][0].append((x, y))
-    return out
-
-
-def geometry_of(pieces):
-    out, cx, cy = [], 0, 0
-    for points, closed in pieces:
-        cx, cy = base.path(out, points, cx, cy, closed)
-    return out
-
-
-def finer_feature(kind, geometry, extent):
-    """A feature's geometry on FINE_EXTENT units (from `extent`), or None
-    when nothing of it is left."""
-    step = extent // FINE_EXTENT
-
-    def q(v):
-        return (v + step // 2) // step
-
-    if kind == 1:
-        out = []
-        for points, _ in parts(geometry):
-            for x, y in points:
-                p = (min(max(q(x), 0), FINE_EXTENT - 1), min(max(q(y), 0), FINE_EXTENT - 1))
-                out.append(([p], False))
-        if not out:
-            return None
-        # MoveTo with all the points, as a multipoint is written.
-        flat = [base.command(1, len(out))]
-        cx = cy = 0
-        for (p,), _ in out:
-            flat += (base.zigzag(p[0] - cx), base.zigzag(p[1] - cy))
-            cx, cy = p
-        return flat
-    kept = []
-    if kind == 2:
-        for points, _ in parts(geometry):
-            line = []
-            for x, y in points:
-                p = (q(x), q(y))
-                if not line or line[-1] != p:
-                    line.append(p)
-            if len(line) >= 2:
-                kept.append((line, False))
-        return geometry_of(kept) if kept else None
-    # Polygons: an outer ring (positive area, y down) and its holes; a ring
-    # that rounds to no area or turns over goes, an outer one with its holes.
-    outer = False
-    for points, _ in parts(geometry):
-        signed = base.shoelace(points)
-        is_outer = signed > 0
-        ring = []
-        for x, y in points:
-            p = (q(x), q(y))
-            if not ring or ring[-1] != p:
-                ring.append(p)
-        while len(ring) > 1 and ring[0] == ring[-1]:
-            ring.pop()
-        now = base.shoelace(ring) if len(ring) >= 3 else 0
-        if now == 0 or (now > 0) != is_outer:
-            if is_outer:
-                outer = False
-            continue
-        if is_outer:
-            outer = True
-        elif not outer:
-            continue
-        kept.append((ring, True))
-    return geometry_of(kept) if kept else None
-
-
 def slim_vector(data, z):
     """A base map tile's bytes (unzipped) of zoom `z`, slimmed, or None
     when it is left with nothing."""
@@ -302,14 +207,6 @@ def slim_vector(data, z):
         if z == NO_MINOR_ZOOM and layer['name'] == 'transportation':
             minor = base.field_bytes(1, b'minor')
             features = [f for f in features if ('class', minor) not in f[1]]
-        if z == base.MAX_ZOOM and layer['extent'] != FINE_EXTENT:
-            finer = []
-            for fid, tags, kind, geometry in features:
-                geometry = finer_feature(kind, geometry, layer['extent'])
-                if geometry is not None:
-                    finer.append((fid, tags, kind, geometry))
-            features = finer
-            layer = dict(layer, extent=FINE_EXTENT)
         if features:
             out.append(dict(layer, features=features))
     return encode_tile(out) if out else None
@@ -321,7 +218,7 @@ def basemap(path):
     out, done = {}, {}
     for tid, stored in entries.items():
         z = zxy(tid)[0]
-        if z not in (NO_MINOR_ZOOM, base.MAX_ZOOM):
+        if z != NO_MINOR_ZOOM:
             out[tid] = stored
             continue
         # The same tile (the open sea) is slimmed once.
@@ -330,7 +227,7 @@ def basemap(path):
             done[z, stored] = None if slim is None else gzip.compress(slim, 9, mtime=0)
         if done[z, stored] is not None:
             out[tid] = done[z, stored]
-    metadata['slimmed'] = 'decision 1005: zoom 14 on 2048 units a side, zoom 13 without minor roads'
+    metadata['slimmed'] = 'decision 1005: zoom 13 without minor roads'
     write_archive(path, out, metadata, header)
     print(f'{path}: {before:,} → {os.path.getsize(path):,} bytes', flush=True)
 
