@@ -194,6 +194,15 @@ public enum DataSourceCredits {
         DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: openStreetMapCopyrightURL)
     }
 
+    /// CC BY 4.0's licence page.
+    static let ccByLicense = DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL)
+
+    /// The Civil Aviation Administration, linked from every source of
+    /// flights.
+    static func civilAviation(in language: DisplayLanguage) -> DataSourceCredit.Link {
+        DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL)
+    }
+
     /// The attribution the Open Government Data License, version 1.0, asks
     /// for after the provider, the year and the datasets (its annex).
     static func openGovernmentAttribution(in language: DisplayLanguage) -> String {

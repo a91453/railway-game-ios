@@ -4,6 +4,7 @@
 
 - 做到哪：上架前的三批（熊本城與水前寺、佛光山與野柳、香港三座廟）已合（#2768，決策 1018）；地標預算改成分區算、懸吊式單軌換 revision-3 是決策 1018 續。
 - 已驗證：見 PR 的「驗證」一節。
+- 之後接的：N700S かもめ塗裝（#2778，決策 998 續）、小倉城與唐津城（#2780，決策 1018 續 2）已合，兩件的經驗檔都改成已接（素材庫 -2 #573、#574）。
 - 下一步：0.6.1 的項目照下面的順序派單。
 
 雲端工作串，分支 `claude/project-thread-qzu8e8`。存檔版本、golden schema、GameCore 都不動。對照表在專案共用資料夾 `studio-models-in/INVENTORY.md`，摘要在決策 1018 §1。原本登記的 1019、1020 已釋出。
@@ -12,6 +13,8 @@
 
 1. 用 `tools/landmarks/glb_to_swift.py` 把工作室的近景、遠景 GLB 轉成 `Map3D<Name>Mesh.swift`：`--materials` 照 GLB 材質順序、`--centre` 讓外框中心在原點、模型方位不對就 `--turn`（逆時針為正）、底要埋進地裡就 `--raise` 並在登錄寫同樣的 `sink:`。
 2. 寫 `Map3D<Name>.swift`：調色盤只用 `Map3DPalette` 的色（`Map3DPaletteGuardTests`；工作室挑的是別的模型的色，就照決策 1018 §2.3 加進 `Map3DPalette` 並刪掉 `tools/palette-guard/baseline.txt` 對應那行），id 要寫成 `Map3DLandmarkRegistration(id: "…"` 字面（測試從原始碼找），登錄的經緯度用 OSM 的輪廓或節點，`size` 照轉檔印出的尺寸。
+   - 登錄的 `id` 要等於 GLB 檔名（`encoded` 用檔名當鍵），不然模型解不出來，鎖檔會寫成 0 個三角形。
+   - `--centre` 移的是**轉好之後**的外框中心（工具印出 `footprint middle … east`）；工作室原點在 OSM 外接矩形中心、模型一端窄（小倉城的付櫓）時，登錄的經緯度要照印出的位移移過去。
 3. `Map3DLandmarkRegistryList.swift` 加一行。
 4. `LANDMARK_LOCKS_WRITE=1 swift test --skip-build --filter Map3DLandmarkRegistryTests` 寫鎖檔 `tools/landmarks/locks/<id>.json`，再不帶變數跑一次。
 5. PR 說明寫經驗檔 `railway-assets-private-2` `docs/studio/lessons/<model>.md`（`lessons-link.yml`）。

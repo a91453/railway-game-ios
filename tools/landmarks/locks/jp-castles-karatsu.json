@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-castles-karatsu: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-castles-karatsu" : {
+      "hash" : "c1ad49fbd52b315f",
+      "triangles" : 4068
+    },
+    "jp-castles-karatsu-far" : {
+      "hash" : "43dc9f98a0b22149",
+      "triangles" : 408
+    }
+  }
+}

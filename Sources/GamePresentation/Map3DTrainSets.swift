@@ -756,33 +756,32 @@ public struct Map3DTrainSet: Sendable {
         }
     }
 
-    /// Decision 399: the two steam locomotives, and where each one's
-    /// headlamp lens is (its front, its bottom, its size).
+    /// Decision 399: the steam locomotives, and where each one's headlamp
+    /// lens is (its front, its bottom, its size).
     /// Decision 930: and the local studio's CT273 (``Map3DCT273``), which
     /// has its lens and a light version; a unit of it that does not
-    /// decode draws as #1103's.
+    /// decode draws as the duplex locomotive's. #1103's locomotive and
+    /// tender, which the CT273 replaced, were deleted on 2026-11-27 (the
+    /// owner: a model a newer one replaces goes).
     enum SteamFormation {
-        case steamTender, duplex, ct273
+        case duplex, ct273
 
         func locomotive(far: Bool) -> Map3DModelPack.Model {
             switch self {
-            case .steamTender: Map3DSteamTender.model(.locomotive)
             case .duplex: Map3DDuplexSteam.model(.locomotive, far: far)
-            case .ct273: Map3DCT273.model(.locomotive, far: far) ?? Map3DSteamTender.model(.locomotive)
+            case .ct273: Map3DCT273.model(.locomotive, far: far) ?? Map3DDuplexSteam.model(.locomotive, far: far)
             }
         }
 
         func tender(far: Bool) -> Map3DModelPack.Model {
             switch self {
-            case .steamTender: Map3DSteamTender.model(.tender)
             case .duplex: Map3DDuplexSteam.model(.tender, far: far)
-            case .ct273: Map3DCT273.model(.tender, far: far) ?? Map3DSteamTender.model(.tender)
+            case .ct273: Map3DCT273.model(.tender, far: far) ?? Map3DDuplexSteam.model(.tender, far: far)
             }
         }
 
         var lamp: (x: Float, height: Float, size: Float)? {
             switch self {
-            case .steamTender: (5.67, 2.695, 0.27)
             case .duplex: (7.13, 4.0, 0.26)
             case .ct273: nil
             }

@@ -124,28 +124,8 @@ public enum Map3DN700S {
     /// the mesh being cut again. (A passenger door's outline is this box;
     /// the driver's door is on the nose's taper, its outline not square to
     /// the car, so its box is only its place and its triangles its piece.)
-    public struct Door: Sendable, Equatable {
-        /// Along the car, metres from its middle, the cab's end positive.
-        public let x: ClosedRange<Float>
-        /// Over the rail, metres.
-        public let z: ClosedRange<Float>
-        /// The driver's own door, by the cab.
-        public let crew: Bool
-        /// Its triangles on the left wall (+y) and on the right, as
-        /// ``Map3DN700S/model(_:)`` has them (the vertices `3 * n` to
-        /// `3 * n + 2` of triangle `n`): the GLB's nodes `…-door-left-…` and
-        /// `…-door-right-…`.
-        public let left: Range<Int>, right: Range<Int>
-
-        /// Its triangles on the wall `side` is on (+y the left).
-        public func triangles(side: Float) -> Range<Int> { side > 0 ? left : right }
-
-        /// Whether `point` is on this door, on the side wall its `y` is on.
-        public func contains(_ point: Map3DPoint, margin: Float = 0.0005) -> Bool {
-            abs(point.y) > 1.5 && point.x >= x.lowerBound - margin && point.x <= x.upperBound + margin
-                && point.z >= z.lowerBound - margin && point.z <= z.upperBound + margin
-        }
-    }
+    /// SPLIT-HOTSPOTS-2: the doors every ported car shares (``Map3DCarDoor``).
+    public typealias Door = Map3DCarDoor
 
     /// `unit`'s doors, from its front to its back; each is on both sides.
     /// As `tools/texture-palette/n700s.py` reports them (`report.json`'s

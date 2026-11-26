@@ -51,6 +51,8 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         XCTAssertEqual(Map3DTrainSet.variant(of: "highSpeed", number: 7), "highSpeed")
         XCTAssertEqual(Map3DRealTrains.variantKey(system: "thsr", key: Map3DRealTrains.formation(system: "thsr", id: "THSR", name: "台灣高鐵").key, number: 7), Map3DTHSR700T.key)
         XCTAssertEqual(RealLineStock.setKey(ofRealLine: "thsr:HSR").map { Map3DTrainSet.variant(of: $0, number: 7) }, Map3DTHSR700T.key)
+        // REVIEW-151: the High Speed Rail bought (decision 993) by its id.
+        XCTAssertEqual(RealLineStock.setKey(ofRealLine: RealBranchLine.taiwanHighSpeedRail).map { Map3DTrainSet.variant(of: $0, number: 7) }, Map3DTHSR700T.key)
         XCTAssertEqual(Map3DTrainSet.variant(of: "EMU3000", number: 1), "EMU3000")
         XCTAssertEqual(Map3DTrainSet.variant(of: "", number: 3), "")
         XCTAssertEqual(Map3DTrainSet.number(ofRealTrain: "thsr-12"), 12)

@@ -104,7 +104,7 @@ extension DataSourceCredits {
                         DataSourceCredit.Link(title: "OpenAddresses", url: "https://openaddresses.io"),
                         openGovernmentLicense(in: language),
                         DataSourceCredit.Link(title: "GHS-BUILT-H", url: "https://doi.org/10.2905/85005901-3A49-48DD-9D19-6261354F56FE"),
-                        DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ccByLicense,
                     ]
                 ),
                 // Decision 385: the land the 3D map's town keeps off and

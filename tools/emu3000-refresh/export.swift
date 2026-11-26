@@ -51,7 +51,7 @@ for far in [false,true] {
     for i in stride(from:0,to:m.vertices.count,by:3){word(m.vertices[i..<i+3].contains(where:{$0.glows}) ? 1:0);for v in m.vertices[i..<i+3]{word(v.x.bitPattern);word(v.y.bitPattern);word(v.z.bitPattern);word(v.color)}}
     try raw.write(to:output.appendingPathComponent(m.name+"-expected.bin"))
 }
-for id in ["refresh-700t-cab","refresh-e200"] {
+for id in ["refresh-e200"] { // the recipe 700T it stood beside was deleted on 2026-11-27 (decision 988)
     let m=Map3DTrainShapeRefresh.model(id),file="models/\(m.name).m3dmodel"
     try encoded(m).write(to:output.appendingPathComponent(file));records.append(record(m,file,"comparison","accepted-style"))
 }

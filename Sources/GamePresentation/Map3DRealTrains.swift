@@ -253,29 +253,6 @@ public struct Map3DRealTrains: Sendable {
         return Formation(key: key, cars: cars)
     }
 
-    /// Decision 511: the DR3100 diesel express, three cars, one set as
-    /// it runs (`integration/formations.js` `dr3100`: fixed sets of three,
-    /// the timetable does not say how many coupled).
-    static let dr3100 = Formation(key: "dieselExpress", cars: 3)
-
-    /// Decision 532: the formation a Taiwan Railway train of `model` (its
-    /// timetable's `carName`) is drawn as, `rail-3d`'s
-    /// `integration/formations.js` `baseFormation`: the EMU3000's twelve
-    /// cars (and the 110K and 110M, as it has them), the Taroko's and the
-    /// Puyuma's eight, the push-pull's twelve coaches and a power car at
-    /// each end, decision 511's DR3100, and a Chu-Kuang's locomotive and
-    /// eight coaches; `nil` for any other (a local train), which runs as
-    /// its line's.
-    static func traFormation(model: String) -> Formation? {
-        if model.hasPrefix("自強(3000") || model == "110K" || model == "110M" { return Formation(key: "emu3000", cars: 12) }
-        if model.contains("(太,") { return Formation(key: "taroko", cars: 8) }
-        if model.contains("(普,") { return Formation(key: "puyuma", cars: 8) }
-        if model.contains("(PP") { return Formation(key: "pushPull", cars: 14) }
-        if model.contains("(D31") { return dr3100 }
-        if model.contains("莒光") || model.contains("普通車") { return Formation(key: "E200CK", cars: 9) }
-        return nil
-    }
-
     /// The formation the train at `place` (its key in
     /// ``RealTrainTraffic/places(of:at:on:dayBefore:)``) of a line whose
     /// trains are `line` is drawn as: decision 532, a Taiwan Railway
@@ -295,26 +272,6 @@ public struct Map3DRealTrains: Sendable {
         return formation(of: line, system: system, number: number, locked: locked)
     }
 
-    /// FINLAND-TRAINS-2: a Rovaniemi train by its name in the timetable
-    /// (`PYO 265`, `IC 24`): a night train (`PYO`) its locomotive and
-    /// double-deck sleepers, any other (`IC`, `S`, December's `MUS`) its
-    /// locomotive, double-deck coaches and the control car at the back.
-    /// The locomotive an Sr3 for three train numbers in eight (the
-    /// remainders ``sr3Remainders``) and an Sr2 for the others, about as a
-    /// week of Digitraffic's compositions had them (38 trains in 99);
-    /// which train has which is not fixed, but the Kemijärvi line's night
-    /// trains (265, 274), which the Sr2 hauled that week, keep it.
-    static func finland(train: String) -> Formation {
-        let sr3 = sr3Remainders.contains(Map3DTrainSet.number(ofRealTrain: train) % 8)
-        let night = train.hasPrefix("PYO")
-        let key = night ? (sr3 ? Map3DFinlandSleeper.sr3Key : Map3DFinlandSleeper.key) : (sr3 ? Map3DFinlandSr3.key : Map3DFinlandSr2.key)
-        return Formation(key: key, cars: Map3DFinlandSr2.cars)
-    }
-
-    /// FINLAND-TRAINS-2: the remainders of a train number divided by
-    /// eight drawn behind the Sr3.
-    static let sr3Remainders: Set<Int> = [3, 5, 6]
-
     /// Each line's trains (decision 339): as many cars as `Railway/`
     /// rail-3d's formations give its trains (`integration/formations.js`
     /// `baseFormation`), each the game's set for that stock, or the nearest
@@ -327,132 +284,15 @@ public struct Map3DRealTrains: Sendable {
     /// name (`內灣線`) alone: a real line the company bought
     /// (``RealLineStock``), drawn as the trains it had before.
     static func formation(system: String, id: String, name: String) -> Formation {
-        switch system {
-        case "thsr":
-            // The 700T: twelve cars.
-            return Formation(key: "highSpeed", cars: 12)
-        case "tra":
-            // The diesel branches' DR1000 railcars, three on a weekday;
-            // the rest the EMU800, eight cars, as most local trains
-            // (`dr1000`, `commuter`).
-            if Map3DScene.dieselBranches.contains(where: { name.hasPrefix($0) }) { return Formation(key: "dieselRailcar", cars: 3) }
-            return Formation(key: "emu800", cars: 8)
-        case "trtc":
-            // Decision 461: each line's own fleet, of the models the game
-            // has (the C301 and C321 have none: the line's other fleet
-            // stands in for them).
-            switch id {
-            // Decision 558: the Wenhu line's four cars, two pairs of its
-            // 370 or, a third of its trains, its VAL256
-            // (``Map3DTrainSet/wenhuLine(number:)``).
-            case "BR": return Formation(key: Map3DTrainSet.wenhu370Key, cars: 4)
-            // The Circular line's four-car 610.
-            case "Y": return Formation(key: "circular610", cars: 4)
-            // The branch shuttles' three-car C371s.
-            case "R_XBT", "G_XBT": return Formation(key: "metroC371", cars: 3)
-            // The Bannan line's C321 and C341: the C341.
-            case "BL": return Formation(key: "metroC341", cars: 6)
-            // The Tamsui-Xinyi line's C301 and C381: the C381.
-            case "R": return Formation(key: "metroC381", cars: 6)
-            // The Songshan-Xindian line's C371 and C381: half each.
-            case "G": return Formation(key: "metroC381", cars: 6, alternate: "metroC371")
-            // The Zhonghe-Xinlu line's (both branches) C371.
-            default: return Formation(key: "metroC371", cars: 6)
-            }
-        case "krtc":
-            // Decision 461: the other cities' metros are not Taipei's.
-            // Decision 496: the Circular light rail's CAF and Citadis
-            // trains, by their number (``Map3DTrainSet/kaohsiungLightRail(number:)``).
-            if id == "C" { return Formation(key: "klrtCitadis", cars: 2) }
-            // Decision 483: the Red and Orange lines' Siemens three cars.
-            return Formation(key: "kaohsiung", cars: 3)
-        case "tymc":
-            // Decision 561: the commuter train's four cars, its 1000; an
-            // express trip's train the 2000's five
-            // (``formation(of:system:place:locked:)``).
-            return Formation(key: Map3DTrainSet.taoyuanAirport1000Key, cars: 4)
-        case "tmrt":
-            // Decision 483: the Green line's own two cars.
-            return Formation(key: "taichungGreen", cars: 2)
-        case "sanying":
-            // Decision 466: its own two-car train.
-            return Formation(key: Map3DTrainSet.sanyingKey, cars: 2)
-        case "ntdlrt":
-            // Decision 496: the light rail's own five modules, about 34 m,
-            // as two cars (decision 331's green tram before).
-            return Formation(key: "danhaiLRT", cars: 2)
-        case "ntalrt":
-            return Formation(key: "ankengLRT", cars: 2)
-        case "afr":
-            // Decision 531: the Alishan Forest Railway's locomotive and five
-            // coaches (`integration/formations.js` `forest`, estimated from
-            // the forest railway's charter information), the DL-38 and its
-            // coaches at their own lengths, about 74 m.
-            return Formation(key: "ALISHAN", cars: 6)
-        case "hkmtr":
-            // Decision 781: the MTR's lines, which have no set of their own
-            // yet, borrow the generic metro car with the line's colour
-            // band, as many cars as the line's real trains have
-            // (``hongKongCars``), not three boxes; decision 780: but the
-            // Airport Express and the Tung Chung Line their own trains;
-            // decision 786: and the four urban lines (the Tseung Kwan O
-            // Line's LOHAS Park branch too) theirs; decision 839: and the
-            // Tuen Ma line its own; decision 843: and the East Rail line
-            // (its Lok Ma Chau branch too) its own; decision 851: and the
-            // South Island line its own; decision 852: and the Disneyland
-            // Resort line its own.
-            switch id {
-            case "AEL": return Formation(key: Map3DMTRAirportLine.expressKey, cars: 8)
-            case "TCL": return Formation(key: Map3DMTRAirportLine.tungChungKey, cars: 8)
-            case "TWL", "ISL", "KTL", "TKL", "TKL_LHP": return Formation(key: Map3DMTRUrbanLine.key, cars: 8)
-            case "TML": return Formation(key: Map3DMTRTuenMaLine.key, cars: 8)
-            case "EAL", "EAL_LMC": return Formation(key: Map3DMTREastRailLine.key, cars: 9)
-            case "SIL": return Formation(key: Map3DMTRSouthIslandLine.key, cars: 3)
-            case "DRL": return Formation(key: Map3DMTRDisneylandLine.key, cars: 4)
-            default: return Formation(key: "metroGeneric", cars: hongKongCars[id] ?? 8)
-            }
-        case "vr":
-            // Decision 864: Rovaniemi's two lines (the Kemijärvi line and
-            // Rovaniemi–Muurola), whose intercity and night trains are
-            // hauled: the Sr2 and six double-deck coaches, the coach every
-            // train of the week counted had and the locomotive most of them.
-            // FINLAND-TRAINS-2: each timetable train by its name
-            // (``finland(train:)``); this, a bought line's, the intercity.
-            return Formation(key: Map3DFinlandSr2.key, cars: Map3DFinlandSr2.cars)
-        case "fksubway":
-            // Decision 893: the Airport line's newest six-car train on
-            // the Airport and Hakozaki lines, which run the same trains,
-            // and the Nanakuma line's own four cars.
-            switch id {
-            case "K", "H": return Formation(key: Map3DFukuokaAirportLine.key, cars: Map3DFukuokaAirportLine.cars)
-            case "N": return Formation(key: Map3DFukuokaNanakumaLine.key, cars: Map3DFukuokaNanakumaLine.cars)
-            default: return Formation(key: "", cars: 3)
-            }
-        case "kyushushinkansen":
-            // Decision 977: the Kyushu Shinkansen's N700 series 7000 and
-            // 8000, eight cars (the "Mizuho" and "Sakura" through trains).
-            // Decision 978: and its odd-numbered trains the 800 series'
-            // six (the "Tsubame"), the line's two fleets.
-            // Decision 998: the Nishi-Kyushu Shinkansen's N700S series
-            // 8000, six cars (the "Kamome"), the game's N700S.
-            if id == "NK" { return Formation(key: Map3DN700S.key, cars: 6) }
-            return Formation(key: Map3DKyushuN700.key, cars: Map3DKyushuN700.cars, alternate: Map3DKyushu800.key)
-        default:
+        // SPLIT-HOTSPOTS-2: each place's systems in a file of its own,
+        // Map3DRealTrainsTaiwan.swift, …HongKong, …Japan and …Finland.
+        taiwanFormation(system: system, id: id, name: name)
+            ?? hongKongFormation(system: system, id: id, name: name)
+            ?? japanFormation(system: system, id: id, name: name)
+            ?? finlandFormation(system: system, id: id, name: name)
             // A system the game has no set for: boxes.
-            return Formation(key: "", cars: 3)
-        }
+            ?? Formation(key: "", cars: 3)
     }
-
-    /// Decision 781: how many cars a train of each MTR line has, by
-    /// `hkmtr.json`'s line id: the East Rail Line's (and its Lok Ma Chau
-    /// branch's) nine-car R-train, the South Island Line's three-car
-    /// S-train, the Disneyland Resort Line's four cars, the other lines'
-    /// eight (the Airport Express's, the Tung Chung Line's, the Tuen Ma
-    /// Line's SP1900 and the urban lines' M- and Q-trains).
-    static let hongKongCars: [String: Int] = [
-        "AEL": 8, "TCL": 8, "TML": 8, "EAL": 9, "EAL_LMC": 9, "TWL": 8,
-        "ISL": 8, "KTL": 8, "TKL": 8, "TKL_LHP": 8, "SIL": 3, "DRL": 4,
-    ]
 
     /// The lines of `traffic` laid in the scene `builder` builds, clear of
     /// `snapshot`'s track (all of it: the real lines are laid past the
