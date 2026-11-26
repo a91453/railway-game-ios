@@ -36,8 +36,8 @@
       "triangles" : 3384
     },
     "set-n700st-head" : {
-      "hash" : "97197d183daf3e9",
-      "triangles" : 5143
+      "hash" : "b8ec2e683cbc3c26",
+      "triangles" : 5413
     },
     "set-n700st-panto" : {
       "hash" : "5a3dabc9296144ba",
@@ -48,8 +48,8 @@
       "triangles" : 3682
     },
     "set-n700st-tail" : {
-      "hash" : "810a1064a716f360",
-      "triangles" : 5143
+      "hash" : "c5dbe6bb47602df6",
+      "triangles" : 5413
     }
   }
 }

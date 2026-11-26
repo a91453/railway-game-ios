@@ -8,7 +8,7 @@ final class Map3DN700STTests: XCTestCase {
     /// its own mesh in the N700ST's paint: no blue, orange and black lines.
     func testEachCarIsTheN700SsSizeInTheN700STsPaint() throws {
         let orange = Map3DTrainShapeRefresh.highSpeedBandColor
-        for (unit, triangles) in zip(Map3DN700S.Unit.allCases, [5_143, 3_384, 3_682]) {
+        for (unit, triangles) in zip(Map3DN700S.Unit.allCases, [5_413, 3_384, 3_682]) {
             let n700s = try XCTUnwrap(Map3DN700S.model(unit), unit.rawValue)
             let n700st = try XCTUnwrap(Map3DN700ST.model(unit), unit.rawValue)
             XCTAssertEqual(n700st.name, "n700st-" + unit.rawValue.dropFirst("n700s-".count))

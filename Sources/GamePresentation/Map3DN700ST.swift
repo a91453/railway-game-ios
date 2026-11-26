@@ -12,10 +12,11 @@ import Foundation
 /// their paint cut again by the local studio from the Taiwan High Speed
 /// Rail's drawing of 2025-08 and a photograph of the first train painted,
 /// 2026-04 (`railway-assets-private-2`
-/// `game-art-previews/docs/art/n700st-paint-2026-11/revision-1/`, its
+/// `game-art-previews/docs/art/n700st-paint-2026-11/revision-2/`, its
 /// `tools/n700st.py`), and written here by
 /// `tools/train-models/glb_to_swift.py` (``encoded``): a white nose with a
-/// black oval mask round the driver's windows; by the cab car's first
+/// black mask round the driver's windows, an oval seen from the side and
+/// from the front (revision 2, the owner: 「正面卻不是」); by the cab car's first
 /// doors a large orange block, from the skirt up to under the windows, its
 /// front edge leaning forward and down, and right behind it a black band
 /// parallel to it; along every car under the windows a narrow black line
@@ -47,9 +48,9 @@ public enum Map3DN700ST {
         typealias Door = Map3DN700S.Door
         return switch unit {
         case .cab:
-            [Door(x: 4.998...5.498, z: 1.341...2.791, crew: true, left: 4507..<4595, right: 4805..<4929),
-             Door(x: 3.987...4.725, z: 1.272...2.906, crew: false, left: 4595..<4689, right: 4929..<5025),
-             Door(x: -10.975 ... -10.236, z: 1.252...2.982, crew: false, left: 4689..<4805, right: 5025..<5143)]
+            [Door(x: 4.998...5.498, z: 1.341...2.791, crew: true, left: 4777..<4865, right: 5075..<5199),
+             Door(x: 3.987...4.725, z: 1.272...2.906, crew: false, left: 4865..<4959, right: 5199..<5295),
+             Door(x: -10.975 ... -10.236, z: 1.252...2.982, crew: false, left: 4959..<5075, right: 5295..<5413)]
         case .middle:
             [Door(x: 10.142...10.875, z: 1.265...2.954, crew: false, left: 2903..<3015, right: 3119..<3244),
              Door(x: -9.154 ... -8.415, z: 1.253...2.980, crew: false, left: 3015..<3119, right: 3244..<3384)]
@@ -72,9 +73,9 @@ public enum Map3DN700ST {
     }
 
     /// Its set and showcase row, with the N700S's lengths; its cars'
-    /// triangles 5,143 the cab car (the mask and the block's slanting
-    /// edges cut 278 more than the N700S's), 3,384 the middle car and
-    /// 3,682 the car under the pantograph: some 45,000 a twelve-car train,
+    /// triangles 5,413 the cab car (the mask and the block's slanting
+    /// edges cut 548 more than the N700S's), 3,384 the middle car and
+    /// 3,682 the car under the pantograph: some 46,000 a twelve-car train,
     /// few enough for no far set.
     static let registration = Map3DTrainRegistration(
         id: "n700st",

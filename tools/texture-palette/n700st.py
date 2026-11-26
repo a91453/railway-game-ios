@@ -2,11 +2,11 @@
 """作者舊版的 N700S 三節網格 → 台灣高鐵 N700ST 塗裝：一個材質一個色票色的 GLB，
 給 `tools/train-models/glb_to_swift.py` 寫進遊戲。
 
-    uv run --with pillow --with numpy python revision-1/tools/n700st.py \
+    uv run --with pillow --with numpy python revision-2/tools/n700st.py \
         --cab OLD/item_c264b30bdcd2d6c06bd11a45.glb \
         --middle OLD/item_2cf2255b345e32868908de7e.glb \
         --pantograph OLD/item_8d903762bac47c2b84da2a0f.glb \
-        --out-dir revision-1
+        --out-dir revision-2
 
 設計原則（照派工單 `game-art-previews/docs/art/n700st-paint-2026-11/README.md`）：
 - 舊版 N700S 三節（c264b30b 頭車、2cf2255b 中間車、8d903762 集電弓車）的幾何外形、
@@ -148,30 +148,54 @@ ORANGE_FRONT_AT_SKIRT = 7.35
 SPLIT_AT_SKIRT = 4.48
 BLACK_DIAG_WIDTH = 0.96
 
-# 駕駛室黑色橢圓遮罩（3D 俯視 (x, z) 凸多邊形，對 z=0 左右對稱）：
-# 前窗玻璃範圍 x=[7.14, 9.10], z=[-0.87, +0.90], y=[2.29, 3.08]。
-# 遮罩向鼻端延伸至 x=9.58（+0.48 m）、向車頂眉部延伸至 x=6.60（-0.54 m，填滿兩側小窗間）、
-# 向兩側外擴至 |z|=0.98（貼合車頂肩線上方，不會觸底截出平角），以 16 邊橢圓確保圓滑且面數精簡。
+# 駕駛室黑色橢圓遮罩（revision-2 r2：俯視 (x, z) 後段微收超橢圓與正面 (z, y) 24 邊圓滑橢圓交集，左右對稱）：
+# - 沿車長範圍維持 revision-1 不變（x = 6.60..9.58 m，MASK_CENTER_X = 8.09, MASK_RX = 1.49），
+#   並以 MASK_XZ_TAPER = 0.11 讓後段（x ≈ 7.0 m）略收貼近 revision-1 側視下緣（降幅由 -118 mm 收至 -47 mm），
+#   使七向全車側視與 revision-1 目視無差別。
+# - 移除舊版 MASK_MIN_Y = 2.02 水平切面，改由正面 (z, y) 圓滑橢圓界定下緣與左右圓角：
+#   底緣自中心 y = 2.215 m（吻合 x = 9.58 鼻脊高 2.219 m）往兩側平滑上彎，頂緣 y = 3.235 m（吻合 x = 6.60 車頂高 3.223 m 且俯視無缺口），
+#   橫向加寬至 |z| = 1.037 m（約佔整車寬 61.7%、車鼻局部寬 ~67%），24 邊圓滑且頭車總面數 < 5,500。
 MASK_CENTER_X = 8.09
 MASK_RX = 1.49
-MASK_RZ = 0.98
+MASK_RZ = 1.15
+MASK_XZ_TAPER = 0.11
 MASK_POWER = 2.05
-MASK_SIDES = 16
-MASK_MIN_Y = 2.02
+MASK_SIDES = 24
+
+MASK_ZY_CENTER_Y = 2.63
+MASK_ZY_RY_TOP = 0.605
+MASK_ZY_RY_BOT = 0.415
+MASK_ZY_RZ = 1.07
+MASK_ZY_POWER_TOP = 1.95
+MASK_ZY_POWER_BOT = 2.35
 
 
-def _make_cab_mask():
+def _make_cab_mask_xz():
     pts = []
     for k in range(MASK_SIDES):
         a = 2.0 * math.pi * k / MASK_SIDES
         ca, sa = math.cos(a), math.sin(a)
         x = MASK_CENTER_X + MASK_RX * math.copysign(abs(ca) ** (2.0 / MASK_POWER), ca)
-        z = MASK_RZ * math.copysign(abs(sa) ** (2.0 / MASK_POWER), sa)
+        z = MASK_RZ * (1.0 + MASK_XZ_TAPER * ca) * math.copysign(abs(sa) ** (2.0 / MASK_POWER), sa)
         pts.append((x, z))
     return pts
 
 
-CAB_MASK_XZ = _make_cab_mask()
+def _make_cab_mask_zy():
+    pts = []
+    for k in range(MASK_SIDES):
+        a = 2.0 * math.pi * k / MASK_SIDES
+        ca, sa = math.cos(a), math.sin(a)
+        power, ry = (MASK_ZY_POWER_TOP, MASK_ZY_RY_TOP) if sa >= 0 else (MASK_ZY_POWER_BOT, MASK_ZY_RY_BOT)
+        z = MASK_ZY_RZ * math.copysign(abs(ca) ** (2.0 / power), ca)
+        y = MASK_ZY_CENTER_Y + ry * math.copysign(abs(sa) ** (2.0 / power), sa)
+        pts.append((z, y))
+    return pts
+
+
+CAB_MASK_XZ = _make_cab_mask_xz()
+CAB_MASK_ZY = _make_cab_mask_zy()
+MASK_ZY_MIN_Y = MASK_ZY_CENTER_Y - MASK_ZY_RY_BOT
 
 
 def _diag_x(x_at_skirt: float, y: float) -> float:
@@ -693,22 +717,33 @@ def paint_n700st(triangles, cab: bool):
 
         pending = [[corners[0], corners[1], corners[2]]]
 
-        # (A) 頭車駕駛室黑色橢圓遮罩：俯視 (x, z) 切出，限定車頂／鼻背上方白面。
-        if cab and corners[:, 1].max() > MASK_MIN_Y and corners[:, 0].max() > MASK_CENTER_X - MASK_RX - 0.1 and door < 0:
+        # (A) 頭車駕駛室黑色橢圓遮罩：俯視 (x, z) 與正面 (z, y) 24 邊雙向橢圓取交集，限定朝前上方車鼻白面。
+        if (
+            cab
+            and door < 0
+            and corners[:, 1].max() > MASK_ZY_MIN_Y - 0.01
+            and corners[:, 0].max() > MASK_CENTER_X - MASK_RX - 0.05
+            and corners[:, 0].min() < MASK_CENTER_X + MASK_RX + 0.05
+            and normal[0] > -0.05
+        ):
             next_pending = []
             for poly in pending:
                 xs = [p[0] for p in poly]
                 ys = [p[1] for p in poly]
                 zs = [p[2] for p in poly]
-                if max(ys) > MASK_MIN_Y and max(xs) > MASK_CENTER_X - MASK_RX and min(xs) < MASK_CENTER_X + MASK_RX and min(abs(z) for z in zs) < MASK_RZ + 0.1:
-                    below, above = halves3d(poly, 0.0, 1.0, MASK_MIN_Y, 0, 1)
-                    if below:
-                        next_pending.append(below)
-                    if above:
-                        inside, outside = carve3d(above, CAB_MASK_XZ, axis0=0, axis1=2)
-                        if inside:
-                            emit(inside, DARK, door)
-                        next_pending += outside
+                if (
+                    max(ys) > MASK_ZY_MIN_Y
+                    and max(xs) > MASK_CENTER_X - MASK_RX
+                    and min(xs) < MASK_CENTER_X + MASK_RX
+                    and min(abs(z) for z in zs) < max(MASK_RZ, MASK_ZY_RZ) + 0.05
+                ):
+                    in_xz, out_xz = carve3d(poly, CAB_MASK_XZ, axis0=0, axis1=2)
+                    next_pending += out_xz
+                    if in_xz:
+                        in_both, out_zy = carve3d(in_xz, CAB_MASK_ZY, axis0=2, axis1=1)
+                        if in_both:
+                            emit(in_both, DARK, door)
+                        next_pending += out_zy
                 else:
                     next_pending.append(poly)
             pending = next_pending
