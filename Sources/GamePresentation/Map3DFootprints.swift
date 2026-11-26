@@ -49,7 +49,8 @@ struct Map3DFootprints: Sendable {
         case guess
         /// OpenStreetMap's tags.
         case tags
-        /// A city's building map (Taichung's of 2022).
+        /// A city's building map (Taichung's of 2022), or, decision 1001,
+        /// the heights PLATEAU measured (Japan's map).
         case cityMap
         /// An official record of the building: Taipei's building permit
         /// map, and since decision 1011 the usage permits and the

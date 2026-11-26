@@ -225,14 +225,16 @@ JOB_STARTED=$(($(date +%s) - 1648)) SWIFT_TEST_WORKERS=2 FAKE_MODE=held-last FAK
 SHARD_LIMIT_MINUTES=45 JOB_STARTED=$(($(date +%s) - 1550)) says 'near its 45-minute limit::.*of its 45 minutes' \
   "the warning names SHARD_LIMIT_MINUTES, not a fixed number" "$script" run campaigns-2
 ci_yml="$(cd "$(dirname "$script")/../workflows" && pwd)/ci.yml"
-ci_timeout="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^    timeout-minutes:/ { print $2; exit }' "$ci_yml")"
+# The test step's own timeout-minutes (the job's is longer, for the
+# container image's pull; decision 582, later).
+ci_timeout="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^        timeout-minutes:/ { print $2; exit }' "$ci_yml")"
 ci_limit="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^ *SHARD_LIMIT_MINUTES:/ { print $2; exit }' "$ci_yml")"
 # shellcheck disable=SC2016 # the $ is the literal text sed matches
 script_limit="$(sed -n 's/^SHARD_LIMIT_MINUTES="\${SHARD_LIMIT_MINUTES:-\([0-9]*\)}"$/\1/p' "$script")"
 if [[ -n "$ci_timeout" && "$ci_timeout" == "$ci_limit" && "$ci_timeout" == "$script_limit" ]]; then
-  echo "ok   says  the shard job's timeout-minutes, ci.yml's SHARD_LIMIT_MINUTES and the script's default are all $ci_timeout"
+  echo "ok   says  the shard's test step's timeout-minutes, ci.yml's SHARD_LIMIT_MINUTES and the script's default are all $ci_timeout"
 else
-  echo "FAIL the shard job's timeout-minutes ('$ci_timeout'), ci.yml's SHARD_LIMIT_MINUTES ('$ci_limit') and the script's default ('$script_limit') must be the same number"
+  echo "FAIL the shard's test step's timeout-minutes ('$ci_timeout'), ci.yml's SHARD_LIMIT_MINUTES ('$ci_limit') and the script's default ('$script_limit') must be the same number"
   failures=$((failures + 1))
 fi
 
@@ -794,6 +796,25 @@ final class SourceScanTests: XCTestCase {
     func testNoPrint() { _ = "Sources/GameCore" }
 }
 SWIFT
+cat >"$tree/Sources/GamePresentation/Ledger.swift" <<'SWIFT'
+public struct LedgerBook {}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/LedgerTests.swift" <<'SWIFT'
+import XCTest
+
+/// Checks two halves share; swift test lists them under the halves only.
+class LedgerChecks: XCTestCase {
+    func checkTheBook() { _ = LedgerBook() }
+}
+
+final class LedgerFirstHalfTests: LedgerChecks {
+    func testFirst() { checkTheBook() }
+}
+
+final class LedgerSecondHalfTests: LedgerChecks {
+    func testSecond() { checkTheBook() }
+}
+SWIFT
 smoke='GoldenScenarioTests ReplayFixtureTests SavedGameTests'
 expect_decision true affected "{\"include\":[{\"shard\":\"selected\",\"tests\":\"GoldenScenarioTests PackUserTests ReplayFixtureTests SavedGameTests TrainPackTests\",\"part\":\"1/1\"}]}" \
   "a pull request of a source file runs the tests that name it, through a helper too" \
@@ -804,6 +825,12 @@ expect_decision true affected "\"tests\":\"CatalogueTests $smoke TrainPackTests\
 expect_decision true affected "\"tests\":\"GoldenScenarioTests ReplayFixtureTests SavedGameTests SourceScanTests\"" \
   "a test that reads a source folder by its path runs when a file in it changes" \
   EVENT=pull_request LISTED=true -- Sources/GameCore/Scan.swift
+expect_decision true affected "\"tests\":\"GoldenScenarioTests LedgerFirstHalfTests LedgerSecondHalfTests ReplayFixtureTests SavedGameTests\"" \
+  "a base test class with no tests of its own runs as its subclasses" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/Ledger.swift
+expect_decision true affected "\"tests\":\"GoldenScenarioTests LedgerFirstHalfTests LedgerSecondHalfTests ReplayFixtureTests SavedGameTests\"" \
+  "a changed test file holding a base class selects its subclasses, not the base" \
+  EVENT=pull_request LISTED=true -- Tests/GamePresentationTests/LedgerTests.swift
 expect_decision true presentation '"shard":"selected-8"' "a push to main of the same file keeps the broad tier" \
   EVENT=push LISTED=true -- Sources/GamePresentation/TrainPack.swift
 expect_decision true presentation '"shard":"selected-8"' "a top-level operator cannot be followed by name" \
