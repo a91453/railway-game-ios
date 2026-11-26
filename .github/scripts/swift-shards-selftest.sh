@@ -225,14 +225,16 @@ JOB_STARTED=$(($(date +%s) - 1648)) SWIFT_TEST_WORKERS=2 FAKE_MODE=held-last FAK
 SHARD_LIMIT_MINUTES=45 JOB_STARTED=$(($(date +%s) - 1550)) says 'near its 45-minute limit::.*of its 45 minutes' \
   "the warning names SHARD_LIMIT_MINUTES, not a fixed number" "$script" run campaigns-2
 ci_yml="$(cd "$(dirname "$script")/../workflows" && pwd)/ci.yml"
-ci_timeout="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^    timeout-minutes:/ { print $2; exit }' "$ci_yml")"
+# The test step's own timeout-minutes (the job's is longer, for the
+# container image's pull; decision 582, later).
+ci_timeout="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^        timeout-minutes:/ { print $2; exit }' "$ci_yml")"
 ci_limit="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^ *SHARD_LIMIT_MINUTES:/ { print $2; exit }' "$ci_yml")"
 # shellcheck disable=SC2016 # the $ is the literal text sed matches
 script_limit="$(sed -n 's/^SHARD_LIMIT_MINUTES="\${SHARD_LIMIT_MINUTES:-\([0-9]*\)}"$/\1/p' "$script")"
 if [[ -n "$ci_timeout" && "$ci_timeout" == "$ci_limit" && "$ci_timeout" == "$script_limit" ]]; then
-  echo "ok   says  the shard job's timeout-minutes, ci.yml's SHARD_LIMIT_MINUTES and the script's default are all $ci_timeout"
+  echo "ok   says  the shard's test step's timeout-minutes, ci.yml's SHARD_LIMIT_MINUTES and the script's default are all $ci_timeout"
 else
-  echo "FAIL the shard job's timeout-minutes ('$ci_timeout'), ci.yml's SHARD_LIMIT_MINUTES ('$ci_limit') and the script's default ('$script_limit') must be the same number"
+  echo "FAIL the shard's test step's timeout-minutes ('$ci_timeout'), ci.yml's SHARD_LIMIT_MINUTES ('$ci_limit') and the script's default ('$script_limit') must be the same number"
   failures=$((failures + 1))
 fi
 
