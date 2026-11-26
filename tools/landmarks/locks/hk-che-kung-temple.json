@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark hk-che-kung-temple: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "hk-che-kung-temple" : {
+      "hash" : "ecbe7f1f69a47fe9",
+      "triangles" : 1216
+    },
+    "hk-che-kung-temple-far" : {
+      "hash" : "679ac6d11e6cee07",
+      "triangles" : 468
+    }
+  }
+}

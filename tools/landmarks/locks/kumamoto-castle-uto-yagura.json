@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark kumamoto-castle-uto-yagura: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "kumamoto-castle-uto-yagura" : {
+      "hash" : "3a86d722ae572ba1",
+      "triangles" : 800
+    },
+    "kumamoto-castle-uto-yagura-far" : {
+      "hash" : "c2cfbce07d17cd55",
+      "triangles" : 200
+    }
+  }
+}

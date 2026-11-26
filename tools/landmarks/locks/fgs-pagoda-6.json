@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark fgs-pagoda-6: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "fgs-pagoda-6" : {
+      "hash" : "e37de4d5efc2e4b8",
+      "triangles" : 664
+    },
+    "fgs-pagoda-6-far" : {
+      "hash" : "94df4413d24b38f6",
+      "triangles" : 300
+    }
+  }
+}

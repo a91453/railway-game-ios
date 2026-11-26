@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark suizenji-fuji-mound: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "suizenji-fuji-mound" : {
+      "hash" : "3f4124a856c74670",
+      "triangles" : 656
+    },
+    "suizenji-fuji-mound-far" : {
+      "hash" : "3f8de7131173c229",
+      "triangles" : 212
+    }
+  }
+}

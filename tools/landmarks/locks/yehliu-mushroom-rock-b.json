@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark yehliu-mushroom-rock-b: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "yehliu-mushroom-rock-b" : {
+      "hash" : "1319bd5737ec92b8",
+      "triangles" : 524
+    },
+    "yehliu-mushroom-rock-b-far" : {
+      "hash" : "de3829a1d8fd1a3e",
+      "triangles" : 128
+    }
+  }
+}
