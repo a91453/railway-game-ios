@@ -474,34 +474,6 @@ TOUCH = 4e-4
 FOLD = 30
 
 
-def mirrored(triangles):
-    """頭車的右半（+z，遊戲的右側）換成左半的鏡像。舊版頭車兩側差幾公釐，車鼻兩肩
-    的燈因此切成 11 與 12 面（工作室 r1）；鏡像以後兩肩的燈、門、窗都一樣。"""
-    out = []
-    for corners, kind, door in triangles:
-        zs = corners[:, 2]
-        if zs.max() <= 1e-9:
-            out.append((corners, kind, door))
-            continue
-        if zs.min() >= -1e-9:
-            continue
-        polygon = []
-        for i in range(3):
-            a, b = corners[i], corners[(i + 1) % 3]
-            if a[2] <= 0:
-                polygon.append(a)
-            if (a[2] <= 0) != (b[2] <= 0):
-                point = a + (b - a) * (a[2] / (a[2] - b[2]))
-                point[2] = 0.0
-                polygon.append(point)
-        for i in range(1, len(polygon) - 1):
-            piece = np.array([polygon[0], polygon[i], polygon[i + 1]])
-            if np.linalg.norm(np.cross(piece[1] - piece[0], piece[2] - piece[0])) > 1e-9:
-                out.append((piece, kind, door))
-    return out + [((corners * np.array([1, 1, -1]))[::-1], kind, door) for corners, kind, door in out
-                  if corners[:, 2].min() < -1e-9]
-
-
 def mend(triangles):
     """T 形接點（`kyushu_800.py` 的同名函式）：切面時一塊的頂點常落在隔壁一塊的
     邊中間。GLB 存到毫米，頂點各自放到毫米的格點上，邊中間那個點就會離開那條邊，
