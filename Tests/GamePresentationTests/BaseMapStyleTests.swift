@@ -189,6 +189,34 @@ final class BaseMapStyleTests: XCTestCase {
     /// middle: the main island, Penghu, Kinmen and Matsu, even a middle on
     /// a river; not Xiamen, though Kinmen is in sight, nor the open strait
     /// or elsewhere; OpenFreeMap's without the water grid.
+    /// Decision 991: each part of a city's map is a source of its own,
+    /// drawn by a copy of every tile layer right after the layer, so the
+    /// parts' water lies under all their roads and the order is kept.
+    func testThePartsOfACitysMapAreDrawnLayerByLayer() throws {
+        let whole = BaseMapStyle.style(tiles: .bundled(pmtiles: "file:///a/basemap.pmtiles"), dark: false, glyphs: Self.glyphs)
+        let cut = BaseMapStyle.style(
+            tiles: .bundled(pmtiles: "file:///a/basemap.pmtiles"), dark: false, glyphs: Self.glyphs,
+            parts: ["file:///b/basemap.pmtiles", "file:///c/basemap.pmtiles"]
+        )
+        let sources = try XCTUnwrap(cut["sources"] as? [String: Any])
+        XCTAssertEqual((sources["openmaptiles-1"] as? [String: Any])?["url"] as? String, "pmtiles://file:///b/basemap.pmtiles")
+        XCTAssertEqual((sources["openmaptiles-2"] as? [String: Any])?["url"] as? String, "pmtiles://file:///c/basemap.pmtiles")
+        let before = try XCTUnwrap(whole["layers"] as? [[String: Any]]), after = try XCTUnwrap(cut["layers"] as? [[String: Any]])
+        let tileLayers = before.filter { $0["source"] as? String == "openmaptiles" }
+        XCTAssertFalse(tileLayers.isEmpty)
+        XCTAssertEqual(after.count, before.count + 2 * tileLayers.count)
+        // The layers as they were, each tile layer followed by its parts'.
+        let ids = after.compactMap { $0["id"] as? String }
+        let original = before.compactMap { $0["id"] as? String }
+        XCTAssertEqual(ids.filter(Set(original).contains), original)
+        for layer in tileLayers {
+            let id = try XCTUnwrap(layer["id"] as? String)
+            let at = try XCTUnwrap(ids.firstIndex(of: id))
+            XCTAssertEqual(Array(ids[at...].prefix(3)), [id, "\(id)-1", "\(id)-2"])
+            XCTAssertEqual(after[at + 2]["source"] as? String, "openmaptiles-2")
+        }
+    }
+
     func testOnlyMapsInTaiwanDrawTheBundledTiles() throws {
         func draws(_ latitude: Double, _ longitude: Double, water: WaterGrid? = BaseMapStyleTests.water) throws -> Bool {
             BaseMapStyle.drawsTaiwan(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude)), water: water)
@@ -236,7 +264,7 @@ final class BaseMapStyleTests: XCTestCase {
     }
 
     /// The terrain the app bundles: a PMTiles v3 archive of PNG tiles
-    /// (Terrarium heights), zooms 0–10, over the heights' grid.
+    /// (Terrarium heights), zooms 0–9, over the heights' grid.
     func testTheBundledTerrainIsTheGamesHeights() throws {
         let file = Self.resources.appendingPathComponent("BaseMap/taiwan_terrain.pmtiles")
         let handle = try FileHandle(forReadingFrom: file)
@@ -247,7 +275,7 @@ final class BaseMapStyleTests: XCTestCase {
         XCTAssertEqual(bytes[98], 1, "uncompressed tiles")
         XCTAssertEqual(bytes[99], 2, "PNG tiles")
         XCTAssertEqual(bytes[100], 0, "first zoom")
-        XCTAssertEqual(bytes[101], 10, "last zoom")
+        XCTAssertEqual(bytes[101], 9, "last zoom")
     }
 
     /// Every font the style asks for has the ranges of Latin and of

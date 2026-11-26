@@ -1,46 +1,46 @@
 {
  "decision": 854,
  "extract": {
-  "file": "kumamoto.pbf",
-  "sha256": "aa24ddd3ad7c2a42945a9e286187e48f53e26132b5d0fb924dcaafb0b7232785",
-  "from": "https://osmtoday.com/asia/japan/kyushu.pbf, cut with osmium extract -b 130.25,32.66,130.94,33.75 -s smart",
+  "file": "four.pbf",
+  "sha256": "daed80aaefec896dd6cc22aa1aa16e1e82fd30c5e0c543e958174aa85af2cb3c",
+  "from": "https://osmtoday.com/asia/japan/kyushu.pbf and chugoku.pbf (osmium merge), cut with osmium extract -b 129.3,32.05,131.37,34.07 -s smart",
   "licence": "ODbL 1.0, © OpenStreetMap contributors",
-  "newestBuildingEdit": "2026-11-21T14:19:07Z",
-  "buildingsRead": 1179924
+  "newestBuildingEdit": "2026-11-24T18:58:24Z",
+  "buildingsRead": 2167553
  },
- "buildings": 1079275,
+ "buildings": 1966854,
  "leftOut": {
-  "small": 100424
+  "small": 200462
  },
- "tiles": 10450,
+ "tiles": 28533,
  "storeysFrom": {
-  "guess": 758756,
-  "tags": 320744
+  "guess": 1580320,
+  "tags": 386771
  },
  "uses": {
-  "agricultural": 9338,
-  "civic": 10990,
-  "commercial": 23725,
-  "education": 2445,
-  "entertainment": 284,
-  "industrial": 6343,
-  "medical": 383,
-  "none": 741744,
-  "outbuilding": 421,
-  "religious": 312,
-  "residential": 283112,
-  "service": 129,
-  "transportation": 274
+  "agricultural": 21794,
+  "civic": 13961,
+  "commercial": 31518,
+  "education": 4283,
+  "entertainment": 454,
+  "industrial": 10885,
+  "medical": 690,
+  "none": 1516624,
+  "outbuilding": 4795,
+  "religious": 554,
+  "residential": 360655,
+  "service": 420,
+  "transportation": 458
  },
  "storeys": {
   "median": 2,
   "tallest": 48,
-  "of1": 360038,
-  "of2": 542136,
-  "of3to5": 162173,
-  "of6andMore": 15153
+  "of1": 773734,
+  "of2": 1025239,
+  "of3to5": 151640,
+  "of6andMore": 16478
  },
- "rawBytes": 20387406,
- "archiveBytes": 16530089,
- "sha256": "359331b43940211a0f9b0e309070cc6d426cff769cc5bb404f337879745bd15a"
+ "rawBytes": 36992430,
+ "archiveBytes": 30537704,
+ "sha256": "b8ef57dd56914609e3fd31f69326be006a2a69e968cadeadbd4571358612f582"
 }

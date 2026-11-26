@@ -359,18 +359,18 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertEqual(credits.map(\.id), [
                 "realRailways", "tra", "thsr", "afr", "taipeiMetro", "newTaipeiMetro", "taoyuanMetro", "taichungMetro", "kaohsiungMetro", "operators",
                 "tdx", "realBuses", "realCoaches", "traOpenData", "nlsc", "openStreetMap",
-                "worldPop", "ridership", "travelSurvey", "sightVisitors", "airports", "overtureBuildings",
+                "worldPop", "ridership", "travelSurvey", "sightVisitors", "airports", "taiwanWeather", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "moiTerrain", "copernicusDEM", "esaWorldCover", "wikidata", "worldUrbanizationProspects",
-                "map3DGround", "temples", "taipeiTempleModels", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "coalBunkerModel", "meshy", "kenney", "taipeiGarbageTrucks", "slopNewYork",
+                "map3DGround", "temples", "taipeiTempleModels", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "highSpeed700Model", "coalBunkerModel", "meshy", "kenney", "taipeiGarbageTrucks", "slopNewYork",
                 // Decision 882: the platforms' name boards' letters.
                 "platformNameBoards",
                 "proceduralTokyo", "polyHaven", "music", "runningSound", "dieselSound", "motorSound", "weatherSound",
                 // Decision 712: Hong Kong's, open since its third pull request.
-                "hongKongMTR", "hongKongMap", "hongKongTerrain", "hongKongLandUse", "hongKongBuildings", "hongKongPeople", "hongKongAirport",
+                "hongKongMTR", "hongKongMap", "hongKongTerrain", "hongKongLandUse", "hongKongBuildings", "hongKongPeople", "hongKongWeather", "hongKongAirport",
                 // Decision 818: Rovaniemi's, open for the winter event.
-                "rovaniemiVR", "rovaniemiMap", "rovaniemiBuildings", "rovaniemiTerrain", "rovaniemiPopulation",
+                "rovaniemiVR", "rovaniemiMap", "rovaniemiBuildings", "rovaniemiTerrain", "rovaniemiPopulation", "rovaniemiWeather",
                 // Decision 854 (FUKUOKA-OPEN): Fukuoka's.
-                "fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport",
+                "fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaWeather", "fukuokaAirport", "kyushuAirports",
             ])
             XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
             for credit in credits {

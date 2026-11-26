@@ -342,7 +342,9 @@ public enum AttractionCatalog {
         Spot("fi10", "凱米耶爾維教堂", "Kemijärvi Church", .temple, 200, 66.71546, 27.43843),
     ]
 
-    /// Decision 894: Japan's sights, round Fukuoka.
+    /// Decision 894: Japan's sights, round Fukuoka; decision 994: and the
+    /// rest of Fukuoka, Saga and Kumamoto prefectures; decision 997: and
+    /// Nagasaki Prefecture's.
     public static let japanSpots: [Spot] = [
         // Way 772670439, the 3D map's tower (decision 854).
         Spot("jp01", "福岡塔", "Fukuoka Tower", .landmark, 400, 33.59333, 130.35151),
@@ -370,6 +372,161 @@ public enum AttractionCatalog {
         Spot("jp12", "福岡市動植物園", "Fukuoka Zoo and Botanical Garden", .town, 300, 33.57333, 130.38927),
         // Node 7077424152, on Shikanoshima.
         Spot("jp13", "志賀海神社", "Shikaumi Shrine", .temple, 250, 33.66808, 130.31316),
+        // Decision 994: the rest of Fukuoka, Saga and Kumamoto prefectures,
+        // the three of the Japan map (decision 991), read from the same
+        // extract of 2026-11-25. Those outside a map's bounds stay off it
+        // until it grows to them.
+        // Fukuoka prefecture. Way 1353165321.
+        Spot("jp14", "太宰府天滿宮", "Dazaifu Tenmangu", .temple, 350, 33.52107, 130.53591),
+        // Way 134721523.
+        Spot("jp15", "九州國立博物館", "Kyushu National Museum", .museum, 300, 33.51815, 130.53810),
+        // Way 1180032939.
+        Spot("jp16", "竈門神社", "Kamado Shrine", .temple, 250, 33.52885, 130.55244),
+        // Node 9079593371.
+        Spot("jp17", "門司港懷舊區", "Mojiko Retro", .town, 350, 33.94393, 130.96488),
+        // Way 32387865, beside Mojiko station.
+        Spot("jp18", "九州鐵道紀念館", "Kyushu Railway History Museum", .museum, 300, 33.94333, 130.96208),
+        // Way 153209407, the keep.
+        Spot("jp19", "小倉城", "Kokura Castle", .landmark, 300, 33.88451, 130.87417),
+        // Way 660855879.
+        Spot("jp20", "旦過市場", "Tanga Market", .town, 250, 33.88145, 130.87965),
+        // Node 1250723383, the summit of the night view.
+        Spot("jp21", "皿倉山", "Mount Sarakura", .mountain, 300, 33.84646, 130.79646),
+        // Way 541232948.
+        Spot("jp22", "河內藤園", "Kawachi Wisteria Garden", .mountain, 300, 33.83206, 130.79239),
+        // Way 1106136483, the quasi-national park.
+        Spot("jp23", "平尾台", "Hiraodai", .mountain, 250, 33.76377, 130.90403),
+        // Way 427344589, Hetsu-miya.
+        Spot("jp24", "宗像大社", "Munakata Taisha", .temple, 300, 33.83028, 130.51435),
+        // Way 182326230.
+        Spot("jp25", "海之中道海洋世界", "Marine World Uminonakamichi", .coast, 300, 33.66090, 130.36377),
+        // Way 705639494.
+        Spot("jp26", "能古島海島公園", "Nokonoshima Island Park", .coast, 250, 33.63282, 130.30133),
+        // Node 6386259585, the wedded rocks.
+        Spot("jp27", "櫻井二見浦", "Sakurai Futamigaura", .coast, 300, 33.64016, 130.19669),
+        // Node 5543105952, where the punts set off.
+        Spot("jp28", "柳川遊船", "Yanagawa River Cruise", .town, 350, 33.16693, 130.41637),
+        // Way 360717768.
+        Spot("jp29", "御花", "Ohana Villa", .landmark, 250, 33.15827, 130.39817),
+        // Way 1223204149, the town's museum.
+        Spot("jp30", "秋月城下町", "Akizuki Castle Town", .town, 250, 33.46930, 130.69404),
+        // Way 1151608789.
+        Spot("jp31", "二日市溫泉", "Futsukaichi Onsen", .hotSpring, 250, 33.48979, 130.51433),
+        // Node 5576408468.
+        Spot("jp32", "原鶴溫泉", "Harazuru Onsen", .hotSpring, 250, 33.35173, 130.78126),
+        // Saga prefecture. Way 500427895.
+        Spot("jp33", "唐津城", "Karatsu Castle", .landmark, 300, 33.45354, 129.97818),
+        // Node 5688817086.
+        Spot("jp34", "七釜", "Nanatsugama", .coast, 250, 33.54896, 129.93196),
+        // Node 6657820685.
+        Spot("jp35", "波戶岬", "Cape Hado", .coast, 250, 33.55528, 129.84659),
+        // Node 3388730193.
+        Spot("jp36", "名護屋城跡", "Hizen Nagoya Castle Ruins", .landmark, 250, 33.52912, 129.86991),
+        // Node 12871663876.
+        Spot("jp37", "吉野里歷史公園", "Yoshinogari Historical Park", .landmark, 300, 33.32542, 130.38438),
+        // Way 753612753.
+        Spot("jp38", "祐德稻荷神社", "Yutoku Inari Shrine", .temple, 300, 33.07436, 130.10863),
+        // Way 568000739, the public bath.
+        Spot("jp39", "嬉野溫泉", "Ureshino Onsen", .hotSpring, 300, 33.09660, 129.98554),
+        // Node 5228408622, behind the gate tower.
+        Spot("jp40", "武雄溫泉", "Takeo Onsen", .hotSpring, 300, 33.19658, 130.01429),
+        // Way 991958955.
+        Spot("jp41", "御船山樂園", "Mifuneyama Rakuen", .town, 250, 33.18208, 130.01783),
+        // Node 3755901803, Arita's porcelain torii.
+        Spot("jp42", "陶山神社", "Tozan Shrine", .temple, 250, 33.18894, 129.89929),
+        // Way 260195961.
+        Spot("jp43", "大川內山", "Okawachiyama", .town, 250, 33.23443, 129.89360),
+        // Way 511628392.
+        Spot("jp44", "佐賀城本丸歷史館", "Saga Castle History Museum", .museum, 250, 33.24536, 130.30280),
+        // Way 480824452.
+        Spot("jp45", "佐賀熱氣球博物館", "Saga Balloon Museum", .museum, 250, 33.25243, 130.30051),
+        // Kumamoto prefecture. Way 375062710, the castle's park.
+        Spot("jp46", "熊本城", "Kumamoto Castle", .landmark, 400, 32.80591, 130.70527),
+        // Way 682657477.
+        Spot("jp47", "水前寺成趣園", "Suizenji Jojuen", .town, 350, 32.79087, 130.73455),
+        // Node 5412185621.
+        Spot("jp48", "熊本熊廣場", "Kumamon Square", .town, 250, 32.80185, 130.71244),
+        // Way 660871771.
+        Spot("jp49", "熊本市動植物園", "Kumamoto City Zoo and Botanical Garden", .town, 250, 32.77476, 130.74816),
+        // Node 1423805703.
+        Spot("jp50", "本妙寺", "Honmyo-ji", .temple, 200, 32.81720, 130.68672),
+        // Node 917987193, the volcano.
+        Spot("jp51", "阿蘇山", "Mount Aso", .mountain, 350, 32.88270, 131.09474),
+        // Node 5603129121.
+        Spot("jp52", "草千里濱", "Kusasenri", .mountain, 300, 32.88071, 131.05384),
+        // Way 412025724.
+        Spot("jp53", "阿蘇神社", "Aso Shrine", .temple, 250, 32.94781, 131.11582),
+        // Way 477419441, the lookout.
+        Spot("jp54", "大觀峰", "Daikanbo", .mountain, 300, 32.99567, 131.06710),
+        // Node 2753566590.
+        Spot("jp55", "黑川溫泉", "Kurokawa Onsen", .hotSpring, 350, 33.07771, 131.14194),
+        // Node 8270409909, the spa's shrine.
+        Spot("jp56", "杖立溫泉", "Tsuetate Onsen", .hotSpring, 250, 33.18075, 131.03613),
+        // Node 4478978090.
+        Spot("jp57", "鍋瀑布", "Nabegataki Falls", .mountain, 250, 33.13785, 131.03511),
+        // Node 4486759494.
+        Spot("jp58", "白川水源", "Shirakawa Spring", .mountain, 250, 32.82447, 131.09453),
+        // Node 6228628173.
+        Spot("jp59", "通潤橋", "Tsujun Bridge", .landmark, 300, 32.68150, 130.99389),
+        // Node 5340095133.
+        Spot("jp60", "三角西港", "Misumi West Port", .harbour, 250, 32.62199, 130.45575),
+        // Node 5603040088, the first of the Amakusa bridges.
+        Spot("jp61", "天門橋", "Tenmon Bridge", .landmark, 250, 32.61122, 130.45849),
+        // Node 4583029374.
+        Spot("jp62", "崎津聚落", "Sakitsu Village", .town, 300, 32.31300, 130.02443),
+        // Way 928735534.
+        Spot("jp63", "大江天主堂", "Oe Church", .temple, 250, 32.33687, 129.99290),
+        // Node 1735884331.
+        Spot("jp64", "人吉城跡", "Hitoyoshi Castle Ruins", .landmark, 250, 32.21112, 130.76656),
+        // Way 258076699.
+        Spot("jp65", "青井阿蘇神社", "Aoi Aso Shrine", .temple, 300, 32.21345, 130.75308),
+        // Way 694507095, the public bath Sakurayu.
+        Spot("jp66", "山鹿溫泉", "Yamaga Onsen", .hotSpring, 250, 33.01439, 130.68899),
+        // Way 1540939189.
+        Spot("jp67", "萬田坑", "Manda Pit", .landmark, 250, 33.00305, 130.45039),
+        // Decision 997: Nagasaki Prefecture's, from here on.
+        // Node 5336401732.
+        Spot("jp68", "眼鏡橋", "Megane Bridge", .landmark, 300, 32.74729, 129.87999),
+        // Way 484294967, the Dutch trading post's site.
+        Spot("jp69", "出島", "Dejima", .museum, 350, 32.74365, 129.87275),
+        // Node 4813297521.
+        Spot("jp70", "新地中華街", "Shinchi Chinatown", .town, 300, 32.74213, 129.87446),
+        // Way 243003159.
+        Spot("jp71", "大浦天主堂", "Oura Church", .temple, 350, 32.73413, 129.87012),
+        // Way 552140518.
+        Spot("jp72", "哥拉巴園", "Glover Garden", .landmark, 350, 32.73328, 129.86924),
+        // Way 718120975.
+        Spot("jp73", "長崎原爆資料館", "Nagasaki Atomic Bomb Museum", .museum, 300, 32.77270, 129.86449),
+        // Node 1859550205.
+        Spot("jp74", "長崎平和公園", "Nagasaki Peace Park", .landmark, 300, 32.77297, 129.86261),
+        // Node 4641487651, the peak.
+        Spot("jp75", "稻佐山", "Mount Inasa", .mountain, 350, 32.75343, 129.84934),
+        // Way 716597818.
+        Spot("jp76", "崇福寺", "Sofukuji Temple", .temple, 250, 32.74257, 129.88349),
+        // Way 544258615.
+        Spot("jp77", "長崎諏訪神社", "Nagasaki Suwa Shrine", .temple, 250, 32.75416, 129.88172),
+        // Way 191502696, the island.
+        Spot("jp78", "軍艦島", "Gunkanjima", .landmark, 350, 32.62763, 129.73812),
+        // Way 552135649.
+        Spot("jp79", "豪斯登堡", "Huis Ten Bosch", .landmark, 350, 33.08737, 129.78905),
+        // Node 3023900936, where the islands' boats leave.
+        Spot("jp80", "九十九島", "Kujukushima Islands", .coast, 300, 33.16245, 129.67894),
+        // Node 1791894729.
+        Spot("jp81", "西海橋", "Saikai Bridge", .landmark, 250, 33.04913, 129.75952),
+        // Way 476451777, the spa's information office.
+        Spot("jp82", "雲仙溫泉", "Unzen Onsen", .hotSpring, 350, 32.73849, 130.26163),
+        // Node 1331880180.
+        Spot("jp83", "小濱溫泉", "Obama Onsen", .hotSpring, 250, 32.72969, 130.20693),
+        // Way 477197128, the keep.
+        Spot("jp84", "島原城", "Shimabara Castle", .landmark, 300, 32.78926, 130.36720),
+        // Way 476222575, the ropeway's lookout under Mount Fugen.
+        Spot("jp85", "仁田峠", "Nita Pass", .mountain, 250, 32.75047, 130.28552),
+        // Way 586353581.
+        Spot("jp86", "平戶城", "Hirado Castle", .landmark, 250, 33.36855, 129.55754),
+        // Way 787827963.
+        Spot("jp87", "平戶沙勿略紀念教會", "Hirado Xavier Memorial Church", .temple, 250, 33.36957, 129.54955),
+        // Node 1423820502.
+        Spot("jp88", "長崎企鵝水族館", "Nagasaki Penguin Aquarium", .museum, 250, 32.75818, 129.94676),
     ]
 
     /// Decision 894: every country's table, Taiwan's first.

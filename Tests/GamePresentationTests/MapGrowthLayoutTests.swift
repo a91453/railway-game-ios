@@ -6,12 +6,21 @@ import XCTest
 /// Decision 969, the presentation's half (JAPAN-MAP-GROW): how a city's map
 /// that grew lies over the Earth, and a game on it as it was growing with
 /// it. The packs that have not grown must lie as they did, to the last
-/// digit; Fukuoka's grew to Kumamoto (KUMAMOTO-GROUND), and the pack it
-/// was before is made here from it, with the extent it had.
+/// digit; Fukuoka's grew to Kumamoto (KUMAMOTO-GROUND), then to the whole
+/// of three prefectures, laid anew (decision 991), then of four (decision
+/// 997, Nagasaki's), laid anew again, and the packs it was
+/// before are made here from it, with the extents they had.
 @MainActor
 final class MapGrowthLayoutTests: XCTestCase {
     private let fukuoka = MapPack.Extent(north: 33.72, south: 33.52, west: 130.29, east: 130.48)
     private let kumamoto = MapPack.Extent(north: 33.72, south: 32.69, west: 130.29, east: 130.9)
+    /// Decision 991: the map the games before it grow to, its north-west
+    /// corner Fukuoka's first.
+    private let older = MapPack.Extent(north: 33.72, south: 32.09, west: 130.29, east: 131.33)
+    /// Decision 991: the whole of Fukuoka, Saga and Kumamoto Prefectures.
+    private let threePrefectures = MapPack.Extent(north: 34.03, south: 32.09, west: 129.73, east: 131.33)
+    /// Decision 997: and Nagasaki's, the west edge moved to Hirado.
+    private let prefectures = MapPack.Extent(north: 34.03, south: 32.09, west: 129.34, east: 131.33)
 
     // MARK: - The packs that never grew
 
@@ -35,26 +44,38 @@ final class MapGrowthLayoutTests: XCTestCase {
         }
     }
 
-    /// Fukuoka's pack grew south and east to Kumamoto (KUMAMOTO-GROUND):
-    /// its anchor and its first world are those its first games were laid
-    /// on, written out as they were pinned before it grew, and its world
-    /// now is 4 tiles by 7.
-    func testFukuokasPackGrewToKumamotoAndLiesWhereItDid() throws {
+    /// Decision 991: Fukuoka's pack holds the whole of three prefectures,
+    /// laid anew round them, with three places to begin; the games laid
+    /// on it before lie where they did, on its older layout, whose anchor
+    /// and first world are written out as they were pinned before.
+    func testFukuokasPackHoldsThreePrefecturesAndItsOldGamesLieWhereTheyDid() throws {
         let pack = try XCTUnwrap(HongKongRailwaysTests.pack(.fukuoka))
         let extents = try MapPack.extents(ofManifest: pack.file("pack", "json"))
-        XCTAssertEqual(extents.extent, kumamoto)
-        XCTAssertEqual(extents.earlier, [fukuoka])
+        XCTAssertEqual(extents.extent, prefectures)
+        XCTAssertEqual(extents.earlier, [])
         let ground = try OverseasGround(city: .fukuoka, pack: pack)
-        XCTAssertEqual(ground.anchor, GeoAnchor(latitude: 336_200_580, longitude: 1_303_850_000))
-        XCTAssertEqual(ground.layout.earlier, [try WorldBounds(width: 1_127_218, height: 1_424_891)])
-        XCTAssertEqual(ground.layout, MapPack.Layout(extent: kumamoto, earlier: [fukuoka]))
-        XCTAssertEqual(ground.bounds, try WorldBounds(width: 3_618_962, height: 7_303_379))
-        // Its ground reaches as far as its map: the grids from the same
-        // corner as before, to the south-east corner.
+        XCTAssertEqual(ground.anchor, prefectures.anchor)
+        XCTAssertEqual(ground.bounds, prefectures.bounds)
+        XCTAssertNil(ground.layout.anchorBounds)
+        XCTAssertEqual(ground.layout.starts.map(\.name), ["福岡", "佐賀", "熊本", "長崎"])
+        XCTAssertEqual(ground.layout.starts.map(\.englishName), ["Fukuoka", "Saga", "Kumamoto", "Nagasaki"])
+        let old = try XCTUnwrap(ground.layout.older.first)
+        XCTAssertEqual(ground.layout.older.count, 2)
+        XCTAssertEqual(old, MapPack.Layout(extent: older, earlier: [fukuoka, kumamoto]))
+        // Decision 997: the games laid over the three prefectures stay on
+        // them, round their own middle.
+        XCTAssertEqual(ground.layout.older.last, MapPack.Layout(extent: threePrefectures, earlier: []))
+        XCTAssertEqual(old.anchor, GeoAnchor(latitude: 336_200_580, longitude: 1_303_850_000))
+        XCTAssertEqual(old.earlier, [try WorldBounds(width: 1_127_218, height: 1_424_891), try WorldBounds(width: 3_618_962, height: 7_303_379)])
+        // Its ground reaches as far as its map.
         let heights = try XCTUnwrap(ground.heights), water = try XCTUnwrap(ground.water)
         XCTAssertGreaterThan(heights.height(latitude: 32.8140, longitude: 130.6388), 500, "Kinpozan, west of Kumamoto")
+        XCTAssertGreaterThan(heights.height(latitude: 33.4362, longitude: 130.3674), 800, "Sefurisan, between Fukuoka and Saga")
         XCTAssertFalse(water.isWater(latitude: 32.7900, longitude: 130.6890), "Kumamoto Station")
+        XCTAssertFalse(water.isWater(latitude: 33.2643, longitude: 130.2975), "Saga Station")
+        XCTAssertFalse(water.isWater(latitude: 33.8865, longitude: 130.8826), "Kokura Station")
         XCTAssertTrue(water.isWater(latitude: 32.9000, longitude: 130.3500), "the Ariake Sea")
+        XCTAssertTrue(water.isWater(latitude: 33.9000, longitude: 130.2000), "the Genkai Sea")
     }
 
     // MARK: - A map that grew
@@ -110,7 +131,7 @@ final class MapGrowthLayoutTests: XCTestCase {
 
     // MARK: - An old game grows
 
-    /// Fukuoka's pack as it is in the app, grown to Kumamoto's extent.
+    /// Fukuoka's pack as it is in the app: three prefectures.
     private func grownFukuoka() throws -> OverseasGround {
         try FukuokaRailwaysTests.ground()
     }
@@ -119,10 +140,23 @@ final class MapGrowthLayoutTests: XCTestCase {
     /// not got the new one: its files, a `pack.json` with the extent it
     /// had and no `earlier`.
     private func fukuokaBeforeItGrew() throws -> OverseasGround {
+        try fukuokaAsItWas(extent: fukuoka, earlier: [])
+    }
+
+    /// Fukuoka's pack as it was once it had grown to Kumamoto (decision
+    /// 969), before decision 991.
+    private func fukuokaGrownToKumamoto() throws -> OverseasGround {
+        try fukuokaAsItWas(extent: kumamoto, earlier: [fukuoka])
+    }
+
+    private func fukuokaAsItWas(extent: MapPack.Extent, earlier: [MapPack.Extent]) throws -> OverseasGround {
+        func json(_ e: MapPack.Extent) -> [String: Double] { ["north": e.north, "south": e.south, "west": e.west, "east": e.east] }
         let pack = try XCTUnwrap(HongKongRailwaysTests.pack(.fukuoka))
         var manifest = try XCTUnwrap(JSONSerialization.jsonObject(with: pack.file("pack", "json")) as? [String: Any])
-        manifest["extent"] = ["north": 33.72, "south": 33.52, "west": 130.29, "east": 130.48]
-        manifest["earlier"] = nil
+        manifest["extent"] = json(extent)
+        manifest["earlier"] = earlier.isEmpty ? nil : earlier.map(json)
+        manifest["starts"] = nil
+        manifest["older"] = nil
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("MapGrowthLayoutTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: folder) }
@@ -153,13 +187,17 @@ final class MapGrowthLayoutTests: XCTestCase {
         }
     }
 
+    /// Decision 991: an old game grows on the older layout, to the new
+    /// south and east edges, its north-west corner where it was.
     func testAnOldGameGrowsKeepingItsPlacesAndOwningItsFourTiles() throws {
         let ground = try grownFukuoka()
+        let layout = try XCTUnwrap(ground.layout.older.first)
         let old = try oldFukuokaGame()
         XCTAssertTrue(ground.holds(old), "the grown pack knows the old game")
+        XCTAssertEqual(ground.layout.layout(holding: old), layout)
         let grown = try XCTUnwrap(ground.grown(old))
 
-        XCTAssertEqual(grown.bounds, ground.bounds)
+        XCTAssertEqual(grown.bounds, layout.bounds)
         XCTAssertEqual(grown.geoAnchor, old.geoAnchor)
         XCTAssertEqual(grown.geoAnchorBounds, old.bounds)
         XCTAssertEqual(grown.stations, old.stations)
@@ -168,7 +206,8 @@ final class MapGrowthLayoutTests: XCTestCase {
         XCTAssertNil(ground.grown(grown), "once")
 
         let expansion = try XCTUnwrap(grown.mapExpansion)
-        XCTAssertEqual(expansion.owned, ground.layout.startTiles)
+        XCTAssertEqual(expansion.owned, layout.startTiles)
+        XCTAssertEqual(expansion.owned, [MapTile(row: 0, column: 0), MapTile(row: 0, column: 1), MapTile(row: 1, column: 0), MapTile(row: 1, column: 1)])
         XCTAssertEqual(expansion.granted, 4)
         XCTAssertEqual(expansion.bought, 0)
         // The first tile bought costs and asks what a one-tile game's does.
@@ -179,25 +218,81 @@ final class MapGrowthLayoutTests: XCTestCase {
         // The four tiles' some 2.2 million people: Fukuoka's 1.7 million
         // and, now that the pack's people reach as far as the tiles do,
         // Dazaifu's and Chikushino's south and east of the map it was (√
-        // of their trips a day is 930 and some, a hundred riders each).
-        XCTAssertEqual(expansion.ridersStep, 93_000)
+        // of their trips a day is 930 and some, a hundred riders each;
+        // 950 and some since decision 1000 counts them by the 2020 census).
+        XCTAssertEqual(expansion.ridersStep, 95_000)
         XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: JSONEncoder().encode(grown)), grown, "a world GameCore loads")
 
         // The old pack still on the device: the game goes on as it was.
         XCTAssertNil(try fukuokaBeforeItGrew().grown(old))
     }
 
-    func testANewGameOnAGrownMapOwnsTheSameTilesAsAnOldOne() throws {
+    /// Decision 991: a game saved once the map had grown to Kumamoto grows
+    /// on to the older layout's edges, owning what it owned.
+    func testAGameOfTheMapGrownToKumamotoGrowsOn() throws {
         let ground = try grownFukuoka()
-        let new = GameWorld.newOverseasGame(ground, balance: Money(100_000_000_000))
-        let old = try XCTUnwrap(ground.grown(try oldFukuokaGame()))
-        XCTAssertEqual(new.bounds, old.bounds)
-        XCTAssertEqual(new.geoAnchor, old.geoAnchor)
-        XCTAssertEqual(new.geoAnchorBounds, old.geoAnchorBounds)
-        XCTAssertEqual(new.mapExpansion?.owned, old.mapExpansion?.owned)
-        XCTAssertEqual(new.mapExpansion?.granted, 4)
-        XCTAssertEqual(new.mapExpansion?.ridersStep, old.mapExpansion?.ridersStep)
-        XCTAssertTrue(ground.holds(new))
+        let layout = try XCTUnwrap(ground.layout.older.first)
+        let middle = try XCTUnwrap(try fukuokaGrownToKumamoto().grown(try oldFukuokaGame()))
+        XCTAssertEqual(middle.bounds, try WorldBounds(width: 3_618_962, height: 7_303_379))
+        XCTAssertEqual(ground.layout.layout(holding: middle), layout)
+        let grown = try XCTUnwrap(ground.grown(middle))
+        XCTAssertEqual(grown.bounds, layout.bounds)
+        XCTAssertEqual(grown.geoAnchor, middle.geoAnchor)
+        XCTAssertEqual(grown.geoAnchorBounds, middle.geoAnchorBounds)
+        XCTAssertEqual(grown.mapExpansion, middle.mapExpansion, "what it owned and bought, as it was")
+        XCTAssertEqual(try places(of: grown), try places(of: middle))
+        XCTAssertNil(ground.grown(grown), "once")
+        // The world now reaches Kumamoto Airport's east and Hitoyoshi's south.
+        let frame = try XCTUnwrap(RealWorldFrame(world: grown))
+        let southEast = frame.coordinate(worldX: Double(grown.bounds.width), worldY: Double(grown.bounds.height))
+        XCTAssertEqual(southEast.latitude, 32.09, accuracy: 1e-6)
+        XCTAssertEqual(southEast.longitude, 131.33, accuracy: 1e-6)
+    }
+
+    /// Decision 997: a game begun on the three prefectures' map (decision
+    /// 991) stays on it, round its own middle, as it was: the map's new
+    /// west does not move what it built.
+    func testAGameOfTheThreePrefecturesStaysAsItWas() throws {
+        let ground = try grownFukuoka()
+        let three = try XCTUnwrap(MapPack.Layout(extent: threePrefectures, earlier: []))
+        var world = GameWorld.newGame(anchor: three.anchor, bounds: three.bounds, land: [])
+        try world.enableMapExpansion(owning: [MapTile(row: 4, column: 4)], townSeed: nil, ridersStep: 1_000)
+        XCTAssertNotEqual(three.anchor, ground.anchor, "the map is laid anew")
+        XCTAssertTrue(ground.holds(world))
+        XCTAssertEqual(ground.layout.layout(holding: world), three)
+        XCTAssertNil(ground.grown(world), "it reaches as far as it did")
+    }
+
+    /// Decision 991: a new game is laid over the whole of the three
+    /// prefectures and owns the 2 × 2 tiles round the city picked, the
+    /// rest bought.
+    func testANewGameBeginsRoundTheCityPicked() throws {
+        let ground = try grownFukuoka()
+        let stations: [(name: String, latitude: Double, longitude: Double)] = [
+            ("Hakata", 33.5897, 130.4207), ("Saga", 33.2643, 130.2975), ("Kumamoto", 32.7898, 130.6886),
+            ("Nagasaki", 32.7528, 129.8691),
+        ]
+        var steps: [Int64] = []
+        for (index, station) in stations.enumerated() {
+            let new = GameWorld.newOverseasGame(ground, balance: Money(100_000_000_000), start: index)
+            XCTAssertEqual(new.bounds, ground.bounds, station.name)
+            XCTAssertEqual(new.geoAnchor, ground.anchor, station.name)
+            XCTAssertNil(new.geoAnchorBounds, station.name)
+            XCTAssertTrue(ground.holds(new), station.name)
+            XCTAssertNil(ground.grown(new), station.name)
+            let expansion = try XCTUnwrap(new.mapExpansion, station.name)
+            XCTAssertEqual(expansion.owned, ground.layout.startTiles(at: index), station.name)
+            XCTAssertEqual(expansion.owned.count, 4, station.name)
+            XCTAssertEqual(expansion.granted, 4, station.name)
+            let frame = try XCTUnwrap(RealWorldFrame(world: new))
+            let at = frame.worldPosition(latitude: station.latitude, longitude: station.longitude)
+            let tile = MapTile(row: Int(at.y) / Int(MapExpansion.tileLength), column: Int(at.x) / Int(MapExpansion.tileLength))
+            XCTAssertTrue(expansion.owned.contains(tile), "\(station.name) Station is in the land given")
+            steps.append(expansion.ridersStep)
+        }
+        XCTAssertEqual(GameWorld.newOverseasGame(ground).mapExpansion?.owned, ground.layout.startTiles, "Fukuoka unless another is picked")
+        XCTAssertGreaterThan(steps[0], steps[2], "Fukuoka's people are more than Kumamoto's")
+        XCTAssertGreaterThan(steps[2], steps[1], "and Kumamoto's than Saga's")
         // On a pack that never grew a new game is as it was: the whole map,
         // not bought.
         let whole = GameWorld.newOverseasGame(try fukuokaBeforeItGrew())
@@ -209,7 +304,9 @@ final class MapGrowthLayoutTests: XCTestCase {
         var world = GameWorld.newOverseasGame(try grownFukuoka(), balance: Money(100_000_000_000))
         XCTAssertTrue(GameSession(world: world, language: .english).namesMapExpansionButton, "four tiles given, none bought")
         XCTAssertEqual(AchievementFacts(world: world).tilesBought, 0)
-        try world.buyMapTile(MapTile(row: 2, column: 0), passingMilestone: true)
+        let owned = try XCTUnwrap(world.mapExpansion?.owned)
+        let below = MapTile(row: try XCTUnwrap(owned.map(\.row).max()) + 1, column: try XCTUnwrap(owned.map(\.column).min()))
+        try world.buyMapTile(below, passingMilestone: true)
         XCTAssertFalse(GameSession(world: world, language: .english).namesMapExpansionButton)
         XCTAssertEqual(AchievementFacts(world: world).tilesBought, 1)
     }
@@ -228,7 +325,7 @@ final class MapGrowthLayoutTests: XCTestCase {
         let middle = frame.place(atMiddleOf: WorldRegion(bounds: grown.bounds))
         XCTAssertLessThan(middle.latitude, frame.anchor.latitude)
         XCTAssertGreaterThan(middle.longitude, frame.anchor.longitude)
-        XCTAssertEqual(middle.latitudeDegrees, (33.72 + 32.69) / 2, accuracy: 0.01)
-        XCTAssertEqual(middle.longitudeDegrees, (130.29 + 130.9) / 2, accuracy: 0.01)
+        XCTAssertEqual(middle.latitudeDegrees, (33.72 + 32.09) / 2, accuracy: 0.01)
+        XCTAssertEqual(middle.longitudeDegrees, (130.29 + 131.33) / 2, accuracy: 0.01)
     }
 }

@@ -1,0 +1,2 @@
+en: Double track laid on from high-speed or metro track now lays its second track and crossovers at the same gauge, so its trains run on both.
+zh: 從高鐵或捷運軌道接出去鋪的複線，第二條和渡線也是同一種軌距，車兩條都能跑。

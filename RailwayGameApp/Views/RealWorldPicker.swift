@@ -442,13 +442,28 @@ struct RealWorldPicker: View {
                 // says so, read afresh when its download answers.
                 let _ = mapPackAnswers
                 ForEach(launcher.overseasMapRows(in: language), id: \.city) { row in
-                    WholeMapRow(
-                        id: "realWorld.overseas.\(row.city.rawValue)", name: row.city.name(in: language),
-                        symbol: row.city.opensByFlights ? "airplane" : "snowflake",
-                        summary: row.city.mapSummary(in: language), howToOpen: row.closed,
-                        closedSymbol: row.waitsForDownload ? "arrow.down.circle" : "lock.fill"
-                    ) {
-                        if launcher.startOverseasMap(row.city) { dismiss() }
+                    // Decision 999: a row for each place its map can
+                    // begin round (Japan: Fukuoka, Saga, Kumamoto).
+                    ForEach(launcher.overseasStartRows(for: row, in: language), id: \.start) { start in
+                        WholeMapRow(
+                            id: start.id, name: start.name,
+                            symbol: row.city.opensByFlights ? "airplane" : "snowflake",
+                            summary: start.summary, howToOpen: row.closed,
+                            closedSymbol: row.waitsForDownload ? "arrow.down.circle" : "lock.fill"
+                        ) {
+                            if launcher.startOverseasMap(row.city, start: start.start) { dismiss() }
+                        }
+                    }
+                    // Decision 992: a map that starts with four tiles can
+                    // also be opened whole, counting no achievements.
+                    if let whole = row.city.wholeMapSummary(in: language) {
+                        WholeMapRow(
+                            id: "realWorld.overseas.\(row.city.rawValue).whole", name: row.city.wholeMapName(in: language),
+                            symbol: "map.fill", summary: whole, howToOpen: row.closed,
+                            closedSymbol: row.waitsForDownload ? "arrow.down.circle" : "lock.fill"
+                        ) {
+                            if launcher.startOverseasMap(row.city, wholeMap: true) { dismiss() }
+                        }
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: MapPackDownloads.statusChanged).receive(on: DispatchQueue.main)) { _ in

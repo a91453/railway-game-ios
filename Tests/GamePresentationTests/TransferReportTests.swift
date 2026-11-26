@@ -61,7 +61,7 @@ final class TransferReportTests: XCTestCase {
             func metres(_ a: PlanPoint, _ b: PlanPoint) -> Double {
                 hypot(Double(a.x - b.x), Double(a.y - b.y)) / Double(WorldCoordinate.unitsPerMetre)
             }
-            let towns = try XCTUnwrap(PolicyMap.densestTowns(in: world, tile: layout.start), id)
+            let towns = try XCTUnwrap(PolicyMap.densestTowns(in: world, tiles: layout.startTiles), id)
             let town = towns.first { (3_000...8_000).contains(metres($0, station)) } ?? towns[0]
 
             var results: [(riders: [Int64], balance: Int64, paidBack: Int?)] = []

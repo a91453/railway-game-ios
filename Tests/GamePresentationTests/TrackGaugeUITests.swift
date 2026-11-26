@@ -35,6 +35,22 @@ final class TrackGaugeUITests: XCTestCase {
         XCTAssertEqual(TrackGauge(rails: [.cape, .standard], loading: .shinkansen).name(in: .traditionalChinese), "1,067 + 1,435 mm 高鐵")
     }
 
+    /// NETWORK-PANEL-SIMPLE: the gauge button says the millimetres alone,
+    /// short enough for one line, and no two gauges alike.
+    func testEachGaugesButtonIsShortAndItsOwn() {
+        for language in [DisplayLanguage.english, .traditionalChinese] {
+            let names = TrackGauge.offered.map { $0.shortName(in: language) } + [TrackGauge.automaticShortName(in: language)]
+            XCTAssertEqual(Set(names).count, names.count, "\(names)")
+            for name in names {
+                XCTAssertLessThanOrEqual(name.count, 20, name)
+                XCTAssertFalse(name.contains("（") || name.contains("("), name)
+            }
+        }
+        XCTAssertEqual(TrackGauge.standard.shortName(in: .traditionalChinese), "1,435 mm")
+        XCTAssertEqual(TrackGauge.shinkansen.shortName(in: .traditionalChinese), "1,435 mm 高鐵")
+        XCTAssertEqual(TrackGauge.automaticShortName(in: .traditionalChinese), "自動軌距")
+    }
+
     func testARealTrainWithNoTrackOfItsGaugeIsToldToLaySome() throws {
         var world = try world()
         XCTAssertEqual(

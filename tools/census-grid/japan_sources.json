@@ -1,0 +1,52 @@
+{
+ "tables": {
+  "T001141": "令和2年国勢調査 人口及び世帯（JGD2011）（500mメッシュ）",
+  "T001162": "令和3年経済センサス‐活動調査 産業（大分類）別事業所数及び従業者数（JGD2011）（500mメッシュ）"
+ },
+ "url": "https://www.e-stat.go.jp/gis/statmap-search/data?statsId={table}&code={code}&downloadType=2",
+ "licence": "政府統計の総合窓口（e-Stat）利用規約 (Government of Japan Standard Terms of Use 2.0, compatible with CC BY 4.0)",
+ "credit": "「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成",
+ "extent": {
+  "north": 34.03,
+  "south": 32.09,
+  "west": 129.34,
+  "east": 131.33
+ },
+ "files": {
+  "T001141_4829.zip": "bb8e87d0e5f5501c8f4bf30ceb36cbfcbebded774d6692c0a4bb1d69a63d748d",
+  "T001141_4830.zip": "232e6a200d30ad0767c7c25376f926032d920081bd3bc56274a31ff94ff0fea9",
+  "T001141_4831.zip": "a445b2c29b71fcdd4630401022666cd975c2c6553acf98b0da4dc45cdf06ccb2",
+  "T001141_4929.zip": "753b07c1c92dd9db9200bd1b35e6b02ed9d516ffcaf792f157ea817d91fe63cc",
+  "T001141_4930.zip": "5980efd02b7da27995324341e7d9329285fae66dda59a63e9cb7c6f2d7ac0b84",
+  "T001141_4931.zip": "6225edef2f58bef4bce2499d9f60d12eacfdf376b2659e1c7c9e79ebbb1f1ab7",
+  "T001141_5029.zip": "d6db3fd60e5540e9648689f4dce89c1e8bda07a63dd0c84c5d8780c3489db3be",
+  "T001141_5030.zip": "91437d0391a6cfdbb337acfce99a58f36a3bc40099b2b504845c032aa8fd6f00",
+  "T001141_5031.zip": "1e3874d38c32572e3b59b52f0ec92cf0c0beb2e7b463a1f54c21d4f10325d1d1",
+  "T001141_5129.zip": "a95c4eff548d64380edb406a7fd5cfb7e928bde0dc195fedb11c3ec5a12ff538",
+  "T001141_5130.zip": "819d08e62880e807713164e37cc292cec551b7f9bffd07590aa99f6056c0d89b",
+  "T001141_5131.zip": "6c78de3748fd3007fc22a20008a7886f38cdfa00d6e4e8136064fbe38c9b8a5a",
+  "T001162_4829.zip": "147b84507bad4a65ccafd1b159c0d54ec1cb3d570eb71d8d45bad7173eae5038",
+  "T001162_4830.zip": "c9f1e4ae66feb0b39d8bb49d0f9aac577f9432aa50109f2f84b5f58bfdf738a3",
+  "T001162_4831.zip": "83519dd531964346d5fd4cd1d3c18f6ee6efbd4774569fdfd1b9d23660b0d43d",
+  "T001162_4929.zip": "db61e1851b088253b7f3e202400fd9bc8af8a662ceb9b0c23c1e3944303fce7e",
+  "T001162_4930.zip": "dd16b1185dbb9cc842eaa7ee5b12f8cd79cec015666b210f9c0e80ea9a2973a2",
+  "T001162_4931.zip": "52420956866b42cc1fd3624c169be91563531cd8a7b0568b7650750a7e9b51c1",
+  "T001162_5029.zip": "f120226f8e9e4fe495d282a0da97f8b8eac85a943524ff4618066b9433ea17c3",
+  "T001162_5030.zip": "7f44155ad18c7770f5861a4dc98c43124dfdda2a58c31945c1e7e8d9ee3f6ead",
+  "T001162_5031.zip": "f01892ed1d270fecbd056a831c76db83d7fc8c00258d644e1b5f46f7bba5635b",
+  "T001162_5129.zip": "106c0fbac7541c58663f06853bddd269573dc8a9fb9019e9ba3fc555a8c2a0ad",
+  "T001162_5130.zip": "2c8ea70a354a853d515ab2e29f0c573148082240b1ae4ef21a2c98f59a9d2070",
+  "T001162_5131.zip": "585801c1ebbd08da58570906c4a6df679eaf446d86712d1227c79a0b43b2da8e"
+ },
+ "residents": 9520606,
+ "jobs": {
+  "office": 1933140,
+  "shop": 1199173,
+  "civic": 1200837,
+  "leisure": 155616
+ },
+ "cells": [
+  931,
+  955
+ ]
+}

@@ -1,11 +1,24 @@
 import Foundation
 
 /// Independent photo-led static studies. Decision 408: the E200 draws the
-/// Chu-Kuang sets' locomotive and the 700T units the high-speed set
-/// (``Map3DTrainSet/highSpeed700T()``); their shapes are as made here.
+/// Chu-Kuang sets' locomotive; the 700T units drew the high-speed set
+/// until decision 988 (``Map3DTHSR700T``, the owner's old cars, has its
+/// place: these stay as the studies they were made as, and the 700T's
+/// colours, which the new cars wear too).
 public enum Map3DTrainShapeRefresh {
     public static let highSpeedBodyColor=Map3DPalette.shopAwnings[3]
     public static let highSpeedAccentColor=Map3DColor.shaded(Map3DPalette.tankStand,0.42)
+    /// Decision 983: the 700T's band, the real train's orange; the teal it
+    /// was built in until then (the game's own colour, decision 243's
+    /// time) is the paint a player can choose instead.
+    public static let highSpeedBandColor=Map3DPalette.highSpeedOrange
+    public static let highSpeedGameBandColor=Map3DPalette.shopAwnings[0]
+    /// Decision 983: the paints a line's 700T sets can wear.
+    static let highSpeedPaints=TrainPaintFamily(
+        id:"highSpeed",sets:[Map3DTHSR700T.key],english:"700T",chinese:"700T",
+        ownEnglish:"Orange band",ownChinese:"橘色帶",ownSwatch:highSpeedBandColor,
+        paints:[TrainPaint(id:"teal",english:"Teal band",chinese:"青綠帶",swatch:highSpeedGameBandColor,
+                           swaps:[TrainPaint.Swap(from:highSpeedBandColor,to:highSpeedGameBandColor)])])
     public static let highSpeedGlassColor=Map3DColor.shaded(Map3DPalette.glazing,0.5)
     public static let ids = ["refresh-e200", "refresh-700t-cab", "refresh-700t-middle", "refresh-700t-panto", "refresh-700t-tail"]
     public static func model(_ id: String) -> Map3DModelPack.Model { model(id, far: false) }
@@ -62,7 +75,6 @@ public enum Map3DTrainShapeRefresh {
 
 extension StationKitBuilder {
     private var refreshWhite: UInt32 { Map3DPalette.shopAwnings[3] }
-    private var refreshTeal: UInt32 { Map3DPalette.shopAwnings[0] }
     private var refreshGlass: UInt32 { Map3DColor.shaded(Map3DPalette.glazing,0.5) }
     private mutating func refreshRunning(_ centres: [Float], axles: [Float], radius: Float, gauge: Float) {
         // Twelve-sided cross sections include the true bottom contact point.
@@ -290,6 +302,7 @@ extension StationKitBuilder {
     mutating func refreshHighSpeed(cab: Bool,panto: Bool,far: Bool = false) {
         let hsrBody=Map3DTrainShapeRefresh.highSpeedBodyColor
         let hsrGlass=Map3DTrainShapeRefresh.highSpeedGlassColor
+        let hsrBand=Map3DTrainShapeRefresh.highSpeedBandColor
         // Decision 422: the far car on half the sections (the underside
         // the same arc) and eleven of the nose's 24 spans.
         let segments=far ? 20:40, bottom: Float=0.78, under=far ? 12...17:24...35
@@ -453,14 +466,14 @@ extension StationKitBuilder {
                 let j=(i+1)%segments
                 let shoulderBand = cab && xs[k]>=3.7
                 let teal = shoulderBand ? (20...23).contains(i) || (36...39).contains(i) : [21,22,23,36,37,38].contains(i)
-                let color: UInt32 = under.contains(i) ? Self.steel : teal ? refreshTeal:hsrBody
+                let color: UInt32 = under.contains(i) ? Self.steel : teal ? hsrBand:hsrBody
                 for triangle in [[rings[k][i],rings[k][j],rings[k+1][j]],[rings[k][i],rings[k+1][j],rings[k+1][i]]] {
                     if cab && xs[k]>=3.7 && !under.contains(i) {
                         let paint=nosePaintParts(triangle,xs[k],xs[k+1])
                         face(paint[0],inside:inside,color:hsrBody)
                         face(paint[1],inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                         let parts=hullParts(paint[2],xs[k],xs[k+1])
-                        face(parts.0,inside:inside,color:refreshTeal)
+                        face(parts.0,inside:inside,color:hsrBand)
                         face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                     } else if !under.contains(i) {
                         // Split the final sculpted shell along its shared paint boundary.
@@ -473,7 +486,7 @@ extension StationKitBuilder {
                             face(clip(panel,at:xs[k],xs[k+1],upper:false,offset:0.055),inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                         }
                         let parts=hullParts(clip(triangle,at:xs[k],xs[k+1],upper:false),xs[k],xs[k+1])
-                        face(parts.0,inside:inside,color:refreshTeal)
+                        face(parts.0,inside:inside,color:hsrBand)
                         face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                     } else {
                         let parts=hullParts(triangle,xs[k],xs[k+1])
@@ -491,7 +504,7 @@ extension StationKitBuilder {
                     face(paint[0],inside:inside,color:hsrBody)
                     face(paint[1],inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                     let parts=hullParts(paint[2],x-1,x+1)
-                    face(parts.0,inside:inside,color:refreshTeal)
+                    face(parts.0,inside:inside,color:hsrBand)
                     face(parts.1,inside:inside,color:Map3DTrainShapeRefresh.highSpeedAccentColor)
                 }
                 continue
@@ -685,4 +698,11 @@ extension StationKitBuilder {
         face(p,inside:c,color:color);face(back,inside:c,color:color)
         for i in p.indices { let j=(i+1)%p.count;face([p[i],back[i],back[j],p[j]],inside:c,color:color) }
     }
+}
+
+extension Map3DPalette {
+    /// Decision 983: the 700T's band, Taiwan High Speed Rail's orange: the
+    /// shade the 2D map has drawn its nose in since decision 243
+    /// (``TrainLivery/highSpeed``, the owner's city view's `hsr` livery).
+    public static let highSpeedOrange = Map3DColor.rgb(0xEA6A1E)
 }

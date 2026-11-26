@@ -257,7 +257,7 @@ extension RealBranchLine {
     func joinedTracks(_ runs: RealLineRuns, in railways: RealRailways) -> RealLineRuns {
         guard isUrban, after == nil, let first = runs.stops.first, let last = runs.stops.last else { return runs }
         var joined = runs
-        let layout = cars > RealLineLayout.lightRailCars ? RealLineLayout.metro : .lightRail
+        let layout = stationLayout
         for other in Self.urbanLines where other.shares == id && Self.leavesAt(system: other.system, network: other.network) != nil {
             guard let full = Self.metroRuns(of: "\(Self.dataSystem(of: other.system)):\(other.network)", after: nil, in: railways) else { continue }
             for name in Set([first, last]) {

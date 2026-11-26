@@ -4,10 +4,10 @@ import GameCore
 import XCTest
 
 /// A real place of Taiwan bought tile by tile (decision 167): the world is
-/// the island, the company owns the 16 km tile round where the player
-/// pointed, its land is read in whole as the game begins and as each next
-/// tile is bought, and the riders each tile asks follow the first tile's
-/// people.
+/// the island, the company owns the four 16 km tiles round where the player
+/// pointed (decision 992; one before), their land is read in whole as the
+/// game begins and each next tile's as it is bought, and the riders each
+/// tile asks follow the first tiles' people.
 ///
 /// Expected values are worked out from the rules, never taken from a
 /// previous run.
@@ -51,10 +51,10 @@ final class RealWorldExpansionTests: XCTestCase {
 
     // MARK: - The layout
 
-    /// Wherever in the box of Taiwan the player points, the first tile is
-    /// centred on it, the tiles are whole, and the island lies inside the
-    /// world.
-    func testTheLayoutCentresTheFirstTileOnThePickAndHoldsTheIsland() throws {
+    /// Wherever in the box of Taiwan the player points, the first four
+    /// tiles are centred on it, the tiles are whole, and the island lies
+    /// inside the world.
+    func testTheLayoutCentresTheFirstTilesOnThePickAndHoldsTheIsland() throws {
         // Kinmen and Matsu lie beyond the box and open one 16 km map.
         var picks = RealWorldPlace.taiwan.map(\.anchor).filter { RealWorldExpansion(around: $0) != nil }
         // The box's corners and edges exactly, and a grid over it.
@@ -79,12 +79,17 @@ final class RealWorldExpansionTests: XCTestCase {
             XCTAssertTrue((18...20).contains(columns) && (24...26).contains(rows), "\(columns) × \(rows) tiles: \(name)")
             XCTAssertLessThanOrEqual(bounds.width, WorldBounds.maximumSide)
             XCTAssertLessThanOrEqual(bounds.height, WorldBounds.maximumSide)
-            XCTAssertTrue((0..<rows).contains(layout.start.row) && (0..<columns).contains(layout.start.column), name)
-            // The pick is where the tile's middle is, to the centimetre.
+            let first = layout.startTiles[0]
+            XCTAssertEqual(layout.startTiles, [
+                first, MapTile(row: first.row, column: first.column + 1),
+                MapTile(row: first.row + 1, column: first.column), MapTile(row: first.row + 1, column: first.column + 1),
+            ], name)
+            XCTAssertTrue((0..<(rows - 1)).contains(first.row) && (0..<(columns - 1)).contains(first.column), name)
+            // The pick is where the four tiles meet, to the centimetre.
             let frame = layout.frame
             let middle = frame.worldPosition(latitude: anchor.latitudeDegrees, longitude: anchor.longitudeDegrees)
-            XCTAssertEqual(middle.x, (Double(layout.start.column) + 0.5) * tile, accuracy: 4, name)
-            XCTAssertEqual(middle.y, (Double(layout.start.row) + 0.5) * tile, accuracy: 4, name)
+            XCTAssertEqual(middle.x, Double(first.column + 1) * tile, accuracy: 4, name)
+            XCTAssertEqual(middle.y, Double(first.row + 1) * tile, accuracy: 4, name)
             // The island's box is inside the world.
             let northWest = frame.worldPosition(latitude: WholeTaiwan.north, longitude: WholeTaiwan.west)
             let southEast = frame.worldPosition(latitude: WholeTaiwan.south, longitude: WholeTaiwan.east)
@@ -92,9 +97,10 @@ final class RealWorldExpansionTests: XCTestCase {
             XCTAssertGreaterThanOrEqual(northWest.y, 0, name)
             XCTAssertLessThanOrEqual(southEast.x, Double(bounds.width), name)
             XCTAssertLessThanOrEqual(southEast.y, Double(bounds.height), name)
-            // No more world than the island needs: a tile and a half of sea
-            // at most beyond it on any side (the pick's tile may reach out).
-            XCTAssertLessThanOrEqual(northWest.x, 1.5 * tile + tile, name)
+            // No more world than the island needs: a tile of sea at most
+            // beyond it on any side (the four tiles may reach out to a tile
+            // past the pick).
+            XCTAssertLessThanOrEqual(northWest.x, tile + 1, name)
         }
     }
 
@@ -104,12 +110,12 @@ final class RealWorldExpansionTests: XCTestCase {
         let taipei = try expansion("tra-taipei"), kaohsiung = try expansion("tra-kaohsiung")
         XCTAssertNotEqual(taipei.anchor, kaohsiung.anchor)
         XCTAssertNotEqual(taipei.anchor, WholeTaiwan.anchor)
-        XCTAssertNotEqual(taipei.start, kaohsiung.start)
+        XCTAssertNotEqual(taipei.startTiles, kaohsiung.startTiles)
         // The same pick, the same layout.
         XCTAssertEqual(try expansion("tra-taipei"), taipei)
         // A tile's ground is a new game's 16.384 km at the anchor's scale.
         let frame = taipei.frame
-        let start = taipei.start
+        let start = taipei.startTiles[0]
         let west = frame.coordinate(worldX: Double(start.column) * tile, worldY: (Double(start.row) + 0.5) * tile)
         let east = frame.coordinate(worldX: Double(start.column + 1) * tile, worldY: (Double(start.row) + 0.5) * tile)
         let kilometres = (east.longitude - west.longitude) * .pi / 180 * 6_378.137 * cos(west.latitude * .pi / 180)
@@ -129,24 +135,26 @@ final class RealWorldExpansionTests: XCTestCase {
 
     // MARK: - The game
 
-    func testANewGameOwnsOnlyItsFirstTileAndReadsNoLandYet() throws {
+    func testANewGameOwnsOnlyItsFirstTilesAndReadsNoLandYet() throws {
         let layout = try expansion("tra-hualien")
         let world = GameWorld.newRealWorldExpansionGame(layout, ridersStep: 12_000, eventSeed: 9)
         XCTAssertEqual(world.bounds, layout.bounds)
         XCTAssertEqual(world.geoAnchor, layout.anchor)
-        XCTAssertEqual(world.mapExpansion, MapExpansion(owned: [layout.start], townSeed: nil, ridersStep: 12_000))
-        XCTAssertEqual(world.mapTilesForSale().count, 4, "the island is wide enough for the tiles on every side of Hualien")
+        XCTAssertEqual(world.mapExpansion, MapExpansion(owned: layout.startTiles, townSeed: nil, ridersStep: 12_000, granted: 4))
+        XCTAssertEqual(world.mapExpansion?.bought, 0)
+        XCTAssertEqual(world.mapTilesForSale().count, 8, "the island is wide enough for the tiles on every side of Hualien's four")
         XCTAssertEqual(world.landBlocks, [])
         XCTAssertTrue(world.land.isEmpty)
         XCTAssertTrue(world.landDemand && world.cityBuildings, "a new game's city, once its land comes")
         XCTAssertTrue(world.outsideConnections, "the towns beyond stand in for the tiles not bought yet, as on any map but the island")
         XCTAssertTrue(world.distanceDemand, "short trips still walk")
         XCTAssertEqual(world.accounts.mode, .management)
-        // Only on the tile owned.
+        // Only on the tiles owned.
         var built = world
-        let outside = PlanPoint(x: Int64((Double(layout.start.column) + 1.5) * tile), y: Int64((Double(layout.start.row) + 0.5) * tile))
+        let first = layout.startTiles[0]
+        let outside = PlanPoint(x: Int64((Double(first.column) + 2.5) * tile), y: Int64((Double(first.row) + 0.5) * tile))
         XCTAssertThrowsError(try built.buildStation(named: "Beyond", at: outside)) { error in
-            XCTAssertEqual(error as? GameError, .mapTileNotOwned(MapTile(row: layout.start.row, column: layout.start.column + 1)))
+            XCTAssertEqual(error as? GameError, .mapTileNotOwned(MapTile(row: first.row, column: first.column + 2)))
         }
         // The save holds the step, and loads.
         let saved = try JSONEncoder().encode(SavedGame(world: world))
@@ -157,8 +165,8 @@ final class RealWorldExpansionTests: XCTestCase {
         XCTAssertLessThan(saved.count, 40_000, "no land yet: the sights' and the airports' few tens of kilobytes at most")
     }
 
-    /// The first tile's land is all there when the game begins: exactly the
-    /// cells a whole import would give its blocks.
+    /// The first tiles' land is all there when the game begins: exactly the
+    /// cells a whole import would give their blocks.
     func testTheFirstTilesLandIsReadWhenTheGameBegins() throws {
         let layout = try expansion("tra-hualien")
         let session = GameSession(world: .newRealWorldExpansionGame(layout, ridersStep: 10_000), language: .english)
@@ -166,14 +174,14 @@ final class RealWorldExpansionTests: XCTestCase {
         session.places = Self.places
         session.readLandRoundStations()
         let world = session.world
-        let blocks = layout.start.landBlocks(in: layout.bounds)
-        XCTAssertEqual(blocks.count, 256, "16 × 16 blocks of 1,024 m")
+        let blocks = layout.startTiles.flatMap { $0.landBlocks(in: layout.bounds) }
+        XCTAssertEqual(blocks.count, 1_024, "four tiles of 16 × 16 blocks of 1,024 m")
         XCTAssertEqual(world.landBlocks, blocks.sorted())
         let expected = LandImport.cells(in: Set(blocks), population: Self.population, places: Self.places, frame: layout.frame, bounds: layout.bounds)
         XCTAssertEqual(world.land.cells, expected)
         XCTAssertEqual(world.buildings.all.count, expected.count)
         let residents = expected.reduce(0) { $0 + $1.residents }
-        XCTAssertGreaterThan(residents, 150_000, "Hualien's tile holds some 190,000")
+        XCTAssertGreaterThan(residents, 150_000, "Hualien's tile alone held some 190,000")
         XCTAssertEqual(world.land.cells.reduce(0) { $0 + $1.residents }, residents)
         // Again: nothing more to read, nothing changes.
         session.readLandRoundStations()
@@ -190,7 +198,7 @@ final class RealWorldExpansionTests: XCTestCase {
         session.population = Self.population
         session.places = Self.places
         session.readLandRoundStations()
-        XCTAssertEqual(session.world.landBlocks?.count, 256)
+        XCTAssertEqual(session.world.landBlocks?.count, 1_024)
         XCTAssertFalse(session.world.land.isEmpty)
     }
 
@@ -206,24 +214,25 @@ final class RealWorldExpansionTests: XCTestCase {
         session.places = Self.places
         session.readLandRoundStations()
         let first = session.world
-        XCTAssertEqual(first.landBlocks?.count, 256)
+        XCTAssertEqual(first.landBlocks?.count, 1_024)
 
-        let north = MapTile(row: layout.start.row - 1, column: layout.start.column)
+        // North of the north-east one of the four: the Taoyuan coast.
+        let north = MapTile(row: layout.startTiles[1].row - 1, column: layout.startTiles[1].column)
         session.startChoosingMapTile()
         let inside = PlanPoint(x: Int64((Double(north.column) + 0.5) * tile), y: Int64((Double(north.row) + 0.5) * tile))
         XCTAssertTrue(session.tapMapExpansion(at: inside))
         XCTAssertTrue(session.buyChosenMapTile())
         let bought = session.world
-        XCTAssertEqual(bought.mapExpansion?.owned, [north, layout.start])
-        let blocks = north.landBlocks(in: layout.bounds) + layout.start.landBlocks(in: layout.bounds)
+        XCTAssertEqual(bought.mapExpansion?.owned, [north] + layout.startTiles)
+        let blocks = north.landBlocks(in: layout.bounds) + layout.startTiles.flatMap { $0.landBlocks(in: layout.bounds) }
         XCTAssertEqual(bought.landBlocks, blocks.sorted())
         let expected = LandImport.cells(in: Set(blocks), population: Self.population, places: Self.places, frame: layout.frame, bounds: layout.bounds)
         XCTAssertEqual(bought.land.cells, expected)
-        XCTAssertGreaterThan(bought.land.cells.count, first.land.cells.count, "Zhubei and Zhongli lie in the tile to the north")
+        XCTAssertGreaterThan(bought.land.cells.count, first.land.cells.count, "Xinwu and Guanyin lie in the tile to the north")
         XCTAssertEqual(session.message?.kind, .success)
 
         session.undo()
-        XCTAssertEqual(session.world.mapExpansion?.owned, [layout.start])
+        XCTAssertEqual(session.world.mapExpansion?.owned, layout.startTiles)
         XCTAssertEqual(session.world.landBlocks, first.landBlocks)
         XCTAssertEqual(session.world.land.cells, first.land.cells)
     }
@@ -238,9 +247,10 @@ final class RealWorldExpansionTests: XCTestCase {
         let session = GameSession(world: world, language: .english)
         session.population = Self.population
         session.places = Self.places
-        let edge = PlanPoint(x: Int64((Double(layout.start.column) + 1) * tile) - 64_000, y: Int64((Double(layout.start.row) + 0.5) * tile))
+        let first = layout.startTiles[0]
+        let edge = PlanPoint(x: Int64((Double(first.column) + 2) * tile) - 64_000, y: Int64((Double(first.row) + 0.5) * tile))
         try session.performEdit { world throws(GameError) in _ = try world.buildStation(named: "Edge", at: edge) }
-        let east = MapTile(row: layout.start.row, column: layout.start.column + 1)
+        let east = MapTile(row: first.row, column: first.column + 2)
         let eastBlocks = Set(east.landBlocks(in: layout.bounds))
         let reached = Set(session.world.landBlocks ?? []).intersection(eastBlocks)
         XCTAssertFalse(reached.isEmpty, "the station's 2 km reach crosses the edge")
@@ -248,7 +258,7 @@ final class RealWorldExpansionTests: XCTestCase {
         session.startChoosingMapTile()
         XCTAssertTrue(session.tapMapExpansion(at: PlanPoint(x: Int64((Double(east.column) + 0.5) * tile), y: edge.y)))
         XCTAssertTrue(session.buyChosenMapTile())
-        XCTAssertEqual(Set(session.world.landBlocks ?? []), Set(layout.start.landBlocks(in: layout.bounds)).union(eastBlocks))
+        XCTAssertEqual(Set(session.world.landBlocks ?? []), Set(layout.startTiles.flatMap { $0.landBlocks(in: layout.bounds) }).union(eastBlocks))
     }
 
     /// The edge of the world cuts the last tiles: only the blocks inside it.
@@ -288,6 +298,13 @@ final class RealWorldExpansionTests: XCTestCase {
         let taitung = try expansion("tra-taitung"), taipei = try expansion("tra-taipei")
         let country = taitung.ridersStep(population: Self.population, places: Self.places, water: nil)
         XCTAssertTrue((19_000...23_000).contains(country), "Taitung's tile: \(country)")
+        // Decision 992: one tile's worth round the pick, a quarter of each
+        // of the four, as when a game started with that one tile.
+        XCTAssertEqual(taitung.middleBlocks.count, 256)
+        XCTAssertTrue(taitung.middleBlocks.isSubset(of: taitung.startTiles.flatMap { $0.landBlocks(in: taitung.bounds) }))
+        for tile in taitung.startTiles {
+            XCTAssertEqual(Set(tile.landBlocks(in: taitung.bounds)).intersection(taitung.middleBlocks).count, 64)
+        }
         XCTAssertEqual(taipei.ridersStep(population: Self.population, places: Self.places, water: nil), MapExpansion.standardRidersStep)
     }
 
@@ -311,12 +328,12 @@ final class RealWorldExpansionTests: XCTestCase {
         let layout = try expansion("tra-hualien")
         XCTAssertEqual(world.bounds, layout.bounds)
         XCTAssertEqual(world.geoAnchor, layout.anchor)
-        XCTAssertEqual(world.mapExpansion?.owned, [layout.start])
+        XCTAssertEqual(world.mapExpansion?.owned, layout.startTiles)
         XCTAssertEqual(world.mapExpansion?.ridersStep, layout.ridersStep(population: Self.population, places: Self.places, water: nil))
         XCTAssertLessThan(try XCTUnwrap(world.mapExpansion?.ridersStep), MapExpansion.standardRidersStep)
-        XCTAssertEqual(world.landBlocks?.count, 256, "the first tile's land is read as the game begins")
+        XCTAssertEqual(world.landBlocks?.count, 1_024, "the first tiles' land is read as the game begins")
         XCTAssertFalse(world.land.isEmpty)
-        XCTAssertEqual(launcher.session?.mapExpansionText?.hasPrefix("Map: 1 of "), true)
+        XCTAssertEqual(launcher.session?.mapExpansionText?.hasPrefix("Map: 4 of "), true)
 
         // A place beyond Taiwan is a 16 km square, as before.
         launcher.startNewGame(at: try place("shanghai").anchor)
@@ -334,8 +351,8 @@ final class RealWorldExpansionTests: XCTestCase {
         let world = GameWorld.newRealWorldExpansionGame(layout, ridersStep: 10_000)
         let region = try XCTUnwrap(WorldRegion.opening(in: world))
         XCTAssertEqual(region, WorldRegion.owned(in: world))
-        XCTAssertEqual(region.width, tile, accuracy: 1)
-        XCTAssertEqual(region.height, tile, accuracy: 1)
+        XCTAssertEqual(region.width, 2 * tile, accuracy: 1)
+        XCTAssertEqual(region.height, 2 * tile, accuracy: 1)
         XCTAssertEqual(WorldRegion.opening(in: .newWholeTaiwanGame()), WorldRegion(bounds: WholeTaiwan.bounds))
         let blank = GameWorld.newGame(buysMap: true)
         let town = try XCTUnwrap(blank.roads?.towns.first).middle

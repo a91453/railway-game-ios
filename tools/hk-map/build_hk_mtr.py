@@ -307,6 +307,10 @@ LANDSD = "Lands Department DTM"
 LANDSD_BUILDINGS = "Lands Department Building"
 # Decision 835: the Planning Department's land use grid.
 PLAND = "Planning Department land utilization"
+# Decision 1008: the census's residents and the survey's jobs
+# (`tools/census-grid/hongkong_census_grid.py`).
+CENSTATD = "Census and Statistics Department"
+PLAND_UNITS = "Planning Department planning units"
 # Decision 712: how far Hong Kong's map reaches, in degrees: the box of
 # WorldPop's grid of Hong Kong (`build_hk_ground.py`), which holds all its
 # land and every line here, some 62 km by 45 km. The game lays the city's
@@ -323,7 +327,12 @@ SOURCES = {
                           "storeys where not measured (from the measured ones and the people round them)": OURS},
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_hk_basemap.py)": OSM,
                         "the mainland's shore closed past the extract": OURS},
-    "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
+    "population.json": {"runs (the 2021 Population Census's residents of each Small Subunit Group, on its homes)": CENSTATD,
+                        "jobs (persons engaged in 2021 in each Tertiary Planning Unit, table 215-16009, on its "
+                        "workplaces)": CENSTATD,
+                        "the Tertiary Planning Units' outlines": PLAND_UNITS,
+                        "where the homes and workplaces are (2025 land use)": PLAND,
+                        "the 7.5 arc-second cells and the kinds of job": OURS},
     # Decision 726 (build_hk_ground_grids.py).
     "heights.dat": {"heights (the mean of the model's 5 m samples in each 1.875 arc-second cell)": LANDSD,
                     "where the sea and the shore are": OSM, "water's surface and the sea at 0": OURS},
@@ -355,6 +364,14 @@ def write_manifest(folder):
         MTR: "MTR Corporation Limited, DATA.GOV.HK Terms and Conditions of Use",
     }
     if "population.json" in files:
+        licences[CENSTATD] = ("2021 Population Census (Small Subunit Groups) and Quarterly Survey of Employment and "
+                              "Vacancies (table 215-16009), Census and Statistics Department, Government of the Hong Kong "
+                              "SAR, via DATA.GOV.HK and the CSDI Portal; DATA.GOV.HK Terms and Conditions of Use")
+        licences[PLAND_UNITS] = ("Boundaries of Tertiary Planning Units and Subunits (2021 Population Census), Planning "
+                                 "Department, Government of the Hong Kong SAR, via the CSDI Portal; CSDI Portal Terms "
+                                 "and Conditions of Use")
+    if "buildings.pmtiles" in files:
+        # The storeys of the unmeasured buildings were estimated from WorldPop's people (build_hk_buildings.py).
         licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
     if "heights.dat" in files:
         licences[LANDSD] = ("Digital Terrain Model, Lands Department, Government of the Hong Kong SAR, via the CSDI Portal; "

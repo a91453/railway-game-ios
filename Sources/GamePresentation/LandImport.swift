@@ -125,10 +125,23 @@ public enum LandImport {
             let source = grid.cell(latitude: grid.north, longitude: longitude).column
             columnSpans[source] = (columnSpans[source]?.lowerBound ?? column)...column
         }
+        // Decision 1000: the places count on the people's cells only where
+        // the two grids are one: Taiwan's places on a map abroad, on a grid
+        // of its own, would be counted by the row and column of another
+        // place on the Earth.
+        let sharedPlaces = places.flatMap { places in
+            places.layers.values.allSatisfy { $0.north == grid.north && $0.west == grid.west && $0.cellDegrees == grid.cellDegrees } ? places : nil
+        }
         // The jobs of a WorldPop cell: in offices, shops, schools and
         // sights (decision 91 keeps the last two apart).
         func jobs(_ cell: GridCounts.Cell) -> (office: Int64, shop: Int64, civic: Int64, leisure: Int64) {
-            guard let places else { return (0, 0, 0, 0) }
+            // Decision 1000: a grid with its own jobs (a census of
+            // workplaces) gives them, and the places are not counted.
+            if population.hasJobs {
+                func count(_ kind: PopulationGrid.JobKind) -> Int64 { Int64(population.jobs(of: kind, in: cell)) }
+                return (count(.office), count(.shop), count(.civic), count(.leisure))
+            }
+            guard let places = sharedPlaces else { return (0, 0, 0, 0) }
             func count(_ kind: PlaceGrid.Kind) -> Int64 {
                 Int64(places.layers[kind]?.counts[cell] ?? 0) * (jobsPerPlace[kind] ?? 0)
             }
@@ -168,7 +181,10 @@ public enum LandImport {
             closedLand?.kind(atLatitude: latitudes[row], longitude: longitudes[column]) != nil
         }
         var sources = Set(grid.counts.keys)
-        if let places {
+        for layer in population.jobs.values {
+            sources.formUnion(layer.counts.keys)
+        }
+        if let places = sharedPlaces, !population.hasJobs {
             for layer in places.layers.values {
                 sources.formUnion(layer.counts.keys)
             }

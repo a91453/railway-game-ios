@@ -147,11 +147,40 @@ CHOICE = 40
 # Hashimoto in the west to the airport in the east, Hakata Bay and Kaizuka
 # in the north, with room to the north for Nishitetsu's Kaizuka Line
 # (NISHITETSU-KAIZUKA, later); some 17.6 km by 22.2 km.
-# The map now (KUMAMOTO-GROUND: south and east to Kumamoto, decision 969) and
-# what it was before it grew, oldest first (`pack.json`'s `earlier`): the
-# north and west edges never move.
-EXTENT = {"north": 33.72, "south": 32.69, "west": 130.29, "east": 130.90}
-EARLIER = [{"north": 33.72, "south": 33.52, "west": 130.29, "east": 130.48}]
+# The map now and what it was before it grew, oldest first (`pack.json`'s
+# `earlier`). Decision 991 (JAPAN-PREFECTURE-PACKS): the whole of Fukuoka,
+# Saga and Kumamoto Prefectures (their land as OpenStreetMap's roads reach
+# it; Okinoshima, 60 km out at sea, left out), cut into a pack for each
+# prefecture (`split_prefectures.py`). Its north and west edges moved, so
+# the map is laid anew round it (no `earlier`), a new game owning the 2 x 2
+# tiles round one of `STARTS` (the middle of Fukuoka, Saga or Kumamoto
+# City; the first unless the player picks another); the games laid over the map before
+# stay on `OLDER`, which keeps their north-west corner and grows to the new
+# south and east edges (decision 969's rule). Decision 997
+# (NAGASAKI-PACK): the west edge moved again, from 129.73 to 129.34, to take
+# in Nagasaki Prefecture as its roads reach it (the mainland, and Hirado,
+# Ikitsuki and Saikai's islands over their bridges; Goto and Tsushima, out
+# at sea, left out), a fourth part and a fourth start; the games laid over
+# decision 991's map stay on it, the last of `OLDER`.
+EXTENT = {"north": 34.03, "south": 32.09, "west": 129.34, "east": 131.33}
+EARLIER = []
+STARTS = [
+    {"name": "福岡", "english": "Fukuoka", "latitude": 33.62, "longitude": 130.385},
+    {"name": "佐賀", "english": "Saga", "latitude": 33.264, "longitude": 130.30},
+    {"name": "熊本", "english": "Kumamoto", "latitude": 32.80, "longitude": 130.71},
+    {"name": "長崎", "english": "Nagasaki", "latitude": 32.75, "longitude": 129.88},
+]
+OLDER = [{
+    "extent": {"north": 33.72, "south": 32.09, "west": 130.29, "east": 131.33},
+    "earlier": [
+        {"north": 33.72, "south": 33.52, "west": 130.29, "east": 130.48},
+        {"north": 33.72, "south": 32.69, "west": 130.29, "east": 130.90},
+    ],
+}, {
+    # Decision 991's three prefectures, laid round their middle, before
+    # decision 997 moved the west edge to take in Nagasaki Prefecture.
+    "extent": {"north": 34.03, "south": 32.09, "west": 129.73, "east": 131.33},
+}]
 SKIPPED_SERVICE = {"yard", "siding", "spur", "crossover"}
 
 
@@ -446,9 +475,11 @@ def write(folder, name, value):
 
 
 OSM, MLIT, OURS = "OpenStreetMap", "National Land Numerical Information (railway data N02, 2025), MLIT", "this project"
-WORLDPOP, GSI = "WorldPop", "GSI elevation tiles"
+ESTAT, GSI = "e-Stat (Statistics Bureau of Japan)", "GSI elevation tiles"
 SOURCES = {
-    "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
+    # JAPAN-CENSUS-GRID (decision 1000): tools/census-grid/japan_census_grid.py.
+    "population.json": {"runs (residents, 2020 Population Census, 500 m grid, spread over 7.5 arc-second cells)": ESTAT,
+                        "jobs (workers, 2021 Economic Census for Business Activity, 500 m grid, by industry)": ESTAT},
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_fukuoka_ground.py basemap)": OSM,
                         "the coast closed along the extract's edge": OURS},
     "buildings.pmtiles": {"outlines, uses, tagged storeys and heights (build_fukuoka_ground.py buildings)": OSM,
@@ -484,7 +515,8 @@ def write_manifest(folder):
              for name in sorted(SOURCES) if os.path.exists(os.path.join(folder, name))}
     licences = {OSM: "© OpenStreetMap contributors, ODbL 1.0", MLIT: MLIT_CREDIT}
     if "population.json" in files:
-        licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
+        licences[ESTAT] = ("「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））"
+                           "を加工して作成 (e-Stat terms of use, Government of Japan Standard Terms of Use 2.0, compatible with CC BY 4.0)")
     if "heights.dat" in files:
         licences[GSI] = "国土地理院の標高タイルを加工して作成 (国土地理院コンテンツ利用規約, compatible with CC BY 4.0)"
     write(folder, "pack.json", {
@@ -495,7 +527,9 @@ def write_manifest(folder):
                    "railways, read from this folder alone. Made by tools/fukuoka-map (README.md there).",
         "bytes": sum(f["bytes"] for f in files.values()),
         "extent": EXTENT,
-        "earlier": EARLIER,
+        **({"earlier": EARLIER} if EARLIER else {}),
+        "starts": STARTS,
+        "older": OLDER,
         "licences": licences,
         "files": files,
     })

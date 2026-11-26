@@ -551,6 +551,12 @@ public final class GameLauncher {
                 preferences.christmasLiveries?[moved] = lines
                 savePreferences()
             }
+            // Decision 983: and its trains' paints.
+            if let paints = preferences.trainPaints?[row] {
+                preferences.trainPaints?[row] = nil
+                preferences.trainPaints?[moved] = paints
+                savePreferences()
+            }
         }
         keptTwiceToTell += outcome.keptBoth.count
         guard session == nil else { return }
@@ -572,9 +578,9 @@ public final class GameLauncher {
     /// Starts a new game: on a blank map, bought tile by tile as the
     /// railway grows (decision 160), or with `anchor` on a real-world map
     /// with its middle there (Stage E2). A place of Taiwan, with the app's
-    /// people, is the island bought tile by tile from the 16 km round it
-    /// (decision 167, ``RealWorldExpansion``); any other place is a 16 km
-    /// map.
+    /// people, is the island bought tile by tile from the 32 km round it
+    /// (decision 167, ``RealWorldExpansion``; 16 km before decision 992);
+    /// any other place is a 16 km map.
     ///
     /// Decision 177: it starts with the player's ``newGameOptions``
     /// (standard unless changed): the cash, the disruptions, the rules
@@ -820,8 +826,14 @@ public final class GameLauncher {
     /// its map pack says, its land read in round each station as it is
     /// built. `false`, with a message, while the city's ground is not read
     /// (the real-world data still loading, or the city not open).
+    ///
+    /// Decision 992: on a map that buys its land, the game starts with four
+    /// tiles, or with the whole map open when `wholeMap` (counting no
+    /// achievements); a demo has the whole map, as on Taiwan.
+    /// Decision 999: on a map with places to begin round
+    /// (``MapPack/Layout/starts``), round the `start`th of them.
     @discardableResult
-    public func startOverseasMap(_ city: OverseasMap) -> Bool {
+    public func startOverseasMap(_ city: OverseasMap, wholeMap: Bool = false, start: Int = 0) -> Bool {
         guard let ground = overseasGrounds.first(where: { $0.city == city }) else {
             // Decision 858: its map pack is not on the device yet.
             let waiting = overseasAwaited.contains { $0.city == city } ? city.notDownloadedText(MapPackDownloads.status(city), in: language) : nil
@@ -831,7 +843,9 @@ public final class GameLauncher {
         // Decision 712: the city's flights open its map.
         guard takeMap(city.rawValue) else { return false }
         let options = newGameOptions
-        var world = GameWorld.newOverseasGame(ground, balance: options.startingBalance, eventSeed: options.eventSeed())
+        var world = GameWorld.newOverseasGame(
+            ground, wholeMap: wholeMap || isDemoMode, balance: options.startingBalance, eventSeed: options.eventSeed(), start: start
+        )
         options.apply(to: &world)
         if isDemoMode { world.setUnlimitedFunds(true) }
         // Decision 726: on the city's own ground, when its pack has heights.
@@ -940,8 +954,9 @@ public final class GameLauncher {
         // Decision 266: nor do the lessons count.
         // 2026-11-14: nor the whole of Taiwan, open from the start, as
         // the map picker says (fair to the maps bought tile by tile).
+        // Decision 992: nor a city's map opened whole.
         guard !session.news.isDemo, session.tutorial == nil, session.lesson == nil, !session.world.economy.unlimitedFunds,
-              !session.world.isWholeTaiwan else { return }
+              !session.world.isWholeTaiwan, !session.world.wholeMapOpen else { return }
         let facts = AchievementFacts(world: session.world)
         let scope = Self.achievementScope(of: session.world)
         let unlocked = achievements.unlock(meeting: facts, at: date, only: scope)
@@ -994,6 +1009,40 @@ public final class GameLauncher {
         all[row] = lines.isEmpty ? nil : lines
         guard all != preferences.christmasLiveries ?? [:] else { return }
         preferences.christmasLiveries = all.isEmpty ? nil : all
+        savePreferences()
+    }
+
+    /// Decision 983: gives `session` the paints `row`'s lines wore (kept
+    /// on the device, not in the save) and keeps each change the player
+    /// makes.
+    func attachTrainPaints(to session: GameSession, row: String?) {
+        var chosen: [LineID: [String: String]] = [:]
+        for (line, paints) in row.flatMap({ preferences.trainPaints?[$0] }) ?? [:] {
+            guard let number = Int(line), !paints.isEmpty else { continue }
+            chosen[LineID(rawValue: number)] = paints
+        }
+        session.trainPaintChosen = chosen
+        session.trainPaintChanged = { [weak self, weak session] _ in
+            guard let self, let session, self.session === session else { return }
+            self.keepTrainPaints()
+        }
+    }
+
+    /// Decision 983: writes the game's trains' paints under its row. A
+    /// game not saved yet takes its row now, as for the Christmas livery
+    /// (decision 814): its autosaves name that row, so the paints come
+    /// back with them when the app reopens.
+    func keepTrainPaints(at date: Date = Date()) {
+        guard let session, !isLookingAtSharedNetwork else { return }
+        if gameRow == nil, !session.trainPaintChosen.isEmpty {
+            gameRow = library.newRow(at: date)
+        }
+        guard let row = gameRow else { return }
+        var all = preferences.trainPaints ?? [:]
+        let lines = Dictionary(uniqueKeysWithValues: session.trainPaintChosen.map { (String($0.key.rawValue), $0.value) })
+        all[row] = lines.isEmpty ? nil : lines
+        guard all != preferences.trainPaints ?? [:] else { return }
+        preferences.trainPaints = all.isEmpty ? nil : all
         savePreferences()
     }
 
@@ -2012,6 +2061,8 @@ public final class GameLauncher {
         gameRow = row
         // Decision 795: the lines this game's row wore the livery on.
         attachChristmasLivery(to: started, row: row)
+        // Decision 983: and the paints its lines' trains wore.
+        attachTrainPaints(to: started, row: row)
         gamesBegun += 1
         gameIsOpen.value = true
         startLessonClock()
@@ -2151,6 +2202,7 @@ public final class GameLauncher {
         let row = (name == nil ? gameRow : nil) ?? library.newRow(at: date, besides: [gameRow].compactMap { $0 })
         gameRow = row
         keepChristmasLivery()
+        keepTrainPaints()
         return write(session.worldToSave, news: session.news, as: .manual, at: date, named: name, row: row) { [weak self, weak session] result in
             switch result {
             case .success(let entry):

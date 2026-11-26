@@ -75,7 +75,7 @@ struct OSMMapBackground: UIViewRepresentable {
         }
         let taiwan = city == nil && BaseMapStyle.drawsTaiwan(anchor: realWorld.anchor, water: water) && BaseMapFiles.tiles != nil
         map.show(
-            style: BaseMapFiles.styleAddress(taiwan: taiwan, city: city.map { ($0.city.rawValue, $0.tiles, $0.terrain) }, dark: dark)
+            style: BaseMapFiles.styleAddress(taiwan: taiwan, city: city.map { ($0.city.rawValue, $0.tiles, $0.terrain, $0.parts) }, dark: dark)
                 ?? OpenStreetMapBase.styleURL(dark: dark),
             language: language,
             railways: railways,
@@ -644,26 +644,28 @@ enum BaseMapFiles {
     /// Decision 858: of the packs read now, so a pack downloaded after the
     /// first look is in from then on; worked out again only when a
     /// download is taken or forgotten (``MapPackDownloads/changes``).
-    static var cityTiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)] {
+    /// Decision 991: with the base maps of the parts of its map
+    /// downloaded apart (``MapPack/baseMapFiles``).
+    static var cityTiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?, parts: [URL])] {
         let changes = MapPackDownloads.changes
         if let kept = cityTilesKept, kept.changes == changes { return kept.tiles }
-        let tiles = OverseasMap.allCases.compactMap { city -> (city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)? in
+        let tiles = OverseasMap.allCases.compactMap { city -> (city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?, parts: [URL])? in
             guard OverseasMaps.open.contains(city), let pack = MapPack.current(city), let tiles = pack.baseMapFile,
                   let extent = try? pack.extent()
             else { return nil }
-            return (city, extent, tiles, pack.terrainFile)
+            return (city, extent, tiles, pack.terrainFile, Array(pack.baseMapFiles.dropFirst()))
         }
         cityTilesKept = (changes, tiles)
         return tiles
     }
 
-    private static var cityTilesKept: (changes: Int, tiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?)])?
+    private static var cityTilesKept: (changes: Int, tiles: [(city: OverseasMap, extent: MapPack.Extent, tiles: URL, terrain: URL?, parts: [URL])])?
 
     /// Decision 712: the buildings of the open cities outside Taiwan,
     /// for the 3D map; a city whose pack has none is left out.
     /// Decision 858: of the packs read now.
     static var cityFootprints: [URL] {
-        cityPacks.compactMap(\.buildingsFile)
+        cityPacks.flatMap(\.buildingsFiles)
     }
 
     /// Taiwan's ground heights for the hill shading, `nil` if the app has
@@ -758,11 +760,11 @@ enum BaseMapFiles {
     /// The address of the style file for Taiwan's tiles or OpenFreeMap's,
     /// light or dark, writing it the first time; `nil` if it cannot be
     /// written.
-    static func styleAddress(taiwan: Bool, city: (name: String, tiles: URL, terrain: URL?)? = nil, dark: Bool) -> String? {
+    static func styleAddress(taiwan: Bool, city: (name: String, tiles: URL, terrain: URL?, parts: [URL])? = nil, dark: Bool) -> String? {
         let name = "BaseMapStyle-\(taiwan ? "taiwan" : city?.name ?? "world")-\(dark ? "dark" : "light").json"
         // Decision 858: a city's style is written again when its pack's
         // files lie elsewhere (a newer download of it).
-        let key = name + (taiwan ? "" : city?.tiles.path ?? "")
+        let key = name + (taiwan ? "" : ([city?.tiles.path ?? ""] + (city?.parts.map(\.path) ?? [])).joined(separator: "|"))
         if let address = written[key] { return address }
         let source: BaseMapStyle.Tiles = if taiwan, let tiles {
             .bundled(pmtiles: tiles.absoluteString)
@@ -773,7 +775,8 @@ enum BaseMapFiles {
         }
         guard let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
               let data = try? BaseMapStyle.json(
-                tiles: source, dark: dark, glyphs: glyphs, terrain: taiwan ? terrain?.absoluteString : city?.terrain?.absoluteString
+                tiles: source, dark: dark, glyphs: glyphs, terrain: taiwan ? terrain?.absoluteString : city?.terrain?.absoluteString,
+                parts: taiwan ? [] : city?.parts.map(\.absoluteString) ?? []
               )
         else { return nil }
         let file = caches.appendingPathComponent(name)

@@ -36,7 +36,7 @@ final class HolidayTests: XCTestCase {
 
     func testEveryCountrysHolidaysFitTheGameYear() {
         XCTAssertNotNil(HolidayCalendar.countries[HolidayCalendar.home])
-        XCTAssertEqual(HolidayCalendar.countries.count, 24)
+        XCTAssertEqual(HolidayCalendar.countries.count, 25)
         for (country, holidays) in HolidayCalendar.countries {
             XCTAssertEqual(country.count, 2, country)
             XCTAssertFalse(holidays.isEmpty, country)

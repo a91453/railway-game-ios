@@ -46,6 +46,8 @@ extension RealLineLaying {
     /// ``RealLineAcquisition/besideIslandOffset`` on the left; another
     /// end's one either side, level by level.
     static func endStationSides(of line: RealBranchLine, name: String, loops: Int, layout: RealLineLayout) -> [(Double, Int, Bool)] {
+        // Decision 995: the real station's.
+        if let real = RealBranchLine.realLoops(system: line.system, network: line.network, name: name, end: true) { return real }
         let offset = layout.loopOffset
         let island = line.islandStations.contains(name) && (line.isUrban || loops <= 2)
         if island {
@@ -74,9 +76,23 @@ extension RealLineLaying {
     /// 605). SHARED-STATION-THROUGH.
     static func throughStationExtent(of line: RealBranchLine, name: String, tracks: Int, overtakes: Bool, layout: RealLineLayout) -> ClosedRange<Double> {
         let second = !line.isDoubleTrack ? 0 : line.islandStations.contains(name) ? RealLineAcquisition.islandSpacing : HighSpeedDemo.trackOffset
+        let sides = throughStationSides(of: line, name: name, tracks: tracks, overtakes: overtakes, layout: layout)
+        let left = second + (sides.filter(\.2).map { -$0.0 }.max() ?? 0)
+        return -left...max(0, sides.filter { !$0.2 }.map(\.0).max() ?? 0)
+    }
+
+    /// The loops of a station between a line's ends, each its offset (from
+    /// the second track where it leaves that), its level and whether it
+    /// leaves the second track: one on the right; an overtaking station's
+    /// (decision 605) one outside each track; decision 995, the real
+    /// station's (``RealBranchLine/realLoops(system:network:name:end:)``).
+    /// As many as it has beyond its line's tracks.
+    static func throughStationSides(of line: RealBranchLine, name: String, tracks: Int, overtakes: Bool, layout: RealLineLayout) -> [(Double, Int, Bool)] {
+        if let real = RealBranchLine.realLoops(system: line.system, network: line.network, name: name, end: false) { return real }
+        let offset = layout.loopOffset
         let loops = overtakes ? 2 : tracks - (line.isDoubleTrack ? 2 : 1)
-        let left = second + (overtakes ? layout.loopOffset : 0)
-        return -left...(loops > 0 ? layout.loopOffset : 0)
+        let sides = overtakes ? [(offset, 1, false), (-offset, 1, true)] : [(offset, 1, false)]
+        return Array(sides.prefix(max(0, loops)))
     }
 
     /// `path`, with each end at a station of the company's (`shared`, by
@@ -85,9 +101,15 @@ extension RealLineLaying {
     /// ends too (SHARED-STATION-THROUGH), held beside the company's track
     /// either way along the line as far as it runs along the way; `nil`
     /// where no stop is moved. `extent` is how far the stop's own tracks
-    /// will stand to either side of the way.
+    /// will stand to either side of the way. Decision 995: where `sunk`
+    /// says a stop stands in its line's real tunnel, the company's track
+    /// up on a viaduct there (both its ends half a crossing's clearance
+    /// over the ground or more) is not counted: a tunnel under a viaduct
+    /// is in neither's way, as ``platformsAreUnderTheGround(of:)`` keeps a
+    /// viaduct's station over a tunnel's.
     func sharedEnds(
-        of path: WorldPath, points: [WorldVector], through: Bool = false, shared: (Int) -> StationID?, extent: (Int) -> ClosedRange<Double>
+        of path: WorldPath, points: [WorldVector], through: Bool = false, shared: (Int) -> StationID?, extent: (Int) -> ClosedRange<Double>,
+        sunk: (Int) -> Bool = { _ in false }
     ) -> (path: WorldPath, moved: [Int])? {
         guard points.count >= 2 else { return nil }
         // The company's track near the way, sampled as the network tool
@@ -112,10 +134,14 @@ extension RealLineLaying {
             var across: [Double] = [], toward: [Double] = [], away: [Double] = []
             let box = RealLineAcquisition.runOn + RealLineAcquisition.junctionReach
             let stopPoint = points[stop]
+            let inATunnel = sunk(stop)
             for edge in world.network.edges {
                 guard let from = world.network.node(edge.from), let to = world.network.node(edge.to) else { continue }
                 let a = WorldVector(from.position.plan), b = WorldVector(to.position.plan)
                 guard min((a - stopPoint).length, (b - stopPoint).length) < box + Double(edge.length) else { continue }
+                if inATunnel, [from, to].allSatisfy({ node in
+                    world.groundHeight(at: node.position.plan).map { node.position.z - $0 >= TrackStructure.clearance / 2 } ?? false
+                }) { continue }
                 guard let geometry = TrackGeometry(from: from.position, to: to.position, curve: edge.curve) else { continue }
                 for plan in NetworkBuilding.surveyedPoints(of: geometry) + [from.position.plan, to.position.plan] {
                     let point = WorldVector(plan)

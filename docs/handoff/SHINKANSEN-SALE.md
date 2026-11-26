@@ -13,7 +13,7 @@
 1. **KUMAMOTO-OPEN（`JAPAN-KUMAMOTO.md` 第 5 列）要量的**：只買新幹線的價錢是土地 39,060,000,000、建造 22,986,337,457、列車 4,176,000,000（現有規則算的，7 塊 16 × 16 km 的地占一大半）。新局買不買得起、地價與里程碑要不要調，這張單沒有碰。
 2. **KYUSHU-SHINKANSEN-EXPRESS**（還沒評分）：通過中間站的「瑞穗」「櫻」、直通鹿兒島中央與新大阪的車。現在每一班都各站停，時刻是估計。
 3. **機廠在熊本站南邊，不在富合的真實位置**（待售的線只到熊本站）。線往南開到新八代時搬過去；真實位置在 `tools/fukuoka-map/kyushu-shinkansen/depot.json`。
-4. **新幹線先買、再買地鐵時，地鐵的博多偏約 33 m**（決策 975 §3）：空港線與七隈線的博多月台相距 187.5 m（沒有新幹線時 154.3 m），都還在地下同一高度、不疊。沒追原因。要查：`SHARED_STATION_REPORT=/tmp/s.txt SHARED_STATION_ONLY=fukuoka swift test --skip-build --filter SharedStationLayoutTests/testReport` 印出四種順序，再用 real-line-laying skill 第 3 節的探針印博多每座月台的平面位置。地鐵先買（清單的順序）沒有這個差別。
+4. ~~新幹線先買、再買地鐵時，地鐵的博多偏約 33 m~~：**決策 995 修好了**（空港線在自己的隧道裡時，新幹線高架上的股道不算擋路）。各站月台也照真實鋪了（博多 6 股、新鳥栖 4 股、筑後船小屋 3 股、熊本 4 股），見 `docs/decisions/995.md`。
 5. **車輛模型**是別的單：N700 系（#2683，決策 977）、800 系（決策 978）。這張單只定了節數 8 與車種 `.highSpeed`；`Map3DRealTrains.swift` 沒碰。
 6. **實機要看**（發版後）：日本新局買九州新幹線、博多站兩層的樣子、熊本車輛基地、列車進出博多。雲端沒有 3D 預覽圖；要看可用 `tools/map3d-preview/README.md` 的 `MAP3D_WORLD` 與 `MAP3D_BUY=kyushushinkansen:KS`（這張單沒試過這個指令對福岡的支援）。
 

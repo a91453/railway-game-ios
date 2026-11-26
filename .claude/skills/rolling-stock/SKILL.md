@@ -9,10 +9,12 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 
 **造型、塗裝、亮窗與玻璃怎麼畫、車頂零件、給作者看的方式、作者自製模型與工作室 GLB 轉進遊戲的做法、新車的水準、網頁版附錄**是獨門做法，2026-11-18 搬到私有素材庫 `a91453/railway-assets-private-2` 的 `docs/studio/skills/rolling-stock.md`（同節號）。**做或改車之前先讀那一份**；這裡只留程式結構、預算、雜湊與工具。做或改模型照 [model-look](../model-look/SKILL.md)。
 
+**送審與輪數**（2026-11-26，model-look §4）：送審前跑 `tools/texture-palette/port_check.py` 到全過（用法在腳本開頭）。作者舊版的車轉新版審 1 輪，小修不開第二輪（流程在私有那份 §8 第 25 條與 `docs/studio/rolling-stock-studio.md`）；全新的車審 2 輪，第 2 輪換另一家，第 2 輪還退大項才開第 3 輪。
+
 ## 2. 配方放哪
 
 - **模型包**：`Map3DModelPack.standard`（`Map3DModels.swift`）。App 第一次開 3D 前把它整包建好、CPU 與 GPU 各留一份，所以**遊戲不畫的靜態展示模型**（單元、整列、角色，沒有 set 接它們）放 `Map3DModelPack.studies`，只給工具與 `hashes.lock.json` 讀（審查 K1-1）。`standard` 的模型數與總頂點數由 `Map3DModelPackSizeTests` 對 `tools/train-models/pack.lock.txt`（一個模型一行，`merge=union`）與 `hashes.lock.json` 加總比對（決策 782 起不算註冊車，見 §2.1；2026-11-25 起不再有要改的總數）：手寫進 `standard` 的車在 `pack.lock.txt` 加自己的行（`MAP3D_WRITE_PACK_LOCK=1 swift test --filter Map3DModelPackLockTests/testTheOrderAndTheLampsAreAsBefore` 重寫，看 diff 只多了自己的行），並在 PR 寫多了多少；註冊車只在 PR 寫。每個模型有名字、`vertices`（三個一組，各帶這個三角形自己的平面法線）、`minimum`／`maximum`。座標：**+x 車頭、+y 左、+z 上、軌面 z = 0、公尺、車廂中心 x = 0**。
-- **程式放樣的車**：`Map3DTrainShell`（`Map3DTrainStyle` 的 cab／car／panto）。每款專用車有自己的配方檔：`Map3DEMU800`、`Map3DEMU900`、`Map3DEMU500`、`Map3DEMU3000`、`Map3DTEMU1000`／`2000`、`Map3DC341`、`Map3DE500`、`Map3DN700SG`、`Map3DTrainShapeRefresh`（700T、E200）…
+- **程式放樣的車**：`Map3DTrainShell`（`Map3DTrainStyle` 的 cab／car／panto）。每款專用車有自己的配方檔：`Map3DEMU800`、`Map3DEMU900`、`Map3DEMU500`、`Map3DEMU3000`、`Map3DTEMU1000`／`2000`、`Map3DC341`、`Map3DE500`、`Map3DTrainShapeRefresh`（700T、E200）…
 - **編組**：`Map3DTrainSet`（`Map3DTrainSets.swift`）。一個 set 有 key、近景的 head／middle／tail／panto／centre／single、`far`（遠景 set 的 key）、`ownLengths`、`cycle`（中間車的循環）。模型名字照 `set-<key>-<單元>`，遠景 `set-<key>Far-<單元>`。`Map3DTrainSet.byKey` 是全部。
 - **接進營運**：`Map3DModelPack.modelIndex(forType:carIndex:count:)`、`layout(forType:count:)`；`Map3DTrains` 擺實例。只加模型、沒接 set，合併後不會在遊戲裡出現。
 
@@ -31,6 +33,15 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 
 `Map3DModelPackSizeTests`、`Map3DModelPackLockTests` 讀的 `pack.lock.txt` 只列手寫的車，加註冊車**不用改**；註冊的 set 一律接在 `Map3DTrainSet.all` 最後（手寫的之後），所以前面的模型都不會移位。要接到真實路線（`Map3DRealTrains`、`set(forKey:count:locked:)`、`byType`）時才會改到共用的表，那是一格一格的改，和別款車通常不在同一行。
 
+### 2.2 一款車多套塗裝（決策 983）
+
+玩家在路線頁逐線選塗裝。塗裝不是另一份模型：`TrainPaint`（`TrainPaint.swift`）是一串換色，車上某個顏色的每一種深淺換成另一個顏色的同一種深淺，App 第一次畫時才做第二份頂點緩衝，所以模型包與雜湊都不變。
+
+- 註冊車：在 `Map3DTrainRegistration` 加 `paints: TrainPaintFamily(id:sets:english:chinese:ownEnglish:ownChinese:ownSwatch:paints:)`；`sets` 列近景與遠景的 key。手寫的 set 照 `Map3DTrainShapeRefresh.highSpeedPaints`，加進 `TrainPaintFamily.all`。
+- **配方畫真車色，原本的遊戲色做成可選塗裝**（作者 11-20）。`id` 發布後不能改。
+- 要換的顏色最好是車上獨有的；白、灰會認到所有同比例的灰，用 `Swap(heights:)` 限高度。玻璃、燈、路線色帶（alpha 小於 1）不會被換。
+- 拍圖：`run.sh OUT --ids … --paint <id>`。`TrainPaintTests` 會擋換不到任何頂點的塗裝。
+
 ## 3. 近景與遠景
 
 - 近景：500 m 內（`Map3DTrainSet.reach(of:)`），一節一個實例。
@@ -42,7 +53,7 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 ## 4. 引擎替配方做的事（細節在私有那份 §4）
 
 - 頂點 alpha 小於 1 的地方畫線的顏色（塗裝帶）。
-- 帶發光旗標的三角形夜裡從裡面亮（`Map3DVertex.glows`）；頭尾燈、客室窗由 `Map3DTrainLights` 每格決定（決策 449），窗只認標成 `trainGlass` 的面（`Map3DTrainMaterial.marksOwnGlass`），沒標面的舊車才照顏色猜。新車加進 `Map3DTrainOwnGlassTests.studioCars`。
+- 帶發光旗標的三角形夜裡從裡面亮（`Map3DVertex.glows`）；頭尾燈、客室窗由 `Map3DTrainLights` 每格決定（決策 449），窗只認標成 `trainGlass` 的面（`Map3DTrainMaterial.marksOwnGlass`），沒標面的舊車才照顏色猜。自己標玻璃的新車在 `Tests/GamePresentationTests/Map3DTrainOwnGlassList.swift`（一台車一行，`merge=union`）加自己的行：`prefixes` 一行、`studioCars` 一行，暗色從沒被當成玻璃的再加 `darkNeverGlass` 一行。
 - 遮蔽陰影（決策 439）、車窗反光與不鏽鋼光澤（決策 450）、方向幕（決策 436）、影子（決策 232）都由 pack 或場景加，配方不畫。不鏽鋼車要加進 `Map3DTrainMaterial.stainlessSets`。
 - 遊戲兩面都畫（`setCullMode(.none)`）：共面或相距不到 1 cm 的重疊面會閃爍。
 

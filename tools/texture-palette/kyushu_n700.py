@@ -41,16 +41,17 @@ import hashlib
 import io
 import json
 import struct
+import sys
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
 
 # 類別，也是輸出材質的順序（`glb_to_swift.py --materials` 用同一順序）。
-MATERIALS = ["whiteBlue", "navy", "gold", "glass", "dark", "headlamp", "taillamp", "doorLine"]
-BODY, NAVY, GOLD, GLASS, DARK, HEAD, TAIL, LINE = range(8)
+MATERIALS = ["whiteBlue", "navy", "gold", "glass", "dark", "headlamp", "taillamp", "doorLine", "hood"]
+BODY, NAVY, GOLD, GLASS, DARK, HEAD, TAIL, LINE, HOOD = range(9)
 PREVIEW = [(0xD8, 0xE5, 0xEB), (0x21, 0x41, 0x68), (0x89, 0x74, 0x55), (0x40, 0x55, 0x60),
-           (0x2B, 0x2F, 0x36), (0xFF, 0xF1, 0xCF), (0xE0, 0x39, 0x2C), (0x8A, 0x90, 0x99)]
+           (0x2B, 0x2F, 0x36), (0xFF, 0xF1, 0xCF), (0xE0, 0x39, 0x2C), (0x8A, 0x90, 0x99), (0xE2, 0xDA, 0xC4)]
 
 # 作者原檔的 SHA-256（頭車 bc97d3e5…、中間車 fd0310c2…）：不是這兩個檔就停。
 SHA256 = {
@@ -86,6 +87,34 @@ WINDSCREEN = [
 LENGTH = 12.5 / 10.501   # 連結面 ±10.501 → ±12.5（車距 25 m）
 WIDTH = 3.36 / 2.80      # 側牆 ±1.40 → ±1.68
 HEIGHT = 3.60 / 3.819    # 車頂 3.819 → 3.60
+JOINT = 10.501           # 舊版的連結面（沿車身）
+TIP = -10.403            # 舊版頭車的鼻尖（車鼻外露的連結器拿掉以後）
+CAB_LENGTH = 27.35       # 真車的頭車
+NOSE_TO = -3.66          # 頭車：鼻尖到這裡（乘務員門門框前緣 -3.6415 再往前 2 cm，切線不落在門邊）是車鼻
+NOSE_OFFSET = 0.00223    # 舊版車鼻（z ≤ -3.808）整個往 +x 偏 2.23 mm（-2.168 起漸漸偏過去）：放回正中，左右燈才對稱
+NOSE = WIDTH             # 車鼻沿車身乘的和寬度一樣（車鼻的長寬比例不變），車身拿剩下的長度
+CAB_BAYS = 1             # 頭車的窗帶多排一格：13 → 14 格窗（真車 8 號車 782 形 14 格）
+BOGIE_FROM_END = 3.75    # 真車：轉向架中心離連結面
+BOGIE_CENTRES = 17.5     # 真車：轉向架中心距
+# 中間車（舊版的座標，沿車身，兩頭對稱）：窗帶放大到真車的窗距，客室門往車端移，
+# 門與車端之間的牆收短（`middle_along`）。
+PITCH = 1.04             # 真車的窗距＝座位間距（普通車），照片上量是 1.04–1.05 m
+BAND = 7.86              # 窗帶的邊：最後一格窗的外緣再往外 5 cm
+DOOR_IN, DOOR_OUT = 9.0287, 9.8904   # 客室門門縫線的內緣、外緣各再往外 3 cm（門邊有 2 cm 的鋸齒，切線落在牆上）
+BODY_END = 10.25         # 車身的端牆
+DOOR_SHIFT = 0.30        # 客室門往車端移多少（遊戲的公尺）：真車門的正中離連結面 0.74 m
+# 車身下緣讓輪子露出來的開口（輪罩）：舊版的座標，沿車身，開口下緣的兩端（裙板斜端
+# 的腳）。頭車在多排一格窗之前量的（後面那個開口在多排的那一段後面，跟著往後移）；
+# 中間車兩頭對稱。車身拉長以後開口要對準照真車放的轉向架（作者 2026-11-26「輪子
+# 是不是跑偏了」）：開口本身照 `OPENING` 放大、正中對到轉向架正中，裙板的伸縮放在
+# 開口之間（`skirt_along`）。
+CAB_OPENINGS = ((-6.474, -2.764), (5.289, 8.983))
+MIDDLE_OPENING = (5.289, 8.983)
+OPENING = LENGTH         # 開口沿車身乘多少：和整節等比放大時一樣（舊的樣子，決策 977）
+SKIRT_FROM = -8.6        # 頭車：裙板從這裡往後是側面；往前是車鼻底下，跟著車鼻
+SKIRT_TOP = 0.785        # 舊版車身側牆的下緣在 0.779：低於這個的頂點（裙板、開口的頂板）照裙板放
+SKIRT_STRIP = 0.85       # 從下緣伸到這以上的面先在這個高度切開：只有下面 7 cm 的一條跟著裙板斜，
+                         # 上面的牆（門、窗、藍帶）一點都不動
 
 
 # ---------------------------------------------------------------- GLB 讀寫
@@ -543,7 +572,73 @@ def classify_point(rectangles, rest, x, y):
 
 # ---------------------------------------------------------------- 一節車
 
+def middle_along(z: np.ndarray, band_scale: float) -> np.ndarray:
+    """中間車：舊版沿車身的位置 → 遊戲的位置。窗帶乘 `band_scale`（窗距放回真車的），
+    客室門整扇往車端平移 `DOOR_SHIFT`，窗帶與門之間、門與端牆之間的牆各自伸縮接上；
+    端牆與連結面不動。分段線性、兩段在分界上接起來。"""
+    side = np.sign(z)
+    u = np.abs(z) * LENGTH
+    band, door_in, door_out, wall = BAND * LENGTH, DOOR_IN * LENGTH, DOOR_OUT * LENGTH, BODY_END * LENGTH
+    knots = [0.0, band, door_in, door_out, wall, JOINT * LENGTH]
+    moved = [0.0, band * band_scale, door_in + DOOR_SHIFT, door_out + DOOR_SHIFT, wall, JOINT * LENGTH]
+    return side * np.interp(u, knots, moved)
+
+
+def along(z: np.ndarray, body: float | None = None) -> np.ndarray:
+    """舊版沿車身的位置 → 真車尺寸的位置。中間車整節乘 LENGTH。頭車（給 `body`，車身
+    沿車身乘多少）：乘務員門門框的前緣（`NOSE_TO`）往後乘 `body`，車鼻乘 `NOSE`；
+    兩段在 `NOSE_TO` 接起來（800 系的做法，決策 978）。"""
+    if body is None:
+        return z * LENGTH
+    return np.where(z <= NOSE_TO, (z - NOSE_TO) * NOSE, (z - NOSE_TO) * body)
+
+
+def cut_low(triangles, value=SKIRT_STRIP):
+    """從車身下緣（`SKIRT_TOP` 以下）伸到 `value` 以上的面，在 y = value 切開。"""
+    out = []
+    for c, kind, door in triangles:
+        y = c[:, 1]
+        if y.min() >= SKIRT_TOP or y.max() <= value + 1e-9:
+            out.append((c, kind, door))
+            continue
+        for low in (True, False):
+            polygon = []
+            for i in range(3):
+                a, b = c[i], c[(i + 1) % 3]
+                a_in = a[1] <= value if low else a[1] >= value
+                b_in = b[1] <= value if low else b[1] >= value
+                if a_in:
+                    polygon.append(a)
+                if a_in != b_in:
+                    point = a + (b - a) * (value - a[1]) / (b[1] - a[1])
+                    point[1] = value
+                    polygon.append(point)
+            out += [(np.array([polygon[0], polygon[i], polygon[i + 1]]), kind, door) for i in range(1, len(polygon) - 1)]
+    return out
+
+
+def skirt_along(z: np.ndarray, body, openings, centres, start: float, end: float) -> np.ndarray:
+    """車身下緣（裙板與開口的頂板）：舊版沿車身的位置 → 遊戲的位置。每個開口 `(lo, hi)`
+    乘 `OPENING`、正中放到 `centres`（真車轉向架的正中）；`start` 以前與 `end` 以後
+    照車身的 `body` 放，中間的裙板各自伸縮接上。裙板與側牆都是含沿車方向的平面，
+    頂點只沿車身移動，面不會折。"""
+    knots, moved = [start], [float(body(np.array([start]))[0])]
+    for (low, high), centre in zip(openings, centres):
+        middle = (low + high) / 2
+        knots += [low, high]
+        moved += [centre - (middle - low) * OPENING, centre + (high - middle) * OPENING]
+    knots.append(end)
+    moved.append(float(body(np.array([end]))[0]))
+    if np.any(np.diff(knots) <= 0) or np.any(np.diff(moved) <= 0):
+        raise SystemExit(f"裙板的折點沒有照順序：{np.round(knots, 3).tolist()} → {np.round(moved, 3).tolist()}")
+    inside = (z > start) & (z < end)
+    return np.where(inside, np.interp(z, knots, moved), body(z))
+
+
 def build(path: Path, cab: bool, debug_dir: Path | None):
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import kyushu_800 as k800  # 切開、多排窗、全周幌、T 形接點：800 系那支（決策 978）的
+
     gltf, blob, digest = read_glb(path)
     pieces = parts(gltf, blob)
     body = max(pieces, key=lambda p: np.ptp(p["world"][:, 2]))
@@ -567,9 +662,85 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         canvas.save(debug_dir / f"{path.stem[:13]}-uv-cut.png")
         shown = np.array(PREVIEW, np.uint8)[labels]
         Image.fromarray(shown).resize((labels.shape[1] * 3, labels.shape[0] * 3), Image.NEAREST).save(debug_dir / f"{path.stem[:13]}-classes.png")
+    stretch, added, numbers, band_scale = None, 0.0, {}, None
+    if not cab:
+        # 中間車：窗距放回真車的（`middle_along`）。分界先切開，跨過分界的面才不會折。
+        wall = [(c, kind, door) for c, kind, door in triangles if np.abs(c[:, 0]).min() > 1.39 and c[:, 0].mean() > 0]
+        windows = k800.spans([c for c, kind, door in wall if kind == GLASS and door < 0])
+        centres = [(low + high) / 2 for low, high in windows if abs(low + high) / 2 < BAND]
+        pitch = float(np.mean(np.diff(centres))) * LENGTH
+        band_scale = PITCH / pitch
+        for value in (BAND, DOOR_IN, DOOR_OUT, BODY_END):
+            triangles = k800.cut_at(k800.cut_at(triangles, value), -value)
+        numbers = {"windows": len(centres), "pitch_m": round(pitch, 4), "band_scale": round(band_scale, 4),
+                   "door_shift_m": DOOR_SHIFT}
+    if cab:
+        # 頭車照真車的比例：車鼻乘 NOSE（和寬度一樣），窗帶多排 CAB_BAYS 格，車身拿剩下的長度。
+        if CAB_BAYS:
+            triangles, added, *_ = k800.more_bays(triangles, CAB_BAYS, NOSE_TO)
+        stretch = (CAB_LENGTH - (NOSE_TO - TIP) * NOSE) / (JOINT + added - NOSE_TO)
+        triangles = k800.cut_at(triangles, NOSE_TO)
+        numbers = {"nose_scale": round(NOSE, 4), "body_scale": round(stretch, 4), "bays": CAB_BAYS,
+                   "added_old": round(added, 4)}
+    joint = float(along(np.array([JOINT + added]), stretch)[0])
+    # 轉向架正中（遊戲的位置，沿車身）：照真車，離連結面 BOGIE_FROM_END、相距 BOGIE_CENTRES。
+    rear = joint - BOGIE_FROM_END
+    if cab:
+        # 後面的開口在多排的那一段窗後面：跟著往後移 `added`。
+        openings = (CAB_OPENINGS[0], tuple(v + added for v in CAB_OPENINGS[1]))
+        numbers["openings_old"] = [[round(v, 3) for v in pair] for pair in openings]
+
+        def skirt(z):
+            return skirt_along(z, lambda v: along(v, stretch), openings, (rear - BOGIE_CENTRES, rear),
+                               SKIRT_FROM, BODY_END + added)
+    else:
+        def skirt(z):
+            u = skirt_along(np.abs(z), lambda v: middle_along(v, band_scale), (MIDDLE_OPENING,), (rear,), 0.0, BODY_END)
+            return np.sign(z) * u
+    triangles = cut_low(triangles)
+    # 開口下緣的腳一定要是舊版的頂點，不是的話這支工具認錯了開口（換了原檔或切法）。
+    feet = {round(float(v), 3) for c, _, _ in triangles for v in c[np.abs(c[:, 1] - 0.401) < 0.002][:, 2]}
+    for low, high in (openings if cab else (MIDDLE_OPENING, (-MIDDLE_OPENING[1], -MIDDLE_OPENING[0]))):
+        if round(low, 3) not in feet or round(high, 3) not in feet:
+            raise SystemExit(f"{path.name}: 找不到輪罩開口 {low}…{high} 的下緣（{sorted(feet)}）")
+
+    def grown(points: np.ndarray, skirts: bool = True) -> np.ndarray:
+        z = along(points[:, 2], stretch) if cab else middle_along(points[:, 2], band_scale)
+        if skirts:
+            low = points[:, 1] < SKIRT_TOP
+            z = np.where(low, skirt(points[:, 2]), z)
+        x = points[:, 0]
+        if cab:
+            x = x - NOSE_OFFSET * np.clip((-2.168 - points[:, 2]) / (-2.168 + 3.808), 0, 1)
+        return np.stack([x * WIDTH, points[:, 1] * HEIGHT, z], 1)
 
     # 原座標：x 右、y 上、z 沿車身（頭車的車鼻在 -z）。車體照真車尺寸放大。
-    scaled = [(corners * np.array([WIDTH, HEIGHT, LENGTH]), kind, door) for corners, kind, door in triangles]
+    scaled = [(grown(corners), kind, door) for corners, kind, door in triangles]
+    # 下緣的頂點另外移動：沒有一個面因此翻面，跨在下緣上的面也只有車身色（側牆下緣
+    # 那一排格子沿牆面斜一點看不出來，有顏色的格子斜了就看得出來）。
+    for (corners, kind, _), (moved, *_) in zip(triangles, scaled):
+        low = corners[:, 1] < SKIRT_TOP
+        if not low.any() or low.all():
+            continue
+        plain = grown(corners, skirts=False)
+        if np.dot(np.cross(moved[1] - moved[0], moved[2] - moved[0]),
+                  np.cross(plain[1] - plain[0], plain[2] - plain[0])) <= 0:
+            raise SystemExit(f"{path.name}: 裙板移動讓一個面翻了：{np.round(corners, 3).tolist()}")
+        if kind != BODY and np.abs(moved[:, 2] - plain[:, 2]).max() > 0.002:
+            raise SystemExit(f"{path.name}: 有顏色（{MATERIALS[kind]}）的面跨在車身下緣：{np.round(corners, 3).tolist()}")
+    # 全周幌（800 系的 `hoods`：淺 V 幌口、偏航 4 度以內不相碰）。真車 N700 的外幌是米色的
+    # （照片量的），車鉤的楔子（寬 10 cm 以內）留深色。
+    hood = []
+    for c, kind, door in k800.hoods(scaled, cab, joint):
+        if np.abs(c[:, 0]).max() > 0.06:
+            hood.append((c, HOOD, door))
+            continue
+        # 車鉤的楔子：後面埋在幌裡，往裡多埋 8 cm（800 系的只埋 1 cm，和米色的幌口
+        # 隔 1 cm 平行，異色近共面）。
+        c = c.copy()
+        deep = np.abs(c[:, 2]) < joint - 0.005
+        c[deep, 2] = np.sign(c[deep, 2]) * (joint - 0.08)
+        hood.append((c, kind, door))
     for piece in pieces:
         if piece is body:
             continue
@@ -577,24 +748,24 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         low, high = world.min(0), world.max(0)
         size = high - low
         if size[2] > 2.5:
-            # 轉向架：位置跟著車體放大，本身不縮放。
+            # 轉向架：本身不縮放；中間車的位置跟著車體，頭車的照真車的位置。
             middle = (low[2] + high[2]) / 2
-            moved = world + np.array([0, 0, middle * LENGTH - middle])
+            if cab:
+                target = rear if middle > 0 else rear - BOGIE_CENTRES
+            else:
+                target = rear if middle > 0 else -rear
+            moved = world + np.array([0, 0, target - middle])
             scaled += [(moved[face], DARK, -1) for face in piece["faces"]]
-        elif size[1] > 1.5:
-            # 通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在連結面上）。
-            grown = world * np.array([WIDTH, HEIGHT, LENGTH])
-            for face in piece["faces"]:
-                corners = grown[face]
-                if np.ptp(corners[:, 2]) < 1e-6:
-                    continue
-                scaled.append((corners, DARK, -1))
-        # 其餘（車鼻外露的連結器）不要。
+        # 其餘：舊版的窄通道幌（整條在全周幌裡面，不畫）與車鼻外露的連結器（實車有蓋）。
 
     # 轉成輸出的軸（+y 上、車沿 x、駕駛室在 +x）：旋轉，行列式 +1。
-    turned = [(np.stack([-c[:, 2], c[:, 1], c[:, 0]], 1), kind, door) for c, kind, door in scaled]
-    xs = np.concatenate([c[:, 0] for c, _, _ in turned])
+    def turn(items):
+        return [(np.stack([-c[:, 2], c[:, 1], c[:, 0]], 1), kind, door) for c, kind, door in items]
+
+    turned, hood = turn(scaled), turn(hood)
+    xs = np.concatenate([c[:, 0] for c, _, _ in turned + hood])
     shift = -(xs.max() + xs.min()) / 2
+
     def normal(corners):
         return np.cross(corners[1] - corners[0], corners[2] - corners[0])
 
@@ -615,7 +786,20 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
             plates[key] = faces[key]
     out = [face for key, face in faces.items() if key not in plates]
     out += [(corners, kind, -1) for corners, kind in solid_plates([face[:2] for face in plates.values()], point, normal)]
-    return name_doors(out), digest
+    out += [(corners + np.array([shift, 0, 0]), kind, door) for corners, kind, door in hood]
+    settled, seen = [], set()
+    for corners, kind, door in mend_near(k800.mend(out)):
+        # GLB 存到毫米：先放到毫米的格點上再看。格點上沒有面積（三點共線）或翻了面
+        # 的細條拿掉（都不到幾個平方毫米）。
+        snapped = np.round(corners * 1000) / 1000
+        if np.linalg.norm(normal(snapped)) < 2e-6 or normal(snapped) @ normal(corners) <= 0:
+            continue
+        key = frozenset(point(corner) for corner in corners)
+        if key in seen:
+            continue
+        seen.add(key)
+        settled.append((snapped, kind, door))
+    return absorb_slivers(*name_doors(settled)), digest, numbers
 
 
 def name_doors(triangles):
@@ -652,6 +836,64 @@ def name_doors(triangles):
     return [(corners, kind, names.get(number)) for number, (corners, kind, _) in enumerate(triangles)], doors
 
 
+def absorb_slivers(triangles, doors, margin=0.0005):
+    """門框方框（`margin` 以內）裡面整塊的牆面歸給那扇門：舊版門頂的邊高低差 1 mm，
+    門和牆之間留下細條。遊戲的 `Door.contains` 本來就把方框裡的面當門，GLB 照一樣分。"""
+    out = list(triangles)
+    for door in doors:
+        name = door["name"]
+        low, high = np.array(door["min"]) - margin, np.array(door["max"]) + margin
+        side = np.sign(low[2] + high[2])
+        for number, (corners, kind, where) in enumerate(out):
+            if where is None and (corners[:, 2] * side > 0).all() \
+                    and (corners[:, :2] >= low[:2]).all() and (corners[:, :2] <= high[:2]).all():
+                out[number] = (corners, kind, name)
+                door["triangles"] += 1
+    return out, doors
+
+
+def mend_near(triangles, near=0.0015, angle=5.0):
+    """`k800.mend` 之後再補一次 T 形接點，鬆一點：舊版的邊有的不是直的（差 1–4 mm）、
+    車鼻開始彎的地方兩塊差 2 度，隔壁一塊的頂點離這條邊 `near` 以內、兩塊夾角 `angle`
+    以內，就把那個頂點本身插進這條邊（不是投影點），兩邊共用同一個頂點、不再裂縫。
+    切出來的哪一塊翻了面，這個面就照舊不切。"""
+    import kyushu_800 as k800
+    corners = np.concatenate([c for c, _, _ in triangles])
+    normals = np.array([np.cross(c[1] - c[0], c[2] - c[0]) for c, _, _ in triangles])
+    normals /= np.maximum(np.linalg.norm(normals, axis=1), 1e-15)[:, None]
+    normals3 = np.repeat(normals, 3, axis=0)
+    out = []
+    for number, (c, kind, door) in enumerate(triangles):
+        flat = np.abs(normals3 @ normals[number]) > np.cos(np.radians(angle))
+        ring = []
+        for i in range(3):
+            a, b = c[i], c[(i + 1) % 3]
+            ring.append(a)
+            edge = b - a
+            length = float(edge @ edge)
+            if length < 1e-10:
+                continue
+            reach = np.sqrt(length)
+            t = (corners - a) @ edge / length
+            off = np.linalg.norm(corners - a - np.outer(t, edge), axis=1)
+            on = (t * reach > 0.002) & ((1 - t) * reach > 0.002) & (off < near) & flat
+            seen = set()
+            for k in sorted(np.nonzero(on)[0], key=lambda k: t[k]):
+                key = tuple(np.round(corners[k], 7))
+                if key not in seen:
+                    seen.add(key)
+                    ring.append(corners[k])
+        if len(ring) == 3:
+            out.append((c, kind, door))
+            continue
+        pieces = k800.clip(ring)
+        if all(np.cross(q[1] - q[0], q[2] - q[0]) @ normals[number] > 0 for q in pieces):
+            out += [(q, kind, door) for q in pieces]
+        else:
+            out.append((c, kind, door))
+    return out
+
+
 def solid_plates(plate, point, normal):
     """雙面薄片 → `PLATE` 厚的封閉實心片：兩個面各往外推一半，邊緣補上側面。"""
     out = []
@@ -667,7 +909,7 @@ def solid_plates(plate, point, normal):
                 if keys & {point(c) for c in face[0]}:
                     group.append(face)
                     keys |= {point(c) for c in face[0]}
-                    left.remove(face)
+                    left = [other for other in left if other is not face]
                     grown = True
         towards = normal(group[0][0])
         fronts = [(c if np.dot(normal(c), towards) > 0 else c[::-1], kind) for c, kind in group]
@@ -699,7 +941,7 @@ def main():
     args.out_dir.mkdir(parents=True, exist_ok=True)
     report = {}
     for name, path, cab in (("kyushu-n700-cab", args.cab, True), ("kyushu-n700-middle", args.middle, False)):
-        (triangles, doors), digest = build(path.expanduser(), cab, args.out_dir if args.debug else None)
+        (triangles, doors), digest, numbers = build(path.expanduser(), cab, args.out_dir if args.debug else None)
         expected = SHA256["cab" if cab else "middle"]
         if digest != expected:
             raise SystemExit(f"{path.name}: 不是這個工具認得的原檔（SHA-256 {digest}）")
@@ -708,7 +950,7 @@ def main():
         counts = {MATERIALS[k]: sum(1 for _, kind, _ in triangles if kind == k) for k in range(len(MATERIALS))}
         report[name] = {"sha256": digest, "triangles": len(triangles), "materials": counts,
                         "min": [round(float(v), 3) for v in points.min(0)], "max": [round(float(v), 3) for v in points.max(0)],
-                        "doors": doors}
+                        "doors": doors, **({"lengths": numbers} if numbers else {})}
     (args.out_dir / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps(report, ensure_ascii=False, indent=2))
 

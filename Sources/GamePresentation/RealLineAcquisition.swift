@@ -213,6 +213,73 @@ public struct RealBranchLine: Hashable, Sendable {
         }
     }
 
+    /// Decision 995: the loops of each of its stations laid as the real
+    /// one's platforms stand, by the station's name in the timetable:
+    /// each its offset (positive on the right going up the line), its
+    /// level and whether it leaves the second track, as
+    /// ``RealLineLaying/endStationSides(of:name:loops:layout:)`` and
+    /// ``RealLineLaying/throughStationSides(of:name:tracks:overtakes:layout:)``
+    /// give them; `nil` for a station laid as every line's are. The Kyushu
+    /// Shinkansen's, from each station's 駅構造 (Japanese Wikipedia, checked
+    /// 2026-11-25), its trains keeping left so the second track is the
+    /// down one (toward Kumamoto):
+    /// Hakata three islands and six tracks (島式 3 面 6 線), Shin-Tosu an
+    /// island outside each main track (島式 2 面 4 線, no through track),
+    /// Chikugo-Funagoya a side platform on the up track and an island
+    /// between the down track and its loop (単式＋島式 2 面 3 線), Kumamoto
+    /// two islands and four tracks (島式 2 面 4 線); Kurume, Shin-Ōmuta and
+    /// Shin-Tamana two side platforms (相対式 2 面 2 線), as every line's
+    /// station of two tracks is laid.
+    static func realLoops(system: String, network: String, name: String, end: Bool) -> [(Double, Int, Bool)]? {
+        guard system == "kyushushinkansen", network == "KS" else { return nil }
+        let island = RealLineAcquisition.islandSpacing, between = HighSpeedDemo.trackOffset
+        if end {
+            return switch name {
+            // Hakata: the first track's island on its right, the second
+            // track's on its left with a loop 11 m out, and a third island
+            // beyond that: the station spreads to the left (east, the
+            // real platforms 11 to 16 standing east of JR's station), away
+            // from the subway's Kuko and Nanakuma Lines under the square
+            // to the west; spread to the right, its outer island stood
+            // over the Kuko Line's platform (1.4 m apart in plan). Each
+            // loop a level deeper than the one inside it on its side, so
+            // the inner one moves out over a longer ramp: an 11 m loop's
+            // 100 m ramp toward a loop 5 m outside it came within
+            // GameCore's 4 m of it.
+            case "博多": [
+                (island, 1, false), (-between, 1, false), (-(between + island), 2, false), (-(2 * between + island), 3, false), (-(2 * (between + island)), 4, false),
+            ]
+            // Kumamoto: the first track's island on its right, the other
+            // a track's spacing to the left.
+            case "熊本": [(island, 1, false), (-between, 1, false), (-(between + island), 2, false)]
+            default: nil
+            }
+        }
+        return switch name {
+        case "新鳥栖": [(island, 1, false), (-island, 1, true)]
+        case "筑後船小屋": [(-island, 1, true)]
+        default: nil
+        }
+    }
+
+    /// Decision 995: the tracks with a platform of each of the line's
+    /// stations ``realLoops(system:network:name:end:)`` lays, more or fewer
+    /// than its timetable stands trains at once (`metro_runs.json`'s
+    /// `tracks`): Kumamoto's four, its depot holding the sets its two
+    /// islands do not.
+    static func realTracks(of id: String) -> [String: Int] {
+        id == "kyushushinkansen:KS" ? ["博多": 6, "新鳥栖": 4, "筑後船小屋": 3, "熊本": 4] : [:]
+    }
+
+    /// How its stations' loops are laid: a TRA branch line's, a light
+    /// rail's, a metro's; decision 995, a high-speed line's.
+    var stationLayout: RealLineLayout {
+        // THSR-SALE (decision 993): the Taiwan High Speed Rail keeps the
+        // metro's loops it was measured with (decision 993 §4); laying it
+        // as decision 995's high-speed line is a later step.
+        !isUrban ? .branch : trainType == .highSpeed && !isTaiwanHighSpeedRail ? .highSpeed : cars > RealLineLayout.lightRailCars ? .metro : .lightRail
+    }
+
     /// Decision 652: the stations between its ends (by their names in the
     /// timetable) whose turn-back crossover on the next stop's side is
     /// laid the other way round, facing the trains coming in: a train in
@@ -393,6 +460,17 @@ struct RealLineLayout {
         loopReach: 150 * RealLineAcquisition.metre, loopRamp: 50 * RealLineAcquisition.metre, loopOffset: RealWorldDemo.groundLoopOffset, endLevels: 2
     )
 
+    /// Decision 995: a high-speed line's (the Kyushu Shinkansen's), its
+    /// loops an island's width out (``RealLineAcquisition/islandSpacing``)
+    /// and more: each level's straight holds its eight 25 m cars' 200 m
+    /// platform (the reach less the ramp, either side of the station),
+    /// moving out over 100 m a level, so an 11 m loop's curve is no
+    /// sharper than a metro's 6 m one over 50 m; four levels deep at an
+    /// end (Hakata's six tracks).
+    static let highSpeed = RealLineLayout(
+        loopReach: 200 * RealLineAcquisition.metre, loopRamp: 100 * RealLineAcquisition.metre, loopOffset: RealWorldDemo.groundLoopOffset, endLevels: 4
+    )
+
     /// THSR-SALE (decision 993): the loops reaching far enough that a
     /// platform `half` long either side of its station lies on their
     /// straight, past their ramps. The High Speed Rail's 300 m platforms
@@ -405,15 +483,13 @@ struct RealLineLayout {
         return RealLineLayout(loopReach: reach, loopRamp: loopRamp, loopOffset: loopOffset, endLevels: endLevels)
     }
 
-    /// THSR-SALE (decision 993): the High Speed Rail's ends lie three
-    /// deep either side, seven tracks, as a light rail's end with a
-    /// depot: with five, under a new game's rules both ends filled up by
-    /// day and the trains in the way were sent into the depots, leaving
-    /// 59 of the second day's 202 runs without a train. Every other line's
-    /// as it was.
+    /// THSR-SALE (decision 993): the High Speed Rail's ends lie at least
+    /// three deep either side, seven tracks, as a light rail's end with a
+    /// depot (its timetable stands seven trains at each end). Every other
+    /// line's as it was.
     func ends(of line: RealBranchLine) -> RealLineLayout {
         guard line.isTaiwanHighSpeedRail else { return self }
-        return RealLineLayout(loopReach: loopReach, loopRamp: loopRamp, loopOffset: loopOffset, endLevels: 3)
+        return RealLineLayout(loopReach: loopReach, loopRamp: loopRamp, loopOffset: loopOffset, endLevels: max(endLevels, 3))
     }
 
     /// The `level`th loop out (from 1): its reach and its ramp.
@@ -1325,7 +1401,7 @@ extension RealLineLaying {
     ) -> Double {
         func extent(_ line: RealBranchLine, _ runs: RealLineRuns, _ index: Int) -> ClosedRange<Double> {
             let name = runs.stops[index], tracks = runs.tracks[name] ?? 1
-            let layout = (!line.isUrban ? RealLineLayout.branch : line.cars > RealLineLayout.lightRailCars ? .metro : .lightRail).ends(of: line)
+            let layout = line.stationLayout.ends(of: line)
             guard index > 0, index < runs.stops.count - 1 else {
                 return endStationExtent(of: line, name: name, tracks: tracks, layout: layout)
             }
@@ -1576,8 +1652,12 @@ extension RealLineLaying {
         guard points.allSatisfy({ world.bounds.contains($0.plan) }) else {
             return refused("The whole line is not on this map.", "這張地圖框不住整條線。")
         }
+        // Decision 995: far enough on for the deepest loops of an end
+        // (a high-speed line's reach 400 m); the run-on of every other
+        // layout's, whose loops reach no further than 200 m, as it was.
+        let runOnLength = max(RealLineAcquisition.runOn, line.stationLayout.reach(level: line.stationLayout.endLevels) + 60 * RealLineAcquisition.metre)
         func runOn(from end: WorldVector, leaving way: WorldVector, at stop: Int) -> [WorldVector] {
-            guard let (_, site, points) = depotEnds.first(where: { $0.stop == stop }) else { return [end + way * RealLineAcquisition.runOn] }
+            guard let (_, site, points) = depotEnds.first(where: { $0.stop == stop }) else { return [end + way * runOnLength] }
             // Decision 602: a fanned yard's lead along the real leads to
             // its throat, from where the line's track runs on past the end.
             if let fan = site.fan {
@@ -1682,7 +1762,7 @@ extension RealLineLaying {
         let half = Double(platformLength) / 2
         let double = line.isDoubleTrack
         // THSR-SALE (decision 993): loops long enough for the platform.
-        let layout = (!line.isUrban ? RealLineLayout.branch : cars > RealLineLayout.lightRailCars ? .metro : .lightRail).holding(half: half).ends(of: line)
+        let layout = line.stationLayout.holding(half: half).ends(of: line)
         // SHARED-STATION-LEVEL: a line's end at a station another of the
         // company's lines calls at, whose track lies along its way, is laid
         // beside that track, an island's width out, not over it.
@@ -1731,14 +1811,29 @@ extension RealLineLaying {
         let ownLane = (abs(RealBranchLine.overseasLanes[line.id]?.offset ?? 0) + (line.after != nil && parts > 0 ? RealLineAcquisition.besideOffset / RealLineAcquisition.metre : 0))
             * RealLineAcquisition.metre
         var carriedInItsLane: (at: [Double], carried: [TrackRise.Carried])?
-        func standsOverATunnel(_ index: Int, _ station: StationID) -> Bool {
-            guard platformsAreUnderTheGround(of: station) else { return false }
+        func carried() -> (at: [Double], carried: [TrackRise.Carried]) {
             let own = carriedInItsLane ?? (
                 points.map { inItsLane.nearest($0).along },
                 railways.structures?.stretches(along: inItsLane, frame: frame, system: line.system, reach: RealRailStructures.reach + ownLane) ?? []
             )
             carriedInItsLane = own
+            return own
+        }
+        func standsOverATunnel(_ index: Int, _ station: StationID) -> Bool {
+            guard platformsAreUnderTheGround(of: station) else { return false }
+            let own = carried()
             return RealLineAcquisition.isRaised(
+                at: own.at[index], before: index > 0 ? own.at[index - 1] : nil, after: index < own.at.count - 1 ? own.at[index + 1] : nil, carried: own.carried
+            )
+        }
+        // Decision 995, the other way round: a station in its line's real
+        // tunnel is not moved beside the company's track up on a viaduct
+        // there. The Kuko Line, bought after the Kyushu Shinkansen, had its
+        // Hakata moved 37 m toward the Shinkansen's viaduct, 191.7 m off
+        // the Nanakuma Line's where without it it stands 154.3 m off.
+        func standsInATunnel(_ index: Int) -> Bool {
+            let own = carried()
+            return RealLineAcquisition.isSunk(
                 at: own.at[index], before: index > 0 ? own.at[index - 1] : nil, after: index < own.at.count - 1 ? own.at[index + 1] : nil, carried: own.carried
             )
         }
@@ -1755,7 +1850,8 @@ extension RealLineLaying {
                 }
                 let overtakes = line.isDoubleTrack && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
                 return Self.throughStationExtent(of: line, name: name, tracks: tracks, overtakes: overtakes, layout: layout)
-            }
+            },
+            sunk: standsInATunnel
         )
         if besideThrough, besideShared?.moved.contains(where: { $0 > 0 && $0 < runs.stops.count - 1 }) != true {
             return refused("No station between the line's ends is beside the company's track.", "這條線中間沒有和公司軌道並排的共用車站。")
@@ -1926,7 +2022,9 @@ extension RealLineLaying {
             let overtakes = between && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
             // SHALUN-ONE-ISLAND: none at the station it leaves the other
             // line's track past, whose platform is the other line's.
-            let loops = leaving ? 0 : overtakes ? 2 : (runs.tracks[name] ?? 1) - (between ? 2 : 1)
+            // Decision 995: as many as the real station has.
+            let real = between ? RealBranchLine.realLoops(system: line.system, network: line.network, name: name, end: false) : nil
+            let loops = leaving ? 0 : real?.count ?? (overtakes ? 2 : (runs.tracks[name] ?? 1) - (between ? 2 : 1))
             // A positive offset is on the right going up the line; on a
             // double track the second track is on the left, so a loop
             // between the ends is on the right. An end station's loops lie
@@ -1942,9 +2040,9 @@ extension RealLineLaying {
             // Shalun), the third 16 m out on the other side with a loop's
             // first reach and ramp, as a branch line's other loops: with
             // the second level's longer ones it did not fit their curves.
-            let sides: [(Double, Int, Bool)] = overtakes
+            let sides: [(Double, Int, Bool)] = real ?? (overtakes
                 ? [(offset, 1, false), (-offset, 1, true)]
-                : between ? [(offset, 1, false)] : endSides(index, name: name, loops: loops)
+                : between ? [(offset, 1, false)] : endSides(index, name: name, loops: loops))
             guard loops <= sides.count else {
                 return refused("A station of the line has no room for its tracks here.", "這條線有一站放不下它要的股道。")
             }

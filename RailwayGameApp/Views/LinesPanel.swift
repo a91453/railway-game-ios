@@ -1840,6 +1840,12 @@ struct LinesPanel: View {
                 }
             }
             .buttonStyle(.borderless)
+            // Decision 983: the paints this line's models of train can wear,
+            // on this device only. No row for most lines.
+            if !line.isFreight {
+                TrainPaintRows(session: session, line: line.id,
+                               offersEveryLine: session.world.lines.filter({ !$0.isFreight }).count > 1)
+            }
             // Decision 795: the winter event's livery, on this device only.
             if session.christmasLiveryAvailable, !line.isFreight {
                 VStack(alignment: .leading, spacing: 4) {
@@ -3955,6 +3961,73 @@ private struct IconOrTitleAndIcon: LabelStyle {
                 configuration.icon
                 configuration.title
             }
+        }
+    }
+}
+
+/// Decision 983: a line page's menus of the paints its models of train can
+/// wear, one for each model on the line that has any, and under each a
+/// button that puts the line's choice on every line running that model.
+private struct TrainPaintRows: View {
+    let session: GameSession
+    let line: LineID
+    /// Whether the company has another passenger line to put it on.
+    let offersEveryLine: Bool
+
+    /// Decision 338: the train pack's sets drawn as the map draws them
+    /// while the pack is locked.
+    private static var locked: Set<String> {
+        let defaults = UserDefaults.standard
+        let unlocked = TrainPack.isUnlocked
+        return TrainPack.locked(unlocked: unlocked, pushPullE1000: defaults.bool(forKey: TrainPack.pushPullE1000Key))
+    }
+
+    var body: some View {
+        let language = session.language, locked = Self.locked
+        ForEach(session.trainPaintMenus(on: line, locked: locked)) { menu in
+            VStack(alignment: .leading, spacing: 4) {
+                // Decision 184, later: a menu the ticks leave alone.
+                TickStable(StableKey(line, menu, language)) {
+                    Menu {
+                        ForEach(menu.rows) { row in
+                            Button {
+                                session.chooseTrainPaint(row.id, in: menu.id, on: line)
+                            } label: {
+                                Label {
+                                    Text(verbatim: row.name)
+                                } icon: {
+                                    Image(systemName: row.isChosen ? "checkmark.circle.fill" : "circle.fill")
+                                }
+                                .tint(Palette.rgb(row.swatch))
+                            }
+                        }
+                    } label: {
+                        Label {
+                            Text(verbatim: language.text("\(menu.title): \(menu.chosen.name)", "\(menu.title)：\(menu.chosen.name)"))
+                        } icon: {
+                            Circle()
+                                .fill(Palette.rgb(menu.chosen.swatch))
+                                .frame(width: 16, height: 16)
+                        }
+                    }
+                    .accessibilityIdentifier("line.trainPaint.\(menu.id)")
+                }
+                Text(verbatim: language.text(
+                    "Changes how this line's trains look on the 3D map. Kept on this device.",
+                    "換這條路線列車在 3D 地圖上的外觀，選擇記在這台裝置。"
+                ))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                if offersEveryLine {
+                    Button {
+                        session.putTrainPaintOnEveryLine(of: menu.id, from: line, locked: locked)
+                    } label: {
+                        Text(verbatim: language.text("Put It on Every Line With This Train", "同款列車的路線全部套用"))
+                    }
+                    .accessibilityIdentifier("line.trainPaint.\(menu.id).all")
+                }
+            }
+            .buttonStyle(.borderless)
         }
     }
 }

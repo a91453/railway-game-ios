@@ -11,9 +11,9 @@
 | 檔案 | 從哪裡來 | 授權 |
 |---|---|---|
 | `N02-25_Station.geojson` | 国土数値情報 鉄道データ N02 2025 年版，`https://nlftp.mlit.go.jp/ksj/gml/data/N02/N02-25/N02-25_GML.zip`（14.2 MB，取 `UTF-8/N02-25_Station.geojson`） | CC BY 4.0；署名「『国土数値情報（鉄道データ）』（国土交通省）を加工して作成」 |
-| `jpn_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop 日本 2025，constrained，1 km | CC BY 4.0，WorldPop |
-| 國土地理院標高圖磚 | `https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/…`（沒有就 dem5b、dem5c），另抓 `dem_png/14/…`（DEM10B） 補 5 m 沒有值的點；`fetch_gsi_dem.py` 一次三片地抓（到熊本是 5 m 5,798 片、10 m 1,488 片，共 562 MB，約 40 分鐘；中斷了再跑會接著抓） | 国土地理院コンテンツ利用規約（與 CC BY 4.0 相容），署名「国土地理院の標高タイルを加工して作成」 |
-| `kyushu.pbf` | OpenStreetMap 九州，`https://osmtoday.com/asia/japan/kyushu.pbf`（約 354 MB，會轉到 geo2day.com），用 `osmium extract` 切成 `fukuoka.pbf`（約 30 MB，鐵道用）與 `kumamoto.pbf`（約 107 MB，地面用） | ODbL 1.0，© OpenStreetMap 貢獻者 |
+| e-Stat 統計 GIS 的 500 m 網格（決策 1000） | 令和 2 年國勢調查（住的人，`T001141`）與令和 3 年經濟普查‐活動調查（上班的人，`T001162`），地圖碰到的每個 1 次網格一個 zip（四縣 12 格、約 3.5 MB），`tools/census-grid/japan_census_grid.py fetch` 下載，讀了什麼寫在 `tools/census-grid/japan_sources.json` | 政府統計の総合窓口（e-Stat）利用規約（政府標準利用規約 2.0，與 CC BY 4.0 相容）；署名「『令和2年国勢調査』『令和3年経済センサス‐活動調査』（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成」 |
+| 國土地理院標高圖磚 | `https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/…`（沒有就 dem5b、dem5c），另抓 `dem_png/14/…`（DEM10B） 補 5 m 沒有值的點；`fetch_gsi_dem.py` 一次六片地抓（三縣是 5 m 31,672 片、10 m 8,100 片；決策 997 的四縣是 5 m 39,376 片、10 m 10,044 片，約 2 小時，兩個程序從兩頭抓約 1 小時；中斷了再跑會接著抓） | 国土地理院コンテンツ利用規約（與 CC BY 4.0 相容），署名「国土地理院の標高タイルを加工して作成」 |
+| `kyushu.pbf`、`chugoku.pbf` | OpenStreetMap 九州與中國地方，`https://osmtoday.com/asia/japan/kyushu.pbf`（約 354 MB，會轉到 geo2day.com）與 `chugoku.pbf`（約 265 MB）。九州的用 `osmium extract` 切成 `fukuoka.pbf`（約 30 MB，鐵道用）；兩包 `osmium merge` 後切成 `four.pbf`（約 233 MB，地面用，決策 991：北邊到關門海峽對岸的下關；決策 997：西邊到平戶） | ODbL 1.0，© OpenStreetMap 貢獻者 |
 
 這兩個在雲端容器都連得到（2026-11-18）。每次讀了什麼寫在 `fukuoka_sources.json`。
 
@@ -30,9 +30,11 @@ mkdir -p /tmp/fk/n02 /tmp/fk/osm
 curl -L -o /tmp/fk/n02/N02-25_GML.zip https://nlftp.mlit.go.jp/ksj/gml/data/N02/N02-25/N02-25_GML.zip
 (cd /tmp/fk/n02 && unzip -o -q N02-25_GML.zip)
 curl -L -o /tmp/fk/osm/kyushu.pbf https://osmtoday.com/asia/japan/kyushu.pbf
+curl -L -o /tmp/fk/osm/chugoku.pbf https://osmtoday.com/asia/japan/chugoku.pbf
 apt-get update && apt-get install -y osmium-tool    # 只用來切範圍（GPL-3.0，只執行、不抄程式）
 osmium extract -b 130.25,33.49,130.52,33.75 -s smart -o /tmp/fk/osm/fukuoka.pbf /tmp/fk/osm/kyushu.pbf    # 鐵道（1、2）
-osmium extract -b 130.25,32.66,130.94,33.75 -s smart -o /tmp/fk/osm/kumamoto.pbf /tmp/fk/osm/kyushu.pbf   # 地面（3），到熊本
+osmium merge /tmp/fk/osm/kyushu.pbf /tmp/fk/osm/chugoku.pbf -o /tmp/fk/osm/merged.pbf
+osmium extract -b 129.30,32.05,131.37,34.07 -s smart -o /tmp/fk/osm/four.pbf /tmp/fk/osm/merged.pbf    # 地面（3、4），福岡、佐賀、熊本、長崎四縣（決策 997）
 pip install osmium
 
 # 1. 鐵道與估計班距（約 50 秒）。
@@ -41,17 +43,26 @@ python3 -I tools/fukuoka-map/build_fukuoka_rail.py /tmp/fk/n02/N02-25_GML/UTF-8/
 # 2. 排班（`tools/real-timetables/extract_metro_runs.py`，和香港同一套）。
 python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/MapPacks/fukuoka
 
-# 3. 人口、底圖、機場、不蓋區、高度與水域（FUKUOKA-GROUND）。
-mkdir -p /tmp/fk/pop /tmp/fk/gsi
-curl -L -o /tmp/fk/pop/jpn.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/JPN/v1/1km_ua/constrained/jpn_pop_2025_CN_1km_R2025A_UA_v1.tif
-pip install tifffile imagecodecs numpy
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py population /tmp/fk/pop/jpn.tif RailwayGameApp/Resources/MapPacks/fukuoka
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka   # 約 2 分鐘，要先有人口
-python3 -I tools/airfields/build_airfields.py /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka/airfields.json
-python3 -I tools/no-build-land/build_no_build.py /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka/no_build.json
+# 3. 人口與上班人數（決策 1000，國勢調查＋經濟普查 500 m，tools/census-grid/README.md）、底圖、機場、不蓋區、
+#    高度與水域（FUKUOKA-GROUND）。高度格的角落寫死在 build_fukuoka_ground.py 的 GRID_CORNER（以前的
+#    WorldPop 30″ 格網），不跟著人口的 7.5″ 格走。
+mkdir -p /tmp/fk/estat /tmp/fk/gsi
+python3 -I tools/census-grid/japan_census_grid.py fetch RailwayGameApp/Resources/MapPacks/fukuoka /tmp/fk/estat
+python3 -I tools/census-grid/japan_census_grid.py build /tmp/fk/estat RailwayGameApp/Resources/MapPacks/fukuoka
+pip install imagecodecs numpy
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka   # 約 2 分鐘，要先有人口
+python3 -I tools/airfields/build_airfields.py /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka/airfields.json
+python3 -I tools/no-build-land/build_no_build.py /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka/no_build.json
 python3 -I tools/fukuoka-map/fetch_gsi_dem.py /tmp/fk/gsi
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/kumamoto.pbf RailwayGameApp/Resources/MapPacks/fukuoka
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka
+
+# 4. 依縣界拆成四包（決策 991、997）：底圖與建築切給福岡、佐賀、熊本、長崎四個資料夾，pack.json 寫上各份、
+#    範圍、開局點與舊存檔的範圍。上面幾步用 `write_manifest` 重寫 pack.json（整張、不分份，九州新幹線的
+#    檔也在 `SOURCES` 裡），所以這一步讀的是整張；拆過的 pack.json 它會停下來。
+pip install shapely   # BSD 3-Clause，只有拆分用
+osmium tags-filter -o /tmp/fk/osm/admin4.pbf /tmp/fk/osm/kyushu.pbf r/admin_level=4   # 縣界（整個關係，不切）
+python3 -I tools/fukuoka-map/split_prefectures.py /tmp/fk/osm/admin4.pbf RailwayGameApp/Resources/MapPacks
 
 swift build --build-tests -Xswiftc -warnings-as-errors
 swift test --skip-build --filter FukuokaRailwaysTests
@@ -70,7 +81,7 @@ swift test --skip-build --filter FukuokaRailwaysTests
 | | 福岡（以前） | 到熊本 |
 |---|--:|--:|
 | 範圍 | 17.6 × 22.2 km | 56.5 × 114.1 km（地圖塊 4 × 7） |
-| 人口（WorldPop） | 約 170 萬 | 484 萬 |
+| 人口（WorldPop，當時） | 約 170 萬 | 484 萬 |
 | 高度格（1.875″） | 400 × 384 | 2000 × 1200 |
 | 建物 | 28.5 萬棟 | 107.9 萬棟 |
 | `basemap.pmtiles` | 3.1 MB | 23.7 MB |
@@ -84,6 +95,13 @@ swift test --skip-build --filter FukuokaRailwaysTests
 - **記憶體**：整張 5 m 像素約 4.5 億點，一次放不進雲端容器的記憶體，`mean_heights` 改成每 8 排圖磚算一次、把每格的總和與點數累加。
 - **鐵道檔**：`track_lines.geojson` 等檔有福岡地鐵三條線與九州新幹線（SHINKANSEN-SALE，決策 975，見下面「九州新幹線」）。
 - **還沒做的**：地圖包的名字與資料來源畫面仍寫「福岡」，KUMAMOTO-OPEN 再決定要不要改。
+
+## 到長崎（決策 997，2026-11-26）
+
+西緣從 129.73 移到 **129.34**（平戶島西南角），長崎縣是第四包 `fukuoka-nagasaki`。地面照上面的步驟整個重做（`four.pbf`）：
+高度格 3,744 × 3,840，陸地 22,070.2 km²、水 18,162.0 km²、陡坡 5,580.0 km²，人口 935 萬，建物 196.7 萬棟；
+整包 117.7 MB（福岡 52.4、佐賀 20.3、熊本 29.4、長崎 15.6 MB）。決策 991 範圍裡的高度只有 27 格差 1 m。
+細節在 `docs/decisions/997.md` §3、§4。
 
 ## 三條線
 

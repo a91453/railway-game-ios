@@ -116,9 +116,10 @@ final class FukuokaRailwaysTests: XCTestCase {
         XCTAssertEqual(airport.coordinate.latitude, OverseasMap.fukuoka.arrival.latitude, accuracy: 0.001)
         XCTAssertEqual(airport.coordinate.longitude, OverseasMap.fukuoka.arrival.longitude, accuracy: 0.001)
         let extent = try XCTUnwrap(HongKongRailwaysTests.pack(.fukuoka)).extent()
-        // KUMAMOTO-GROUND: the map reaches south and east to Kumamoto; what
-        // it was is `earlier` (MapGrowthLayoutTests).
-        XCTAssertEqual(extent, MapPack.Extent(north: 33.72, south: 32.69, west: 130.29, east: 130.9))
+        // Decision 991: the map holds Fukuoka, Saga and Kumamoto
+        // Prefectures, decision 997: and Nagasaki; how it lay before is
+        // `older` (MapGrowthLayoutTests).
+        XCTAssertEqual(extent, MapPack.Extent(north: 34.03, south: 32.09, west: 129.34, east: 131.33))
     }
 
     /// Each line is on sale on the map, bought with its trains, and runs a

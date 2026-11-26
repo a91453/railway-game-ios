@@ -984,6 +984,8 @@ extension TrainType {
         "DR3100": ("DR3100 diesel Tze-Chiang", "DR3100 柴聯自強號"),
         "DR1000": ("DR1000 railcar", "DR1000 柴油客車"),
         "C381": ("Taipei Metro C381", "台北捷運 C381"),
+        // Decision 986.
+        "KEIKYU1000": ("Keikyu New 1000", "京急新1000形"),
     ]
 }
 

@@ -319,22 +319,51 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
-                    // Decision 712: the people of Hong Kong's map
-                    // (`MapPacks/hongkong/population.json`).
+                    // Decisions 712 and 1008: the people and jobs of Hong
+                    // Kong's map (`MapPacks/hongkong/population.json`,
+                    // `tools/census-grid/hongkong_census_grid.py`).
                     DataSourceCredit(
                         id: "hongKongPeople",
                         title: language.text("Hong Kong’s people", "香港的人口"),
                         detail: language.text(
-                            "On Hong Kong’s map, how many people live round each station, which sets how many ride from it and where the city’s buildings stand.",
-                            "香港地圖上每座車站周圍住了多少人，決定有多少人從那裡搭車，以及城市的建物蓋在哪裡。"
+                            "On Hong Kong’s map, how many people live and work round each station, which sets how many ride from it and where they go.",
+                            "香港地圖上每座車站周圍住了多少人、有多少人在那裡上班，決定有多少人從那裡搭車、往哪裡去。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), University of Southampton: population estimates per square kilometre of Hong Kong, 2025 (R2025A), under the Creative Commons Attribution 4.0 International licence (CC BY 4.0). Each cell is rounded to whole people.",
-                            "WorldPop（www.worldpop.org），英國南安普敦大學：香港 2025 年每平方公里人口估計（R2025A），依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）。每格四捨五入到整數人。"
+                            "Residents: 2021 Population Census, Census and Statistics Department. Jobs: Quarterly Survey of Employment and Vacancies, 2021, Census and Statistics Department. Tertiary Planning Units and land use: Planning Department. All Government of the Hong Kong SAR, via DATA.GOV.HK and the CSDI Portal (Common Spatial Data Infrastructure), used under their Terms and Conditions of Use. Spread over the homes and workplaces for the game.",
+                            "住的人：2021 年人口普查，政府統計處。上班的人：2021 年就業及職位空缺按季統計調查，政府統計處。小規劃統計區與土地用途：規劃署。都是香港特別行政區政府的資料，經「資料一線通」（DATA.GOV.HK）與空間數據共享平台（CSDI）提供，依兩者的使用條款使用；為遊戲分配到住宅與工作的地方。"
                         ),
                         links: [
-                            DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
-                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                            DataSourceCredit.Link(
+                                title: language.text("2021 Population Census", "2021 年人口普查"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-censtatd-census_geo-2021-population-census-by-ssg"
+                            ),
+                            DataSourceCredit.Link(
+                                title: language.text("Persons engaged by Tertiary Planning Unit", "按小規劃統計區劃分的就業人數"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-censtatd-tablechart-215-16009"
+                            ),
+                            DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
+                            DataSourceCredit.Link(
+                                title: language.text("CSDI Portal Terms and Conditions of Use", "空間數據共享平台使用條款"),
+                                url: "https://portal.csdi.gov.hk/csdi-webpage/doc/TNC"
+                            ),
+                        ]
+                    ),
+                    // Decision 1003: the months' rain and thunder
+                    // (`Disruptions.countryRain`).
+                    DataSourceCredit(
+                        id: "hongKongWeather",
+                        title: language.text("Hong Kong’s weather", "香港的天氣"),
+                        detail: language.text(
+                            "How often it rains or thunders in each month on Hong Kong’s map.",
+                            "香港地圖上每個月多常下雨、打雷。"
+                        ),
+                        notice: language.text(
+                            "Hong Kong Observatory: days with thunderstorms in its monthly normals of 1991–2020, and days with 1 mm of rain or more counted from its daily rainfall of 1991–2020.",
+                            "香港天文台：1991–2020 年月平均值的雷暴日數，與由 1991–2020 年每日雨量算出的 1 毫米以上雨日。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Hong Kong Observatory", "香港天文台"), url: "https://www.hko.gov.hk/en/cis/normal/1991_2020/normals.htm"),
                         ]
                     ),
                     // Decision 712: Hong Kong International Airport on
@@ -429,14 +458,37 @@ public enum DataSourceCredits {
                         id: "rovaniemiPopulation",
                         title: language.text("Rovaniemi’s people", "羅瓦涅米的人口"),
                         detail: language.text(
-                            "Where people live on Rovaniemi’s map, for how many ride from each station.",
-                            "羅瓦涅米地圖上的人住在哪裡，用來算每一站有多少人搭車。"
+                            "Where people live and work on Rovaniemi’s map, for how many ride from each station.",
+                            "羅瓦涅米地圖上的人住在哪裡、在哪裡上班，用來算每一站有多少人搭車。"
+                        ),
+                        // Decision 1007: Statistics Finland's open data,
+                        // spread over the map's buildings (a change the
+                        // licence asks to be said).
+                        notice: language.text(
+                            "Source: Statistics Finland, Population grid data 1 km × 1 km 2025 and Paavo – Open data by postal code area 2025, under the Creative Commons Attribution 4.0 licence; spread over the map’s buildings.",
+                            "資料來源：芬蘭統計局（Statistics Finland）1 公里人口格網 2025 年、郵遞區開放統計 Paavo 2025 年，依創用 CC 姓名標示 4.0 授權使用；已依地圖上的建物細分。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
+                    ),
+                    // Decision 1003: the months' rain and thunder
+                    // (`Disruptions.countryRain`).
+                    DataSourceCredit(
+                        id: "rovaniemiWeather",
+                        title: language.text("Rovaniemi’s weather", "羅瓦涅米的天氣"),
+                        detail: language.text(
+                            "How often it rains, snows or thunders in each month on Rovaniemi’s map.",
+                            "羅瓦涅米地圖上每個月多常下雨、下雪、打雷。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), Finland 2025, 1 km grid, CC BY 4.0.",
-                            "WorldPop（www.worldpop.org），芬蘭 2025 年 1 公里格網，CC BY 4.0。"
+                            "Finnish Meteorological Institute open data, CC BY 4.0: daily precipitation at Rovaniemi airport, 1998–2020, and lightning within 10 km of the town, 2011–2020, counted by month.",
+                            "芬蘭氣象局開放資料，CC BY 4.0：羅瓦涅米機場 1998–2020 年的每日降水，與 2011–2020 年市區 10 公里內的閃電，按月計算。"
                         ),
-                        links: []
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Finnish Meteorological Institute open data", "芬蘭氣象局開放資料"), url: "https://en.ilmatieteenlaitos.fi/open-data"),
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: "https://creativecommons.org/licenses/by/4.0/"),
+                        ]
                     ),
                 ]
             )
@@ -533,14 +585,33 @@ public enum DataSourceCredits {
                         id: "fukuokaPopulation",
                         title: language.text("Fukuoka’s people", "福岡的人口"),
                         detail: language.text(
-                            "Where people live on Fukuoka’s map, for how many ride from each station.",
-                            "福岡地圖上的人住在哪裡，用來算每一站有多少人搭車。"
+                            "Where people live and where they work on Fukuoka’s map, for how many ride from each station and where they go.",
+                            "福岡地圖上的人住在哪裡、在哪裡上班，用來算每一站有多少人搭車、要去哪裡。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), Japan 2025, 1 km grid, CC BY 4.0.",
-                            "WorldPop（www.worldpop.org），日本 2025 年 1 公里格網，CC BY 4.0。"
+                            "Made by processing the 2020 Population Census and the 2021 Economic Census for Business Activity, 500 m grids (Statistics Bureau, Ministry of Internal Affairs and Communications), from e-Stat, the portal site of official statistics of Japan (「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成). Each 500 m cell’s people and workers are spread evenly over it.",
+                            "「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成（以日本總務省統計局 2020 年國勢調查與 2021 年經濟普查的 500 公尺網格加工製作，資料取自政府統計入口網站 e-Stat）。每個 500 公尺格的人與上班的人平均分在格內。"
                         ),
-                        links: []
+                        links: [
+                            DataSourceCredit.Link(title: language.text("e-Stat terms of use", "e-Stat 使用條款"), url: "https://www.e-stat.go.jp/terms-of-use"),
+                        ]
+                    ),
+                    // Decision 1003: the months' rain and thunder
+                    // (`Disruptions.countryRain`).
+                    DataSourceCredit(
+                        id: "fukuokaWeather",
+                        title: language.text("Kyushu’s weather", "九州的天氣"),
+                        detail: language.text(
+                            "How often it rains or thunders in each month in each part of Kyushu’s map.",
+                            "九州地圖上各地每個月多常下雨、打雷。"
+                        ),
+                        notice: language.text(
+                            "Japan Meteorological Agency, normals of 1991–2020 at Fukuoka, Saga, Nagasaki and Kumamoto: days with 1.0 mm of precipitation or more and days with thunder (edited).",
+                            "日本氣象廳 1991–2020 年平年值（福岡、佐賀、長崎、熊本）：日降水量 1.0 毫米以上日數與雷日數（經加工）。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Japan Meteorological Agency: normals", "日本氣象廳：平年值"), url: "https://www.data.jma.go.jp/obd/stats/data/mdrr/normal/index.html"),
+                        ]
                     ),
                     // FUKUOKA-OPEN: Fukuoka Airport on Fukuoka's map
                     // (`AirportCatalog.overseasPlaces`).
@@ -558,6 +629,23 @@ public enum DataSourceCredits {
                         links: [
                             DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
                             DataSourceCredit.Link(title: language.text("Fukuoka City: Fukuoka Airport", "福岡市：福岡空港について"), url: "https://www.city.fukuoka.lg.jp/shisei/kotsu-toshiseibi/kukouchosa.html"),
+                        ]
+                    ),
+                    // Decision 991: the map's other airports
+                    // (`AirportCatalog.overseasPlaces`).
+                    DataSourceCredit(
+                        id: "kyushuAirports",
+                        title: language.text("Kumamoto, Saga, Kitakyushu, Amakusa, Nagasaki and Iki Airports", "熊本、佐賀、北九州、天草、長崎、壹岐機場"),
+                        detail: language.text(
+                            "On Fukuoka’s map, how many passengers and flights each of these airports has in a day.",
+                            "福岡地圖上這六座機場一天各有多少旅客與航班。"
+                        ),
+                        notice: language.text(
+                            "Passengers and flights of 2025: the Ministry of Land, Infrastructure, Transport and Tourism (Japan), airport survey 2025. Positions: OpenStreetMap contributors. The game is not affiliated with the airports.",
+                            "2025 年的旅客與航班：日本國土交通省《令和 7 年空港管理狀況調書》。位置：OpenStreetMap 貢獻者。本遊戲與這六座機場沒有任何關係。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("MLIT: airport figures", "國土交通省：空港管理狀況"), url: "https://www.mlit.go.jp/koku/15_bf_000185.html"),
                         ]
                     ),
                 ]
@@ -930,6 +1018,28 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
                         ]
                     ),
+                    // Decision 1004: how often it rains in each part of
+                    // Taiwan, from the weather station nearest each place;
+                    // decision 1013: days of 1 mm and of thunder. CWA open
+                    // data is under the Open Government Data License 1.0
+                    // (attribution); NOAA's summaries are public domain.
+                    DataSourceCredit(
+                        id: "taiwanWeather",
+                        title: language.text("Taiwan’s weather", "台灣的天氣"),
+                        detail: language.text(
+                            "On a map of Taiwan, how often it rains and thunders in each month in each part of the island: the north’s wet winters, the south’s dry ones and summer thunderstorms.",
+                            "台灣地圖上各地每個月多常下雨、打雷：北部冬天多雨、南部冬天少雨，夏天午後雷陣雨。"
+                        ),
+                        notice: language.text(
+                            "Central Weather Administration open data: daily rainfall at 19 stations, 2017–2025, counted as days with 1 mm or more (edited; Open Government Data License, version 1.0). Thunder: airport weather reports of 2015–2024 from the Iowa Environmental Mesonet, Iowa State University, and the Global Summary of the Day of NOAA National Centers for Environmental Information (edited). Station positions: NOAA NCEI.",
+                            "中央氣象署氣象資料開放平臺：19 個氣象站 2017–2025 年的每日雨量，數成 1 毫米以上的日數（經加工；政府資料開放授權條款第 1 版）。雷暴：美國愛荷華州立大學 Iowa Environmental Mesonet 的 2015–2024 年機場天氣報告，與美國國家海洋暨大氣總署國家環境資訊中心（NOAA NCEI）的每日摘要（經加工）。測站位置：NOAA NCEI。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Central Weather Administration: open data", "中央氣象署：氣象資料開放平臺"), url: "https://opendata.cwa.gov.tw/"),
+                            DataSourceCredit.Link(title: "Iowa Environmental Mesonet", url: "https://mesonet.agron.iastate.edu/request/download.phtml"),
+                            DataSourceCredit.Link(title: language.text("NOAA NCEI: Global Summary of the Day", "NOAA NCEI：每日摘要"), url: "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00516"),
+                        ]
+                    ),
                     // Decision 147: how much of the ground real buildings
                     // cover, which sets what buying out a city building
                     // costs. Overture's buildings theme is ODbL 1.0; in
@@ -1252,19 +1362,38 @@ public enum DataSourceCredits {
                         ]
                     ),
                     // Decision 408: the second high-speed train
-                    // (Map3DN700SG), the author's own model in the reference
-                    // repository with fewer triangles, which the author lets
-                    // the game and its public repository carry.
+                    // (decision 979: Map3DN700S, the author's own N700S of
+                    // the earlier version, its texture cut into faces of the
+                    // game's colours), which the author lets the game and
+                    // its public repository carry.
                     DataSourceCredit(
                         id: "highSpeedTrainModel",
                         title: language.text("White high-speed train", "白色高速列車"),
                         detail: language.text(
-                            "The Train Pack’s high-speed train on the 3D map, white with a dark green line: a model the game’s author made.",
-                            "列車包裡 3D 地圖上的高速列車，白色車身配深綠色線條：遊戲作者自己做的模型。"
+                            "The Train Pack’s high-speed train on the 3D map, white with two blue lines: a model the game’s author made.",
+                            "列車包裡 3D 地圖上的高速列車，白色車身配兩道藍色線條：遊戲作者自己做的模型。"
                         ),
                         notice: language.text(
-                            "The game author’s own model, simplified and in the game’s colours, used with the author’s permission.",
-                            "遊戲作者自己做的模型，簡化並換成遊戲的配色，經作者同意使用。"
+                            "The game author’s own model from the game’s earlier version, in the game’s colours, used with the author’s permission.",
+                            "遊戲作者在舊版遊戲裡自己做的模型，換成遊戲的配色，經作者同意使用。"
+                        ),
+                        links: []
+                    ),
+                    // Decisions 988 and 989: the 700T (Map3DTHSR700T) and
+                    // the 700 series in its own paint (Map3DSeries700),
+                    // the author's own 700 series cars of the earlier
+                    // version, their texture cut into faces of the game's
+                    // colours.
+                    DataSourceCredit(
+                        id: "highSpeed700Model",
+                        title: language.text("High-speed 700T and 700 Series", "高鐵 700T 與 700 系"),
+                        detail: language.text(
+                            "The high-speed line’s 700T on the 3D map, white with an orange band, and the white and blue 700 Series in the garage: models the game’s author made.",
+                            "3D 地圖上高鐵的 700T（白色車身配橘色帶）和車庫裡白色車身配藍帶的 700 系：遊戲作者自己做的模型。"
+                        ),
+                        notice: language.text(
+                            "The game author’s own models from the game’s earlier version, in the game’s colours, used with the author’s permission.",
+                            "遊戲作者在舊版遊戲裡自己做的模型，換成遊戲的配色，經作者同意使用。"
                         ),
                         links: []
                     ),

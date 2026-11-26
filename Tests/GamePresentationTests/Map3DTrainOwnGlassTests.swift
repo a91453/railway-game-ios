@@ -11,30 +11,12 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
     var studioCars: [Map3DModelPack.Model] {
         get throws {
             var cars: [Map3DModelPack.Model] = []
+            // One train a line in `Map3DTrainOwnGlassList.studioCars`.
             for far in [false, true] {
-                for unit in Map3DMTRUrbanLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTRUrbanLine.model(unit, far: far))) }
-                for unit in Map3DMTRTuenMaLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTRTuenMaLine.model(unit, far: far))) }
-                for unit in Map3DMTRAirportLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTRAirportLine.model(unit, far: far))) }
-                for unit in Map3DMTREastRailLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTREastRailLine.model(unit, far: far))) }
-                for unit in Map3DMTRSouthIslandLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTRSouthIslandLine.model(unit, far: far))) }
-                for unit in Map3DMTRDisneylandLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DMTRDisneylandLine.model(unit, far: far))) }
-                // Decision 864: and the Finnish double-deck coach.
-                cars.append(try XCTUnwrap(Map3DFinlandDoubleDeck.model(far: far)))
-                // Decision 900: the control car and the sleeping car.
-                cars.append(try XCTUnwrap(Map3DFinlandControlCar.model(far: far)))
-                cars.append(try XCTUnwrap(Map3DFinlandSleeper.model(far: far)))
-                // Decision 893: and Fukuoka's three.
-                for unit in Map3DFukuokaAirportLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DFukuokaAirportLine.model(unit, far: far))) }
-                for unit in Map3DFukuokaKaizukaLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DFukuokaKaizukaLine.model(unit, far: far))) }
-                for unit in Map3DFukuokaNanakumaLine.Unit.allCases { cars.append(try XCTUnwrap(Map3DFukuokaNanakumaLine.model(unit, far: far))) }
-                // Decision 957: and the steam train's wooden coaches.
-                for unit in Map3DSteamCoach.Unit.allCases { cars.append(try XCTUnwrap(Map3DSteamCoach.model(unit, far: far))) }
-                // Decision 956: and the Keikyu New 1000.
-                cars.append(try XCTUnwrap(Map3DRedCommuter.cab(far: far)))
-                cars.append(try XCTUnwrap(Map3DRedCommuter.middle(far: far)))
+                for train in Map3DTrainOwnGlassList.studioCars {
+                    for car in train(far) { cars.append(try XCTUnwrap(car)) }
+                }
             }
-            // Decision 977: and the Kyushu Shinkansen's N700 series, near only.
-            for unit in Map3DKyushuN700.Unit.allCases { cars.append(try XCTUnwrap(Map3DKyushuN700.model(unit))) }
             return cars
         }
     }
@@ -102,12 +84,10 @@ final class Map3DTrainOwnGlassTests: XCTestCase {
             let byColour = try XCTUnwrap(Map3DTrainLights.windowModel(of: guessed), model.name)
             XCTAssertLessThanOrEqual(panes.triangleCount, byColour.triangleCount, model.name)
             // The urban line's and the airport lines' doors and window bays
-            // are charcoal and their window bands dark (the Tuen Ma line's
-            // are navy, never taken for glass): those lit no longer. The
-            // Keikyu New 1000's (decision 956) dark is its underframe's and
-            // gangways', never taken for glass either, and so is the
-            // Kyushu Shinkansen's N700's (decision 977).
-            if !["mtr-tuen-ma", "keikyu-new1000", "kyushu-n700"].contains(where: model.name.hasPrefix) {
+            // are charcoal and their window bands dark: those lit no
+            // longer. The cars of `Map3DTrainOwnGlassList.darkNeverGlass`
+            // had no dark taken for glass.
+            if !Map3DTrainOwnGlassList.darkNeverGlass.contains(where: model.name.hasPrefix) {
                 XCTAssertLessThan(panes.triangleCount, byColour.triangleCount, "\(model.name): the dark greys no longer lit")
             }
         }

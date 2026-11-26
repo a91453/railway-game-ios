@@ -1217,6 +1217,15 @@ public final class GameSession {
     /// Decision 795: told of the lines chosen each time the player changes
     /// them, for the launcher to keep.
     @ObservationIgnored var christmasLiveryChanged: ((Set<LineID>) -> Void)?
+    /// Decision 983: the paint the player chose for each line's trains, by
+    /// the model's family (``TrainPaintFamily/id``) and the paint's name
+    /// (``TrainPaint/id``); a line or a family not here wears its own. From
+    /// the launcher, which keeps them on the device by the game's row
+    /// (``LauncherPreferences/trainPaints``), never in the save.
+    public internal(set) var trainPaintChosen: [LineID: [String: String]] = [:]
+    /// Decision 983: told of the paints chosen each time the player
+    /// changes them, for the launcher to keep.
+    @ObservationIgnored var trainPaintChanged: (([LineID: [String: String]]) -> Void)?
     /// Decision 712: the cities outside Taiwan the app offers and those
     /// whose flights are open, from the launcher (``GameLauncher/airRoutes``):
     /// what the airports' rows say of them. Empty in a game with no
@@ -1379,7 +1388,9 @@ public final class GameSession {
         // Decision 695: a free game on a real-world map saved before there
         // were airports gets its map's.
         // Decision 880: and one saved before its map had sights gets them.
-        let world = AttractionCatalog.withSights(AirportCatalog.withAirports(Self.withCityRidership(world)))
+        // Decision 1003: and one whose map's country was taken for Taiwan's
+        // gets its own holidays and weather.
+        let world = CountryLookup.withMapCountry(AttractionCatalog.withSights(AirportCatalog.withAirports(Self.withCityRidership(world))))
         self.world = world
         self.commandLog = CommandLog(start: world)
         self.language = language

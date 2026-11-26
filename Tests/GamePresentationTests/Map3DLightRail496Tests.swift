@@ -62,6 +62,32 @@ final class Map3DLightRail496Tests: XCTestCase {
         }
     }
 
+    /// Decision 985: a real line's train and the player's are laid at the
+    /// halves' own lengths, the whole train its real 33 to 34 m, not two
+    /// cars of 20 m.
+    func testLaidAtItsOwnLength() throws {
+        for key in Self.keys {
+            for set in [key, key + "Far"] {
+                let drawn = try XCTUnwrap(Map3DTrainSet.byKey[set], set)
+                XCTAssertTrue(drawn.ownLengths, set)
+                XCTAssertEqual(drawn.fixedCars, 2, set)
+            }
+            let whole = try XCTUnwrap(Self.lengths[key])
+            // The player's, however many cars its type has.
+            for count in [1, 2, 3] {
+                let laid = try XCTUnwrap(pack.layout(forType: key, count: count), key)
+                XCTAssertEqual(laid.map(\.model), [pack.index(of: "set-\(key)-head"), pack.index(of: "set-\(key)-tail")], key)
+                XCTAssertEqual(laid.reduce(0) { $0 + $1.length + $1.gap }, whole, accuracy: 0.05, key)
+            }
+            // A real line's, in its km.
+            let real = Map3DRealTrains.cars(of: .init(key: key, cars: 2), hasModels: true, models: pack)
+            XCTAssertEqual(real.cars.count, 2, key)
+            XCTAssertEqual(real.length * 1_000, Double(whole), accuracy: 0.05, key)
+            XCTAssertEqual(real.cars[1].start, real.cars[0].length, accuracy: 0.000_001, "end to end")
+            XCTAssertLessThan(real.length, 2 * Map3DRealTrains.carPitch, key)
+        }
+    }
+
     func testFromFiveHundredMetresTheirLightVersions() throws {
         for key in Self.keys {
             XCTAssertEqual(Map3DTrainSet.reach(of: key), 500, key)

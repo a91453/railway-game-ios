@@ -58,6 +58,7 @@ THSR_SALE_PROFIT=3 $B GamePresentationTests.ThsrSaleTests/testProfit   # 一天�
 3. 夜間 `timetable-checkup` 的台灣捷運那個 job 會多約 25 分（擬實）＋1 小時（簡易）：看要不要把高鐵移到自己的 job。
 4. `real-line-laying` skill 加一行：月台比待避線長就鋪不下（`holding(half:)`）；中間站有班次起訖要折返渡線；端點股數不是簡易規則沒發的原因（5→7 股沒變好）。
 5. 分段買（高鐵與九州新幹線）是另一張單。
+6. 併 main 時（決策 995 加了 `RealLineLayout.highSpeed`，`RealBranchLine.stationLayout` 照車種選），高鐵刻意留在量過的 `.metro` 鋪法（`stationLayout` 排除 `isTaiwanHighSpeedRail`）。改成 `.highSpeed`（待避線一座島寬、更真實）要重量兩種一天檢查與共站，之後再做。
 
 ## UNVERIFIED
 

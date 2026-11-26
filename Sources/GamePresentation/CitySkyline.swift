@@ -29,13 +29,20 @@ public struct CitySkyline: Sendable {
         /// (``GameWorld/cityBuildingSide(row:column:)``: its density's with
         /// the city's footprints, decision 142).
         public let side: Int64
+        /// Decision 1006: how much of a full lot's houses stand on it, over
+        /// 0 up to 1: a D1 lot's people and jobs over the floor its table
+        /// gives them (``CitySkyline/fill(residents:jobs:density:)``), so a
+        /// cell where a few live has a house or two, not a street of them;
+        /// 1 for every denser lot and open ground.
+        public let fill: Double
 
-        public init(row: Int, column: Int, use: LandUse, density: Int, side: Int64 = PlacedBuildingRules.cityBuildingSide) {
+        public init(row: Int, column: Int, use: LandUse, density: Int, side: Int64 = PlacedBuildingRules.cityBuildingSide, fill: Double = 1) {
             self.row = row
             self.column = column
             self.use = use
             self.density = density
             self.side = side
+            self.fill = min(1, max(0, fill))
         }
 
         /// Whether it is open ground rather than a building.
@@ -55,6 +62,8 @@ public struct CitySkyline: Sendable {
         let rows = Land.rows(in: world.bounds), columns = Land.columns(in: world.bounds)
         var lots: [Lot] = []
         lots.reserveCapacity(world.land.cells.count)
+        // Decision 1006: only where the people are an official census's.
+        let byPeople = world.geoAnchor != nil && Self.housesByPeople(Map3DRegionLook(world: world).buildings)
         for cell in world.land.cells where cell.row < rows && cell.column < columns {
             let building = world.buildings.building(row: cell.row, column: cell.column)
             let use = building?.use ?? cell.use
@@ -65,7 +74,8 @@ public struct CitySkyline: Sendable {
             } else if let building {
                 let density = building.kind == .existingStock ? BuildingDensity.d4.rawValue : building.density.rawValue
                 lots.append(Lot(row: cell.row, column: cell.column, use: use, density: density,
-                                side: world.cityBuildingSide(row: cell.row, column: cell.column)))
+                                side: world.cityBuildingSide(row: cell.row, column: cell.column),
+                                fill: byPeople ? Self.fill(residents: cell.residents, jobs: cell.jobs, density: density) : 1))
             }
         }
         self.lots = lots.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
@@ -77,6 +87,44 @@ public struct CitySkyline: Sendable {
         self.lots = lots.sorted { ($0.row, $0.column) < ($1.row, $1.column) }
         self.time = time
     }
+
+    /// Decision 1006: the share of a full lot's houses a lot of `density`
+    /// with `residents` and `jobs` draws: on a D1 lot the floor they need
+    /// (``Building/areaPerResident`` and ``Building/areaPerJob`` each)
+    /// over the floor a D1 cell has (``Building/floorArea`` on each of its
+    /// storeys), at most 1; on a denser lot 1, its houses full. A D1
+    /// home's table (56 residents and 12 jobs) fills it exactly.
+    public static func fill(residents: Int64, jobs: Int64, density: Int) -> Double {
+        guard density == BuildingDensity.d1.rawValue else { return 1 }
+        let floor = Double(Building.floorArea * BuildingDensity.d1.floors)
+        let needed = Double(max(0, residents) * Building.areaPerResident + max(0, jobs) * Building.areaPerJob)
+        return min(1, needed / floor)
+    }
+
+    /// Decision 1006: the maps whose people and jobs come from an official
+    /// census on a fine grid (Japan's 500 m one, decision 1000), whose 64 m
+    /// cells' counts the game's houses follow. Elsewhere (WorldPop's 1 km
+    /// people spread evenly over every 64 m cell, and the blank map's
+    /// towns) every lot stays full as before: the owner, 2026-11-26, 「但也要顧慮目前照官方的只有日本 日本先做 其他還在使用world pop」
+    /// 「我怕會影響精確度」. A map whose people move to an official census
+    /// (Taiwan's, Hong Kong's, Finland's, in the same `population.json`
+    /// with its `jobs`) adds its look here in the same pull request.
+    /// Finland's (`.nordic`, Rovaniemi) since decision 1007: Statistics
+    /// Finland's 1 km people and postal areas' jobs, spread over the map's
+    /// buildings on 7.5″ cells. Hong Kong's since decision 1008: the 2021
+    /// census and each planning unit's jobs.
+    public static let censusLooks: [Map3DRegionLook.Buildings] = [.japan, .nordic, .hongKong]
+
+    /// Decision 1006: whether a map drawn with `buildings` lays the game's
+    /// houses by its cells' people (``censusLooks``).
+    public static func housesByPeople(_ buildings: Map3DRegionLook.Buildings) -> Bool {
+        censusLooks.contains(buildings)
+    }
+
+    /// Decision 1006: below this ``Lot/fill`` a lot's ground is not drawn
+    /// as a town's yard or paving but as the land round it (its field or
+    /// forest): a house or two among the fields, not a 64 m square of yard.
+    public static let thinFill = 0.25
 
     /// The uses drawn as open ground rather than buildings.
     public static let openGround: Set<LandUse> = [.park, .agricultural]

@@ -1,0 +1,55 @@
+{
+  "comment" : "Decision 782: the models of the registered train keikyuNew1000 (Map3DKeikyuNew1000): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 6,
+  "lamps" : "9ac00b7aee9a5573",
+  "models" : {
+    "light-set-keikyuNew1000-car" : {
+      "hash" : "b0e8068c5e62488d",
+      "triangles" : 48
+    },
+    "light-set-keikyuNew1000-head" : {
+      "hash" : "26d24775e9216435",
+      "triangles" : 40
+    },
+    "light-set-keikyuNew1000-tail" : {
+      "hash" : "4c2bbc4c4eccdf35",
+      "triangles" : 40
+    },
+    "light-set-keikyuNew1000Far-car" : {
+      "hash" : "c0caf2a52562a57d",
+      "triangles" : 28
+    },
+    "light-set-keikyuNew1000Far-head" : {
+      "hash" : "6f019d53fbd92e1d",
+      "triangles" : 20
+    },
+    "light-set-keikyuNew1000Far-tail" : {
+      "hash" : "d557c1fef656881d",
+      "triangles" : 20
+    },
+    "set-keikyuNew1000-car" : {
+      "hash" : "4470d2fb0c3094cd",
+      "triangles" : 1116
+    },
+    "set-keikyuNew1000-head" : {
+      "hash" : "9ed70371205d51d4",
+      "triangles" : 1330
+    },
+    "set-keikyuNew1000-tail" : {
+      "hash" : "159c0b511c037859",
+      "triangles" : 1330
+    },
+    "set-keikyuNew1000Far-car" : {
+      "hash" : "1eded9dffa49145",
+      "triangles" : 532
+    },
+    "set-keikyuNew1000Far-head" : {
+      "hash" : "c89cbf65b92f9e61",
+      "triangles" : 634
+    },
+    "set-keikyuNew1000Far-tail" : {
+      "hash" : "c0831be17c96d7f6",
+      "triangles" : 634
+    }
+  }
+}

@@ -27,19 +27,20 @@ final class PlatformTransferTests: XCTestCase {
         let v: TrackPlatform
     }
 
-    /// The tracks, and a track between A and B when `between`.
-    private static func scene(between: Bool = false) throws -> Scene {
+    /// The tracks, and a track between A and B when `between`; B of
+    /// `gaugeOfB` (decision 970) where given.
+    private static func scene(between: Bool = false, gaugeOfB: TrackGauge? = nil) throws -> Scene {
         var world = try GameWorld(
             bounds: WorldBounds(width: 200_704, height: 16_384), economy: GameEconomy(balance: 100_000_000, costs: testCosts),
             clock: GameClock(now: GameTime(minutes: 6 * 60), speed: .normal)
         )
-        func track(_ dy: Int64, z: Int64 = 0) throws -> TrackEdgeID {
+        func track(_ dy: Int64, z: Int64 = 0, gauge: TrackGauge? = nil) throws -> TrackEdgeID {
             let from = try world.buildTrackNode(at: WorldCoordinate(x: 40_960, y: y + dy, z: z))
             let to = try world.buildTrackNode(at: WorldCoordinate(x: 61_440, y: y + dy, z: z))
-            return try world.buildTrackEdge(from: from, to: to, structure: z > 0 ? .elevated : .surface)
+            return try world.buildTrackEdge(from: from, to: to, structure: z > 0 ? .elevated : .surface, gauge: gauge)
         }
         let a = try track(0)
-        let b = try track(11 * unit)
+        let b = try track(11 * unit, gauge: gaugeOfB)
         let c = try track(-5 * unit)
         let v = try track(-20 * unit, z: 8 * unit)
         if between { _ = try track(6 * unit) }
@@ -168,5 +169,40 @@ final class PlatformTransferTests: XCTestCase {
             let pair = PassengerRouteGraph.PlatformPair(from: scene.a, to: scene[keyPath: second])
             XCTAssertEqual(graph.platformChanges[pair]?.penaltySeconds, penalty)
         }
+    }
+
+    /// Decision 990: an island between tracks of different gauges (a
+    /// conventional line's 1,067 mm beside the Shinkansen's 1,435 mm, as
+    /// at Shin-Yatsushiro in 2004–2011) is changed across like any other:
+    /// the change does not look at gauges, and each line runs on its own.
+    func testAnIslandBetweenTwoGaugesIsChangedAcross() throws {
+        var scene = try Self.scene(gaugeOfB: .shinkansen)
+        XCTAssertEqual(scene.world.network.edge(scene.a.edge)?.gauge, .cape)
+        XCTAssertEqual(scene.world.network.edge(scene.b.edge)?.gauge, .shinkansen)
+        let island = try XCTUnwrap(scene.world.platformChange(from: scene.a, to: scene.b))
+        XCTAssertEqual(island.kind, .acrossPlatform)
+        XCTAssertEqual(island.minimumSeconds, 60)
+
+        // W along 1,067 mm track to A; B along the Shinkansen's to E.
+        let westNode = try scene.world.buildTrackNode(at: WorldCoordinate(x: 8_192, y: Self.y, z: 0))
+        let eastNode = try scene.world.buildTrackNode(at: WorldCoordinate(x: 190_000, y: Self.y + 11 * Self.unit, z: 0))
+        let a = try XCTUnwrap(scene.world.network.edge(scene.a.edge))
+        let b = try XCTUnwrap(scene.world.network.edge(scene.b.edge))
+        let out = try scene.world.buildTrackEdge(from: westNode, to: a.from, structure: .surface)
+        let on = try scene.world.buildTrackEdge(from: b.to, to: eastNode, structure: .surface)
+        XCTAssertEqual(scene.world.network.edge(out)?.gauge, .cape, "laid at the gauge of the track it joins")
+        XCTAssertEqual(scene.world.network.edge(on)?.gauge, .shinkansen)
+        try scene.world.addTrackPlatform(scene.w, on: out, from: 2_048, to: 12_288)
+        try scene.world.addTrackPlatform(scene.e, on: on, from: 70_000, to: 80_000)
+        let (west, east) = try Self.lines(&scene, first: scene.a, second: scene.b)
+        XCTAssertEqual(scene.world.trackGauges(ofLine: west), [.cape])
+        XCTAssertEqual(scene.world.trackGauges(ofLine: east), [.shinkansen])
+        for line in [west, east] {
+            try scene.world.setLineServiceWindow(line, to: .allDay)
+            try scene.world.setLineTrainsInService(line, to: TrainsInService(peak: 2, offPeak: 2, low: 2))
+        }
+        let graph = PassengerRouteGraph(world: scene.world)
+        let pair = PassengerRouteGraph.PlatformPair(from: scene.a, to: scene.b)
+        XCTAssertEqual(graph.platformChanges[pair]?.penaltySeconds, 720, "the island's same-platform cost")
     }
 }

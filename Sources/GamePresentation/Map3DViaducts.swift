@@ -16,6 +16,11 @@ import GameCore
 //   30 m;
 // - a steel truss where the Taiwan Railway crosses a river.
 //
+// Decision 996: the spans checked against real ones and kept: the High
+// Speed Rail's 35 m are its own (30 and 35 m), a metro's 30 m are wider
+// than the Circular Line's 25 m, a Shinkansen's rigid frames stand closer
+// still, and no real span of the Taiwan Railway's viaducts was found.
+//
 // The tracks of a pair are laid one by one, so the viaducts are drawn
 // together once all are laid (``Map3DScene/Builder/addViaducts()``): a pier
 // of one track with one of the track beside it (as the site's
@@ -34,10 +39,12 @@ enum Map3DViaduct: Sendable, Hashable {
     case metro
 
     /// The kind the system with site id `system` (`rail_tracks.json`'s
-    /// `systems`) builds.
+    /// `systems`) builds. Decision 996: the Kyushu Shinkansen's the High
+    /// Speed Rail's, as its line is once bought (``Map3DSceneTrack``'s
+    /// `isHighSpeed`) and as ``DemoRealLines`` gives it high-speed cars.
     init(system: String) {
         switch system {
-        case "thsr_sched": self = .highSpeed
+        case "thsr_sched", "kyushushinkansen": self = .highSpeed
         case "tra_sched", "afr_sched": self = .railway
         default: self = .metro
         }
