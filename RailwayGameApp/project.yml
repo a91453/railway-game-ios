@@ -25,7 +25,7 @@ settings:
     # The app's version, here so that the map pack downloader extension
     # (decision 776) carries the same one: App Store Connect refuses an
     # extension whose version is not the app's.
-    MARKETING_VERSION: "0.7.0"
+    MARKETING_VERSION: "0.6.0"
     CURRENT_PROJECT_VERSION: "1"
 
 packages:
@@ -66,8 +66,12 @@ targets:
     # (AssetPacks/<city>.json), downloaded apart from the app. The Debug
     # app, which the Simulator, the UI tests and the screenshots run and
     # which cannot download, carries the packs whole.
+    # DEBUG-150: 0.6.0 (150) found no file of any downloaded pack on the
+    # owner's iPhone, so the Release app carries the packs whole too, until
+    # the download is seen to work again (docs/handoff/DEBUG-150.md). Set
+    # CARRY_MAP_PACKS to NO to go back to pack.json only.
     postBuildScripts:
-      - name: Copy the map packs (whole in Debug, pack.json only in Release)
+      - name: Copy the map packs (whole, or pack.json only in Release when CARRY_MAP_PACKS is NO)
         basedOnDependencyAnalysis: false
         script: |
           set -eu
@@ -75,7 +79,7 @@ targets:
           to="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/MapPacks"
           rm -rf "$to"
           mkdir -p "$to"
-          if [ "$CONFIGURATION" = "Debug" ]; then
+          if [ "$CONFIGURATION" = "Debug" ] || [ "${CARRY_MAP_PACKS:-YES}" != "NO" ]; then
             cp -R "$from/." "$to/"
           else
             for manifest in "$from"/*/pack.json; do

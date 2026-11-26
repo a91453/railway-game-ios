@@ -44,6 +44,44 @@ final class MapPackDownloadsTests: XCTestCase {
         XCTAssertNil(MapPack.current(.hongKong))
     }
 
+    /// DEBUG-150: 0.6.0 (150) on the owner's iPhone found no file of any
+    /// pack where the system said it was. The shared folder is searched for
+    /// them by their path from `MapPacks`, the newest copy kept, and a pack
+    /// found so is taken.
+    func testAPackFoundOnlyBySearchingTheSharedFolderIsTaken() throws {
+        let shared = FileManager.default.temporaryDirectory.appendingPathComponent("shared-\(UUID().uuidString)")
+        folders.append(shared)
+        let older = shared.appendingPathComponent("v6/Payload/MapPacks/hongkong")
+        let newer = shared.appendingPathComponent("v7/x/MapPacks/hongkong")
+        for folder in [older, newer] {
+            try FileManager.default.createDirectory(at: folder.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: try bundled.root, to: folder)
+        }
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: -3600)], ofItemAtPath: older.appendingPathComponent("pack.json").path)
+        try Data("x".utf8).write(to: shared.appendingPathComponent("unrelated.txt"))
+
+        let files = MapPackDownloads.mapPackFiles(under: shared)
+        XCTAssertEqual(files["MapPacks/hongkong/pack.json"]?.standardizedFileURL.path, newer.appendingPathComponent("pack.json").standardizedFileURL.path)
+        XCTAssertNil(files["unrelated.txt"])
+        XCTAssertTrue(MapPackDownloads.describeMapPackFiles(files).contains("(hongkong)"), MapPackDownloads.describeMapPackFiles(files))
+        XCTAssertEqual(MapPackDownloads.describeMapPackFiles([:]), "no MapPacks files in the shared folder")
+
+        // The system gives nothing; the search finds every file.
+        let locators: [MapPackDownloads.Locator] = [
+            { _ in nil },
+            { files["MapPacks/hongkong/\($0)"] },
+        ]
+        XCTAssertNil(MapPackDownloads.use(.hongKong, locators: locators, bundled: try bundled))
+        XCTAssertNotNil(MapPack.current(.hongKong)?.baseMapFile)
+
+        // Nothing anywhere: the refusal's clue says what was seen.
+        MapPackDownloads.forget(.hongKong)
+        XCTAssertEqual(MapPackDownloads.use(.hongKong, locators: [{ _ in nil }], bundled: try bundled), .noManifest)
+        MapPackDownloads.addToClue(.hongKong, "url(for:) said nothing")
+        let clue = try XCTUnwrap(MapPackDownloads.clue(.hongKong))
+        XCTAssertTrue(clue.hasPrefix("pack.json looked for at nowhere; url(for:) said nothing"), clue)
+    }
+
     /// Decision 819 (MAPPACK-FIX): an Apple-hosted asset pack hands out a
     /// URL per file (`AssetPackManager.url(for:)`); the folder of the one
     /// it gave for `pack.json` need not hold the rest. On the owner's

@@ -31,11 +31,19 @@ public struct ProblemReport: Hashable, Sendable {
     public let mapPacks: String?
 
     /// Decision 573 (player report 111.1, "it put no address in: where do
-    /// I send it?"): where a note goes, for a TestFlight tester. The app
-    /// names no address of its own (the code is public); the feedback
-    /// address is on the app's page in TestFlight.
-    public static func whereToSend(in language: DisplayLanguage) -> String {
-        language.text(
+    /// I send it?"): where a note goes. The app names no address of its own
+    /// (the code is public). A TestFlight tester (`testing`, the app's
+    /// `TestBuild.isTest`) has the feedback address on the app's page in
+    /// TestFlight; a player of the App Store's build (REVIEW-L37, 0.7.0)
+    /// has the support link on the game's App Store page, and no TestFlight.
+    public static func whereToSend(in language: DisplayLanguage, testing: Bool) -> String {
+        guard testing else {
+            return language.text(
+                "Where to send it: the game's page in the App Store has an App Support link; send it there.",
+                "寄到哪裡：App Store 這個遊戲的頁面上有「App 支援」連結，照那裡的方式寄出即可。"
+            )
+        }
+        return language.text(
             "Where to send it: testing in TestFlight? Take a screenshot and send it as feedback from TestFlight. To attach the save, choose Mail in the share menu and send it to the feedback address on this app's page in the TestFlight app.",
             "寄到哪裡：用 TestFlight 測試的話，截圖後在 TestFlight 送出回饋即可。要附上存檔時，在分享選單選「郵件」，寄到 TestFlight App 裡這個 App 頁面上的回饋信箱。"
         )
