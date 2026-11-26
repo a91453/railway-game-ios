@@ -40,9 +40,9 @@ final class Map3DLandmarkRegistryTests: XCTestCase {
     /// registration says (half a metre either way), standing on its foot
     /// with its footprint's middle at the origin; the far model has at most
     /// half the near one's triangles and no colour it lacks; each stays
-    /// within one model's budget, and each map's landmarks within one.
+    /// within one model's budget, and the landmarks within the budgets of
+    /// ``testTheBudgets``.
     func testTheModels() {
-        var maps: [String: Int] = [:]
         for landmark in Map3DLandmarkRegistry.landmarks {
             let id = landmark.id
             let near = landmark.model(full: true), far = landmark.model(full: false)
@@ -70,10 +70,43 @@ final class Map3DLandmarkRegistryTests: XCTestCase {
             XCTAssertTrue(Set(far.vertices.map(\.color)).isSubset(of: Set(near.vertices.map(\.color))), "\(id) far colours")
             XCTAssertEqual(Set(near.vertices.map(\.color)), Set(landmark.palette), "\(id): every palette colour used, no other")
             XCTAssertTrue(landmark.glass.union(landmark.bandedGlass).allSatisfy(landmark.palette.indices.contains), "\(id) glass")
-            maps[landmark.map, default: 0] += near.indices.count / 3
         }
-        for (map, triangles) in maps {
-            XCTAssertLessThanOrEqual(triangles, 60_000, map)
+    }
+
+    /// Decision 1018's continuation: the landmarks' budgets, as the game
+    /// builds them. A scene builds only the landmarks inside its map's
+    /// ground, a new game's 32 km square at first, more as land is bought
+    /// (decision 969), so the near models any one square of that size holds
+    /// stay within 60,000 triangles (decision 895's budget, once a whole
+    /// map's: Taiwan's reached 59,860 from Keelung to Kaohsiung, never on
+    /// one screen); and a map bought whole keeps all of its landmarks, near
+    /// and far, within 20 MB (Taiwan's 9.9 MB in 2026-11, its fullest
+    /// square 23,602 triangles; a tenth of the 206 MB the Taipei scene's
+    /// meshes keep, `Map3DMotionBudgetTests.testWhatTheMapKeepsInMemory`).
+    func testTheBudgets() {
+        let square = 2 * 16_384.0
+        var placed: [String: [(x: Double, y: Double, triangles: Int)]] = [:]
+        var bytes: [String: Int] = [:]
+        for landmark in Map3DLandmarkRegistry.landmarks {
+            let near = landmark.model(full: true), far = landmark.model(full: false)
+            let metresEast = 111_320 * cos(landmark.latitude * .pi / 180)
+            placed[landmark.map, default: []].append((landmark.longitude * metresEast, landmark.latitude * 110_574, near.indices.count / 3))
+            bytes[landmark.map, default: 0] += (near.vertices.count + far.vertices.count) * MemoryLayout<Map3DVertex>.stride
+                + (near.indices.count + far.indices.count) * MemoryLayout<UInt32>.stride
+        }
+        for (map, landmarks) in placed {
+            // The fullest square has a landmark on its west edge and one on
+            // its south edge.
+            var most = 0
+            for west in landmarks {
+                for south in landmarks {
+                    most = max(most, landmarks.filter {
+                        $0.x >= west.x && $0.x <= west.x + square && $0.y >= south.y && $0.y <= south.y + square
+                    }.reduce(0) { $0 + $1.triangles })
+                }
+            }
+            XCTAssertLessThanOrEqual(most, 60_000, "\(map): the near triangles of one 32 km square")
+            XCTAssertLessThanOrEqual(bytes[map] ?? 0, 20_000_000, "\(map): every landmark's meshes, near and far")
         }
     }
 

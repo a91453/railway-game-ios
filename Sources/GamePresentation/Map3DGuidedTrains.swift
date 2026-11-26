@@ -142,7 +142,7 @@ public enum Map3DGuidedMaglev {
 /// cars are): a white body with a green band and a thin navy line, its
 /// bogies' housing on its roof where it hangs from its beam, one palette
 /// colour a triangle (`a91453/railway-assets-private-2`,
-/// `game-art-previews/docs/art/guided-skyrail-2026-11/revision-2`),
+/// `game-art-previews/docs/art/guided-skyrail-2026-11/revision-3`),
 /// written here by `tools/train-models/glb_to_swift.py` (``encoded``). A
 /// generic train: no operator's livery, mark or lettering.
 public enum Map3DGuidedSkyrail {
@@ -166,12 +166,12 @@ public enum Map3DGuidedSkyrail {
     }
 
     /// Decision 782: its set, near and far, its showcase row and its
-    /// cars' triangles (2,826 and 2,260 near, 1,246 and 892 far) and
+    /// cars' triangles (2,846 and 2,260 near, 1,258 and 892 far) and
     /// length (12.00 m).
     static let registration = Map3DTrainRegistration(
         id: "guidedSkyrail",
         sets: [Map3DGuidedTrains.set(key, far: false, cab: { model(cab: true, far: $0) }, middle: { model(cab: false, far: $0) }),
                Map3DGuidedTrains.set(key, far: true, cab: { _ in model(cab: true, far: true) }, middle: { _ in model(cab: false, far: true) })],
         showcase: [Map3DShowcase.Entry(key, "Light monorail", "輕型單軌", .other, cars: 3, most: 6, gauge: 1.435)],
-        triangles: 890...2_830, length: 11.95...12.05)
+        triangles: 890...2_850, length: 11.95...12.05)
 }
