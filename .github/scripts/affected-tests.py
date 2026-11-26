@@ -58,6 +58,7 @@ SMOKE = [
     "TimetableCheckupTaiwanTests",
 ]
 NARROW_SHARE = 0.5
+TEST_METHOD = re.compile(r"^test[A-Z0-9_]")
 # A member name declared in more files than this (id, name, count, body) is
 # too common a word to say who uses the type; the type's own name still is.
 MEMBER_FILES_LIMIT = 12
@@ -254,7 +255,37 @@ class Repository:
 
         for f in self.tests:
             f.test_classes = {c for c in f.classes if is_test(c)}
-        self.all_classes = {c: f for f in self.tests for c in f.test_classes}
+        # A test class other test classes inherit from (SaveMutationChecks)
+        # runs its checks under its subclasses' names; with no test of its
+        # own, swift test lists nothing under it, so it stands for them.
+        children = {}
+        for f in self.tests:
+            for c in f.test_classes:
+                if parents[c] in parents:
+                    children.setdefault(parents[c], set()).add(c)
+        own_tests = {
+            b.owner for f in self.tests for b in f.blocks
+            if any(TEST_METHOD.match(n) for n in b.declared)
+        }
+        self.subclasses = {}
+        for base in children:
+            if base in own_tests:
+                continue
+            found, stack = set(), [base]
+            while stack:
+                for c in children.get(stack.pop(), ()):
+                    if c not in found:
+                        found.add(c)
+                        stack.append(c)
+            self.subclasses[base] = found
+        for f in self.tests:
+            f.test_classes = set().union(*(self.listed(c) for c in f.test_classes)) if f.test_classes else set()
+        self.all_classes = {}
+        for f in self.tests:
+            for c in f.classes:
+                if c in self.subclasses or not is_test(c):
+                    continue
+                self.all_classes[c] = f
         # Which test declarations name a word.
         self.index = {}
         for f in self.tests:
@@ -262,6 +293,11 @@ class Repository:
                 block.file = f
                 for word in block.words:
                     self.index.setdefault(word, []).append(block)
+
+    def listed(self, name):
+        """The classes swift test lists for a test class: its subclasses for
+        a base class with no test of its own, else the class."""
+        return self.subclasses.get(name, {name})
 
     def path_readers(self, path):
         """The test files that read the file or a folder above it by its path
@@ -382,9 +418,11 @@ def plan(paths, repo, log):
             if id(block) in hit or (inside is not None and block.file is not inside):
                 continue
             hit.add(id(block))
-            if block.owner in repo.all_classes and block.owner not in classes:
-                classes.add(block.owner)
-                reason[block.owner] = name if why == "changed" else f"{name} <- {why}"
+            for owner in repo.listed(block.owner) if block.owner else ():
+                if owner in repo.all_classes and owner not in classes:
+                    classes.add(owner)
+                    via = name if why == "changed" else f"{name} <- {why}"
+                    reason[owner] = via if owner == block.owner else f"{via} (in {block.owner})"
             for other in block.exported:
                 queue.append((other, None, name))
             for other in block.declared - block.exported - repo.common:

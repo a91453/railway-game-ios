@@ -796,6 +796,25 @@ final class SourceScanTests: XCTestCase {
     func testNoPrint() { _ = "Sources/GameCore" }
 }
 SWIFT
+cat >"$tree/Sources/GamePresentation/Ledger.swift" <<'SWIFT'
+public struct LedgerBook {}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/LedgerTests.swift" <<'SWIFT'
+import XCTest
+
+/// Checks two halves share; swift test lists them under the halves only.
+class LedgerChecks: XCTestCase {
+    func checkTheBook() { _ = LedgerBook() }
+}
+
+final class LedgerFirstHalfTests: LedgerChecks {
+    func testFirst() { checkTheBook() }
+}
+
+final class LedgerSecondHalfTests: LedgerChecks {
+    func testSecond() { checkTheBook() }
+}
+SWIFT
 smoke='GoldenScenarioTests ReplayFixtureTests SavedGameTests'
 expect_decision true affected "{\"include\":[{\"shard\":\"selected\",\"tests\":\"GoldenScenarioTests PackUserTests ReplayFixtureTests SavedGameTests TrainPackTests\",\"part\":\"1/1\"}]}" \
   "a pull request of a source file runs the tests that name it, through a helper too" \
@@ -806,6 +825,12 @@ expect_decision true affected "\"tests\":\"CatalogueTests $smoke TrainPackTests\
 expect_decision true affected "\"tests\":\"GoldenScenarioTests ReplayFixtureTests SavedGameTests SourceScanTests\"" \
   "a test that reads a source folder by its path runs when a file in it changes" \
   EVENT=pull_request LISTED=true -- Sources/GameCore/Scan.swift
+expect_decision true affected "\"tests\":\"GoldenScenarioTests LedgerFirstHalfTests LedgerSecondHalfTests ReplayFixtureTests SavedGameTests\"" \
+  "a base test class with no tests of its own runs as its subclasses" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/Ledger.swift
+expect_decision true affected "\"tests\":\"GoldenScenarioTests LedgerFirstHalfTests LedgerSecondHalfTests ReplayFixtureTests SavedGameTests\"" \
+  "a changed test file holding a base class selects its subclasses, not the base" \
+  EVENT=pull_request LISTED=true -- Tests/GamePresentationTests/LedgerTests.swift
 expect_decision true presentation '"shard":"selected-8"' "a push to main of the same file keeps the broad tier" \
   EVENT=push LISTED=true -- Sources/GamePresentation/TrainPack.swift
 expect_decision true presentation '"shard":"selected-8"' "a top-level operator cannot be followed by name" \
