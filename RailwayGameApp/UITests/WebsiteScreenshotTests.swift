@@ -5665,7 +5665,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         // (the App Store's English screenshots).
         let english = english || ProcessInfo.processInfo.environment["SCREENSHOT_LANGUAGE"] == "en"
         let language = english ? ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"] : ["-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"]
-        app.launchArguments = ["-ui-testing"] + language + extra
+        // Kind store: no frame rate or gesture hint over the 3D map.
+        let clean = ProcessInfo.processInfo.environment["SCREENSHOT_CLEAN"] == "1" && !extra.contains("-screenshot-3d-clean")
+        app.launchArguments = ["-ui-testing"] + language + extra + (clean ? ["-screenshot-3d-clean"] : [])
         app.launch()
         return app
     }

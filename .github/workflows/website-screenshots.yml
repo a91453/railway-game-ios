@@ -65,7 +65,7 @@ permissions:
 concurrency:
   # One run at a time per branch and device, so an iPhone's and an iPad's
   # App Store screenshots can be taken at once.
-  group: website-screenshots-${{ github.ref }}-${{ inputs.device }}
+  group: website-screenshots-${{ github.ref }}-${{ inputs.device }}-${{ inputs.language }}
   cancel-in-progress: true
 
 jobs:
@@ -169,12 +169,15 @@ jobs:
         # ran out (run 45752144692): each call after the boot gets two
         # minutes of its own and only warns when it does not answer.
         timeout-minutes: ${{ inputs.kind == 'store' && 14 || 6 }}
+        env:
+          APPEARANCE: ${{ inputs.kind == 'store' && 'light' || 'dark' }}
         run: |
           within() { local secs=$1; shift; "$@" & local pid=$!
             ( sleep "$secs"; kill "$pid" 2>/dev/null ) & local watcher=$!
             wait "$pid"; local status=$?; kill "$watcher" 2>/dev/null; return "$status"; }
           xcrun simctl bootstatus "$SIMULATOR_UDID" -b
-          within 120 xcrun simctl ui "$SIMULATOR_UDID" appearance dark || echo "::warning::Could not set dark mode"
+          # The App Store's screenshots (kind store) are light, the website's dark.
+          within 120 xcrun simctl ui "$SIMULATOR_UDID" appearance "$APPEARANCE" || echo "::warning::Could not set the appearance"
           within 120 xcrun simctl status_bar "$SIMULATOR_UDID" override --time 9:41 --batteryState charged --batteryLevel 100 \
             --cellularBars 4 --wifiBars 3 || echo "::warning::Could not set the status bar"
 
@@ -193,6 +196,8 @@ jobs:
           # xcodebuild hands TEST_RUNNER_-prefixed variables to the tests
           # without the prefix (WebsiteScreenshotTests.launch).
           TEST_RUNNER_SCREENSHOT_LANGUAGE: ${{ inputs.language }}
+          # Kind store: no frame rate or gesture hint over the 3D map.
+          TEST_RUNNER_SCREENSHOT_CLEAN: ${{ inputs.kind == 'store' && '1' || '' }}
         run: |
           # An empty `tests` input runs the whole class; a list of test names runs those.
           only=(-only-testing:RailwayGameUITests/WebsiteScreenshotTests)
