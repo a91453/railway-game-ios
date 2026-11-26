@@ -30,8 +30,18 @@ extension OverseasMap {
     /// The name of its map picker row that opens the whole map
     /// (``buysLand``).
     public func wholeMapName(in language: DisplayLanguage) -> String {
-        let name = self.name(in: language)
+        let name = pickerName(in: language)
         return language.text("\(name): the whole map", "\(name)（整張全開）")
+    }
+
+    /// Decision 999: what the map picker's rows call its map: Japan for
+    /// Fukuoka's, whose map is several prefectures since decision 991; the
+    /// city's name for the rest.
+    public func pickerName(in language: DisplayLanguage) -> String {
+        switch self {
+        case .fukuoka: language.text("Japan", "日本")
+        case .hongKong, .rovaniemi: name(in: language)
+        }
     }
 
     /// What the row of its whole map says (``buysLand``); `nil` for a map
@@ -143,5 +153,49 @@ extension GameWorld {
             preconditionFailure("Could not open the whole map of \(ground.city): \(error)")
         }
         return world
+    }
+}
+
+// Decision 999 (the owner, 2026-11-26: 「開圖也能選 熊本開局 福岡開局 佐賀開局等」):
+// a map whose pack names several places to begin (decision 991's
+// `starts`) has a map picker row for each, and a new game picked there
+// owns the 2 × 2 tiles round that place (``MapPack/Layout/startTiles(at:)``).
+
+/// Decision 999: one row of the map picker that starts a new game on a
+/// city's map (``GameLauncher/overseasStartRows(for:in:)``).
+public struct OverseasStartRow: Equatable, Sendable {
+    public let city: OverseasMap
+    /// Which of the map's places the game begins round
+    /// (``MapPack/Layout/starts``), 0 for the first.
+    public let start: Int
+    /// Its accessibility identifier: the city's row's for the first
+    /// place, as it was before there was a choice.
+    public let id: String
+    public let name: String
+    public let summary: String
+}
+
+extension GameLauncher {
+    /// Decision 999: the rows that start a new game on `row`'s map: one
+    /// for each place its pack names to begin round, while the map is open
+    /// and names more than one; else the one row of the city.
+    public func overseasStartRows(for row: OverseasMapRow, in language: DisplayLanguage) -> [OverseasStartRow] {
+        let city = row.city, id = "realWorld.overseas.\(city.rawValue)"
+        let layout = overseasGrounds.first { $0.city == city }?.layout ?? overseasAwaited.first { $0.city == city }?.layout
+        guard row.closed == nil, city.buysLand, let starts = layout?.starts, starts.count > 1 else {
+            return [OverseasStartRow(city: city, start: 0, id: id, name: city.pickerName(in: language), summary: city.mapSummary(in: language))]
+        }
+        let map = city.pickerName(in: language)
+        return starts.enumerated().map { index, start in
+            let place = language.text(start.englishName, start.name)
+            return OverseasStartRow(
+                city: city, start: index, id: index == 0 ? id : "\(id).start.\(index)",
+                name: language.text("\(map): start in \(place)", "\(map)：從\(place)開始"),
+                summary: index == 0 ? city.mapSummary(in: language) : language.text(
+                    "You start with about 33 by 33 km round \(place) and buy the rest of the map as your railway grows.",
+                    "一開始是\(place)一帶約 33 × 33 公里，地圖其餘部分用買的。"
+                )
+            )
+        }
     }
 }
