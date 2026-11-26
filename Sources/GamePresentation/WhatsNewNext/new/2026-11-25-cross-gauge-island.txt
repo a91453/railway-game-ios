@@ -1,2 +1,0 @@
-en: Lay two tracks of different gauges side by side and build an island between them: passengers change trains across the platform.
-zh: 兩股不同軌距的軌道並排蓋一座島式月台，乘客走過月台就能換車（像新幹線對面接在來線）。

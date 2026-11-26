@@ -1,2 +1,0 @@
-en: The track card is simpler: track type, gauge, double track and Lay Track up front, the rest under More options.
-zh: 鋪軌卡片變簡單：軌道種類、軌距、複線和鋪設在前面，其他收進「更多選項」。
