@@ -69,16 +69,16 @@ public enum WhatsNew {
                     chinese: "車庫多了原塗裝的 700 系：白色車身、窗下藍帶，十六節。"
                 ),
                 Line(
-                    english: "The high-speed 700T is now the 700 Series of the game's earlier version in the real train's white and orange, twelve cars.",
-                    chinese: "高鐵 700T 換成舊版遊戲的 700 系，塗成真車的白底橘帶，十二節。"
+                    english: "The high-speed 700T has a new model in the real train's white and orange, twelve cars.",
+                    chinese: "高鐵 700T 換新模型，塗成真車的白底橘帶，十二節。"
                 ),
                 Line(
                     english: "Choose a paint for a line's trains on the line's page; the high-speed 700T now wears its real orange band, with the earlier teal as a choice.",
                     chinese: "路線頁可以替這條線的列車選塗裝；高鐵 700T 改成真車的橘色帶，原本的青綠帶可以選回來。"
                 ),
                 Line(
-                    english: "The Train Pack's white high-speed train is now the N700S of the game's earlier version: white with two blue lines, twelve cars.",
-                    chinese: "列車包的白色高速列車換成舊版遊戲的 N700S：白色車身、窗下兩道藍線，十二節。"
+                    english: "The Train Pack's white high-speed train is now the N700S: white with two blue lines, twelve cars.",
+                    chinese: "列車包的白色高速列車換成 N700S：白色車身、窗下兩道藍線，十二節。"
                 ),
                 Line(
                     english: "A new train to buy: the Keikyu New 1000, each car its real 18 m.",
