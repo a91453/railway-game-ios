@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""The Fukuoka map's ground for its map pack (FUKUOKA-GROUND): the people
-(`population.json`), the base map (`basemap.pmtiles`), and the heights,
+"""The Fukuoka map's ground for its map pack (FUKUOKA-GROUND): the base map
+(`basemap.pmtiles`), and the heights,
 water and steep slopes (`heights.dat`, `water.json`, `terrain.pmtiles`),
 in the formats of Taiwan's, Hong Kong's and Rovaniemi's, with the tools
 they share (`tools/overseas-map/overseas_ground.py`).
 
-    python3 -I tools/fukuoka-map/build_fukuoka_ground.py population /tmp/fk/pop/jpn.tif RailwayGameApp/Resources/MapPacks/fukuoka
     python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka
     python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka
 
-People: WorldPop's 1 km grid of Japan (2025, constrained, R2025A v1,
-CC BY 4.0), cut to the extent (`build_fukuoka_rail.EXTENT`).
+People and jobs (`population.json`): since decision 1000, Japan's census
+grids, made by `tools/census-grid/japan_census_grid.py` (README.md there).
 
 Base map: Taiwan's tiles (`tools/basemap/build_basemap.py`) from the
 Kyushu extract cut to the map; since decision 991, Kyushu's and Chugoku's
@@ -20,8 +19,9 @@ every side, so the open coastline is cut to the extract's box and closed
 along its edge (`overseas_ground.coast_in_box`); Nokonoshima and the other
 islands are closed rings of their own.
 
-Grids: Taiwan's 1.875″ cells from the population grid's corner, over the
-extent. Water: a cell is water when its middle is outside the land of that
+Grids: Taiwan's 1.875″ cells from GRID_CORNER, the corner of WorldPop's
+30″ grid the population used to be on, over the extent (the population's
+7.5″ cells would move it). Water: a cell is water when its middle is outside the land of that
 coastline or inside a body of water. Heights: the Geospatial Information
 Authority of Japan's elevation tiles (`fetch_gsi_dem.py`): the 5 m models
 (the laser survey's where it has the tile, else the photogrammetric ones),
@@ -62,9 +62,9 @@ sys.path.insert(0, os.path.join(HERE, '..', 'hk-map'))
 import build_fukuoka_rail  # noqa: E402
 import overseas_ground  # noqa: E402
 
-POPULATION_SHA256 = '0e6e4155c86d5e87f61a837ad3bd90f993dd19b7a34c475f7a05cb36d6338e3d'
-POPULATION_URL = ('https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/JPN/v1/1km_ua/constrained/'
-                  'jpn_pop_2025_CN_1km_R2025A_UA_v1.tif')
+# The heights grid's corner and the cell it is cut from: WorldPop's 30″
+# grid, which population.json was on before decision 1000.
+GRID_CORNER = {'north': 34.0333335332, 'west': 129.34166542930004, 'cellDegrees': 0.0083333333}
 # The extract's box (west, south, east, north), as cut with osmium.
 BOX = (129.30, 32.05, 131.37, 34.07)
 SEA_MARGIN = 0.05
@@ -82,20 +82,6 @@ def record(name, entry):
         sources = json.load(f)
     sources['inputs'][name] = entry
     overseas_ground.write_json(HERE, 'fukuoka_sources.json', sources)
-
-
-def population(source, folder):
-    fields, digest, cut = overseas_ground.population(source, POPULATION_SHA256, build_fukuoka_rail.EXTENT)
-    overseas_ground.write_json(folder, 'population.json', {
-        'source': 'WorldPop, Japan 2025, constrained, 30 arc-second (about 1 km), R2025A v1, cut to the Fukuoka map',
-        'from': POPULATION_URL,
-        'licence': 'CC BY 4.0',
-        **fields,
-    })
-    build_fukuoka_rail.write_manifest(folder)
-    record('jpn_pop_2025_CN_1km_R2025A_UA_v1.tif', {'sha256': digest, 'from': POPULATION_URL,
-                                                     'licence': 'CC BY 4.0, WorldPop'})
-    print(f'population.json: {len(fields["runs"])} runs, {int(cut.sum())} people, {cut.shape[0]} x {cut.shape[1]} cells')
 
 
 def basemap(extract, folder):
@@ -212,8 +198,7 @@ def grids(tiles_folder, extract, folder):
     import build_water_grid
 
     five, ten, digest = tiles_of(tiles_folder)
-    population_data = json.load(open(os.path.join(folder, 'population.json'), encoding='utf-8'))
-    north, west, step, rows, columns = build_hk_ground_grids.grid_box(population_data, build_fukuoka_rail.EXTENT)
+    north, west, step, rows, columns = build_hk_ground_grids.grid_box(GRID_CORNER, build_fukuoka_rail.EXTENT)
     latitudes = north - (np.arange(rows) + 0.5) * step
 
     # Water.
@@ -288,7 +273,7 @@ def buildings(extract, folder):
 
 
 if __name__ == '__main__':
-    steps = {'population': (population, 2), 'basemap': (basemap, 2), 'grids': (grids, 3), 'buildings': (buildings, 2)}
+    steps = {'basemap': (basemap, 2), 'grids': (grids, 3), 'buildings': (buildings, 2)}
     if len(sys.argv) < 2 or sys.argv[1] not in steps or len(sys.argv) != 2 + steps[sys.argv[1]][1]:
         sys.exit(__doc__)
     steps[sys.argv[1]][0](*sys.argv[2:])

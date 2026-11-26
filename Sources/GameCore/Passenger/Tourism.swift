@@ -1201,8 +1201,9 @@ extension GameWorld {
         // Decision 772: by the sight's kind.
         let dayFactor = Tourism.dayFactor(attraction.kind, weekday: StationDemand.weekday(ofDay: day), holiday: holiday(onDay: day)?.holiday.kind,
                                           dayOfMonth: Int(dayOfYear % 30) + 1)
-        // Decision 773: a harbour's by the kind of weather.
-        let weather = Tourism.weatherFactor(attraction.kind, weather: self.weather(onDay: day))
+        // Decision 773: a harbour's by the kind of weather; decision 1004:
+        // the weather where it is.
+        let weather = Tourism.weatherFactor(attraction.kind, weather: self.weather(onDay: day, at: attraction.point))
         return (dayFactor, Tourism.seasonFactor(attraction.kind, month: month), weather)
     }
 

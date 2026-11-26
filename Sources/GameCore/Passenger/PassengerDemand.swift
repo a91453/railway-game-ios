@@ -62,7 +62,7 @@ extension GameWorld {
         let counted = day ?? dayIndex(of: clock.now)
         // Without holidays or weather the network's multiplier is 1000, and
         // this is the event's rounding alone, as before them.
-        let network = (1_000 + (holiday(onDay: counted)?.boost ?? 0)) * (1_000 - weatherDrop(onDay: counted)) / 1_000
+        let network = (1_000 + (holiday(onDay: counted)?.boost ?? 0)) * (1_000 - weatherDrop(onDay: counted, at: station)) / 1_000
         let local = demandEvents != nil ? demandMultiplier(at: station, onDay: counted) : 1_000
         return (trips * local * network + 500_000) / 1_000_000
     }

@@ -423,7 +423,7 @@ extension GameSession {
     /// ``GameWorld/cablewayIsOpen(_:onDay:)`` checks it.
     private func closedReason(_ cableway: Cableway, onDay day: Int64) -> (english: String, chinese: String) {
         if StationDemand.weekday(ofDay: day) == 1, world.holiday(onDay: day) == nil { return ("Monday maintenance", "週一例行保養") }
-        if world.weather(onDay: day) == .thunderstorm { return ("thunderstorm", "雷雨") }
+        if world.weather(onDay: day, atCableway: cableway.id) == .thunderstorm { return ("thunderstorm", "雷雨") }
         return ("typhoon", "颱風")
     }
 }

@@ -53,8 +53,30 @@ final class HongKongMapTests: XCTestCase {
         XCTAssertEqual(half.south * 2 / 1_000, 45.5, accuracy: 0.5)
         XCTAssertEqual(ground.anchor.longitudeDegrees, 114.1375, accuracy: 0.0001)
         XCTAssertEqual(ground.anchor.latitudeDegrees, 22.354, accuracy: 0.001)
-        // WorldPop's Hong Kong, 2025: 7.4 million people.
-        XCTAssertEqual(try XCTUnwrap(ground.population).total, 7_396_724)
+        // Decision 1008: the 2021 census's 7.4 million residents and the
+        // 2.6 million jobs of that year's survey, all on the map.
+        XCTAssertEqual(try XCTUnwrap(ground.population).total, 7_411_945)
+        XCTAssertEqual(try XCTUnwrap(ground.population).totalJobs, 2_602_490)
+    }
+
+    /// Decision 1008: the census puts the jobs in the business districts
+    /// and the homes in the new towns, so a 2 km square round Central or
+    /// Admiralty has more jobs than residents and one round Tin Shui Wai
+    /// or Tseung Kwan O more residents than jobs.
+    func testTheCensusPutsTheJobsInTheBusinessDistricts() throws {
+        let population = try XCTUnwrap(Self.ground().population)
+        let bounds = try WorldBounds(width: 131_072, height: 131_072)
+        for (name, latitude, longitude, mostlyWork) in [
+            ("Central", 22.2820, 114.1580, true), ("Admiralty", 22.2790, 114.1650, true),
+            ("Tin Shui Wai", 22.4600, 114.0020, false), ("Tseung Kwan O", 22.3075, 114.2600, false),
+        ] {
+            let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: latitude, longitudeDegrees: longitude))
+            let cells = try XCTUnwrap(LandImport.cells(population: population, frame: RealWorldFrame(anchor: anchor, bounds: bounds), bounds: bounds), name)
+            let residents = cells.reduce(0) { $0 + $1.residents }, jobs = cells.reduce(0) { $0 + $1.jobs }
+            XCTAssertGreaterThan(residents, 0, name)
+            XCTAssertGreaterThan(jobs, 0, name)
+            XCTAssertEqual(jobs > residents, mostlyWork, "\(name): \(residents) residents, \(jobs) jobs")
+        }
     }
 
     /// A box that is not one, or wider than a world, has no ground.

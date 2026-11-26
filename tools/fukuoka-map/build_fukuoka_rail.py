@@ -475,9 +475,11 @@ def write(folder, name, value):
 
 
 OSM, MLIT, OURS = "OpenStreetMap", "National Land Numerical Information (railway data N02, 2025), MLIT", "this project"
-WORLDPOP, GSI = "WorldPop", "GSI elevation tiles"
+ESTAT, GSI = "e-Stat (Statistics Bureau of Japan)", "GSI elevation tiles"
 SOURCES = {
-    "population.json": {"runs (people per 30 arc-second cell, rounded)": WORLDPOP},
+    # JAPAN-CENSUS-GRID (decision 1000): tools/census-grid/japan_census_grid.py.
+    "population.json": {"runs (residents, 2020 Population Census, 500 m grid, spread over 7.5 arc-second cells)": ESTAT,
+                        "jobs (workers, 2021 Economic Census for Business Activity, 500 m grid, by industry)": ESTAT},
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_fukuoka_ground.py basemap)": OSM,
                         "the coast closed along the extract's edge": OURS},
     "buildings.pmtiles": {"outlines, uses, tagged storeys and heights (build_fukuoka_ground.py buildings)": OSM,
@@ -513,7 +515,8 @@ def write_manifest(folder):
              for name in sorted(SOURCES) if os.path.exists(os.path.join(folder, name))}
     licences = {OSM: "© OpenStreetMap contributors, ODbL 1.0", MLIT: MLIT_CREDIT}
     if "population.json" in files:
-        licences[WORLDPOP] = "WorldPop (www.worldpop.org), CC BY 4.0"
+        licences[ESTAT] = ("「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））"
+                           "を加工して作成 (e-Stat terms of use, Government of Japan Standard Terms of Use 2.0, compatible with CC BY 4.0)")
     if "heights.dat" in files:
         licences[GSI] = "国土地理院の標高タイルを加工して作成 (国土地理院コンテンツ利用規約, compatible with CC BY 4.0)"
     write(folder, "pack.json", {
