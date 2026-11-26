@@ -106,6 +106,8 @@ sys.path.insert(0, os.path.join(HERE, '..', 'real-world-population'))
 ZOOM = 16
 EXTENT = 4096
 LEVEL_HEIGHT = 3.2
+# Douglas-Peucker's tolerance in metres (`build`'s default).
+TOLERANCE = 0.5
 # West, south, east, north: Taiwan and Penghu (the survey's), Kinmen, Matsu.
 BOXES = [(119.3, 21.8, 122.1, 25.4), (118.1, 24.35, 118.55, 24.56), (119.85, 25.9, 120.55, 26.4)]
 # Kept when the centroid is this far (degrees, about 2 km) from a county.
@@ -319,6 +321,24 @@ def encode_tile(key, rows, tolerance, storeys=None):
     [buildings, rings dropped, points before, points after, area before (m²),
     sum |area change| (m²), buildings whose area moved over 5 %, largest
     relative change]."""
+    buildings, stats = encoded_buildings(key, rows, tolerance, storeys)
+    buildings.sort(key=lambda b: b[:5])
+    return written(b[5:] for b in buildings), stats
+
+
+def sort_key(outline, id_):
+    """Where a building (its outline in working units) goes in its tile:
+    rows of 256 units, alternating direction, so steps stay short."""
+    cx = sum(x for x, _ in outline) / len(outline)
+    cy = sum(y for _, y in outline) / len(outline)
+    row = int(cy) >> 8
+    return (row, int(cx) >> 8 if row % 2 == 0 else -(int(cx) >> 8), int(cy), int(cx), id_)
+
+
+def encoded_buildings(key, rows, tolerance, storeys=None):
+    """`encode_tile`'s buildings before they are written, each as
+    `sort_key` + (attributes, rings in written units), and its stats
+    (`official_outlines.py` adds its own to a tile's)."""
     tx, ty = key
     metre = metre_of(ty)  # working units a metre
     sq_tolerance = (tolerance * metre) ** 2
@@ -368,12 +388,8 @@ def encode_tile(key, rows, tolerance, storeys=None):
             change = abs(after - before) / before if before > 0 else 0
             stats[6] += change > 0.05
             stats[7] = max(stats[7], change)
-            cx = sum(x for x, _ in outline) / len(outline)
-            cy = sum(y for _, y in outline) / len(outline)
-            buildings.append(((int(cy) >> 8, int(cx) >> 8, int(cy), int(cx), _id), attributes, rings))
-    # Rows of 256 units, alternating direction, so steps stay short.
-    buildings.sort(key=lambda b: (b[0][0], b[0][1] if b[0][0] % 2 == 0 else -b[0][1], b[0][2:]))
-    return written(b[1:] for b in buildings), stats
+            buildings.append(sort_key(outline, _id) + (attributes, rings))
+    return buildings, stats
 
 
 def coarse_rings(rings, metre):

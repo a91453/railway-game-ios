@@ -1,0 +1,2 @@
+en: Taichung's 3D map now draws its buildings from the city's own building map: every street lined as it really is, and nearly three times as many buildings.
+zh: 台中市的 3D 地圖改用市府建物圖：每條街的房子照實際位置排好，建物多了將近三倍。

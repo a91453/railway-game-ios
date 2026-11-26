@@ -15,7 +15,7 @@ final class Map3DSceneLayerRegistryTests: XCTestCase {
     /// and kind, what is being built, the ground, the shared work and the
     /// tallies of each step. A layer's own state does not join them.
     static let shared: Set<String> = [
-        "originX", "originY", "region", "world", "meshes", "shadows", "sizing", "sizesFar", "baseParts", "farParts", "shadowParts",
+        "originX", "originY", "region", "world", "meshes", "shadows", "sizing", "sizesFar", "farSizing", "baseParts", "farParts", "shadowParts",
         "layers", "marked", "steps", "stepEnded", "target", "state", "facadeMeshes", "props", "signs", "streetLife", "studyRegion",
         "nearMeshes", "keptColours", "farMeshes", "instancingBoxes", "closeMeshes", "standInMeshes", "ownColourNear", "ownColourFar",
         "corners", "levelling", "trackCover", "shared", "detail", "detailAhead", "fileGround", "placedGround", "look",

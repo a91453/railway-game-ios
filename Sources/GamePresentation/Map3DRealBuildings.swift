@@ -331,6 +331,61 @@ extension Map3DScene.Builder {
         // its roof painted as below.
         let rectangle = far && !canopy && !hipped && polygons.count == 1 && polygons[0].count == 1 && Self.isRectangle(outline, box)
 
+        // Decision 1015: a building's walls, which from afar are built
+        // apart from its roof (``Map3DScene/Builder/farSizing``).
+        func addWalls(_ mesh: inout Map3DMesh, _ polygon: [[Map3DPoint]]) {
+            for (index, ring) in polygon.enumerated() where ring.count >= 3 {
+                // Outlines counter-clockwise and holes clockwise in x
+                // and z, so every wall faces away from the building.
+                let ring = (Self.signedArea(ring) > 0) == (index == 0) ? ring : ring.reversed()
+                // Decision 817: a narrow wall of a tower takes its side bays.
+                let longestWall = sidePaint == nil ? 0 : ring.indices.map { (ring[($0 + 1) % ring.count] - ring[$0]).length }.max() ?? 0
+                for (at, a) in ring.enumerated() {
+                    let b = ring[(at + 1) % ring.count]
+                    let low = Map3DPoint(0, ground + wallBottom, 0)
+                    let bottom = (a: Map3DPoint(a.x, 0, a.z) + low, b: Map3DPoint(b.x, 0, b.z) + low)
+                    // Decision 765: a wall narrower than half a bay of
+                    // its paint, or a piece of a curved wall, is left
+                    // plain, not given a window squeezed into it.
+                    let length = (b - a).length
+                    let curve = Self.isCurvePiece(ring[(at + ring.count - 1) % ring.count], a, b, ring[(at + 2) % ring.count])
+                    func plain(_ given: Map3DPaint?) -> Map3DPaint? {
+                        let paint = given == upperPaint && length < longestWall * Map3DFacadeVariety.narrowShare ? sidePaint ?? given : given
+                        return length < Self.plainBelow(paint) || (curve && length < Self.longestCurvePiece) ? nil : paint
+                    }
+                    if groundFloor > 0 {
+                        let up = Map3DPoint(0, groundFloor, 0)
+                        mesh.addQuad(bottom.b, bottom.a, bottom.a + up, bottom.b + up, color: wall, paint: plain(groundPaint))
+                        let top = Map3DPoint(0, eaves, 0)
+                        mesh.addQuad(bottom.b + up, bottom.a + up, bottom.a + top, bottom.b + top, color: wall, paint: plain(upperPaint))
+                    } else {
+                        let top = Map3DPoint(0, eaves - wallBottom, 0)
+                        mesh.addQuad(bottom.b, bottom.a, bottom.a + top, bottom.b + top, color: wall, paint: plain(upperPaint))
+                    }
+                }
+            }
+        }
+        // Decision 235's roof clutter on a house; from afar built apart
+        // from the house, by its own size (decision 1015).
+        func addClutter(_ mesh: inout Map3DMesh, top: Map3DPoint) {
+            // Only on a house's roof, not a long terrace's or a hall's.
+            // Decision 802: and only where roofs have them.
+            guard clutter, box.length > 4, box.width > 3.2, box.length < 30, box.width < 16 else { return }
+            let spot = top - box.along * (box.length / 4)
+            if r(6) < 0.55 {
+                let tank = r(7) < 0.5 ? Map3DPalette.tankBlue : Map3DPalette.tankSteel
+                mesh.addBox(base: spot, forward: box.along, length: 1.6, width: 1.6, height: 2.2, top: tank, side: tank)
+            } else if r(6) < 0.8 {
+                let tin = Self.pick(Map3DPalette.tinRoofs, r(11))
+                let length = box.length / 2 - 0.4, width = box.width - 0.8
+                mesh.addBox(base: spot, forward: box.along, length: length, width: width, height: 2.4, top: tin,
+                            side: Map3DColor.shaded(Map3DPalette.shedWalls[0], 0.95), frontPaint: Self.metal, flankPaint: Self.metal,
+                            capped: false)
+                mesh.addGableRoof(base: spot + Map3DPoint(0, 2.4, 0), forward: box.along, length: length, width: width,
+                                  rise: width / 2 * 0.36, overhang: 0.3, color: tin, gable: Map3DPalette.shedWalls[0], paint: Self.metal)
+            }
+        }
+
         mesh(at: centre) { mesh in
             if rectangle {
                 // Its front faces along, as wide as the box; its flanks as
@@ -350,36 +405,7 @@ extension Map3DScene.Builder {
                             topPaint: roofPaint, frontPaint: plain(box.width, ends), flankPaint: plain(box.length, upperPaint), shaded: false)
             }
             for polygon in polygons where !rectangle {
-                for (index, ring) in polygon.enumerated() where ring.count >= 3 {
-                    // Outlines counter-clockwise and holes clockwise in x
-                    // and z, so every wall faces away from the building.
-                    let ring = (Self.signedArea(ring) > 0) == (index == 0) ? ring : ring.reversed()
-                    // Decision 817: a narrow wall of a tower takes its side bays.
-                    let longestWall = sidePaint == nil ? 0 : ring.indices.map { (ring[($0 + 1) % ring.count] - ring[$0]).length }.max() ?? 0
-                    for (at, a) in ring.enumerated() {
-                        let b = ring[(at + 1) % ring.count]
-                        let low = Map3DPoint(0, ground + wallBottom, 0)
-                        let bottom = (a: Map3DPoint(a.x, 0, a.z) + low, b: Map3DPoint(b.x, 0, b.z) + low)
-                        // Decision 765: a wall narrower than half a bay of
-                        // its paint, or a piece of a curved wall, is left
-                        // plain, not given a window squeezed into it.
-                        let length = (b - a).length
-                        let curve = Self.isCurvePiece(ring[(at + ring.count - 1) % ring.count], a, b, ring[(at + 2) % ring.count])
-                        func plain(_ given: Map3DPaint?) -> Map3DPaint? {
-                            let paint = given == upperPaint && length < longestWall * Map3DFacadeVariety.narrowShare ? sidePaint ?? given : given
-                            return length < Self.plainBelow(paint) || (curve && length < Self.longestCurvePiece) ? nil : paint
-                        }
-                        if groundFloor > 0 {
-                            let up = Map3DPoint(0, groundFloor, 0)
-                            mesh.addQuad(bottom.b, bottom.a, bottom.a + up, bottom.b + up, color: wall, paint: plain(groundPaint))
-                            let top = Map3DPoint(0, eaves, 0)
-                            mesh.addQuad(bottom.b + up, bottom.a + up, bottom.a + top, bottom.b + top, color: wall, paint: plain(upperPaint))
-                        } else {
-                            let top = Map3DPoint(0, eaves - wallBottom, 0)
-                            mesh.addQuad(bottom.b, bottom.a, bottom.a + top, bottom.b + top, color: wall, paint: plain(upperPaint))
-                        }
-                    }
-                }
+                if !far { addWalls(&mesh, polygon) }
                 // The flat roof over the outline and its holes.
                 let lifted = polygon.map { $0.map { Map3DPoint($0.x, ground + eaves, $0.z) } }
                 let triangles = Earcut.triangulate(lifted.map { $0.map { (x: Double($0.x), y: Double($0.z)) } })
@@ -437,22 +463,7 @@ extension Map3DScene.Builder {
             let house = kind == .shophouse || kind == .house || (kind == .flats && storeys <= 6)
             switch kind {
             case _ where house:
-                // Only on a house's roof, not a long terrace's or a hall's.
-                // Decision 802: and only where roofs have them.
-                guard clutter, box.length > 4, box.width > 3.2, box.length < 30, box.width < 16 else { break }
-                let spot = top - box.along * (box.length / 4)
-                if r(6) < 0.55 {
-                    let tank = r(7) < 0.5 ? Map3DPalette.tankBlue : Map3DPalette.tankSteel
-                    mesh.addBox(base: spot, forward: box.along, length: 1.6, width: 1.6, height: 2.2, top: tank, side: tank)
-                } else if r(6) < 0.8 {
-                    let tin = Self.pick(Map3DPalette.tinRoofs, r(11))
-                    let length = box.length / 2 - 0.4, width = box.width - 0.8
-                    mesh.addBox(base: spot, forward: box.along, length: length, width: width, height: 2.4, top: tin,
-                                side: Map3DColor.shaded(Map3DPalette.shedWalls[0], 0.95), frontPaint: Self.metal, flankPaint: Self.metal,
-                                capped: false)
-                    mesh.addGableRoof(base: spot + Map3DPoint(0, 2.4, 0), forward: box.along, length: length, width: width,
-                                      rise: width / 2 * 0.36, overhang: 0.3, color: tin, gable: Map3DPalette.shedWalls[0], paint: Self.metal)
-                }
+                if !far { addClutter(&mesh, top: top) }
             case .flats, .office, .civic:
                 if !far {
                     Self.addRoofPlant(&mesh, on: top, forward: box.along, length: box.length * 0.8, width: box.width * 0.8, r: r, salt: 30)
@@ -460,6 +471,21 @@ extension Map3DScene.Builder {
             default:
                 break
             }
+        }
+        // Decision 1015: from afar (looking straight down), a building's
+        // walls show only as far as the view leans them, so they are left
+        // out by its height (``Map3DFarDetail/heightSeen``), and its roof
+        // stays while its outline is large enough; a house's roof clutter
+        // goes by its own size.
+        if far, !rectangle {
+            farSizing = (eaves - wallBottom) * Map3DFarDetail.heightSeen
+            mesh(at: centre) { mesh in
+                for polygon in polygons { addWalls(&mesh, polygon) }
+            }
+            farSizing = nil
+        }
+        if far, !hipped, !hongKong, kind == .shophouse || kind == .house || (kind == .flats && storeys <= 6) {
+            mesh(at: centre) { addClutter(&$0, top: Map3DPoint(box.centre.x, ground + eaves, box.centre.z)) }
         }
         // Decision 817: near, what stands out of a tower's walls.
         if let facadeLook, !far, !canopy, !hipped, polygons.count == 1 || polygons.allSatisfy({ $0.count == 1 }) {
