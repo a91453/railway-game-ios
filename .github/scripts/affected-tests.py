@@ -11,6 +11,11 @@ root, and prints
 or exits 3 with the reason on stderr when the change cannot be narrowed (the
 caller then runs the broad tier, swift-shards.sh plan, as before).
 
+swift-shards.sh decide does not call it when the broad tier is full (GameCore,
+the package, the CI scripts, a shared test file, two edited campaigns;
+decision 1012's later note): those pull requests run every shard. Run by
+hand, BROAD_TIER=full still weighs the selection against every class.
+
 What a file reaches, read as text like swift-shards.sh does (a top-level
 declaration starts in column 0, the style of every Swift file here):
 

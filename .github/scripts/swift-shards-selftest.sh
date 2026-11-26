@@ -841,15 +841,18 @@ final class Map3DFarViewTests: XCTestCase {
     func testFar() { XCTAssertEqual(unrelatedHelper(), 1) }
 }
 SWIFT
-mkdir -p "$tree/Sources/GameCore"
+mkdir -p "$tree/Sources/GameCore" "$tree/Sources/GamePresentation/Scan"
 cat >"$tree/Sources/GameCore/Scan.swift" <<'SWIFT'
 public struct ScanThing {}
+SWIFT
+cat >"$tree/Sources/GamePresentation/Scan/Scanned.swift" <<'SWIFT'
+public struct ScannedThing {}
 SWIFT
 cat >"$tree/Tests/GamePresentationTests/SourceScanTests.swift" <<'SWIFT'
 import XCTest
 
 final class SourceScanTests: XCTestCase {
-    func testNoPrint() { _ = "Sources/GameCore" }
+    func testNoPrint() { _ = "Sources/GamePresentation/Scan" }
 }
 SWIFT
 cat >"$tree/Sources/GamePresentation/Ledger.swift" <<'SWIFT'
@@ -880,7 +883,14 @@ expect_decision true affected "\"tests\":\"CatalogueTests $smoke TrainPackTests\
   EVENT=pull_request LISTED=true -- Tests/GamePresentationTests/TrainPackTests.swift RailwayGameApp/Resources/Catalogue/stations.json
 expect_decision true affected "\"tests\":\"GoldenScenarioTests ReplayFixtureTests SavedGameTests SourceScanTests\"" \
   "a test that reads a source folder by its path runs when a file in it changes" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/Scan/Scanned.swift
+# Decision 1012's later note (CIOPT-17 item 2): a full tier is not narrowed,
+# so a GameCore change runs every shard on its pull request, even when its
+# names reach only a few tests (here none but the smoke ones).
+expect_decision true full full "a pull request of a GameCore source file runs every shard" \
   EVENT=pull_request LISTED=true -- Sources/GameCore/Scan.swift
+expect_decision true full full "a GameCore source file beside a GamePresentation one runs every shard" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/TrainPack.swift Sources/GameCore/Scan.swift
 expect_decision true affected "\"tests\":\"GoldenScenarioTests LedgerFirstHalfTests LedgerSecondHalfTests ReplayFixtureTests SavedGameTests\"" \
   "a base test class with no tests of its own runs as its subclasses" \
   EVENT=pull_request LISTED=true -- Sources/GamePresentation/Ledger.swift

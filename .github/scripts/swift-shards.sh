@@ -1704,9 +1704,11 @@ push_base() {
 # followed through test helpers), plus a smoke list of the core (golden
 # scenarios, saves, replays, the state machine, every start, the real data,
 # the short timetable checkup). It is taken only when every changed file can
-# be followed (a source file of GameCore or GamePresentation, a test file,
-# bundled data a Swift file names by path) and the selection weighs at most
-# half the broad tier's; otherwise the broad tier runs as before. Its jobs
+# be followed (a source file of GamePresentation, a test file, bundled data
+# a Swift file names by path), the broad tier is not full (decision 1012's
+# later note: GameCore, the package and the CI scripts run every shard on
+# their pull request too) and the selection weighs at most half the broad
+# tier's; otherwise the broad tier runs as before. Its jobs
 # are `selected` parts of AFFECTED_PART_SECONDS each, at most
 # PRESENTATION_PARTS. A push to main and the nightly and manual runs never
 # take it, so the broad tier on main catches what the names missed.
@@ -2160,8 +2162,15 @@ ci_decide() {
         # A pull request runs only the tests its files reach and the smoke
         # tests, when that is at most half of its broad tier (decision 1012,
         # affected_plan); the push of main after the merge runs the broad
-        # tier, and the nightly run everything.
-        if [[ "${EVENT:-}" == pull_request && "$tier" != none ]] && narrow="$(affected_plan "$tier" "$tests" <<<"$files")"; then
+        # tier, and the nightly run everything. A full tier (GameCore, the
+        # package, the CI scripts, a shared test file, two edited campaigns)
+        # is never narrowed (decision 1012's later note, CIOPT-17 item 2):
+        # a change there can move a deadlock or timetable campaign that no
+        # name leads to, and it should turn its own pull request red, not
+        # main after the merge.
+        if [[ "${EVENT:-}" == pull_request && "$tier" == full ]]; then
+          echo "Tier full: not narrowed (decision 1012's later note)." >&2
+        elif [[ "${EVENT:-}" == pull_request && "$tier" != none ]] && narrow="$(affected_plan "$tier" "$tests" <<<"$files")"; then
           tier=affected
           tests="$(sed -n 's/^tests=//p' <<<"$narrow")"
           parts="$(sed -n 's/^parts=//p' <<<"$narrow")"
