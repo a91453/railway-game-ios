@@ -34,3 +34,8 @@
 4. `website-screenshots.yml` 也接 `pick-mac.yml`（等 #2726 合）。
 5. `Map3DFarViewTests.testTheFarthestViewOfTaipeiIsWithinBudget` 一支要 287–440 s，見量測檔 §5。
 6. 發版 PR 不再加 `full-ci` 標籤（#2748 已修 SaveMutationChecks 選錯），寫進發版例行的步驟。
+7. **TestFlight 的 App 上傳和地圖包上傳分開跑**（作者 11-26「以後能分開跑嗎」；148 兩件事擠在 `release` job 的 45 分上限裡被停掉，#2754 先放寬到 90 分）。149 送出後做，0.7.0 送審（11-27 21:00）前趕不上就保留現在的做法。
+   - 拆法：地圖包上傳（`Upload the map packs that changed`，`testflight-map-packs.py` + `package.sh` + `altool --upload-asset-pack`）搬成自己的 job，和封存、簽章、匯出、檢查 IPA 平行跑；`Upload to App Store Connect` 拆成第三個 job，`needs` 兩邊都成功才傳 build。
+   - 要守的：決策 858（該傳的包沒傳成，build 就不傳）、DEBUG-138（包要先於 build 上傳）。build 的 IPA 用 artifact 交給上傳 job；簽章材料每個 job 自己建、自己清（`testflight-signing.sh cleanup`，`if: always()`）。
+   - 失敗只重跑那一邊：GitHub 的「Re-run failed jobs」。地圖包已經傳成功的那個 job 不會重跑；但整個 run 重跑時 `testflight-map-packs.py` 比的是上一次成功的發版，會再傳一次（ASC 每傳一次就多一版、要再審），所以要在步驟摘要寫清楚「只按 Re-run failed jobs」，或讓它讀同一個 run 先前的上傳紀錄跳過。
+   - 會多佔一台 macOS（地圖包 job 也要 Xcode 的 `altool`），發版時兩台。`testflight-checks.yml` 的 dry run 要跟著改成三個 job，selftest 照改。
