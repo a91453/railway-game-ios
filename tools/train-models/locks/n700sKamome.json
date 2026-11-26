@@ -1,0 +1,55 @@
+{
+  "comment" : "Decision 782: the models of the registered train n700sKamome (Map3DN700SKamome): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 6,
+  "lamps" : "3a38a634efd4bf26",
+  "models" : {
+    "light-set-n700sKamome-car" : {
+      "hash" : "b99dd199d85dc89d",
+      "triangles" : 362
+    },
+    "light-set-n700sKamome-carBack" : {
+      "hash" : "297025851f13da9d",
+      "triangles" : 362
+    },
+    "light-set-n700sKamome-head" : {
+      "hash" : "437fd1e4a1a12ba4",
+      "triangles" : 226
+    },
+    "light-set-n700sKamome-panto" : {
+      "hash" : "a98777ca151234d3",
+      "triangles" : 367
+    },
+    "light-set-n700sKamome-pantoBack" : {
+      "hash" : "ee6b8b068aa4c1d3",
+      "triangles" : 367
+    },
+    "light-set-n700sKamome-tail" : {
+      "hash" : "344c35503dffb6a4",
+      "triangles" : 226
+    },
+    "set-n700sKamome-car" : {
+      "hash" : "e6dfd1292913d471",
+      "triangles" : 3447
+    },
+    "set-n700sKamome-carBack" : {
+      "hash" : "3818761a705b14ab",
+      "triangles" : 3447
+    },
+    "set-n700sKamome-head" : {
+      "hash" : "cc8c04978f815f9",
+      "triangles" : 3448
+    },
+    "set-n700sKamome-panto" : {
+      "hash" : "4aae6c837f858a81",
+      "triangles" : 3567
+    },
+    "set-n700sKamome-pantoBack" : {
+      "hash" : "e87f07242929c702",
+      "triangles" : 3567
+    },
+    "set-n700sKamome-tail" : {
+      "hash" : "817ca441aade4785",
+      "triangles" : 3448
+    }
+  }
+}

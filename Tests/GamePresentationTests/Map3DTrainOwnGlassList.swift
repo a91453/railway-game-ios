@@ -44,6 +44,7 @@ enum Map3DTrainOwnGlassList {
         "set-highSpeed-", // Decision 988: the 700T, the owner's old 700 series.
         "set-series700-", // Decision 989: the 700 series in its own paint.
         "set-kyushu800", // Decision 978: the Kyushu Shinkansen's 800 series.
+        "set-n700sKamome-", // Decision 998 (continued): the N700S Kamome.
     ]
 
     /// Every studio car checked face by face (`Map3DTrainOwnGlassTests`):
@@ -67,6 +68,7 @@ enum Map3DTrainOwnGlassList {
         { far in far ? [] : Map3DKyushuN700.Unit.allCases.map { Map3DKyushuN700.model($0) } }, // Decision 977: near only.
         { far in far ? [] : Map3DN700S.Unit.allCases.map { Map3DN700S.model($0) } }, // Decision 979: near only.
         { far in far ? [] : Map3DKyushu800.Unit.allCases.map { Map3DKyushu800.model($0) } }, // Decision 978: near only.
+        { far in far ? [] : Map3DN700SKamome.Unit.allCases.map { Map3DN700SKamome.model($0) } }, // Decision 998 (continued): near only.
     ]
 
     /// The studio cars whose dark faces were never taken for glass, so
