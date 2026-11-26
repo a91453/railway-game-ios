@@ -2,9 +2,10 @@
 
 ## 進度
 
-- 做到哪：**PR 1 做完**（2026-11-26 台灣時間 09:40，第二串）：地面整個重做、切成四包、997 的數字填好、測試改好。PR 2 還沒開始，整份是共用資料夾 `nagasaki-pack/pr2-nishi-kyushu-wk-nk.patch`。
-- 已驗證：PR 1 本機 `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨，`FukuokaGroundTests`、`FukuokaRailwaysTests`、`KyushuShinkansenTests`、`MapGrowthLayoutTests`、`MapPackDownloadsTests`、`OverseasSightsTests`、`BaseMapStyleTests`、`MapPackExtentsTests` 等日本相關的測試都過。其餘留給 CI。
-- 下一步：PR 1 合併後，從 main 重開分支 `git apply` PR 2 的 patch（下面「PR 2 的狀態」）。**PR 2 的 patch 是在舊地面上做的**：它的 `KyushuShinkansenTests` 那段要留 PR 1 的 2,577 m，地圖包的檔（`MapPacks/`）留 main 的、只重跑 `build_kyushu_shinkansen.py merge` 與 `extract_fukuoka_runs.py`。
+- 做到哪（2026-11-26 台灣時間 12:50，第二串）：**PR 1（#2719，決策 997）已合**，main 95cfbcb。**PR 2（#2735，決策 998）已開**，本機建置與相關測試全過，CI 綠就合。
+- 已驗證（PR 2，Linux 雲端 Swift 6.4）：`NishiKyushuShinkansenTests`、`KyushuShinkansenTests`、`RealLineBundleTests`、`PlatformNameBoardStylesTests`、`FukuokaRailwaysTests`、`Map3DRealTrainsTests` 等全過；NK 一天體檢兩種規則全 0，預算在 `CheckupBudgets/Fukuoka.swift`。
+- 下一步：只剩「之後」那幾項，都是另開的單。下面 PR 1、PR 2 的段落是做的過程，留作重做時的步驟。
+- 作者要做：下次發版上傳四個地圖包（共 117.7 MB）；`mappack-fukuoka-nagasaki` 是新包，第一次要審。
 
 2026-11-26（台灣時間 08:40），雲端 session，分支 `claude/project-thread-dzwmgt`。上一串對話被壓縮兩次，照規則停手。
 作者：「那還要補長崎縣嗎 這樣西九州新幹線就能用了」；後來又說「對了西九州我舊版有做塗裝」「直接用n700s套上塗裝就行了吧」。
@@ -68,13 +69,13 @@ python3 -I tools/fukuoka-map/split_prefectures.py /tmp/fk/osm/admin4.pbf Railway
 
 測試：新的 `NishiKyushuShinkansenTests`；`KyushuShinkansenTests`、`FukuokaRailwaysTests`、`TimetableCheckupAllBoughtTests.testNishiKyushuShinkansen` 也改了。
 
-**這些測試都還沒跑過**，上一串停手時建置做到 114/161。下面三個斷言是推測的，要先驗證：
+（已做完）當時推測、後來驗證過的三個斷言：
 
 - 時刻表的 `runs.tracks` 有沒有照 `realTracks`。
 - 月台長度是不是 150 m。
 - 武雄溫泉是不是兩個側式月台。
 
-接下來要做的：
+當時的步驟（都做完了）：
 
 1. 建置，跑 `NishiKyushuShinkansenTests`、`KyushuShinkansenTests`。
 2. 兩種規則都跑 NK 的體檢：`TIMETABLE_CHECKUP=1 TIMETABLE_CHECKUP_ONLY="fukuoka kyushushinkansen:NK simple"`，`simple` 再換成另一種規則跑一次。

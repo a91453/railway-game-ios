@@ -74,7 +74,7 @@ def main(folder):
         f.write(text)
     sys.path.insert(0, here)
     import build_fukuoka_rail
-    build_fukuoka_rail.write_manifest(folder)
+    build_fukuoka_rail.refresh_manifest(folder)
 
 
 if __name__ == "__main__":
