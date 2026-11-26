@@ -15,3 +15,6 @@ Sources/GamePresentation/Map3DSceneLayerList.swift merge=union
 # TRAIN-OWN-GLASS-LIST: one train that marks its own glass a line, the same
 # way (Map3DTrainOwnGlassListTests checks the result).
 Tests/GamePresentationTests/Map3DTrainOwnGlassList.swift merge=union
+# SPLIT-HOTSPOTS-2: one place a game on Japan's map begins round a line, the
+# same way (OverseasStartLandJapanTests checks the result).
+Tests/GamePresentationTests/OverseasStartLandJapanList.swift merge=union
