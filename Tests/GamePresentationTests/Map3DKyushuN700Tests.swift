@@ -194,6 +194,41 @@ final class Map3DKyushuN700Tests: XCTestCase {
         XCTAssertEqual(27.35 / 2 - (crew.x.lowerBound + crew.x.upperBound) / 2, 8.46, accuracy: 0.05)
     }
 
+    /// The bogies stand where the real car's do (3.75 m from a coupling
+    /// face, 17.5 m apart; the cab car's front one 6.10 m behind the nose's
+    /// tip), and each sits in the middle of the opening in the skirts that
+    /// shows its wheels (the owner, 2026-11-26: the openings had stretched
+    /// with the body and the wheels stood at one end of them).
+    func testTheWheelsAreInTheMiddleOfTheirOpenings() throws {
+        for unit in Map3DKyushuN700.Unit.allCases {
+            let model = try XCTUnwrap(Map3DKyushuN700.model(unit))
+            let half = unit.pitch / 2
+            let wheels = model.vertices.filter { $0.color == Map3DPalette.dark && $0.z < 0.3 }.map(\.x).sorted()
+            var axles: [[Float]] = []
+            for x in wheels {
+                if let last = axles.last?.last, x - last < 0.8 { axles[axles.count - 1].append(x) } else { axles.append([x]) }
+            }
+            XCTAssertEqual(axles.count, 4, unit.rawValue)
+            guard axles.count == 4 else { continue }
+            // The skirts' foot along the side walls: where the openings begin and end.
+            let feet = model.vertices.filter { $0.color == Map3DPalette.kyushuWhiteBlue && abs($0.z - 0.378) < 0.01 && abs($0.y) > 1.1 }.map(\.x)
+            var centres: [Float] = []
+            for pair in [axles[0] + axles[1], axles[2] + axles[3]] {
+                let low = pair.min() ?? 0, high = pair.max() ?? 0, centre = (low + high) / 2
+                centres.append(centre)
+                let front = try XCTUnwrap(feet.filter { $0 < low }.max(), unit.rawValue)
+                let back = try XCTUnwrap(feet.filter { $0 > high }.min(), unit.rawValue)
+                XCTAssertEqual((front + back) / 2, centre, accuracy: 0.01, "\(unit.rawValue): the opening's middle is the bogie's")
+                XCTAssertEqual(back - front, 4.40, accuracy: 0.05, unit.rawValue)
+            }
+            XCTAssertEqual(centres[1] - centres[0], 17.5, accuracy: 0.01, unit.rawValue)
+            XCTAssertEqual(centres[0], -half + 3.75, accuracy: 0.01, unit.rawValue)
+            if unit.isCab {
+                XCTAssertEqual(half - centres[1], 6.10, accuracy: 0.01, "the front bogie 6.10 m behind the nose's tip")
+            }
+        }
+    }
+
     /// Between two cars a full-width hood in the real train's beige, flush
     /// with the body from the skirts to the roof, so the gap between two
     /// cars is not seen through (the old cars had only a narrow gangway,

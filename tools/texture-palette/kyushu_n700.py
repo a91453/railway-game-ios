@@ -103,6 +103,18 @@ BAND = 7.86              # 窗帶的邊：最後一格窗的外緣再往外 5 cm
 DOOR_IN, DOOR_OUT = 9.0287, 9.8904   # 客室門門縫線的內緣、外緣各再往外 3 cm（門邊有 2 cm 的鋸齒，切線落在牆上）
 BODY_END = 10.25         # 車身的端牆
 DOOR_SHIFT = 0.30        # 客室門往車端移多少（遊戲的公尺）：真車門的正中離連結面 0.74 m
+# 車身下緣讓輪子露出來的開口（輪罩）：舊版的座標，沿車身，開口下緣的兩端（裙板斜端
+# 的腳）。頭車在多排一格窗之前量的（後面那個開口在多排的那一段後面，跟著往後移）；
+# 中間車兩頭對稱。車身拉長以後開口要對準照真車放的轉向架（作者 2026-11-26「輪子
+# 是不是跑偏了」）：開口本身照 `OPENING` 放大、正中對到轉向架正中，裙板的伸縮放在
+# 開口之間（`skirt_along`）。
+CAB_OPENINGS = ((-6.474, -2.764), (5.289, 8.983))
+MIDDLE_OPENING = (5.289, 8.983)
+OPENING = LENGTH         # 開口沿車身乘多少：和整節等比放大時一樣（舊的樣子，決策 977）
+SKIRT_FROM = -8.6        # 頭車：裙板從這裡往後是側面；往前是車鼻底下，跟著車鼻
+SKIRT_TOP = 0.785        # 舊版車身側牆的下緣在 0.779：低於這個的頂點（裙板、開口的頂板）照裙板放
+SKIRT_STRIP = 0.85       # 從下緣伸到這以上的面先在這個高度切開：只有下面 7 cm 的一條跟著裙板斜，
+                         # 上面的牆（門、窗、藍帶）一點都不動
 
 
 # ---------------------------------------------------------------- GLB 讀寫
@@ -581,6 +593,48 @@ def along(z: np.ndarray, body: float | None = None) -> np.ndarray:
     return np.where(z <= NOSE_TO, (z - NOSE_TO) * NOSE, (z - NOSE_TO) * body)
 
 
+def cut_low(triangles, value=SKIRT_STRIP):
+    """從車身下緣（`SKIRT_TOP` 以下）伸到 `value` 以上的面，在 y = value 切開。"""
+    out = []
+    for c, kind, door in triangles:
+        y = c[:, 1]
+        if y.min() >= SKIRT_TOP or y.max() <= value + 1e-9:
+            out.append((c, kind, door))
+            continue
+        for low in (True, False):
+            polygon = []
+            for i in range(3):
+                a, b = c[i], c[(i + 1) % 3]
+                a_in = a[1] <= value if low else a[1] >= value
+                b_in = b[1] <= value if low else b[1] >= value
+                if a_in:
+                    polygon.append(a)
+                if a_in != b_in:
+                    point = a + (b - a) * (value - a[1]) / (b[1] - a[1])
+                    point[1] = value
+                    polygon.append(point)
+            out += [(np.array([polygon[0], polygon[i], polygon[i + 1]]), kind, door) for i in range(1, len(polygon) - 1)]
+    return out
+
+
+def skirt_along(z: np.ndarray, body, openings, centres, start: float, end: float) -> np.ndarray:
+    """車身下緣（裙板與開口的頂板）：舊版沿車身的位置 → 遊戲的位置。每個開口 `(lo, hi)`
+    乘 `OPENING`、正中放到 `centres`（真車轉向架的正中）；`start` 以前與 `end` 以後
+    照車身的 `body` 放，中間的裙板各自伸縮接上。裙板與側牆都是含沿車方向的平面，
+    頂點只沿車身移動，面不會折。"""
+    knots, moved = [start], [float(body(np.array([start]))[0])]
+    for (low, high), centre in zip(openings, centres):
+        middle = (low + high) / 2
+        knots += [low, high]
+        moved += [centre - (middle - low) * OPENING, centre + (high - middle) * OPENING]
+    knots.append(end)
+    moved.append(float(body(np.array([end]))[0]))
+    if np.any(np.diff(knots) <= 0) or np.any(np.diff(moved) <= 0):
+        raise SystemExit(f"裙板的折點沒有照順序：{np.round(knots, 3).tolist()} → {np.round(moved, 3).tolist()}")
+    inside = (z > start) & (z < end)
+    return np.where(inside, np.interp(z, knots, moved), body(z))
+
+
 def build(path: Path, cab: bool, debug_dir: Path | None):
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import kyushu_800 as k800  # 切開、多排窗、全周幌、T 形接點：800 系那支（決策 978）的
@@ -629,9 +683,32 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         numbers = {"nose_scale": round(NOSE, 4), "body_scale": round(stretch, 4), "bays": CAB_BAYS,
                    "added_old": round(added, 4)}
     joint = float(along(np.array([JOINT + added]), stretch)[0])
+    # 轉向架正中（遊戲的位置，沿車身）：照真車，離連結面 BOGIE_FROM_END、相距 BOGIE_CENTRES。
+    rear = joint - BOGIE_FROM_END
+    if cab:
+        # 後面的開口在多排的那一段窗後面：跟著往後移 `added`。
+        openings = (CAB_OPENINGS[0], tuple(v + added for v in CAB_OPENINGS[1]))
+        numbers["openings_old"] = [[round(v, 3) for v in pair] for pair in openings]
 
-    def grown(points: np.ndarray) -> np.ndarray:
+        def skirt(z):
+            return skirt_along(z, lambda v: along(v, stretch), openings, (rear - BOGIE_CENTRES, rear),
+                               SKIRT_FROM, BODY_END + added)
+    else:
+        def skirt(z):
+            u = skirt_along(np.abs(z), lambda v: middle_along(v, band_scale), (MIDDLE_OPENING,), (rear,), 0.0, BODY_END)
+            return np.sign(z) * u
+    triangles = cut_low(triangles)
+    # 開口下緣的腳一定要是舊版的頂點，不是的話這支工具認錯了開口（換了原檔或切法）。
+    feet = {round(float(v), 3) for c, _, _ in triangles for v in c[np.abs(c[:, 1] - 0.401) < 0.002][:, 2]}
+    for low, high in (openings if cab else (MIDDLE_OPENING, (-MIDDLE_OPENING[1], -MIDDLE_OPENING[0]))):
+        if round(low, 3) not in feet or round(high, 3) not in feet:
+            raise SystemExit(f"{path.name}: 找不到輪罩開口 {low}…{high} 的下緣（{sorted(feet)}）")
+
+    def grown(points: np.ndarray, skirts: bool = True) -> np.ndarray:
         z = along(points[:, 2], stretch) if cab else middle_along(points[:, 2], band_scale)
+        if skirts:
+            low = points[:, 1] < SKIRT_TOP
+            z = np.where(low, skirt(points[:, 2]), z)
         x = points[:, 0]
         if cab:
             x = x - NOSE_OFFSET * np.clip((-2.168 - points[:, 2]) / (-2.168 + 3.808), 0, 1)
@@ -639,6 +716,18 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
 
     # 原座標：x 右、y 上、z 沿車身（頭車的車鼻在 -z）。車體照真車尺寸放大。
     scaled = [(grown(corners), kind, door) for corners, kind, door in triangles]
+    # 下緣的頂點另外移動：沒有一個面因此翻面，跨在下緣上的面也只有車身色（側牆下緣
+    # 那一排格子沿牆面斜一點看不出來，有顏色的格子斜了就看得出來）。
+    for (corners, kind, _), (moved, *_) in zip(triangles, scaled):
+        low = corners[:, 1] < SKIRT_TOP
+        if not low.any() or low.all():
+            continue
+        plain = grown(corners, skirts=False)
+        if np.dot(np.cross(moved[1] - moved[0], moved[2] - moved[0]),
+                  np.cross(plain[1] - plain[0], plain[2] - plain[0])) <= 0:
+            raise SystemExit(f"{path.name}: 裙板移動讓一個面翻了：{np.round(corners, 3).tolist()}")
+        if kind != BODY and np.abs(moved[:, 2] - plain[:, 2]).max() > 0.002:
+            raise SystemExit(f"{path.name}: 有顏色（{MATERIALS[kind]}）的面跨在車身下緣：{np.round(corners, 3).tolist()}")
     # 全周幌（800 系的 `hoods`：淺 V 幌口、偏航 4 度以內不相碰）。真車 N700 的外幌是米色的
     # （照片量的），車鉤的楔子（寬 10 cm 以內）留深色。
     hood = []
@@ -661,7 +750,6 @@ def build(path: Path, cab: bool, debug_dir: Path | None):
         if size[2] > 2.5:
             # 轉向架：本身不縮放；中間車的位置跟著車體，頭車的照真車的位置。
             middle = (low[2] + high[2]) / 2
-            rear = joint - BOGIE_FROM_END
             if cab:
                 target = rear if middle > 0 else rear - BOGIE_CENTRES
             else:
