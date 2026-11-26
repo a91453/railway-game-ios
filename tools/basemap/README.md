@@ -21,13 +21,21 @@
 
 切法照 geojson-vt（ISC，Copyright (c) 2015, Mapbox）：每個圖形的點先排一次簡化的順序，再由上一層的圖磚切成四塊、留 64 單位的邊；移植成 Python。MVT 2.1 與 PMTiles v3 的編碼都用標準函式庫寫在同一個檔裡。zoom 7 以下各塊交給工作行程，四核心約 3.5 分鐘。
 
+瘦身（決策 1005）：`build_basemap.py` 寫完後呼叫 `slim_tiles.basemap`，z14 的座標從 4096 進位到 2048 單位（約 0.5 m → 1 m），z13 不放 `minor` 道路（巷弄在 2D 晚一級出現）。已經做好的檔可以就地轉，範圍、中心、zoom 照舊：
+
+```sh
+python3 tools/basemap/slim_tiles.py basemap <底圖.pmtiles>
+python3 tools/basemap/slim_tiles.py buildings <建物.pmtiles>   # footprints/2 → footprints/3
+python3 tools/basemap/slim_tiles.py terrain <terrain.pmtiles>  # 拿掉 z10
+```
+
 ## 字型
 
 `fetch_glyphs.py` 下載 OpenFreeMap 的字型 glyph（OpenMapTiles 版的 Noto Sans，SIL Open Font License 1.1，授權條款在 `Resources/Licenses/NotoSans-OFL.txt`；參考庫 `Ci/reference_snapshot/external/openfreemap-tiles/fonts/` 的三個檔逐位元相同）。MapLibre Native 用裝置的字型畫中文、假名與諺文，不會要那些範圍；其他範圍裡，地名用到的拉丁字母、標點與符號是真的 glyph，其餘是空的檔：MapLibre 等不到某個範圍時，整塊圖磚的文字都不排，所以意料外的文字也要有檔可讀（空的檔只少那幾個字）。`build_basemap.py` 最後會列出地名用到哪些範圍。
 
 ## 山的陰影
 
-`build_terrain.py` 把遊戲的地面高度（`Resources/RealWorld/taiwan_heights.dat`，決策 124）寫成 `Resources/BaseMap/taiwan_terrain.pmtiles`：Terrarium 編碼（高度 = 紅 × 256 + 綠 + 藍 ÷ 256 − 32768 公尺）的 512 像素 PNG，zoom 0–10，只寫有陸地的圖磚。照 `Railway/` 網站的 `rail-3d/integration/map3d.js`（`raster-dem` 加 `hillshade`）。陰影和遊戲判斷路堤、隧道的高度是同一份資料。需要 numpy，約 1 分鐘；2026-10-10：115 塊、10.0 MB；2026-11-23（決策 943，內政部 DTM）：115 塊、9.73 MB。
+`build_terrain.py` 把遊戲的地面高度（`Resources/RealWorld/taiwan_heights.dat`，決策 124）寫成 `Resources/BaseMap/taiwan_terrain.pmtiles`：Terrarium 編碼（高度 = 紅 × 256 + 綠 + 藍 ÷ 256 − 32768 公尺）的 512 像素 PNG，zoom 0–9（決策 1005 拿掉 z10：2D 拉到最近時由 z9 放大），只寫有陸地的圖磚。照 `Railway/` 網站的 `rail-3d/integration/map3d.js`（`raster-dem` 加 `hillshade`）。陰影和遊戲判斷路堤、隧道的高度是同一份資料。需要 numpy，約 1 分鐘；2026-10-10：115 塊、10.0 MB；2026-11-23（決策 943，內政部 DTM）：115 塊、9.73 MB。
 
 ## 重新產生
 
