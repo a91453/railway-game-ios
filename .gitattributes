@@ -15,3 +15,5 @@ Sources/GamePresentation/Map3DSceneLayerList.swift merge=union
 # TRAIN-OWN-GLASS-LIST: one train that marks its own glass a line, the same
 # way (Map3DTrainOwnGlassListTests checks the result).
 Tests/GamePresentationTests/Map3DTrainOwnGlassList.swift merge=union
+# SPLIT-HOTSPOTS-2: one texture-palette script a line, the same way.
+tools/texture-palette/SCRIPTS.md merge=union

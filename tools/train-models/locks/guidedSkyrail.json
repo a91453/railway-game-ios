@@ -8,48 +8,48 @@
       "triangles" : 144
     },
     "light-set-SKYRAIL-head" : {
-      "hash" : "48f8a60c950d6034",
-      "triangles" : 110
+      "hash" : "65a68b9ac6e18985",
+      "triangles" : 116
     },
     "light-set-SKYRAIL-tail" : {
-      "hash" : "92a91351efb7e434",
-      "triangles" : 110
+      "hash" : "70d7275825aec285",
+      "triangles" : 116
     },
     "light-set-SKYRAILFar-car" : {
       "hash" : "b9e4ad40b8a2835d",
       "triangles" : 48
     },
     "light-set-SKYRAILFar-head" : {
-      "hash" : "c52282969cc183dd",
-      "triangles" : 36
+      "hash" : "a95ee795a296f97d",
+      "triangles" : 40
     },
     "light-set-SKYRAILFar-tail" : {
-      "hash" : "c8712f5ece906ddd",
-      "triangles" : 36
+      "hash" : "dc540b996cc3357d",
+      "triangles" : 40
     },
     "set-SKYRAIL-car" : {
-      "hash" : "a93cb83194459d0c",
+      "hash" : "dd2f8ad1cd03a0fe",
       "triangles" : 2260
     },
     "set-SKYRAIL-head" : {
-      "hash" : "631eb8e4212e996e",
-      "triangles" : 2826
+      "hash" : "bfbd2ad70dd8ee5c",
+      "triangles" : 2846
     },
     "set-SKYRAIL-tail" : {
-      "hash" : "3865309b823e3001",
-      "triangles" : 2826
+      "hash" : "13b143827b497538",
+      "triangles" : 2846
     },
     "set-SKYRAILFar-car" : {
-      "hash" : "57c0472a65a4cbad",
+      "hash" : "b9b8b18e4ff54893",
       "triangles" : 892
     },
     "set-SKYRAILFar-head" : {
-      "hash" : "26d5b202d935ae23",
-      "triangles" : 1246
+      "hash" : "44db976635594e1c",
+      "triangles" : 1258
     },
     "set-SKYRAILFar-tail" : {
-      "hash" : "2998fb0f676ecc52",
-      "triangles" : 1246
+      "hash" : "72f204aafa38db8b",
+      "triangles" : 1258
     }
   }
 }
