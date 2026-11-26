@@ -51,7 +51,8 @@
 #                                the track network)
 #   all                          everything, for a local full run
 #   selected                     the tests SELECTED_TESTS names: a pull
-#                                request's partial tier (pr_plan). Words are
+#                                request's partial tier (pr_plan) or its
+#                                affected tier (decision 1012). Words are
 #                                class names, or `Module.*` for a module
 #
 # Every shard runs on Swift 6.4 only; the Swift 6.0 job, and its `light`
@@ -1696,6 +1697,19 @@ push_base() {
 # The test files are read as text, not compiled: a top-level declaration is
 # one that starts in column 0, the style of every test file here. Anything
 # the reading cannot follow counts as shared, which means full.
+#
+# affected (decision 1012, pull requests only): below that broad tier, a pull
+# request runs only the test classes its changed files can reach by name
+# (affected-tests.py: the tests that use a changed file's declarations,
+# followed through test helpers), plus a smoke list of the core (golden
+# scenarios, saves, replays, the state machine, every start, the real data,
+# the short timetable checkup). It is taken only when every changed file can
+# be followed (a source file of GameCore or GamePresentation, a test file,
+# bundled data a Swift file names by path) and the selection weighs at most
+# half the broad tier's; otherwise the broad tier runs as before. Its jobs
+# are `selected` parts of AFFECTED_PART_SECONDS each, at most
+# PRESENTATION_PARTS. A push to main and the nightly and manual runs never
+# take it, so the broad tier on main catches what the names missed.
 
 TIERS=(none tests-only fixtures presentation full)
 
@@ -2078,6 +2092,28 @@ pr_plan() {
   echo "parts=$parts"
 }
 
+# A pull request's narrowed plan (decision 1012, CI-AFFECTED): the test
+# classes its changed files (on stdin) reach and the smoke tests, read by
+# affected-tests.py, which says why each class runs on stderr. $1 and $2 are
+# the broad tier and its tests (pr_plan), which the narrowed selection must
+# undercut by half. Prints tests=<classes> and parts=<jobs>, one part per
+# AFFECTED_PART_SECONDS of CLASS_WEIGHTS (some 9 minutes of tests on a slow
+# runner), at most PRESENTATION_PARTS; fails when the change cannot be
+# narrowed, and the broad tier runs.
+AFFECTED_PART_SECONDS=600
+affected_plan() {
+  local out weight parts
+  out="$(BROAD_TIER="$1" BROAD_TESTS="$2" CLASS_WEIGHTS="$CLASS_WEIGHTS" CLASS_WEIGHT_DEFAULT="$CLASS_WEIGHT_DEFAULT" \
+    python3 -I "$(dirname "${BASH_SOURCE[0]}")/affected-tests.py")" || return 1
+  weight="$(sed -n 's/^weight=//p' <<<"$out")"
+  [[ "$weight" =~ ^[0-9]+$ ]] || return 1
+  parts=$(((weight + AFFECTED_PART_SECONDS - 1) / AFFECTED_PART_SECONDS))
+  ((parts >= 1)) || parts=1
+  ((parts <= PRESENTATION_PARTS)) || parts="$PRESENTATION_PARTS"
+  sed -n 's/^tests=/tests=/p' <<<"$out"
+  echo "parts=$parts"
+}
+
 # What ci.yml's change detection decides, from the event and what it found:
 #   EVENT    push, pull_request, workflow_dispatch or schedule
 #   LISTED   true when the changed files (on stdin) could be listed
@@ -2106,10 +2142,19 @@ ci_decide() {
         tier="$(sed -n 's/^tier=//p' <<<"$plan")"
         tests="$(sed -n 's/^tests=//p' <<<"$plan")"
         parts="$(sed -n 's/^parts=//p' <<<"$plan")"
+        # A pull request runs only the tests its files reach and the smoke
+        # tests, when that is at most half of its broad tier (decision 1012,
+        # affected_plan); the push of main after the merge runs the broad
+        # tier, and the nightly run everything.
+        if [[ "${EVENT:-}" == pull_request && "$tier" != none ]] && narrow="$(affected_plan "$tier" "$tests" <<<"$files")"; then
+          tier=affected
+          tests="$(sed -n 's/^tests=//p' <<<"$narrow")"
+          parts="$(sed -n 's/^parts=//p' <<<"$narrow")"
+        fi
         case "$tier" in
           full) swift=true ;;
           none) swift=false ;;
-          tests-only | fixtures | presentation)
+          tests-only | fixtures | presentation | affected)
             swift=true
             [[ "$tests" =~ ^[A-Za-z0-9_.*\ ]+$ && "$parts" =~ ^[1-9][0-9]*$ ]] || die "Bad plan: tests '$tests', parts '$parts'."
             echo "Tests: $tests" >&2

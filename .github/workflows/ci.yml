@@ -23,6 +23,14 @@ name: CI
 # then). A manual run and the nightly run (schedule, below) run every shard
 # (swift-shards.sh decide).
 #
+# A pull request narrows that tier further (decision 1012, the `affected`
+# tier, .github/scripts/affected-tests.py): it runs only the test classes
+# its changed files reach by name, plus a smoke list of the core (golden
+# scenarios, saves, replays, every start, the real data, the short timetable
+# checkup), when every changed file can be followed and the selection is at
+# most half the broad tier. A push to main keeps the broad tier, and the
+# nightly run every shard, so what the names miss is caught on main.
+#
 # Nightly full run (decision 413): a push to main runs only its tier, as its
 # pull request did, so every night the newest commit of main runs every
 # shard, unless a run of that commit already passed every shard (a manual
@@ -417,8 +425,8 @@ jobs:
         run: .github/scripts/swift-shards.sh unpack "$RUNNER_TEMP/swift-build/swift-build.tar.gz"
 
       # Runs this shard's tests and fails unless exactly those tests ran.
-      # A partial tier's job is `selected` (SELECTED_TESTS, and its part of
-      # them); a full run's are the shards.
+      # A partial or affected tier's job is `selected` (SELECTED_TESTS, and
+      # its part of them); a full run's are the shards.
       - name: Test (shard ${{ matrix.shard }})
         run: .github/scripts/swift-shards.sh run "$SHARD"
         env:
