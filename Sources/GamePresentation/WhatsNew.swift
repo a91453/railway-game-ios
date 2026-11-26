@@ -117,6 +117,10 @@ public enum WhatsNew {
                     chinese: "鋪軌卡片變簡單：軌道種類、軌距、複線和鋪設在前面，其他收進「更多選項」。"
                 ),
                 Line(
+                    english: "The Japan map has the buildings it was missing in Kitakyushu, Iizuka and Munakata, and real heights for Kumamoto, Kitakyushu, Kurume and Sasebo.",
+                    chinese: "日本地圖補上北九州、飯塚、宗像缺的建物，熊本、北九州、久留米、佐世保的大樓照實際高度。"
+                ),
+                Line(
                     english: "Buildings on the Rovaniemi map now follow Finland's official survey: real outlines, and real heights in the town.",
                     chinese: "羅瓦涅米地圖的建物改用芬蘭官方測量資料：外形照實際，市區的大樓照實際高度。"
                 ),
