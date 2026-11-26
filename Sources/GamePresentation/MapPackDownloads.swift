@@ -138,6 +138,51 @@ public enum MapPackDownloads {
         return store.clues[city]
     }
 
+    /// DEBUG-150: adds `text` to the ``clue(_:)`` of `city` (what the
+    /// system said when asked for its files, what lies in the shared
+    /// folder), for a problem report.
+    public static func addToClue(_ city: OverseasMap, _ text: String) {
+        store.lock.lock()
+        defer { store.lock.unlock() }
+        store.clues[city] = [store.clues[city], text].compactMap { $0 }.joined(separator: "; ")
+    }
+
+    /// DEBUG-150: every file below `folder` whose path has a `MapPacks`
+    /// folder in it, by its path from there (`MapPacks/hongkong/pack.json`),
+    /// the newest where two copies have one path: where a downloaded pack's
+    /// files lie when the system cannot say. At most `limit` items are
+    /// looked at.
+    public static func mapPackFiles(under folder: URL, limit: Int = 50_000) -> [String: URL] {
+        guard let walker = FileManager.default.enumerator(
+            at: folder,
+            includingPropertiesForKeys: [.isRegularFileKey, .contentModificationDateKey],
+            options: []
+        ) else { return [:] }
+        var found: [String: (url: URL, date: Date)] = [:]
+        var seen = 0
+        for case let url as URL in walker {
+            seen += 1
+            if seen > limit { break }
+            let parts = url.standardizedFileURL.pathComponents
+            guard let at = parts.lastIndex(of: "MapPacks"), at < parts.count - 1 else { continue }
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .contentModificationDateKey])
+            guard values?.isRegularFile == true else { continue }
+            let key = parts[at...].joined(separator: "/")
+            let date = values?.contentModificationDate ?? .distantPast
+            if let held = found[key], held.date >= date { continue }
+            found[key] = (url, date)
+        }
+        return found.mapValues(\.url)
+    }
+
+    /// DEBUG-150: ``mapPackFiles(under:limit:)`` in a few words for a
+    /// problem report: how many, and of which folders.
+    public static func describeMapPackFiles(_ files: [String: URL]) -> String {
+        guard !files.isEmpty else { return "no MapPacks files in the shared folder" }
+        let folders = Set(files.keys.compactMap { $0.split(separator: "/").dropFirst().first.map(String.init) }).sorted()
+        return "\(files.count) MapPacks files in the shared folder (\(folders.joined(separator: ", ")))"
+    }
+
     /// Posted (on the thread that changed it) when a city's ``status(_:)``
     /// changes, for a screen that shows it.
     public static let statusChanged = Notification.Name("MapPackDownloads.statusChanged")

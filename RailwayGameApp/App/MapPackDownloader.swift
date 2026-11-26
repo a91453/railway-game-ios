@@ -22,10 +22,14 @@ enum MapPackDownloader {
 
     /// Whether this build is set up for Apple-hosted asset packs.
     static var isAvailable: Bool {
-        guard let group = Bundle.main.object(forInfoDictionaryKey: "BAAppGroupID") as? String, !group.isEmpty,
-              Bundle.main.object(forInfoDictionaryKey: "BAUsesAppleHosting") as? Bool == true
-        else { return false }
-        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group) != nil
+        guard Bundle.main.object(forInfoDictionaryKey: "BAUsesAppleHosting") as? Bool == true else { return false }
+        return sharedFolder != nil
+    }
+
+    /// The App Group's folder the downloader extension shares, if any.
+    private static var sharedFolder: URL? {
+        guard let group = Bundle.main.object(forInfoDictionaryKey: "BAAppGroupID") as? String, !group.isEmpty else { return nil }
+        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
     }
 
     /// Starts fetching every city's pack in the background; returns at once.
@@ -152,6 +156,23 @@ enum MapPackDownloader {
                     refusal = take(city, from: manager)
                 }
             }
+            // DEBUG-150: 0.6.0 (150) on the owner's iPhone: every pack was
+            // said to be on the device, yet not one of its files could be
+            // found (the day before, 147 read them). The system's copy is
+            // thrown away and fetched again, once each time this is asked.
+            if refusal == .noManifest {
+                log.notice("map pack \(city.assetPackID, privacy: .public) said to be on the device but not found; fetching it again")
+                MapPackDownloads.note(city, .downloading)
+                for id in city.assetPackIDs {
+                    try? await manager.remove(assetPackWithID: id)
+                }
+                for id in city.assetPackIDs {
+                    let pack = try await manager.assetPack(withID: id)
+                    try await manager.ensureLocalAvailability(of: pack)
+                }
+                refusal = take(city, from: manager)
+                if refusal != nil { MapPackDownloads.addToClue(city, "fetched again") }
+            }
             // Decision 858: the app carries no pack of the city, and the
             // one it lists has not come (a new version of the pack still
             // waits for its review, say): the one on the device is read
@@ -202,18 +223,43 @@ enum MapPackDownloader {
         // FB19512759); asked for at most once, and only when needed.
         // Decision 991: a file of a part of the map (a name with a folder
         // in it) lies in that part's folder, beside the city's.
+        // DEBUG-150: what the system said when it could not give a file,
+        // and, third, the shared folder searched for the file by its path
+        // (looked through at most once, and only when needed).
         var folderURLs: [String: URL?] = [:]
+        var refusals: [String] = []
+        var shared: [String: URL]?
+        func ask(_ path: String) -> URL? {
+            do {
+                return try manager.url(for: FilePath(path))
+            } catch {
+                if refusals.count < 2 { refusals.append("\(path): \(String(describing: error).prefix(160))") }
+                return nil
+            }
+        }
+        func sharedFiles() -> [String: URL] {
+            if let shared { return shared }
+            let found = sharedFolder.map { MapPackDownloads.mapPackFiles(under: $0) } ?? [:]
+            shared = found
+            return found
+        }
         let locators: [MapPackDownloads.Locator] = [
-            { try? manager.url(for: FilePath(city.assetPackPath(of: $0))) },
+            { ask(city.assetPackPath(of: $0)) },
             { name in
                 let path = city.assetPackPath(of: name)
                 let folder = (path as NSString).deletingLastPathComponent
                 if folderURLs[folder] == nil {
-                    folderURLs[folder] = .some(try? manager.url(for: FilePath(folder)))
+                    folderURLs[folder] = .some(ask(folder))
                 }
                 return folderURLs[folder]??.appendingPathComponent((path as NSString).lastPathComponent)
             },
+            { sharedFiles()[city.assetPackPath(of: $0)] },
         ]
-        return MapPackDownloads.use(city, locators: locators, expected: expected)
+        let refusal = MapPackDownloads.use(city, locators: locators, expected: expected)
+        if refusal == .noManifest {
+            let said = refusals.isEmpty ? "url(for:) gave no error" : "url(for:) said \(refusals.joined(separator: " | "))"
+            MapPackDownloads.addToClue(city, "\(said); \(MapPackDownloads.describeMapPackFiles(sharedFiles()))")
+        }
+        return refusal
     }
 }
