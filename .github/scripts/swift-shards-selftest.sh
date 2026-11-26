@@ -720,6 +720,62 @@ expect_decision true presentation 'GamePresentationTests' "a label that only loo
 expect_decision false none none "a pull request of docs skips" EVENT=pull_request LISTED=true -- docs/ROADMAP.md README.md
 expect_decision true full full "a pull request whose files could not be listed" EVENT=pull_request LISTED=false --
 
+# Decision 1017: a pull request that changes only the release notes (the
+# entries of WhatsNew.swift, WhatsNewNext's lines, the What to Test text)
+# is tier notes and runs only the tests that read them; one that also
+# changes code beside the entries runs its usual tier, and so do full-ci
+# and a push to main. release-notes-only.py's own cases first.
+if python3 -I "$(dirname "$script")/release-notes-only.py" --selftest >"$work/notes-selftest.txt" 2>&1; then
+  echo "ok   pass  release-notes-only.py --selftest"
+else
+  echo "FAIL release-notes-only.py --selftest"
+  sed 's/^/     | /' "$work/notes-selftest.txt" | grep -v '| ok ' | tail -10
+  failures=$((failures + 1))
+fi
+notes="$work/notes-repo"
+mkdir -p "$notes/Sources/GamePresentation/WhatsNewNext/new"
+notes_file() {
+  printf '%s\n' 'public enum WhatsNew {' '    public static let entries: [Entry] = [' "$@" '    ]' '' \
+    '    public static var edition: String? { entries.first?.id }' '}'
+}
+notes_file '        Entry(' '            id: "one",' '            items: [],' '            fixes: []' '        ),' \
+  >"$notes/Sources/GamePresentation/WhatsNew.swift"
+printf 'en: A.\nzh: 甲。\n' >"$notes/Sources/GamePresentation/WhatsNewNext/new/2026-11-26-a.txt"
+printf 'old\n' >"$notes/what-to-test.md"
+git -C "$notes" init -q
+git -C "$notes" add -A
+git -C "$notes" -c user.name=t -c user.email=t@t commit -q -m base
+notes_file '        Entry(' '            id: "two",' '            items: [' '                Line(' \
+  '                    english: "A.",' '                    chinese: "甲。"' '                ),' '            ],' \
+  '            fixes: []' '        ),' '        Entry(' '            id: "one",' '            items: [],' \
+  '            fixes: []' '        ),' >"$notes/Sources/GamePresentation/WhatsNew.swift"
+rm "$notes/Sources/GamePresentation/WhatsNewNext/new/2026-11-26-a.txt"
+git -C "$notes" add -A
+git -C "$notes" -c user.name=t -c user.email=t@t commit -q -m release
+sed 's/entries.first?.id/entries.last?.id/' "$notes/Sources/GamePresentation/WhatsNew.swift" >"$work/notes-code.swift"
+# expect_notes <want: notes or not-notes> <description> <VAR=value...>
+expect_notes() {
+  local want="$1" what="$2" got tier
+  shift 2
+  got="$(cd "$notes" && git diff --no-renames --name-only HEAD^1 HEAD | env "$@" "$script" decide 2>"$work/err.txt")" || got="exit $?"
+  tier="$(sed -n 's/^tier=//p' <<<"$got")"
+  if [[ "$want" == notes && "$tier" == notes && "$got" == *'"tests":"WhatsNewTests ReviewL19FixTests","part":"1/1"'* && "$got" == *swift=true* ]] \
+    || [[ "$want" == not-notes && -n "$tier" && "$tier" != notes ]]; then
+    echo "ok   pass  decide: $what -> ${tier}"
+  else
+    echo "FAIL decide: $what: expected $want; got: $(tr '\n' ' ' <<<"$got")"
+    sed 's/^/     | /' "$work/err.txt" | tail -5
+    failures=$((failures + 1))
+  fi
+}
+expect_notes notes "a pull request of the release notes alone" EVENT=pull_request LISTED=true NOTES_BASE=HEAD^1
+expect_notes not-notes "the release notes without NOTES_BASE" EVENT=pull_request LISTED=true
+expect_notes not-notes "the release notes labelled full-ci" EVENT=pull_request LISTED=true LABELS=full-ci NOTES_BASE=HEAD^1
+expect_notes not-notes "a push to main of the release notes" EVENT=push LISTED=true NOTES_BASE=HEAD^1
+cp "$work/notes-code.swift" "$notes/Sources/GamePresentation/WhatsNew.swift"
+git -C "$notes" -c user.name=t -c user.email=t@t commit -q -a --amend -m release
+expect_notes not-notes "the release notes beside code outside the entries" EVENT=pull_request LISTED=true NOTES_BASE=HEAD^1
+
 # A pull request's narrowed tier (decision 1012, affected-tests.py): the
 # classes whose code names what a changed source file declares, the helpers
 # that do and their users, and the smoke classes (here GoldenScenarioTests,

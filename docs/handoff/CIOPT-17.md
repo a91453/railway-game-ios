@@ -5,6 +5,7 @@
 - 做到哪：#2747（rest 重排）、#2748（受影響測試選到基底類別）、#2750（MAC-RUNNER，決策 1014）已合。發版日的量測在量測檔 §6。
 - 已驗證：#2747 自己的完整 tier，rest-1 12.6 分、rest-2 12.0 分（11-26 夜間是 19.9 分）。
 - 下一步：開新的一串做下面的「只改發版說明的 PR」（量測檔 §6：發版 PR 推 8 次、每次約 31 分，卡在 hosted iOS build 29.9 分）。本串已壓縮兩次，停手。
+- 2026-11-26 後來：第 1 項與第 6 項由串「讓只改說明的 PR 不重建 App」（分支 `claude/project-thread-s43n4g`，決策 1017）做了：只改發版說明的 PR 是 `notes` tier，只跑 `WhatsNewTests`、`ReviewL19FixTests`，iOS 的 macOS job 全跳過；發版 PR 不加 `full-ci`。剩下照下面第 2–5、7 項。
 - 等作者：runner 加 `xcode-27.2` 標籤、關掉 Mac 的 Xcode 自動更新（`docs/MAC_RUNNER.md`）；在那之前 PR 的 iOS build 都照舊用 hosted。
 
 ## 做了什麼
@@ -17,7 +18,7 @@
 
 ## 還留下什麼（依序）
 
-1. **只改發版說明的 PR 走快速路線**（作者 11-26 同意，「好」）。這種 PR 只動三樣：
+1. ~~只改發版說明的 PR 走快速路線~~（做了：決策 1017）。原本的規格：（作者 11-26 同意，「好」）。這種 PR 只動三樣：
    - `Sources/GamePresentation/WhatsNew.swift` 的條目
    - 刪 `Sources/GamePresentation/WhatsNewNext/*.txt`
    - 改 `.github/testflight-whats-new.md`
@@ -33,7 +34,7 @@
 3. MAC-RUNNER 上線一週後量 PR 的 iOS 排隊時間和 Mac 上 build job 的時間，寫回決策 1014 的「下一步」。
 4. `website-screenshots.yml` 也接 `pick-mac.yml`（等 #2726 合）。
 5. `Map3DFarViewTests.testTheFarthestViewOfTaipeiIsWithinBudget` 一支要 287–440 s，見量測檔 §5。
-6. 發版 PR 不再加 `full-ci` 標籤（#2748 已修 SaveMutationChecks 選錯），寫進發版例行的步驟。
+6. ~~發版 PR 不再加 `full-ci` 標籤~~（做了：決策 1017 §3）。（#2748 已修 SaveMutationChecks 選錯），寫進發版例行的步驟。
 7. **TestFlight 的 App 上傳和地圖包上傳分開跑**（作者 11-26「以後能分開跑嗎」；148 兩件事擠在 `release` job 的 45 分上限裡被停掉，#2754 先放寬到 90 分）。149 送出後做，0.7.0 送審（11-27 21:00）前趕不上就保留現在的做法。
    - 拆法：地圖包上傳（`Upload the map packs that changed`，`testflight-map-packs.py` + `package.sh` + `altool --upload-asset-pack`）搬成自己的 job，和封存、簽章、匯出、檢查 IPA 平行跑；`Upload to App Store Connect` 拆成第三個 job，`needs` 兩邊都成功才傳 build。
    - 要守的：決策 858（該傳的包沒傳成，build 就不傳）、DEBUG-138（包要先於 build 上傳）。build 的 IPA 用 artifact 交給上傳 job；簽章材料每個 job 自己建、自己清（`testflight-signing.sh cleanup`，`if: always()`）。
