@@ -36,6 +36,15 @@ place and the others' to `MapPacks/fukuoka-saga/`,
 `MapPacks/fukuoka-kumamoto/` and `MapPacks/fukuoka-nagasaki/`, and lists the parts' files in `pack.json`.
 Run it once after `build_fukuoka_ground.py basemap` and `buildings`; run
 on parts already cut it stops (the whole map's file is no longer there).
+
+Only one of the two made again (decision 1001: the buildings, with
+Overture's outlines), the parts already cut and `pack.json` as git has
+it: name the file, and only it is cut and its entries written.
+
+    python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings ...
+    git checkout -- RailwayGameApp/Resources/MapPacks/fukuoka/pack.json
+    python3 -I tools/fukuoka-map/split_prefectures.py /tmp/fk/osm/admin4.pbf \\
+        RailwayGameApp/Resources/MapPacks buildings.pmtiles
 """
 import gzip
 import hashlib
@@ -231,12 +240,16 @@ def sha256(path):
         return hashlib.sha256(f.read()).hexdigest()
 
 
-def main(extract, packs):
+def main(extract, packs, only=None):
     import build_fukuoka_rail
     own = os.path.join(packs, PARTS[0][0])
     manifest_path = os.path.join(own, 'pack.json')
     with open(manifest_path, encoding='utf-8') as f:
         manifest = json.load(f)
+    if only:
+        if only not in FILES or not any('/' in name for name in manifest['files']):
+            sys.exit(f'{manifest_path}: {only} is cut again only into parts cut already (and is one of {", ".join(FILES)})')
+        return cut_again(extract, packs, only, manifest, manifest_path)
     if any('/' in name for name in manifest['files']):
         sys.exit(f'{manifest_path}: the parts are cut already; make the whole map again first')
     lookup = Lookup(borders(extract), build_fukuoka_rail.EXTENT)
@@ -272,8 +285,34 @@ def main(extract, packs):
     return report
 
 
+def cut_again(extract, packs, name, manifest, manifest_path):
+    """`name` cut into the parts again, its entries in `manifest` written
+    with the sources `build_fukuoka_rail.SOURCES` gives it now, the rest
+    of `manifest` as it was."""
+    import build_fukuoka_rail
+    own = os.path.join(packs, PARTS[0][0])
+    lookup = Lookup(borders(extract), build_fukuoka_rail.EXTENT)
+    written = cut(os.path.join(own, name), lookup, [os.path.join(packs, folder) for folder, _ in PARTS])
+    report = {}
+    for (folder, prefecture), (size, count) in zip(PARTS, written):
+        key = name if folder == PARTS[0][0] else f'{folder}/{name}'
+        sources = dict(build_fukuoka_rail.SOURCES[name])
+        sources[f'the tiles whose middle {prefecture} holds, or is nearest '
+                '(tools/fukuoka-map/split_prefectures.py)'] = 'OpenStreetMap'
+        manifest['files'][key] = {'bytes': size, 'sources': sources}
+        report[key] = {'bytes': size, 'tiles': count, 'sha256': sha256(os.path.join(packs, folder, name))}
+        print(f'{key}: {count} tiles, {size / 1e6:.1f} MB')
+    if name == 'buildings.pmtiles':
+        manifest['licences'][build_fukuoka_rail.OVERTURE] = build_fukuoka_rail.OVERTURE_CREDIT
+        manifest['licences'][build_fukuoka_rail.PLATEAU] = build_fukuoka_rail.PLATEAU_CREDIT
+    manifest['bytes'] = sum(entry['bytes'] for entry in manifest['files'].values())
+    with open(manifest_path, 'w', encoding='utf-8') as f:
+        json.dump(manifest, f, ensure_ascii=False, separators=(',', ':'))
+    return report
+
+
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
+    if len(sys.argv) not in (3, 4):
         sys.exit(__doc__)
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    main(sys.argv[1], sys.argv[2])
+    main(*sys.argv[1:])

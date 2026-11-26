@@ -49,7 +49,12 @@ curl -L -o /tmp/fk/pop/jpn.tif https://data.worldpop.org/GIS/Population/Global_2
 pip install tifffile imagecodecs numpy
 python3 -I tools/fukuoka-map/build_fukuoka_ground.py population /tmp/fk/pop/jpn.tif RailwayGameApp/Resources/MapPacks/fukuoka
 python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka   # 約 2 分鐘，要先有人口
+# 建物（決策 1001）：先抓 Overture 的機器畫建物與 PLATEAU 的官方建物，再疊上 OSM。
+pip install duckdb   # MIT，只有讀 Overture 用
+python3 -I tools/overseas-map/overture_extra.py extract 2026-11-18.0 129.34,32.09,131.33,34.03 /tmp/fk/ov/japan.parquet   # 約 20 秒
+python3 -I tools/fukuoka-map/plateau_buildings.py fetch /tmp/fk/plateau   # 四縣 23 個市町，約 40 分鐘，中斷了再跑會接著抓
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka \
+  /tmp/fk/ov/japan.parquet 2026-11-18.0 /tmp/fk/plateau   # 要先有人口；記憶體要 10 GB 以上，別和 swift build 同時跑
 python3 -I tools/airfields/build_airfields.py /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka/airfields.json
 python3 -I tools/no-build-land/build_no_build.py /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka/no_build.json
 python3 -I tools/fukuoka-map/fetch_gsi_dem.py /tmp/fk/gsi
@@ -61,6 +66,9 @@ python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/o
 pip install shapely   # BSD 3-Clause，只有拆分用
 osmium tags-filter -o /tmp/fk/osm/admin4.pbf /tmp/fk/osm/kyushu.pbf r/admin_level=4   # 縣界（整個關係，不切）
 python3 -I tools/fukuoka-map/split_prefectures.py /tmp/fk/osm/admin4.pbf RailwayGameApp/Resources/MapPacks
+# 只重做建物時：先 `git checkout -- RailwayGameApp/Resources/MapPacks/fukuoka/pack.json`（拆過的那份），
+# 再只切建物，底圖不動：
+python3 -I tools/fukuoka-map/split_prefectures.py /tmp/fk/osm/admin4.pbf RailwayGameApp/Resources/MapPacks buildings.pmtiles
 
 swift build --build-tests -Xswiftc -warnings-as-errors
 swift test --skip-build --filter FukuokaRailwaysTests
@@ -101,6 +109,25 @@ swift test --skip-build --filter FukuokaRailwaysTests
 整包 117.7 MB（福岡 52.4、佐賀 20.3、熊本 29.4、長崎 15.6 MB）。決策 991 範圍裡的高度只有 27 格差 1 m。
 細節在 `docs/decisions/997.md` §3、§4。
 
+## 建物補齊（決策 1001，2026-11-26）
+
+OSM 在北九州（八幡、戶畑、門司、若松）、飯塚、直方、田川、宗像、古賀一帶建物很少，空地多到看得出來。
+照作者「官方資料優先、最後才 Overture」的順序疊四層，前一層有的，後一層就不放：
+
+1. **OpenStreetMap**：外形、用途、標了的樓層（同之前）。
+2. **PLATEAU**（國土交通省的 3D 都市模型，四縣 23 個市町）：OSM 沒有的建物整棟加進來，帶實測的高度與用途；
+   OSM 有但沒標樓層的，照中心點落在哪個 OSM 外形，用 PLATEAU 量的高度。
+3. **Overture 的 East Asian buildings**（Shi 等人，CC BY 4.0）。
+4. **Overture 的 Microsoft ML Buildings**（ODbL）。
+
+疊的規則：已經放的建物蓋住新的一棟 10% 以上、或新的一棟蓋住已經放的一棟 50% 以上，新的就不放。實測高度
+換成樓層：PLATEAU 有樓層數、而且每層 2–7 m 的照它，否則用高度換（同 Overture 的高度）。樓層來源記成
+`cityMap`（實測），也進四分位數表，所以沒量到的建物用的估計會參考量到的。
+
+PLATEAU 用 CityGML（`api.plateau.reearth.io/datacatalog/citygml/<市町代碼>`，每個市町最新的年度），
+`plateau_buildings.py` 讀 `lod0FootPrint`、`lod0RoofEdge`，沒有就用 `lod1Solid` 的底面。授權是國交省的
+利用規約（相容 CC BY 4.0），要寫「3D都市モデル（Project PLATEAU）（国土交通省）を加工して作成」。
+
 ## 三條線
 
 | 線 | 站數 | 長度（量的） | 官方 | 一天的班次（估計） |
@@ -114,7 +141,7 @@ swift test --skip-build --filter FukuokaRailwaysTests
 - 隧道約 30 km、高架約 0.6 km（姪濱一帶），其餘是地面。
 - 七隈線尖峰用平均 3 分 15 秒，不用最短的 3 分：3 分時，尖峰轉離峰多出來的車，兩端各要 6 股，沒有機廠的線遊戲只鋪 5 股。真實的機廠在橋本，決策 898 起收購時一起蓋（`RealLineDepotSite.hashimoto`，位置與為什麼不在真實的位置見 `tools/rail-depots/README.md`）。
 - **七隈線整天從橋本端排車**（決策 898，`SERVICE["N"]["depotEnd"]`、`FAR_TURN`）：博多的每一班都是橋本開來的車到站 6 分鐘後折返，夜裡 23 組車都在橋本（4 組在站、19 組在機廠），博多不留夜車。博多離機廠 13.5 km，留在那裡的車夜裡會被收回機廠、清晨再空車開回去，擋住博多的頭幾班。只重排時刻不重讀 OSM：`python3 -I tools/fukuoka-map/build_fukuoka_rail.py times RailwayGameApp/Resources/MapPacks/fukuoka`，再跑 `extract_fukuoka_runs.py`。車組數照遊戲的最短停站 36 秒算（時刻表每站 25 秒），橋本再留 3 分鐘讓晚到的車追回來（`extract_branch_runs.RECOVERY`），所以是 23 組不是 20 組。
-- **建物**：OSM 的外形與用途，樓層或高度有標的照標（福岡約九成有標，是圖友匯入的福岡市 3D 模型），沒標的照羅瓦涅米的規則估（同類、同人口密度、同面積的四分位數）。約 28.5 萬棟、4.5 MB，最高 48 層；統計在 `fukuoka_buildings.json`。PLATEAU 不另外接：OSM 已經帶了它的高度。
+- **建物**：OSM 的外形與用途，樓層或高度有標的照標（福岡約九成有標，是圖友匯入的福岡市 3D 模型），沒標的照羅瓦涅米的規則估（同類、同人口密度、同面積的四分位數）。約 28.5 萬棟、4.5 MB，最高 48 層；統計在 `fukuoka_buildings.json`。決策 1001 起再疊上 PLATEAU 與 Overture，見下一節。
 
 ## 九州新幹線（博多—熊本，KYUSHU-SHINKANSEN-DATA）
 

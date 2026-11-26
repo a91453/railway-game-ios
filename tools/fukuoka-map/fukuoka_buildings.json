@@ -1,5 +1,5 @@
 {
- "decision": 854,
+ "decision": 1001,
  "extract": {
   "file": "four.pbf",
   "sha256": "daed80aaefec896dd6cc22aa1aa16e1e82fd30c5e0c543e958174aa85af2cb3c",
@@ -8,39 +8,72 @@
   "newestBuildingEdit": "2026-11-24T18:58:24Z",
   "buildingsRead": 2167553
  },
- "buildings": 1966854,
+ "added": {
+  "read": {
+   "PLATEAU": 1832822,
+   "doi:10.5281/zenodo.8174931": 546586,
+   "Microsoft ML Buildings": 894495
+  },
+  "laid": {
+   "PLATEAU": 706064,
+   "doi:10.5281/zenodo.8174931": 305926,
+   "Microsoft ML Buildings": 616254
+  },
+  "overlapping": {
+   "PLATEAU": 889868,
+   "doi:10.5281/zenodo.8174931": 131478,
+   "Microsoft ML Buildings": 191046
+  },
+  "small": {
+   "PLATEAU": 236890,
+   "doi:10.5281/zenodo.8174931": 109182,
+   "Microsoft ML Buildings": 87195
+  },
+  "overture": "2026-11-18.0",
+  "plateau": "PLATEAU (国土交通省), the newest CityGML buildings of each town, read by tools/fukuoka-map/plateau_buildings.py"
+ },
+ "plateauHeightsOnOpenStreetMap": {
+  "read": 1837063,
+  "inTheMap": 1832822,
+  "noHeight": 58339,
+  "inNoOutline": 1305038,
+  "outlinesMeasured": 432107
+ },
+ "buildings": 3594324,
  "leftOut": {
   "small": 200462
  },
- "tiles": 28533,
+ "tiles": 47281,
  "storeysFrom": {
-  "guess": 1580320,
+  "cityMap": 1131714,
+  "guess": 2076850,
   "tags": 386771
  },
  "uses": {
-  "agricultural": 21794,
-  "civic": 13961,
-  "commercial": 31518,
-  "education": 4283,
+  "agricultural": 26486,
+  "civic": 15594,
+  "commercial": 60226,
+  "education": 28982,
   "entertainment": 454,
-  "industrial": 10885,
+  "industrial": 29871,
   "medical": 690,
+  "military": 8,
   "none": 1516624,
   "outbuilding": 4795,
   "religious": 554,
-  "residential": 360655,
-  "service": 420,
+  "residential": 877051,
+  "service": 1563,
   "transportation": 458
  },
  "storeys": {
   "median": 2,
   "tallest": 48,
-  "of1": 773734,
-  "of2": 1025239,
-  "of3to5": 151640,
-  "of6andMore": 16478
+  "of1": 1218177,
+  "of2": 2104840,
+  "of3to5": 240517,
+  "of6andMore": 30657
  },
- "rawBytes": 36992430,
- "archiveBytes": 30537704,
- "sha256": "b8ef57dd56914609e3fd31f69326be006a2a69e968cadeadbd4571358612f582"
+ "rawBytes": 66268191,
+ "archiveBytes": 54886796,
+ "sha256": "4f3c47252cb3e4f8f4f1488888062f29faeeb7ac92bc3355c6f051e4f55a2623"
 }
