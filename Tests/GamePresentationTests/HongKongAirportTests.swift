@@ -84,12 +84,12 @@ final class HongKongAirportTests: XCTestCase {
         XCTAssertNil(taiwan.places?.noBuild?.kind(atLatitude: Self.terminal.latitude, longitude: Self.terminal.longitude), "no city asked for")
     }
 
-    /// Fewer live on the airport: WorldPop's people on its cells that
-    /// reach off it move to the rest of their cells, as Taiwan's do
-    /// (decision 385 (續)); a WorldPop cell wholly on it keeps its own
-    /// (that rule: where no one may live, all may), which the 3D map draws
-    /// no town on (decision 733). Everyone is kept.
-    func testFewerLiveOnTheAirport() throws {
+    /// No one lives on the airport, and people work there: since decision
+    /// 1008 the census puts its residents on housing land and its jobs on
+    /// workplaces, the airport's among them (WorldPop put thousands of
+    /// residents there, which decision 385 (續)'s rule moved off the
+    /// cells that reach off it). Everyone is kept.
+    func testNoOneLivesOnTheAirport() throws {
         let (_, open, closed, frame) = try land()
         let noBuild = try XCTUnwrap(Self.pack().noBuildLand(airfields: false))
         func onAirport(_ cell: LandCell) -> Bool {
@@ -98,8 +98,9 @@ final class HongKongAirportTests: XCTestCase {
         }
         let before = open.filter(onAirport).reduce(Int64(0)) { $0 + $1.residents }
         let after = closed.filter(onAirport).reduce(Int64(0)) { $0 + $1.residents }
-        XCTAssertGreaterThan(before, 1_000, "WorldPop puts people on the airport")
-        XCTAssertLessThan(after, before)
+        XCTAssertEqual(before, 0, "the census puts no one on the airport")
+        XCTAssertEqual(after, 0)
+        XCTAssertGreaterThan(closed.filter(onAirport).reduce(Int64(0)) { $0 + $1.jobs }, 10_000, "the airport's jobs")
         XCTAssertEqual(closed.reduce(Int64(0)) { $0 + $1.residents }, open.reduce(Int64(0)) { $0 + $1.residents }, "everyone is kept")
     }
 
