@@ -40,15 +40,20 @@ on:
         options: [website, promo]
         default: website
       device:
-        description: "iphone (a Pro), ipad (an iPad Pro) or iphone-small (the smallest iPhone, to check the tools fit)"
+        description: "iphone (a Pro), iphone-max (a Pro Max: the App Store's 6.9-inch screenshots), ipad (the 13-inch iPad Pro) or iphone-small (the smallest iPhone, to check the tools fit)"
         type: choice
-        options: [iphone, ipad, iphone-small]
+        options: [iphone, iphone-max, ipad, iphone-small]
         default: iphone
       appearance:
         description: "promo only: dark, light or both (the recording is of the first)"
         type: choice
         options: [dark, light, both]
         default: dark
+      language:
+        description: "website only: zh (Traditional Chinese, the website's) or en (every test in English: the App Store's English screenshots)"
+        type: choice
+        options: [zh, en]
+        default: zh
       tests:
         description: "PromoMaterialTests (promo) or WebsiteScreenshotTests (website) methods, separated by spaces or commas (empty: all)"
         type: string
@@ -58,7 +63,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: website-screenshots-${{ github.ref }}
+  # One run at a time per branch and device, so an iPhone's and an iPad's
+  # App Store screenshots can be taken at once.
+  group: website-screenshots-${{ github.ref }}-${{ inputs.device }}
   cancel-in-progress: true
 
 jobs:
@@ -128,9 +135,15 @@ jobs:
                   named = [d for word in (" mini", " SE") for d in iphones if word in d["name"]]
                   device = (named or iphones)[0]
           else:
-              # An iPhone Pro that is not a Max; an iPad Pro (the largest).
-              pros = [d for d in iphones if d["name"].endswith(" Pro")] if kind == "iPhone" \
-                  else [d for d in iphones if d["name"].startswith("iPad Pro")]
+              # An iPhone Pro that is not a Max (or a Pro Max); an iPad Pro.
+              if wanted == "iphone-max":
+                  pros = [d for d in iphones if d["name"].endswith(" Pro Max")]
+              elif kind == "iPhone":
+                  pros = [d for d in iphones if d["name"].endswith(" Pro")]
+              else:
+                  # The 13-inch, the App Store's iPad size, before any other.
+                  pros = [d for d in iphones if d["name"].startswith("iPad Pro") and "13-inch" in d["name"]] \
+                      or [d for d in iphones if d["name"].startswith("iPad Pro")]
               device = (pros or iphones)[-1]
           print(f"Selected {device['name']} ({device['udid']})")
           with open(os.environ["GITHUB_ENV"], "a") as env:
@@ -166,6 +179,9 @@ jobs:
         timeout-minutes: 20
         env:
           WEBSITE_TESTS: ${{ inputs.tests }}
+          # xcodebuild hands TEST_RUNNER_-prefixed variables to the tests
+          # without the prefix (WebsiteScreenshotTests.launch).
+          TEST_RUNNER_SCREENSHOT_LANGUAGE: ${{ inputs.language }}
         run: |
           # An empty `tests` input runs the whole class; a list of test names runs those.
           only=(-only-testing:RailwayGameUITests/WebsiteScreenshotTests)

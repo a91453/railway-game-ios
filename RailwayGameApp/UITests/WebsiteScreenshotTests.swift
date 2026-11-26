@@ -5661,6 +5661,9 @@ final class WebsiteScreenshotTests: XCTestCase {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
+        // The workflow's `language` input en puts every test in English
+        // (the App Store's English screenshots).
+        let english = english || ProcessInfo.processInfo.environment["SCREENSHOT_LANGUAGE"] == "en"
         let language = english ? ["-AppleLanguages", "(en)", "-AppleLocale", "en_US"] : ["-AppleLanguages", "(zh-Hant)", "-AppleLocale", "zh_TW"]
         app.launchArguments = ["-ui-testing"] + language + extra
         app.launch()
