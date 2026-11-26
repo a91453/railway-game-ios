@@ -423,19 +423,21 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
-                    // Decision 799: the pack's buildings.
+                    // Decisions 799 and 1009: the pack's buildings, the
+                    // National Land Survey's with OpenStreetMap's uses.
                     DataSourceCredit(
                         id: "rovaniemiBuildings",
                         title: language.text("Rovaniemi’s buildings", "羅瓦涅米的建物"),
                         detail: language.text(
-                            "On Rovaniemi’s map, the outlines and uses of the buildings on the 3D map, and their storeys where they are recorded.",
-                            "羅瓦涅米地圖上，3D 地圖裡建物的外形與用途，有記錄的還有樓層數。"
+                            "On Rovaniemi’s map, the outlines, uses and heights of the buildings on the 3D map, and the uses and newer buildings the survey does not have.",
+                            "羅瓦涅米地圖上，3D 地圖裡建物的外形、用途與高度，以及測量局沒有的用途與新建物。"
                         ),
                         notice: language.text(
-                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Storeys that are not recorded are this game’s estimate.",
-                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。沒有記錄的樓層數是本遊戲的估計。"
+                            "Contains data from the National Land Survey of Finland Topographic Database and Buildings 3D (2022), under the Creative Commons Attribution 4.0 licence. Uses and newer buildings: © OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Storeys that are neither measured nor recorded are this game’s estimate.",
+                            "含芬蘭國土測量局（Maanmittauslaitos）地形資料庫與 3D 建物（2022）的資料，依創用 CC 姓名標示 4.0 授權使用。用途與新建物：© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。沒有實測也沒有記錄的樓層數是本遊戲的估計。"
                         ),
                         links: [
+                            DataSourceCredit.Link(title: language.text("National Land Survey open data licence", "芬蘭國土測量局開放資料授權"), url: "https://www.maanmittauslaitos.fi/en/opendata-licence-cc40"),
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
@@ -1306,23 +1308,34 @@ public enum DataSourceCredits {
                         ]
                     ),
                     // Decision 389: the storeys of the footprints' buildings
-                    // in the 3D map, from two city maps and GHSL's heights.
+                    // in the 3D map, from two city maps and GHSL's heights;
+                    // decision 1011: the usage permits of New Taipei, Taipei
+                    // and Hsinchu City, found by their door-number points,
+                    // Tainan's, found by its parcels' centres, and elsewhere
+                    // the real-price registry's storeys at its door numbers.
                     DataSourceCredit(
                         id: "buildingStoreys",
                         title: language.text("Building storeys", "建物樓層"),
                         detail: language.text(
-                            "How many storeys the real buildings of 3D maps in Taiwan have, from Taichung’s building map and Taipei’s building permit map, and elsewhere how tall the buildings round them are.",
-                            "台灣實景 3D 地圖上真實建物的樓層，取自臺中市建物圖與臺北市建築執照套繪圖，其他地方參考周圍建物的高度。"
+                            "How many storeys the real buildings of 3D maps in Taiwan have, from Taichung’s building map, Taipei’s building permit map the usage permits of New Taipei, Taipei, Tainan and Hsinchu City and the real-price registry of home sales, and elsewhere how tall the buildings round them are.",
+                            "台灣實景 3D 地圖上真實建物的樓層，取自臺中市建物圖、臺北市建築執照套繪圖、新北市、臺北市、臺南市、新竹市的使用執照與內政部實價登錄，其他地方參考周圍建物的高度。"
                         ),
                         notice: language.text(
-                            "Taichung City Government, Taichung building map (2022, 2024 and 2025), and Taipei City Government, Taipei building permit map, used under the Open Government Data License, version 1.0. European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A, average building height, doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE, under CC BY 4.0.",
-                            "臺中市政府「臺中市建物圖」（111、113、114 年）與臺北市政府「臺北市建築執照套繪圖」，依政府資料開放授權條款第 1 版使用。European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A（平均建物高度），doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE，依 CC BY 4.0 使用。"
+                            "Taichung City Government, Taichung building map (2022, 2024 and 2025); Taipei City Government, Taipei building permit map and Taipei usage permit summaries; New Taipei City Government, New Taipei building permits; Tainan City Government, Tainan usage permits and parcel centres; Hsinchu City Government, Hsinchu City usage permits; Ministry of the Interior, Department of Land Administration, real-price registry of real estate transactions; and the door-number points of Taiwan’s cities and counties by their governments, through OpenAddresses and Overture Maps; used under the Open Government Data License, version 1.0. European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A, average building height, doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE, under CC BY 4.0.",
+                            "臺中市政府「臺中市建物圖」（111、113、114 年）；臺北市政府「臺北市建築執照套繪圖」「臺北市歷年使用執照摘要」；新北市政府「新北市建築執照存查」；臺南市政府「臺南市政府使用執照資料」「臺南市宗地地號屬性資料」；新竹市政府「新竹市使用執照清冊」；內政部地政司「不動產買賣實價登錄批次資料」；各縣市政府的門牌坐標（經 OpenAddresses、Overture Maps 取得）；依政府資料開放授權條款第 1 版使用。European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A（平均建物高度），doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE，依 CC BY 4.0 使用。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Taichung building map (2022)", "臺中市建物圖（111 年）"), url: "https://data.gov.tw/dataset/162900"),
                             DataSourceCredit.Link(title: language.text("Taichung building map (2024)", "臺中市建物圖（113 年）"), url: "https://data.gov.tw/dataset/152106"),
                             DataSourceCredit.Link(title: language.text("Taichung building map (2025)", "臺中市建物圖（114 年）"), url: "https://data.gov.tw/dataset/158889"),
                             DataSourceCredit.Link(title: language.text("Taipei building permit map", "臺北市建築執照套繪圖"), url: "https://data.gov.tw/dataset/151936"),
+                            DataSourceCredit.Link(title: language.text("Taipei usage permit summaries", "臺北市歷年使用執照摘要"), url: "https://data.gov.tw/dataset/128203"),
+                            DataSourceCredit.Link(title: language.text("New Taipei building permits", "新北市建築執照存查"), url: "https://data.gov.tw/dataset/123639"),
+                            DataSourceCredit.Link(title: language.text("Tainan usage permits", "臺南市政府使用執照資料"), url: "https://data.gov.tw/dataset/121026"),
+                            DataSourceCredit.Link(title: language.text("Tainan parcel centres", "臺南市宗地地號屬性資料"), url: "https://data.gov.tw/dataset/176361"),
+                            DataSourceCredit.Link(title: language.text("Hsinchu City usage permits", "新竹市使用執照清冊"), url: "https://data.gov.tw/dataset/163823"),
+                            DataSourceCredit.Link(title: language.text("Real-price registry", "不動產買賣實價登錄批次資料"), url: "https://data.gov.tw/dataset/18703"),
+                            DataSourceCredit.Link(title: "OpenAddresses", url: "https://openaddresses.io"),
                             openGovernmentLicense(in: language),
                             DataSourceCredit.Link(title: "GHS-BUILT-H", url: "https://doi.org/10.2905/85005901-3A49-48DD-9D19-6261354F56FE"),
                             DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),

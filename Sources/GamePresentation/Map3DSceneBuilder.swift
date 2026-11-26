@@ -470,7 +470,8 @@ extension Map3DScene {
                     build(&mesh)
                     guard mesh.indices.count > first || mesh.boxes.count > firstBox else { return }
                     part = Map3DFarDetail.Part(first: first, count: mesh.indices.count - first, firstBox: firstBox, boxCount: mesh.boxes.count - firstBox,
-                                               rank: Map3DFarDetail.rank(size: mesh.extent(fromVertex: firstVertex, fromBox: firstBox)))
+                                               rank: Map3DFarDetail.rank(size: mesh.extent(fromVertex: firstVertex, fromBox: firstBox,
+                                                                                                    heightShare: Map3DFarDetail.heightSeen)))
                 }
                 sized(&farMeshes[key, default: Map3DMesh()])
                 if let part { farParts[key, default: []].append(part) }

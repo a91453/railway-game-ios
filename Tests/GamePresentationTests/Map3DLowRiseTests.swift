@@ -40,11 +40,11 @@ final class Map3DLowRiseTests: XCTestCase {
             XCTAssertTrue(caps.isSubset(of: [0, 2, 3, 4]), "\(name): \(caps.sorted())")
             XCTAssertTrue(caps.contains(2), "\(name): \(caps.sorted())")
         }
-        // Qimei and Lanyu have nothing over two storeys by their airports:
-        // every place with buildings round it is held to two.
-        for (latitude, longitude) in [(23.2131, 119.4175), (22.0270, 121.5350)] {
-            XCTAssertEqual(try Self.caps(latitude: latitude, longitude: longitude, reach: 2_000), [0, 2])
-        }
+        // Lanyu has nothing over two storeys by its airport: every place
+        // with buildings round it is held to two. (Qimei was too until
+        // decision 1011: the real-price registry's sales at Nanhu harbour
+        // name houses of three and four storeys, so its caps reach four.)
+        XCTAssertEqual(try Self.caps(latitude: 22.0270, longitude: 121.5350, reach: 2_000), [0, 2])
     }
 
     /// The main island's cities are as they were: round their main
