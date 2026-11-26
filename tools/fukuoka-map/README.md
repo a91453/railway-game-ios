@@ -12,8 +12,8 @@
 |---|---|---|
 | `N02-25_Station.geojson` | 国土数値情報 鉄道データ N02 2025 年版，`https://nlftp.mlit.go.jp/ksj/gml/data/N02/N02-25/N02-25_GML.zip`（14.2 MB，取 `UTF-8/N02-25_Station.geojson`） | CC BY 4.0；署名「『国土数値情報（鉄道データ）』（国土交通省）を加工して作成」 |
 | `jpn_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop 日本 2025，constrained，1 km | CC BY 4.0，WorldPop |
-| 國土地理院標高圖磚 | `https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/…`（沒有就 dem5b、dem5c），另抓 `dem_png/14/…`（DEM10B） 補 5 m 沒有值的點；`fetch_gsi_dem.py` 一次六片地抓（三縣是 5 m 31,672 片、10 m 8,100 片，約 2 小時；中斷了再跑會接著抓） | 国土地理院コンテンツ利用規約（與 CC BY 4.0 相容），署名「国土地理院の標高タイルを加工して作成」 |
-| `kyushu.pbf`、`chugoku.pbf` | OpenStreetMap 九州與中國地方，`https://osmtoday.com/asia/japan/kyushu.pbf`（約 354 MB，會轉到 geo2day.com）與 `chugoku.pbf`（約 265 MB）。九州的用 `osmium extract` 切成 `fukuoka.pbf`（約 30 MB，鐵道用）；兩包 `osmium merge` 後切成 `three.pbf`（約 228 MB，地面與縣界用，決策 991：北邊到關門海峽對岸的下關） | ODbL 1.0，© OpenStreetMap 貢獻者 |
+| 國土地理院標高圖磚 | `https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/…`（沒有就 dem5b、dem5c），另抓 `dem_png/14/…`（DEM10B） 補 5 m 沒有值的點；`fetch_gsi_dem.py` 一次六片地抓（三縣是 5 m 31,672 片、10 m 8,100 片；決策 997 的四縣是 5 m 39,376 片、10 m 10,044 片，約 2 小時，兩個程序從兩頭抓約 1 小時；中斷了再跑會接著抓） | 国土地理院コンテンツ利用規約（與 CC BY 4.0 相容），署名「国土地理院の標高タイルを加工して作成」 |
+| `kyushu.pbf`、`chugoku.pbf` | OpenStreetMap 九州與中國地方，`https://osmtoday.com/asia/japan/kyushu.pbf`（約 354 MB，會轉到 geo2day.com）與 `chugoku.pbf`（約 265 MB）。九州的用 `osmium extract` 切成 `fukuoka.pbf`（約 30 MB，鐵道用）；兩包 `osmium merge` 後切成 `four.pbf`（約 233 MB，地面用，決策 991：北邊到關門海峽對岸的下關；決策 997：西邊到平戶） | ODbL 1.0，© OpenStreetMap 貢獻者 |
 
 這兩個在雲端容器都連得到（2026-11-18）。每次讀了什麼寫在 `fukuoka_sources.json`。
 
@@ -34,7 +34,7 @@ curl -L -o /tmp/fk/osm/chugoku.pbf https://osmtoday.com/asia/japan/chugoku.pbf
 apt-get update && apt-get install -y osmium-tool    # 只用來切範圍（GPL-3.0，只執行、不抄程式）
 osmium extract -b 130.25,33.49,130.52,33.75 -s smart -o /tmp/fk/osm/fukuoka.pbf /tmp/fk/osm/kyushu.pbf    # 鐵道（1、2）
 osmium merge /tmp/fk/osm/kyushu.pbf /tmp/fk/osm/chugoku.pbf -o /tmp/fk/osm/merged.pbf
-osmium extract -b 129.69,32.05,131.37,34.07 -s smart -o /tmp/fk/osm/three.pbf /tmp/fk/osm/merged.pbf    # 地面（3、4），福岡、佐賀、熊本三縣
+osmium extract -b 129.30,32.05,131.37,34.07 -s smart -o /tmp/fk/osm/four.pbf /tmp/fk/osm/merged.pbf    # 地面（3、4），福岡、佐賀、熊本、長崎四縣（決策 997）
 pip install osmium
 
 # 1. 鐵道與估計班距（約 50 秒）。
@@ -48,16 +48,16 @@ mkdir -p /tmp/fk/pop /tmp/fk/gsi
 curl -L -o /tmp/fk/pop/jpn.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/JPN/v1/1km_ua/constrained/jpn_pop_2025_CN_1km_R2025A_UA_v1.tif
 pip install tifffile imagecodecs numpy
 python3 -I tools/fukuoka-map/build_fukuoka_ground.py population /tmp/fk/pop/jpn.tif RailwayGameApp/Resources/MapPacks/fukuoka
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka   # 約 2 分鐘，要先有人口
-python3 -I tools/airfields/build_airfields.py /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka/airfields.json
-python3 -I tools/no-build-land/build_no_build.py /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka/no_build.json
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py buildings /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka   # 約 2 分鐘，要先有人口
+python3 -I tools/airfields/build_airfields.py /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka/airfields.json
+python3 -I tools/no-build-land/build_no_build.py /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka/no_build.json
 python3 -I tools/fukuoka-map/fetch_gsi_dem.py /tmp/fk/gsi
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/three.pbf RailwayGameApp/Resources/MapPacks/fukuoka
+python3 -I tools/fukuoka-map/build_fukuoka_ground.py grids /tmp/fk/gsi /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka
 
-# 4. 依縣界拆成三包（決策 991）：底圖與建築切給福岡、佐賀、熊本三個資料夾，pack.json 寫上各份、範圍、
-#    開局點與舊存檔的範圍。上面幾步會把 pack.json 的九州新幹線條目弄掉，先從 git 拿回來。
-git checkout -- RailwayGameApp/Resources/MapPacks/fukuoka/pack.json
+# 4. 依縣界拆成四包（決策 991、997）：底圖與建築切給福岡、佐賀、熊本、長崎四個資料夾，pack.json 寫上各份、
+#    範圍、開局點與舊存檔的範圍。上面幾步用 `write_manifest` 重寫 pack.json（整張、不分份，九州新幹線的
+#    檔也在 `SOURCES` 裡），所以這一步讀的是整張；拆過的 pack.json 它會停下來。
 pip install shapely   # BSD 3-Clause，只有拆分用
 osmium tags-filter -o /tmp/fk/osm/admin4.pbf /tmp/fk/osm/kyushu.pbf r/admin_level=4   # 縣界（整個關係，不切）
 python3 -I tools/fukuoka-map/split_prefectures.py /tmp/fk/osm/admin4.pbf RailwayGameApp/Resources/MapPacks
