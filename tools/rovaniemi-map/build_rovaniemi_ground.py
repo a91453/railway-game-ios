@@ -2,6 +2,11 @@
 """The Rovaniemi map's people, as the pack's `population.json`
 (decision 789), as `tools/hk-map/build_hk_ground.py` makes Hong Kong's.
 
+The backup since decision 1007: the pack's people and jobs are Statistics
+Finland's (`tools/census-grid/finland_census_grid.py`). This puts WorldPop's
+modelled 1 km people back, with no jobs (the game then takes them from
+OpenStreetMap's places), should that open data ever be gone.
+
     pip install tifffile imagecodecs numpy
     curl -L -o /tmp/rv/pop/fin.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/FIN/v1/1km_ua/constrained/fin_pop_2025_CN_1km_R2025A_UA_v1.tif
     python3 -I tools/rovaniemi-map/build_rovaniemi_ground.py /tmp/rv/pop/fin.tif RailwayGameApp/Resources/MapPacks/rovaniemi

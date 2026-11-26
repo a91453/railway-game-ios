@@ -429,14 +429,19 @@ public enum DataSourceCredits {
                         id: "rovaniemiPopulation",
                         title: language.text("Rovaniemi’s people", "羅瓦涅米的人口"),
                         detail: language.text(
-                            "Where people live on Rovaniemi’s map, for how many ride from each station.",
-                            "羅瓦涅米地圖上的人住在哪裡，用來算每一站有多少人搭車。"
+                            "Where people live and work on Rovaniemi’s map, for how many ride from each station.",
+                            "羅瓦涅米地圖上的人住在哪裡、在哪裡上班，用來算每一站有多少人搭車。"
                         ),
+                        // Decision 1007: Statistics Finland's open data,
+                        // spread over the map's buildings (a change the
+                        // licence asks to be said).
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), Finland 2025, 1 km grid, CC BY 4.0.",
-                            "WorldPop（www.worldpop.org），芬蘭 2025 年 1 公里格網，CC BY 4.0。"
+                            "Source: Statistics Finland, Population grid data 1 km × 1 km 2025 and Paavo – Open data by postal code area 2025, under the Creative Commons Attribution 4.0 licence; spread over the map’s buildings.",
+                            "資料來源：芬蘭統計局（Statistics Finland）1 公里人口格網 2025 年、郵遞區開放統計 Paavo 2025 年，依創用 CC 姓名標示 4.0 授權使用；已依地圖上的建物細分。"
                         ),
-                        links: []
+                        links: [
+                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ]
                     ),
                 ]
             )
