@@ -306,7 +306,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
         await MainActor.run { [expected] in
             let session = GameSession(world: world)
             session.selectTool(.network)
-            XCTAssertEqual(session.networkDraftText(), "Tap where the track starts: the end of a track, a track for a turnout there, or anywhere to start new track.")
+            XCTAssertEqual(session.networkDraftText(), "Tap the map where the track starts.")
             session.tapNetwork(at: Self.a, reach: Self.reach)
             XCTAssertEqual(session.networkStart, .point(Self.a))
             XCTAssertEqual(session.networkDraftText(), "From a new point. Tap where it ends, or drag there from the start.")
@@ -774,7 +774,7 @@ final class NetworkBuildingSessionTests: XCTestCase {
         await MainActor.run {
             let session = GameSession(world: world, language: .traditionalChinese)
             session.selectTool(.network)
-            XCTAssertEqual(session.networkDraftText(), "請點軌道的起點：既有軌道的端點、軌道上（在那裡設轉轍器），或任何地方開始新的軌道。")
+            XCTAssertEqual(session.networkDraftText(), "點地圖選軌道的起點。")
             session.tapNetwork(at: Self.a, reach: Self.reach)
             XCTAssertEqual(session.networkDraftText(), "從新的一點開始。請點終點，或從起點拖曳過去。")
             session.tapNetwork(at: Self.b, reach: Self.reach)

@@ -213,6 +213,7 @@ extension GameSession {
         platforms: [ChainPlatform], wantsCrossover: (start: Bool, end: Bool), in world: GameWorld,
         mainBuilt: (world: GameWorld, edges: [TrackEdgeID])? = nil
     ) throws(GameError) -> DoubleChainPlan {
+        let parallel = parallel.laidBeside(main: main, run: run, in: world)
         var draft: GameWorld
         let mainEdges: [TrackEdgeID], parallelEdges: [TrackEdgeID]
         if let mainBuilt, !main.isEmpty, mainBuilt.edges.count == main.count {
@@ -508,5 +509,32 @@ private struct OffsetCubic {
             most = max(most, abs(distance - spacing))
         }
         return most
+    }
+}
+
+extension Array where Element == PlayerCommand.TrackStretch {
+    /// REVIEW-L35 P2-1 (decision 970): a second track none of whose
+    /// stretches has a gauge of its own, at the gauge of the first track
+    /// beside it in `world`: `main`'s first gauge as it is laid
+    /// (``joiningGauge(in:)``), or for track already there the first of
+    /// `run`'s edges' (``GameWorld/gaugeBeside(_:)``). Its ends stand beside
+    /// the first track, not on it, so left to GameCore it would be laid at
+    /// ``TrackGauge/default``. Mountain track keeps its own; unchanged when
+    /// a stretch has a gauge or the first track has none to give.
+    func laidBeside(
+        main: [PlayerCommand.TrackStretch], run: [(edge: TrackEdgeID, reversed: Bool)], in world: GameWorld
+    ) -> [PlayerCommand.TrackStretch] {
+        guard allSatisfy({ $0.gauge == nil }) else { return self }
+        let first = main.isEmpty
+            ? run.lazy.compactMap { world.gaugeBeside($0.edge) }.first
+            : main.joiningGauge(in: world).lazy.compactMap(\.gauge).first
+        guard let gauge = first else { return self }
+        return map { stretch in
+            guard !stretch.mountain else { return stretch }
+            return PlayerCommand.TrackStretch(
+                start: stretch.start, end: stretch.end, from: stretch.from, to: stretch.to, curve: stretch.curve, profile: stretch.profile,
+                structure: stretch.structure, ground: stretch.ground, mountain: stretch.mountain, system: stretch.system, gauge: gauge
+            )
+        }
     }
 }

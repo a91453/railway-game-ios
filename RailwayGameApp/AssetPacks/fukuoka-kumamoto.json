@@ -1,0 +1,12 @@
+{
+  "assetPackID": "mappack-fukuoka-kumamoto",
+  "downloadPolicy": {
+    "prefetch": {
+      "installationEventTypes": ["firstInstallation", "subsequentUpdate"]
+    }
+  },
+  "fileSelectors": [
+    { "directory": "MapPacks/fukuoka-kumamoto" }
+  ],
+  "platforms": ["iOS"]
+}

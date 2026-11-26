@@ -65,7 +65,7 @@ final class Map3DEMU3000Tests: XCTestCase {
         var locked=pack;locked.locked.insert("emu3000")
         XCTAssertEqual(locked.models[try XCTUnwrap(locked.modelIndex(forType:"EMU3000",carIndex:0,count:12))].name,"express-cab")
         XCTAssertNil(locked.layout(forType:"EMU3000",count:12))
-        for code in ["HSR","n700sG","E200CK","puyuma","taroko","emu800"] {XCTAssertNotNil(pack.models(forType:code),code)}
+        for code in ["HSR","n700s","E200CK","puyuma","taroko","emu800"] {XCTAssertNotNil(pack.models(forType:code),code)}
     }
     func testActualMeshesHaveClosedOutwardSurfacesAndRejectVisibleDefects() throws {
         for far in [false,true] {for unit in Map3DEMU3000.Unit.allCases {

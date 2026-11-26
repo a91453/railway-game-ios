@@ -64,19 +64,32 @@ struct NetworkControls: View {
             // side panel is narrow there): SwiftUI squeezed their words one
             // character to a line. In rows, each button as wide as its
             // words: one row where they fit, else two, else more.
+            // NETWORK-PANEL-SIMPLE (2026-11-26, decision 383's later note):
+            // only what most stretches need shows; snapping joins the
+            // folded options, and Clear shows once there is a start to clear.
             ChipFlow(spacing: 8) {
                 systemPicker
                 if session.networkSystem == .conventional {
                     gaugePicker
                 }
-                advancedButton
                 doubleToggle
-                snapToggle
                 traceToggle
-                clearButton
+                advancedButton
+                if session.networkStart != nil {
+                    clearButton
+                }
             }
             .buttonStyle(.bordered)
             .font(.footnote)
+            // NETWORK-PANEL-SIMPLE: what to tap first, here rather than in
+            // a box above the options (``ControlPanel/showsInspector(_:)``).
+            if session.networkStart == nil {
+                Text(verbatim: session.networkDraftText())
+                    .font(.footnote)
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("network.startHint")
+            }
             // Decision 955: what a guideway joins and crosses, said
             // before the player draws it.
             if let note = session.networkSystemNote {
@@ -88,7 +101,8 @@ struct NetworkControls: View {
             }
             if showsAdvanced {
                 advancedOptions
-            } else {
+            } else if !advancedSummary.isEmpty {
+                // Only what was changed from how a new stretch is laid.
                 Text(verbatim: advancedSummary)
                     .font(.caption)
                     .foregroundStyle(Theme.textSecondary)
@@ -204,6 +218,11 @@ struct NetworkControls: View {
                 }
             } label: {
                 Text(verbatim: language.text("Track system", "軌道種類"))
+            } currentValueLabel: {
+                // The chips' size, not the menu's larger default.
+                Text(verbatim: session.networkSystem.name(in: language))
+                    .font(.footnote)
+                    .lineLimit(1)
             }
             .pickerStyle(.menu)
         }
@@ -211,7 +230,9 @@ struct NetworkControls: View {
     }
 
     /// Decision 970: the gauge of the next ordinary track; automatic
-    /// follows the track it joins.
+    /// follows the track it joins. The menu says whom each carries; the
+    /// button only the millimetres, on one line (its two lines, in a
+    /// narrow card, ran over the buttons below: NETWORK-PANEL-SIMPLE).
     private var gaugePicker: some View {
         let language = session.language
         return TickStable(StableKey(session.networkGauge, language)) {
@@ -222,6 +243,10 @@ struct NetworkControls: View {
                 }
             } label: {
                 Text(verbatim: language.text("Gauge", "軌距"))
+            } currentValueLabel: {
+                Text(verbatim: session.networkGauge.map { $0.shortName(in: language) } ?? TrackGauge.automaticShortName(in: language))
+                    .font(.footnote)
+                    .lineLimit(1)
             }
             .pickerStyle(.menu)
         }
@@ -258,8 +283,9 @@ struct NetworkControls: View {
     }
 
     /// Off: every tap is a new point, for a parallel track a few metres
-    /// beside another (closer than a tap reaches). Decision 383: beside
-    /// Double, not among the folded options.
+    /// beside another (closer than a tap reaches). Decision 383 put it
+    /// beside Double; NETWORK-PANEL-SIMPLE folded it again, first among
+    /// the options, as it is rarely turned off.
     private var snapToggle: some View {
         Toggle("Snap to track", isOn: $session.networkSnapsToTrack)
             .toggleStyle(OnOffButtonToggleStyle())
@@ -315,6 +341,7 @@ struct NetworkControls: View {
             // The second under the first where the two do not fit side
             // by side.
             ChipFlow(spacing: 8) {
+                snapToggle
                 Toggle("Smooth curves", isOn: $session.networkFollowsTrack)
                 Toggle("Ease the grade", isOn: $session.networkEasesGrade)
             }
@@ -344,16 +371,18 @@ struct NetworkControls: View {
         .transition(.opacity)
     }
 
-    /// The options folded away, in a line: the structure, and those of the
-    /// two switches that are off.
+    /// The folded options changed from how a new stretch is laid, in a
+    /// line; empty while none is (NETWORK-PANEL-SIMPLE: the line said
+    /// "Automatic" under every card).
     private var advancedSummary: String {
         let language = session.language
-        var parts = [session.networkStructure.name(in: language)]
+        var parts: [String] = []
+        if session.networkStructure != .automatic { parts.append(session.networkStructure.name(in: language)) }
+        if !session.networkSnapsToTrack { parts.append(language.text("not snapping", "不吸附")) }
         if !session.networkFollowsTrack { parts.append(language.text("sharp curves", "不平順曲線")) }
         if !session.networkEasesGrade { parts.append(language.text("steep grade", "不緩和坡度")) }
-        if session.networkDoubleShown {
-            parts.append(session.networkDoubleSide == .left
-                ? language.text("second track left", "第二條在左") : language.text("second track right", "第二條在右"))
+        if session.networkDoubleShown, session.networkDoubleSide == .right {
+            parts.append(language.text("second track right", "第二條在右"))
         }
         return parts.joined(separator: " · ")
     }

@@ -151,7 +151,7 @@ final class Map3DChristmasLiveryTests: XCTestCase {
     func testALongNosesWreathLeavesTheWindscreenClear() throws {
         let pack = Map3DModelPack.standard
         for name in ["set-highSpeed-head", "set-highSpeed-tail", "set-puyuma-head", "set-puyuma-tail",
-                     "set-emu3000-head", "set-emu3000-tail", "set-n700sG-head", "highSpeed-cab"] {
+                     "set-emu3000-head", "set-emu3000-tail", "set-n700s-head", "highSpeed-cab"] {
             let index = try XCTUnwrap(pack.index(of: name), name)
             let model = pack.models[index], wear = try XCTUnwrap(pack.christmas[index], name)
             let half = max(abs(model.minimum.y), abs(model.maximum.y))
@@ -206,7 +206,7 @@ final class Map3DChristmasLiveryTests: XCTestCase {
     /// no bulb of another colour, no ribbon, no glow.
     func testAFarCarWearsOnlySnowAndALitLine() throws {
         let pack = Map3DModelPack.standard
-        for name in ["set-highSpeedFar-head", "set-emu500Far-panto", "set-pushPullFar-car"] {
+        for name in ["set-emu500Far-panto", "set-pushPullFar-car"] {
             let (model, wear, all) = try dressed(name, in: pack)
             XCTAssertTrue(wear.far, name)
             let added = Array(all[model.vertices.count...])

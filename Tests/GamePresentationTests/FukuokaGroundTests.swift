@@ -50,12 +50,13 @@ final class FukuokaGroundTests: XCTestCase {
         XCTAssertFalse(water.isWater(latitude: 33.5300, longitude: 130.4700), "the south-east corner, inland")
     }
 
-    /// The people, WorldPop's: some 4.8 million on the map from Fukuoka to
-    /// Kumamoto (KUMAMOTO-GROUND), some 1.7 million of them on the map as
-    /// it was, Fukuoka's 17.6 by 22.2 km.
+    /// The people, WorldPop's: some 9.1 million on the map of Fukuoka,
+    /// Saga and Kumamoto Prefectures and the corners of their neighbours
+    /// (decision 991), some 1.7 million of them on the map as it was
+    /// first, Fukuoka's 17.6 by 22.2 km.
     func testThePeople() throws {
         let population = try XCTUnwrap(try FukuokaRailwaysTests.ground().population)
-        XCTAssertTrue((4_400_000...5_300_000).contains(population.total), "\(population.total)")
+        XCTAssertTrue((8_500_000...9_800_000).contains(population.total), "\(population.total)")
         let fukuoka = population.cells(north: 33.72, south: 33.52, west: 130.29, east: 130.48)
             .filter { (33.52...33.72).contains($0.centerLatitude) && (130.29...130.48).contains($0.centerLongitude) }
             .reduce(0) { $0 + $1.count }
@@ -112,7 +113,7 @@ final class FukuokaGroundTests: XCTestCase {
         XCTAssertTrue(licences.values.contains { $0.contains("WorldPop") })
         for language in DisplayLanguage.allCases {
             let section = try XCTUnwrap(DataSourceCredits.sections(in: language, overseas: [.fukuoka]).first { $0.id == "fukuokaRailways" })
-            XCTAssertEqual(section.credits.map(\.id), ["fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport"])
+            XCTAssertEqual(section.credits.map(\.id), ["fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport", "kyushuAirports"])
         }
     }
 }

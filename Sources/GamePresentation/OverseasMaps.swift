@@ -127,7 +127,34 @@ public struct MapPack: Sendable {
 
     /// Where the pack's file `name` (its name in `pack.json`) lies.
     public func url(of name: String) -> URL {
-        located[name] ?? root.appendingPathComponent(name)
+        located[name] ?? Self.place(of: name, root: root)
+    }
+
+    /// Decision 991: where the file `name` of the pack in `root` lies in
+    /// its folders: in `root`, or, for a name with a folder in it
+    /// (`fukuoka-kumamoto/basemap.pmtiles`), in that folder beside `root`,
+    /// a part of the map downloaded apart (``OverseasMap/partFolders``).
+    public static func place(of name: String, root: URL) -> URL {
+        name.contains("/") ? root.deletingLastPathComponent().appendingPathComponent(name) : root.appendingPathComponent(name)
+    }
+
+    /// Decision 991: the names of the files the pack's `pack.json` lists,
+    /// sorted; none when it cannot be read.
+    public var listedFiles: [String] {
+        struct Manifest: Decodable {
+            let files: [String: FileEntry]
+            struct FileEntry: Decodable {}
+        }
+        guard let data = try? file("pack", "json"), let manifest = try? JSONDecoder().decode(Manifest.self, from: data) else { return [] }
+        return manifest.files.keys.sorted()
+    }
+
+    /// Decision 991: the files named `name` of the pack and of its parts
+    /// (``place(of:root:)``) that are there: the pack's own first, then its
+    /// parts' in the order of their names.
+    func files(named name: String) -> [URL] {
+        let parts = listedFiles.filter { $0.contains("/") && ($0 as NSString).lastPathComponent == name }
+        return ([name] + parts).map(url(of:)).filter { FileManager.default.fileExists(atPath: $0.path) }
     }
 
     /// The contents of the pack's file `name.ext`.
@@ -143,6 +170,13 @@ public struct MapPack: Sendable {
         return FileManager.default.fileExists(atPath: file.path) ? file : nil
     }
 
+    /// Decision 991: the base maps of the pack and of its parts, its own
+    /// first: each holds tiles none of the others does, so a tile is read
+    /// from the first that has it.
+    public var baseMapFiles: [URL] {
+        files(named: "basemap.pmtiles")
+    }
+
     /// Decision 712: the pack's buildings (`buildings.pmtiles`:
     /// OpenStreetMap's, in the format of Taiwan's footprint tiles,
     /// `tools/hk-map/build_hk_buildings.py`), or `nil` for a pack without
@@ -150,6 +184,12 @@ public struct MapPack: Sendable {
     public var buildingsFile: URL? {
         let file = url(of: "buildings.pmtiles")
         return FileManager.default.fileExists(atPath: file.path) ? file : nil
+    }
+
+    /// Decision 991: the buildings of the pack and of its parts, its own
+    /// first, as ``baseMapFiles``.
+    public var buildingsFiles: [URL] {
+        files(named: "buildings.pmtiles")
     }
 
     /// Decision 726: the pack's hill shading for its 2D map
@@ -217,7 +257,7 @@ public struct MapPack: Sendable {
         guard let data = try? Data(contentsOf: folder.appendingPathComponent("pack.json")),
               let manifest = try? JSONDecoder().decode(Manifest.self, from: data), !manifest.files.isEmpty
         else { return false }
-        return manifest.files.keys.allSatisfy { FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path) }
+        return manifest.files.keys.allSatisfy { FileManager.default.fileExists(atPath: place(of: $0, root: folder).path) }
     }
 }
 
@@ -289,12 +329,39 @@ extension MapPack {
     /// its north-west corner, and everything in it its place, as the map
     /// grows. Throws for an `earlier` that does not.
     public static func extents(ofManifest manifest: Data) throws -> (extent: Extent, earlier: [Extent]) {
-        struct Manifest: Decodable {
+        let read = try JSONDecoder().decode(Manifest.self, from: manifest)
+        try checkGrowth(read.earlier ?? [], to: read.extent)
+        return (read.extent, read.earlier ?? [])
+    }
+
+    /// Decision 991: what a `pack.json` says of where its map lies.
+    struct Manifest: Decodable {
+        let extent: Extent
+        let earlier: [Extent]?
+        /// Where a new game may begin, the first unless the player picks
+        /// another: it owns the 2 × 2 tiles round it.
+        let starts: [Start]?
+        /// The maps it was before its north or west edge moved, each with
+        /// its own `earlier`.
+        let older: [Older]?
+
+        struct Start: Decodable {
+            let name: String
+            let english: String
+            let latitude: Double
+            let longitude: Double
+        }
+
+        struct Older: Decodable {
             let extent: Extent
             let earlier: [Extent]?
         }
-        let read = try JSONDecoder().decode(Manifest.self, from: manifest)
-        let stages = (read.earlier ?? []) + [read.extent]
+    }
+
+    /// Throws unless each of `earlier` is the north-west part of the next,
+    /// the last of `extent` (decision 969).
+    static func checkGrowth(_ earlier: [Extent], to extent: Extent) throws {
+        let stages = earlier + [extent]
         for (before, after) in zip(stages, stages.dropFirst()) {
             guard before.north == after.north, before.west == after.west, before.south >= after.south, before.east <= after.east,
                   before != after
@@ -302,7 +369,6 @@ extension MapPack {
                 throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "pack.json: an earlier extent is not the map's north-west part"))
             }
         }
-        return (read.extent, read.earlier ?? [])
     }
 }
 
@@ -348,7 +414,11 @@ public struct OverseasGround: Sendable {
     public let population: PopulationGrid?
     /// The pack's base map, its file mapped, or `nil` for a pack without
     /// one: its 3D map then has bare ground, and its land no real roads.
-    public let baseMap: Data?
+    public var baseMap: Data? { baseMaps.first }
+    /// Decision 991: the base maps of the pack and of its parts
+    /// (``MapPack/baseMapFiles``), their files mapped, the pack's own
+    /// first; none for a pack without one.
+    public let baseMaps: [Data]
     /// Decision 726: the city's water, the sea, rivers and lakes, and its
     /// steep slopes (`water.json`, in the form of Taiwan's
     /// `taiwan_water.json`), or `nil` for a pack without it, or one out of
@@ -370,14 +440,15 @@ public struct OverseasGround: Sendable {
     /// likewise its water and heights (decision 726) and land cover
     /// (decision 835).
     public init(city: OverseasMap, pack: MapPack) throws {
-        let extents = try MapPack.extents(ofManifest: pack.file("pack", "json"))
-        guard let layout = MapPack.Layout(extent: extents.extent, earlier: extents.earlier) else {
+        let manifest = try pack.file("pack", "json")
+        _ = try MapPack.extents(ofManifest: manifest)
+        guard let layout = MapPack.Layout(manifest: manifest) else {
             throw RealRailways.ResourceError.missing("MapPacks/\(city.packFolder)/pack.json: extent")
         }
         self.city = city
         self.layout = layout
         population = (try? pack.file("population", "json")).flatMap { try? PopulationGrid(data: $0) }
-        baseMap = pack.baseMapFile.flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
+        baseMaps = pack.baseMapFiles.compactMap { try? Data(contentsOf: $0, options: .alwaysMapped) }
         water = (try? pack.file("water", "json")).flatMap { try? WaterGrid(data: $0) }
         heights = (try? pack.file("heights", "dat")).flatMap { try? HeightGrid(data: $0) }
         landCover = (try? pack.file("landcover", "dat")).flatMap { try? LandCoverGrid(data: $0) }
@@ -401,7 +472,9 @@ public struct OverseasGround: Sendable {
     /// world this map does not hold, or holds as it is now: a game goes on
     /// as it was.
     public func grown(_ world: GameWorld) -> GameWorld? {
-        guard layout.holds(world), world.bounds != layout.bounds else { return nil }
+        // Decision 991: a game laid over one of the map's older layouts
+        // grows on it, its north-west corner where it was.
+        guard let layout = layout.layout(holding: world), world.bounds != layout.bounds else { return nil }
         var grown = world
         do throws(GameError) {
             try grown.growMap(to: layout.bounds)
@@ -454,6 +527,12 @@ extension MapPack {
     /// that world's north-west corner to each later extent's south-east
     /// corner, rounded up to the next whole world unit: a game laid over
     /// the first stays over the same places as it grows.
+    ///
+    /// Decision 991: a map whose north or west edge moved is laid anew
+    /// round its new extent (no `earlier`), a new game owning the tiles
+    /// round its `start`; the games laid over it before stay as they were
+    /// laid, each on an ``older`` layout that grows only to the south and
+    /// the east, and only as far as the map now reaches.
     public struct Layout: Equatable, Sendable {
         /// Where the map lies: the middle of the world of its first extent.
         public let anchor: GeoAnchor
@@ -462,6 +541,31 @@ extension MapPack {
         /// The worlds of the extents it had before, oldest first: empty for
         /// a map that never grew.
         public let earlier: [WorldBounds]
+        /// Decision 991: where a new game may begin (``startTiles(at:)``),
+        /// the first unless the player picks another; empty for a map
+        /// whose games begin where its first extent lay.
+        public let starts: [Start]
+        /// Decision 991: how the map lay before its north or west edge
+        /// moved, for the games laid over it then; empty for a map whose
+        /// edges never did.
+        public let older: [Layout]
+
+        /// Decision 991: a place a new game may begin round, by the name
+        /// of its city.
+        public struct Start: Equatable, Sendable {
+            public let name: String
+            public let englishName: String
+            public let coordinate: RealRailways.Coordinate
+
+            public init(name: String, englishName: String, coordinate: RealRailways.Coordinate) {
+                self.name = name
+                self.englishName = englishName
+                self.coordinate = coordinate
+            }
+        }
+
+        /// Where a new game begins unless the player picks another place.
+        public var start: RealRailways.Coordinate? { starts.first?.coordinate }
 
         /// The part of the world the anchor is the middle of
         /// (``GameWorld/geoAnchorBounds``): the world of the first extent,
@@ -471,7 +575,12 @@ extension MapPack {
         /// The layout of a map of `extent` that had the `earlier` extents
         /// before (``MapPack/extents(ofManifest:)``); `nil` when the first
         /// has no world (``Extent/bounds``) or a later one reaches too far.
-        public init?(extent: Extent, earlier extents: [Extent]) {
+        /// Decision 991: a new game begins round one of `starts` when they
+        /// are given, and the games laid over the `older` layouts stay on
+        /// them.
+        public init?(extent: Extent, earlier extents: [Extent], starts: [Start] = [], older: [Layout] = []) {
+            self.starts = starts
+            self.older = older
             guard let first = extents.first else {
                 guard let anchor = extent.anchor, let bounds = extent.bounds else { return nil }
                 (self.anchor, self.bounds, earlier) = (anchor, bounds, [])
@@ -498,28 +607,68 @@ extension MapPack {
         /// The layout `manifest`, a `pack.json`, gives; `nil` when it
         /// cannot be read or has no extent that fits a world.
         public init?(manifest: Data) {
-            guard let read = try? MapPack.extents(ofManifest: manifest) else { return nil }
-            self.init(extent: read.extent, earlier: read.earlier)
+            guard let read = try? JSONDecoder().decode(MapPack.Manifest.self, from: manifest),
+                  (try? MapPack.checkGrowth(read.earlier ?? [], to: read.extent)) != nil
+            else { return nil }
+            var older: [Layout] = []
+            for stage in read.older ?? [] {
+                guard (try? MapPack.checkGrowth(stage.earlier ?? [], to: stage.extent)) != nil,
+                      let layout = Layout(extent: stage.extent, earlier: stage.earlier ?? [])
+                else { return nil }
+                older.append(layout)
+            }
+            self.init(
+                extent: read.extent, earlier: read.earlier ?? [],
+                starts: (read.starts ?? []).map {
+                    Start(name: $0.name, englishName: $0.english, coordinate: RealRailways.Coordinate(latitude: $0.latitude, longitude: $0.longitude))
+                },
+                older: older
+            )
         }
 
         /// Whether `world` is laid over this map: as it is now, or as it was
         /// at an earlier extent (its world that size, its anchor the middle
-        /// of the whole of it at the first, of the first's world after).
+        /// of the whole of it at the first, of the first's world after), or
+        /// over one of its ``older`` layouts (decision 991).
         public func holds(_ world: GameWorld) -> Bool {
-            guard world.geoAnchor == anchor else { return false }
-            if world.bounds == bounds, world.geoAnchorBounds == anchorBounds { return true }
-            return earlier.indices.contains { index in
-                world.bounds == earlier[index] && world.geoAnchorBounds == (index == 0 ? nil : anchorBounds)
+            layout(holding: world) != nil
+        }
+
+        /// Decision 991: the layout `world` is laid over: this one, one of
+        /// its ``older`` ones, or `nil` for a world laid over neither.
+        public func layout(holding world: GameWorld) -> Layout? {
+            if world.geoAnchor == anchor {
+                if world.bounds == bounds, world.geoAnchorBounds == anchorBounds { return self }
+                if earlier.indices.contains(where: { index in
+                    world.bounds == earlier[index] && world.geoAnchorBounds == (index == 0 ? nil : anchorBounds)
+                }) { return self }
             }
+            return older.lazy.compactMap { $0.layout(holding: world) }.first
         }
 
         /// The tiles of the map (decision 160) that hold the world of its
         /// first extent, by row and then column: those a game laid over it
         /// owns as the map grows, and a new game owns from the start. The
         /// tile of the world's north-west corner alone for a map that never
-        /// grew (unused there).
-        public var startTiles: [MapTile] {
-            let start = anchorBounds ?? bounds, length = MapExpansion.tileLength
+        /// grew (unused there). Decision 991: on a map with ``starts``,
+        /// the 2 × 2 tiles that meet nearest the first.
+        public var startTiles: [MapTile] { startTiles(at: 0) }
+
+        /// ``startTiles`` round the `index`th of ``starts`` (decision 991),
+        /// the first's for an index it does not have.
+        public func startTiles(at index: Int) -> [MapTile] {
+            let length = MapExpansion.tileLength
+            if let start = (starts.indices.contains(index) ? starts[index] : starts.first)?.coordinate {
+                let frame = RealWorldFrame(anchor: anchor, bounds: bounds)
+                let point = frame.worldPosition(latitude: start.latitude, longitude: start.longitude)
+                let rows = Int((bounds.height + length - 1) / length), columns = Int((bounds.width + length - 1) / length)
+                func first(_ at: Double, of count: Int) -> Int {
+                    min(max(Int((at / Double(length)).rounded()) - 1, 0), max(count - 2, 0))
+                }
+                let row = first(point.y, of: rows), column = first(point.x, of: columns)
+                return (row..<min(row + 2, rows)).flatMap { row in (column..<min(column + 2, columns)).map { MapTile(row: row, column: $0) } }
+            }
+            let start = anchorBounds ?? bounds
             let rows = Int((start.height + length - 1) / length), columns = Int((start.width + length - 1) / length)
             return (0..<max(rows, 1)).flatMap { row in (0..<max(columns, 1)).map { MapTile(row: row, column: $0) } }
         }
@@ -537,13 +686,22 @@ extension GameWorld {
     /// extent and grown as a game played there before is
     /// (``OverseasGround/grown(_:)``), so a new game and an old one own
     /// the same tiles and buy the rest alike.
-    public static func newOverseasGame(_ ground: OverseasGround, balance: Money = startingBalance, eventSeed: UInt32 = 1) -> GameWorld {
+    /// Decision 991: on a map with places to begin round
+    /// (``MapPack/Layout/starts``), round the `start`th of them.
+    public static func newOverseasGame(_ ground: OverseasGround, balance: Money = startingBalance, eventSeed: UInt32 = 1, start: Int = 0) -> GameWorld {
         var world = newGame(
             anchor: ground.anchor, bounds: ground.layout.anchorBounds ?? ground.bounds, balance: balance, eventSeed: eventSeed, land: []
         )
         world.setLandOnDemand()
         world.setFarDemand(true)
-        return ground.grown(world) ?? world
+        if let grown = ground.grown(world) { return grown }
+        // Decision 991: a map laid anew round its new extent begins round
+        // the place picked, the rest bought tile by tile.
+        if !ground.layout.starts.isEmpty {
+            let tiles = ground.layout.startTiles(at: start)
+            try? world.enableMapExpansion(owning: tiles, townSeed: nil, ridersStep: ground.ridersStep(owning: tiles, in: world))
+        }
+        return world
     }
 }
 

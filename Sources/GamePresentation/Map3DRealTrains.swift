@@ -785,8 +785,9 @@ public struct Map3DRealTrains: Sendable {
             let isRing = line.ringKm != nil
             for place in traffic.places(of: line, at: second, on: day, dayBefore: dayBefore) {
                 guard drawn < RealTrainTraffic.mostDrawn else { return }
-                // Decision 408: half the high-speed trains the N700S-G, by
-                // their run on the day's timetable.
+                // Decision 408: half the high-speed trains the N700S-G
+                // (decision 979: the owner's old N700S), by their run on
+                // the day's timetable.
                 // Decision 338 (second later): none while the pack is locked.
                 // Decision 433: and half the Taipei Metro's the C341.
                 // Decision 435: and the Taiwan Railway's local trains three

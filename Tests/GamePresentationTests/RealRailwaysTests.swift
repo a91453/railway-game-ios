@@ -361,7 +361,7 @@ final class RealRailwaysTests: XCTestCase {
                 "tdx", "realBuses", "realCoaches", "traOpenData", "nlsc", "openStreetMap",
                 "worldPop", "ridership", "travelSurvey", "sightVisitors", "airports", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "moiTerrain", "copernicusDEM", "esaWorldCover", "wikidata", "worldUrbanizationProspects",
-                "map3DGround", "temples", "taipeiTempleModels", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "coalBunkerModel", "meshy", "kenney", "taipeiGarbageTrucks", "slopNewYork",
+                "map3DGround", "temples", "taipeiTempleModels", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "highSpeed700Model", "coalBunkerModel", "meshy", "kenney", "taipeiGarbageTrucks", "slopNewYork",
                 // Decision 882: the platforms' name boards' letters.
                 "platformNameBoards",
                 "proceduralTokyo", "polyHaven", "music", "runningSound", "dieselSound", "motorSound", "weatherSound",
@@ -370,7 +370,7 @@ final class RealRailwaysTests: XCTestCase {
                 // Decision 818: Rovaniemi's, open for the winter event.
                 "rovaniemiVR", "rovaniemiMap", "rovaniemiBuildings", "rovaniemiTerrain", "rovaniemiPopulation",
                 // Decision 854 (FUKUOKA-OPEN): Fukuoka's.
-                "fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport",
+                "fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport", "kyushuAirports",
             ])
             XCTAssertEqual(Set(credits.map(\.id)).count, credits.count, "ids are unique")
             for credit in credits {

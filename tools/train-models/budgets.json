@@ -20,8 +20,7 @@
     "comment": "Sets on main when this tool was made that break a rule below. They stay as they are; a new model may not join the list. id -> reason.",
     "noFar": {},
     "farBox": {
-      "metroC341": "the far car is not in the near car's box",
-      "n700sG": "the far car is not in the near car's box"
+      "metroC341": "the far car is not in the near car's box"
     },
     "farShare": {
       "E200CK": "its Chu-Kuang coaches: far 4008 of near 6476, not under 50% (decision 420); the E200 has its own far version since decision 825",

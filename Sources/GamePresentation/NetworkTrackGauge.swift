@@ -22,6 +22,17 @@ extension TrackGauge {
         }
     }
 
+    /// What the network tool's gauge button says once it is chosen: the
+    /// millimetres alone, on one line (NETWORK-PANEL-SIMPLE: the whole
+    /// name took two lines in a narrow card and ran over the buttons
+    /// below). The menu still says whom each carries.
+    public func shortName(in language: DisplayLanguage) -> String {
+        let rails = sortedRails.map { Self.millimetres($0.rawValue) }.joined(separator: " + ")
+        return loading == .shinkansen
+            ? language.text("\(rails) mm high-speed", "\(rails) mm 高鐵")
+            : "\(rails) mm"
+    }
+
     /// `1435` as "1,435".
     static func millimetres(_ value: Int) -> String {
         value >= 1_000 ? "\(value / 1_000),\(String(value % 1_000).leftPadded(to: 3))" : "\(value)"
@@ -30,6 +41,11 @@ extension TrackGauge {
     /// The tool's first choice: the gauge of the track a stretch joins.
     public static func automaticName(in language: DisplayLanguage) -> String {
         language.text("Automatic (as the track it joins)", "自動（跟接上的軌道一樣）")
+    }
+
+    /// ``automaticName(in:)`` on the gauge button.
+    public static func automaticShortName(in language: DisplayLanguage) -> String {
+        language.text("Auto gauge", "自動軌距")
     }
 }
 
@@ -92,5 +108,17 @@ extension Array where Element == PlayerCommand.TrackStretch {
                 structure: stretch.structure, ground: stretch.ground, mountain: stretch.mountain, system: stretch.system, gauge: joined
             )
         }
+    }
+}
+
+extension GameWorld {
+    /// Decision 990: whether edges `a` and `b` of ordinary track have a
+    /// rail gauge in common, so that a crossover between them could carry
+    /// a train; `true` where either is a guideway's (decision 951's rule
+    /// decides there) or not on this world's track.
+    func sharesRailGauge(_ a: TrackEdgeID, _ b: TrackEdgeID) -> Bool {
+        guard let first = network.edge(a), let second = network.edge(b),
+              !first.system.isGuideway, !second.system.isGuideway else { return true }
+        return !first.gauge.rails.isDisjoint(with: second.gauge.rails)
     }
 }
