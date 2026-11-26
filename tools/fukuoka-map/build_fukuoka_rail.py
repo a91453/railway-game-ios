@@ -156,13 +156,19 @@ CHOICE = 40
 # tiles round one of `STARTS` (the middle of Fukuoka, Saga or Kumamoto
 # City; the first unless the player picks another); the games laid over the map before
 # stay on `OLDER`, which keeps their north-west corner and grows to the new
-# south and east edges (decision 969's rule).
-EXTENT = {"north": 34.03, "south": 32.09, "west": 129.73, "east": 131.33}
+# south and east edges (decision 969's rule). Decision 997
+# (NAGASAKI-PACK): the west edge moved again, from 129.73 to 129.34, to take
+# in Nagasaki Prefecture as its roads reach it (the mainland, and Hirado,
+# Ikitsuki and Saikai's islands over their bridges; Goto and Tsushima, out
+# at sea, left out), a fourth part and a fourth start; the games laid over
+# decision 991's map stay on it, the last of `OLDER`.
+EXTENT = {"north": 34.03, "south": 32.09, "west": 129.34, "east": 131.33}
 EARLIER = []
 STARTS = [
     {"name": "福岡", "english": "Fukuoka", "latitude": 33.62, "longitude": 130.385},
     {"name": "佐賀", "english": "Saga", "latitude": 33.264, "longitude": 130.30},
     {"name": "熊本", "english": "Kumamoto", "latitude": 32.80, "longitude": 130.71},
+    {"name": "長崎", "english": "Nagasaki", "latitude": 32.75, "longitude": 129.88},
 ]
 OLDER = [{
     "extent": {"north": 33.72, "south": 32.09, "west": 130.29, "east": 131.33},
@@ -170,6 +176,10 @@ OLDER = [{
         {"north": 33.72, "south": 33.52, "west": 130.29, "east": 130.48},
         {"north": 33.72, "south": 32.69, "west": 130.29, "east": 130.90},
     ],
+}, {
+    # Decision 991's three prefectures, laid round their middle, before
+    # decision 997 moved the west edge to take in Nagasaki Prefecture.
+    "extent": {"north": 34.03, "south": 32.09, "west": 129.73, "east": 131.33},
 }]
 SKIPPED_SERVICE = {"yard", "siding", "spur", "crossover"}
 

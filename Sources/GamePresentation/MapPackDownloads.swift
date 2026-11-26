@@ -403,13 +403,14 @@ extension OverseasMap {
     /// pack (`mappack-<folder>`): Japan's map is cut along the prefectures'
     /// borders, Fukuoka's own folder holding Fukuoka Prefecture's tiles
     /// and everything the map shares (its railways, heights, water and
-    /// people), Saga's and Kumamoto's theirs. A part's files are listed
+    /// people), Saga's, Kumamoto's and (decision 997) Nagasaki's theirs. A part's files are listed
     /// in the city's `pack.json` by their folder and name
     /// (`fukuoka-kumamoto/basemap.pmtiles`).
     public var partFolders: [String] {
         switch self {
         case .hongKong, .rovaniemi: []
-        case .fukuoka: ["fukuoka-saga", "fukuoka-kumamoto"]
+        // Decision 997: Nagasaki's, the fourth prefecture.
+        case .fukuoka: ["fukuoka-saga", "fukuoka-kumamoto", "fukuoka-nagasaki"]
         }
     }
 
