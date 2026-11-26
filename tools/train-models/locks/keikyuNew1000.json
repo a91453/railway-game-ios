@@ -4,15 +4,15 @@
   "lamps" : "9ac00b7aee9a5573",
   "models" : {
     "light-set-keikyuNew1000-car" : {
-      "hash" : "f05d4e0dcb235725",
+      "hash" : "b0e8068c5e62488d",
       "triangles" : 48
     },
     "light-set-keikyuNew1000-head" : {
-      "hash" : "65f9878ffba995d5",
+      "hash" : "26d24775e9216435",
       "triangles" : 40
     },
     "light-set-keikyuNew1000-tail" : {
-      "hash" : "9184430cbc245cd5",
+      "hash" : "4c2bbc4c4eccdf35",
       "triangles" : 40
     },
     "light-set-keikyuNew1000Far-car" : {
@@ -28,27 +28,27 @@
       "triangles" : 20
     },
     "set-keikyuNew1000-car" : {
-      "hash" : "9775b2ee5afc66e6",
+      "hash" : "4470d2fb0c3094cd",
       "triangles" : 1116
     },
     "set-keikyuNew1000-head" : {
-      "hash" : "7d183363212ab60c",
+      "hash" : "9ed70371205d51d4",
       "triangles" : 1330
     },
     "set-keikyuNew1000-tail" : {
-      "hash" : "cea469f206d5ebcf",
+      "hash" : "159c0b511c037859",
       "triangles" : 1330
     },
     "set-keikyuNew1000Far-car" : {
-      "hash" : "ab3a43565902e45d",
+      "hash" : "1eded9dffa49145",
       "triangles" : 532
     },
     "set-keikyuNew1000Far-head" : {
-      "hash" : "e3d0b008de6910b1",
+      "hash" : "c89cbf65b92f9e61",
       "triangles" : 634
     },
     "set-keikyuNew1000Far-tail" : {
-      "hash" : "2ede7dcf58d63dee",
+      "hash" : "c0831be17c96d7f6",
       "triangles" : 634
     }
   }
