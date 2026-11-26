@@ -104,7 +104,9 @@ jobs:
     needs: preflight
     if: github.ref == 'refs/heads/main'
     runs-on: xcode-27
-    timeout-minutes: 45
+    # Run 147's archive took 35 minutes and run 148's 41: at 45 the job was
+    # stopped while it uploaded the map packs. 90 leaves room for a slow runner.
+    timeout-minutes: 90
     environment: testflight
     permissions:
       contents: read
