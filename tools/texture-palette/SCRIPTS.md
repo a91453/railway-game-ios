@@ -10,6 +10,7 @@
 - `kyushu_800.py`：作者舊版的九州新幹線 800 系頭車與中間車（決策 978）
 - `kyushu_n700.py`：作者舊版的九州新幹線 N700 系頭車與中間車（決策 977）
 - `n700s.py`：作者舊版的 N700S 頭車、中間車、集電弓車（決策 979）
+- `n700st.py`：同一組 N700S 舊版三節 → 台灣高鐵 N700ST 塗裝（本地工作室，N700ST-PAINT）
 - `port_check.py`：舊版車轉好之後、送工作室審查之前的自動檢查（只用 numpy）
 - `thsr_700t.py`：作者舊版的 700 系 → 台灣高鐵 700T（決策 988）；`--train series700` 出原塗裝的 700 系（決策 989）
 - `to_swift.py`：把 `cut_faces.py` 切好的舊車 e752e7a2 寫成 `Map3DRedCommuterMesh.swift`（決策 956 起不再用，見 README）

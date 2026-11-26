@@ -109,7 +109,7 @@ final class Map3DPPIntegrationTests: XCTestCase {
             }
         }
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: locked.locked), "HSR")
-        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700s")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700st")
         XCTAssertNil(pack.models(forType: "pp-e500-display"))
     }
 

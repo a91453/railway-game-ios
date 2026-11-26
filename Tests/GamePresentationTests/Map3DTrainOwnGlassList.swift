@@ -41,6 +41,7 @@ enum Map3DTrainOwnGlassList {
         "set-keikyuNew1000", // Decision 986: the same cars at 18 m.
         "set-kyushuN700", // Decision 977: the Kyushu Shinkansen's N700 series.
         "set-n700s-", // Decision 979: the N700S.
+        "set-n700st-", // N700ST-PAINT: the N700S in the N700ST's paint.
         "set-highSpeed-", // Decision 988: the 700T, the owner's old 700 series.
         "set-series700-", // Decision 989: the 700 series in its own paint.
         "set-kyushu800", // Decision 978: the Kyushu Shinkansen's 800 series.
@@ -67,6 +68,7 @@ enum Map3DTrainOwnGlassList {
         { far in [Map3DRedCommuter.cab(far: far), Map3DRedCommuter.middle(far: far)] }, // Decision 956: the Keikyu New 1000.
         { far in far ? [] : Map3DKyushuN700.Unit.allCases.map { Map3DKyushuN700.model($0) } }, // Decision 977: near only.
         { far in far ? [] : Map3DN700S.Unit.allCases.map { Map3DN700S.model($0) } }, // Decision 979: near only.
+        { far in far ? [] : Map3DN700S.Unit.allCases.map { Map3DN700ST.model($0) } }, // N700ST-PAINT: near only.
         { far in far ? [] : Map3DKyushu800.Unit.allCases.map { Map3DKyushu800.model($0) } }, // Decision 978: near only.
         { far in far ? [] : Map3DN700SKamome.Unit.allCases.map { Map3DN700SKamome.model($0) } }, // Decision 998 (continued): near only.
     ]
@@ -83,6 +85,7 @@ enum Map3DTrainOwnGlassList {
         "keikyu-new1000",
         "kyushu-n700",
         "n700s-",
+        "n700st-",
         "kyushu-800",
     ]
 }

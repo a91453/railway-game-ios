@@ -149,7 +149,7 @@ final class Map3DC341IntegrationTests: XCTestCase {
             XCTAssertEqual(Map3DTrainSet.variant(of: key, number: 1), key, key)
         }
         XCTAssertEqual(Map3DTrainSet.variant(of: "emu800", number: 7), "emu500", "decision 432, decision 435's shares")
-        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700s", "decision 408 is as it was (decision 979: the N700S)")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700st", "decision 408 is as it was (N700ST-PAINT: the N700ST)")
         // TAP-FREEZE-151: the Taiwan High Speed Rail's own trains (the
         // 700T's key) are all 700Ts.
         XCTAssertEqual(Map3DTrainSet.variant(of: "highSpeed", number: 1), "highSpeed")

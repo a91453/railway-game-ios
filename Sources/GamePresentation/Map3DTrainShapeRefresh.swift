@@ -13,9 +13,10 @@ public enum Map3DTrainShapeRefresh {
     /// time) is the paint a player can choose instead.
     public static let highSpeedBandColor=Map3DPalette.highSpeedOrange
     public static let highSpeedGameBandColor=Map3DPalette.shopAwnings[0]
-    /// Decision 983: the paints a line's 700T sets can wear.
+    /// Decision 983: the paints a line's 700T sets can wear; N700ST-PAINT:
+    /// the N700ST's too, its orange line the same orange.
     static let highSpeedPaints=TrainPaintFamily(
-        id:"highSpeed",sets:[Map3DTHSR700T.key],english:"700T",chinese:"700T",
+        id:"highSpeed",sets:[Map3DTHSR700T.key,Map3DN700ST.key],english:"700T",chinese:"700T",
         ownEnglish:"Orange band",ownChinese:"橘色帶",ownSwatch:highSpeedBandColor,
         paints:[TrainPaint(id:"teal",english:"Teal band",chinese:"青綠帶",swatch:highSpeedGameBandColor,
                            swaps:[TrainPaint.Swap(from:highSpeedBandColor,to:highSpeedGameBandColor)])])

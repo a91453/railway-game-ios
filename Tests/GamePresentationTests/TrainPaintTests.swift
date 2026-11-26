@@ -236,10 +236,9 @@ final class TrainPaintTests: XCTestCase {
         XCTAssertEqual(menu.chosen.id, "")
         XCTAssertEqual(menu.rows[0].swatch, 0xEA6A1E)
         XCTAssertNotEqual(menu.rows[1].swatch, menu.rows[0].swatch)
-        // With the train pack open the odd-numbered sets are another model (decision 432):
-        // the menu is there while an even-numbered set, a 700T, is on the line.
-        let has700T = session.world.line(id: fast)?.assignedTrains.contains { $0.rawValue % 2 == 0 } == true
-        XCTAssertEqual(session.trainPaintMenus(on: fast, locked: []).map(\.id), has700T ? ["highSpeed"] : [])
+        // With the train pack open the odd-numbered sets are the N700ST (N700ST-PAINT),
+        // whose orange line the same menu paints: the menu is there whichever is on the line.
+        XCTAssertEqual(session.trainPaintMenus(on: fast, locked: []).map(\.id), ["highSpeed"])
 
         var told: [[LineID: [String: String]]] = []
         session.trainPaintChanged = { told.append($0) }
