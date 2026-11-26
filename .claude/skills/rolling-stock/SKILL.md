@@ -53,7 +53,7 @@ description: 3D 地圖裡的列車：配方放哪、近景與遠景、塗裝帶�
 ## 4. 引擎替配方做的事（細節在私有那份 §4）
 
 - 頂點 alpha 小於 1 的地方畫線的顏色（塗裝帶）。
-- 帶發光旗標的三角形夜裡從裡面亮（`Map3DVertex.glows`）；頭尾燈、客室窗由 `Map3DTrainLights` 每格決定（決策 449），窗只認標成 `trainGlass` 的面（`Map3DTrainMaterial.marksOwnGlass`），沒標面的舊車才照顏色猜。新車加進 `Map3DTrainOwnGlassTests.studioCars`。
+- 帶發光旗標的三角形夜裡從裡面亮（`Map3DVertex.glows`）；頭尾燈、客室窗由 `Map3DTrainLights` 每格決定（決策 449），窗只認標成 `trainGlass` 的面（`Map3DTrainMaterial.marksOwnGlass`），沒標面的舊車才照顏色猜。自己標玻璃的新車在 `Tests/GamePresentationTests/Map3DTrainOwnGlassList.swift`（一台車一行，`merge=union`）加自己的行：`prefixes` 一行、`studioCars` 一行，暗色從沒被當成玻璃的再加 `darkNeverGlass` 一行。
 - 遮蔽陰影（決策 439）、車窗反光與不鏽鋼光澤（決策 450）、方向幕（決策 436）、影子（決策 232）都由 pack 或場景加，配方不畫。不鏽鋼車要加進 `Map3DTrainMaterial.stainlessSets`。
 - 遊戲兩面都畫（`setCullMode(.none)`）：共面或相距不到 1 cm 的重疊面會閃爍。
 
