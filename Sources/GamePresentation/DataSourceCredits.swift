@@ -1017,8 +1017,8 @@ public enum DataSourceCredits {
                         id: "overtureBuildings",
                         title: language.text("Overture Maps buildings", "Overture Maps 建物"),
                         detail: language.text(
-                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, which sets what buying out the city’s buildings costs: a car park costs little, a dense block a lot. The buildings of 3D maps in Taiwan, Penghu, Kinmen and Matsu, and of the 3D city preview round Kaohsiung and Taichung Stations, are its too.",
-                            "台灣與澎湖實景地圖上真實建物佔地多少，決定收購城市建物的價錢：停車場便宜，密集的街區貴。台灣、澎湖、金門、馬祖實景 3D 地圖上的建物，以及 3D 城市預覽裡高雄車站、台中車站周圍的建物，也是它的。"
+                            "How much of the ground real buildings cover on real-world maps of Taiwan and Penghu, which sets what buying out the city’s buildings costs: a car park costs little, a dense block a lot. The buildings of 3D maps in Taiwan, Penghu, Kinmen and Matsu, and of the 3D city preview round Kaohsiung and Taichung Stations, are its too, but in Taichung City, where the city’s own building map draws them.",
+                            "台灣與澎湖實景地圖上真實建物佔地多少，決定收購城市建物的價錢：停車場便宜，密集的街區貴。台灣、澎湖、金門、馬祖實景 3D 地圖上的建物，以及 3D 城市預覽裡高雄車站、台中車站周圍的建物，也是它的（台中市改用臺中市建物圖）。"
                         ),
                         notice: language.text(
                             "Overture Maps Foundation (overturemaps.org), buildings, release 2026-09-23.1, under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file, the city tiles and the footprint tiles the game derives from them come with the app, and a complete machine-readable copy under the same licence is available by writing to \(mailbox.english).",
@@ -1273,12 +1273,14 @@ public enum DataSourceCredits {
                     // and Hsinchu City, found by their door-number points,
                     // Tainan's, found by its parcels' centres, and elsewhere
                     // the real-price registry's storeys at its door numbers.
+                    // Decision 1015: in Taichung the outlines are the
+                    // building map's too, and Overture's fill only the gaps.
                     DataSourceCredit(
                         id: "buildingStoreys",
                         title: language.text("Building storeys", "建物樓層"),
                         detail: language.text(
-                            "How many storeys the real buildings of 3D maps in Taiwan have, from Taichung’s building map, Taipei’s building permit map the usage permits of New Taipei, Taipei, Tainan and Hsinchu City and the real-price registry of home sales, and elsewhere how tall the buildings round them are.",
-                            "台灣實景 3D 地圖上真實建物的樓層，取自臺中市建物圖、臺北市建築執照套繪圖、新北市、臺北市、臺南市、新竹市的使用執照與內政部實價登錄，其他地方參考周圍建物的高度。"
+                            "How many storeys the real buildings of 3D maps in Taiwan have, from Taichung’s building map, Taipei’s building permit map the usage permits of New Taipei, Taipei, Tainan and Hsinchu City and the real-price registry of home sales, and elsewhere how tall the buildings round them are. In Taichung the buildings’ outlines are the building map’s too.",
+                            "台灣實景 3D 地圖上真實建物的樓層，取自臺中市建物圖、臺北市建築執照套繪圖、新北市、臺北市、臺南市、新竹市的使用執照與內政部實價登錄，其他地方參考周圍建物的高度。台中市的建物輪廓也取自臺中市建物圖。"
                         ),
                         notice: language.text(
                             "Taichung City Government, Taichung building map (2022, 2024 and 2025); Taipei City Government, Taipei building permit map and Taipei usage permit summaries; New Taipei City Government, New Taipei building permits; Tainan City Government, Tainan usage permits and parcel centres; Hsinchu City Government, Hsinchu City usage permits; Ministry of the Interior, Department of Land Administration, real-price registry of real estate transactions; and the door-number points of Taiwan’s cities and counties by their governments, through OpenAddresses and Overture Maps; used under the Open Government Data License, version 1.0. European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A, average building height, doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE, under CC BY 4.0.",

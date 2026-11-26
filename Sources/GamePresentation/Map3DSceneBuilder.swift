@@ -125,6 +125,10 @@ extension Map3DScene {
         /// each by its own size: the real buildings and the lots, not the
         /// landmarks, stations and temples.
         var sizesFar = false
+        /// Decision 1015: the size the next part of the simplified city
+        /// counts as instead of how far it reaches (a building's walls, by
+        /// how far the view from afar leans them); `nil` for its reach.
+        var farSizing: Float?
         /// Decision 709: the parts of each chunk's ground, simplified city
         /// and shadows that are left out from afar.
         var baseParts: [ChunkKey: [Map3DFarDetail.Part]] = [:]
@@ -469,9 +473,9 @@ extension Map3DScene {
                     let first = mesh.indices.count, firstVertex = mesh.vertices.count, firstBox = mesh.boxes.count
                     build(&mesh)
                     guard mesh.indices.count > first || mesh.boxes.count > firstBox else { return }
+                    let size = farSizing ?? mesh.extent(fromVertex: firstVertex, fromBox: firstBox, heightShare: Map3DFarDetail.heightSeen)
                     part = Map3DFarDetail.Part(first: first, count: mesh.indices.count - first, firstBox: firstBox, boxCount: mesh.boxes.count - firstBox,
-                                               rank: Map3DFarDetail.rank(size: mesh.extent(fromVertex: firstVertex, fromBox: firstBox,
-                                                                                                    heightShare: Map3DFarDetail.heightSeen)))
+                                               rank: Map3DFarDetail.rank(size: size))
                 }
                 sized(&farMeshes[key, default: Map3DMesh()])
                 if let part { farParts[key, default: []].append(part) }

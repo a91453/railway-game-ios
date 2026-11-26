@@ -159,6 +159,20 @@ final class Map3DFarViewTests: XCTestCase {
         XCTAssertGreaterThan(ground * 10, scene.chunks.count * 9, "\(ground) of \(scene.chunks.count) chunks")
     }
 
+    /// Taichung's whole city map (decision 1015) lays about five times
+    /// the buildings Overture had there; its farthest views stay within
+    /// the same budget as Taipei's.
+    func testTheFarthestViewOfTaichungIsWithinBudget() throws {
+        let source = try Source()
+        let scene = Self.farthest(source, latitude: 24.1372, longitude: 120.6869).scene
+        // And the farthest each of its two busiest levels is drawn from:
+        // the same buildings, more of the city seen.
+        for distance in Self.distances + [4_450, 5_500] {
+            let frame = Self.frame(scene, distance: distance)
+            XCTAssertLessThanOrEqual(frame.triangles, Map3DFarDetail.budget, "from \(Int(distance)) m: \(frame.chunks) chunks")
+        }
+    }
+
     /// The classes and levels: 1.41 times the size a class, nothing left
     /// out up to where chunks are drawn in full, more the farther.
     func testLevelsRiseWithTheDistance() {
