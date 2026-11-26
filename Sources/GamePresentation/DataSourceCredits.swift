@@ -1211,23 +1211,28 @@ public enum DataSourceCredits {
                         ]
                     ),
                     // Decision 389: the storeys of the footprints' buildings
-                    // in the 3D map, from two city maps and GHSL's heights.
+                    // in the 3D map, from two city maps and GHSL's heights;
+                    // decision 1011: New Taipei's and Taipei's usage permits,
+                    // found by the two cities' door-number points.
                     DataSourceCredit(
                         id: "buildingStoreys",
                         title: language.text("Building storeys", "建物樓層"),
                         detail: language.text(
-                            "How many storeys the real buildings of 3D maps in Taiwan have, from Taichung’s building map and Taipei’s building permit map, and elsewhere how tall the buildings round them are.",
-                            "台灣實景 3D 地圖上真實建物的樓層，取自臺中市建物圖與臺北市建築執照套繪圖，其他地方參考周圍建物的高度。"
+                            "How many storeys the real buildings of 3D maps in Taiwan have, from Taichung’s building map, Taipei’s building permit map and the usage permits of New Taipei and Taipei, and elsewhere how tall the buildings round them are.",
+                            "台灣實景 3D 地圖上真實建物的樓層，取自臺中市建物圖、臺北市建築執照套繪圖與新北市、臺北市的使用執照，其他地方參考周圍建物的高度。"
                         ),
                         notice: language.text(
-                            "Taichung City Government, Taichung building map (2022, 2024 and 2025), and Taipei City Government, Taipei building permit map, used under the Open Government Data License, version 1.0. European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A, average building height, doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE, under CC BY 4.0.",
-                            "臺中市政府「臺中市建物圖」（111、113、114 年）與臺北市政府「臺北市建築執照套繪圖」，依政府資料開放授權條款第 1 版使用。European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A（平均建物高度），doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE，依 CC BY 4.0 使用。"
+                            "Taichung City Government, Taichung building map (2022, 2024 and 2025); Taipei City Government, Taipei building permit map and Taipei usage permit summaries; New Taipei City Government, New Taipei building permits; and the door-number points of both cities by the New Taipei City Government and the Taipei City Government, through OpenAddresses and Overture Maps; used under the Open Government Data License, version 1.0. European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A, average building height, doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE, under CC BY 4.0.",
+                            "臺中市政府「臺中市建物圖」（111、113、114 年）；臺北市政府「臺北市建築執照套繪圖」「臺北市歷年使用執照摘要」；新北市政府「新北市建築執照存查」；新北市政府與臺北市政府的門牌坐標（經 OpenAddresses、Overture Maps 取得）；依政府資料開放授權條款第 1 版使用。European Commission, Joint Research Centre (2023): GHS-BUILT-H R2023A（平均建物高度），doi:10.2905/85005901-3A49-48DD-9D19-6261354F56FE，依 CC BY 4.0 使用。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Taichung building map (2022)", "臺中市建物圖（111 年）"), url: "https://data.gov.tw/dataset/162900"),
                             DataSourceCredit.Link(title: language.text("Taichung building map (2024)", "臺中市建物圖（113 年）"), url: "https://data.gov.tw/dataset/152106"),
                             DataSourceCredit.Link(title: language.text("Taichung building map (2025)", "臺中市建物圖（114 年）"), url: "https://data.gov.tw/dataset/158889"),
                             DataSourceCredit.Link(title: language.text("Taipei building permit map", "臺北市建築執照套繪圖"), url: "https://data.gov.tw/dataset/151936"),
+                            DataSourceCredit.Link(title: language.text("Taipei usage permit summaries", "臺北市歷年使用執照摘要"), url: "https://data.gov.tw/dataset/128203"),
+                            DataSourceCredit.Link(title: language.text("New Taipei building permits", "新北市建築執照存查"), url: "https://data.gov.tw/dataset/123639"),
+                            DataSourceCredit.Link(title: "OpenAddresses", url: "https://openaddresses.io"),
                             openGovernmentLicense(in: language),
                             DataSourceCredit.Link(title: "GHS-BUILT-H", url: "https://doi.org/10.2905/85005901-3A49-48DD-9D19-6261354F56FE"),
                             DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),

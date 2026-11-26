@@ -249,4 +249,19 @@ final class Map3DFootprintsTests: XCTestCase {
         let middle = (x: outline.reduce(0) { $0 + $1.x } / Double(outline.count), y: outline.reduce(0) { $0 + $1.y } / Double(outline.count))
         XCTAssertLessThan(hypot(middle.x - frame.middleX, middle.y - frame.middleY) / m, 60)
     }
+
+    /// Decision 1011: Linkou's new towers take New Taipei's usage permits'
+    /// storeys (they were guessed at eleven at most).
+    func testLinkouTowersHaveTheirPermitsStoreys() throws {
+        let file = Map3DFrameCostReportTests.baseMap.appendingPathComponent("taiwan_buildings.pmtiles")
+        let tiles = try FootprintTiles(data: Data(contentsOf: file, options: .alwaysMapped))
+        let world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 25.0720, longitudeDegrees: 121.3720)!)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let m = Double(WorldCoordinate.unitsPerMetre)
+        let region = WorldRegion(minX: frame.middleX - 150 * m, minY: frame.middleY - 150 * m,
+                                 maxX: frame.middleX + 150 * m, maxY: frame.middleY + 150 * m)
+        let permitted = Map3DFootprints(tiles: tiles, frame: frame, region: region).buildings.filter { $0.storeysFrom == .permits }
+        XCTAssertGreaterThanOrEqual(permitted.count, 5)
+        XCTAssertGreaterThanOrEqual(permitted.map(\.storeys).max() ?? 0, 18)
+    }
 }

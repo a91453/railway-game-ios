@@ -73,6 +73,10 @@ PMTiles v3，只有 zoom 16，圖塊型別 0（未知），每塊 gzip。解開�
 
 Overture Maps 的建物整體是 ODbL 1.0；台灣的足跡各自來自 OpenStreetMap（ODbL 1.0，「© OpenStreetMap contributors」）與 Shi 等人的 East Asian buildings（doi:10.5281/zenodo.8174931，CC BY 4.0）。每個檔的 metadata 寫了這段署名。App 的署名在 `DataSourceCredits` 的 `overtureBuildings`（決策 389）；官網 credits.html 還沒加（`docs/HANDOFF.md` §4.8）。
 
+## 使用執照的樓層（決策 1011）
+
+`usage_permits.py` 把新北市建築執照存查（data.gov.tw 123639）與臺北市歷年使用執照摘要（128203）的地上層數，用兩市的門牌坐標（OpenAddresses 收錄、Overture Maps addresses 轉載）對到內建檔的輪廓，改那幾棟的樓層（來源 `permits`），其他位元組不動。指令在它的開頭；`footprints/2`、`/3` 都讀。結果在 `usage_permits.json`。從 `main` 的檔跑，不要對已經跑過的檔再跑。
+
 換樓高來源（國土測繪中心、其他縣市的建物圖、新一年的臺中圖）只要改 `storeys` 的來源順序、重跑 `storeys` 與 `build`，格式與 App 都不用改；樓層來源 3 位元還有 3 個空位。
 
 `footprints/1`（決策 386 第一版，樓層 << 5）App 不讀，`decode_tile` 也只收 2。
