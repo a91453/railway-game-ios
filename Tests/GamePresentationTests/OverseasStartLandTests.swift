@@ -208,6 +208,56 @@ final class OverseasStartLandTests: XCTestCase {
         XCTAssertNil(launcher.session?.world.mapExpansion)
     }
 
+    // MARK: - Decision 999: which city a game on Japan's map begins round
+
+    /// Japan's map, once open, has a row for each place its pack names to
+    /// begin round, the first keeping the city's row's identifier; each
+    /// starts a game owning the four tiles round its place. Closed, it is
+    /// one row; a map with one place to begin (Hong Kong) has one row.
+    func testJapansGamesBeginRoundTheCityPicked() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("OverseasStartLand-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = GameLauncher(library: SaveLibrary(directory: directory), language: .traditionalChinese)
+        await launcher.loadRealWorldData {
+            RealWorldData.load(overseas: [.hongKong, .fukuoka], pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
+        }.value
+        launcher.rememberAirRoutes([AirMap.taiwan.id])
+        let closed = try XCTUnwrap(launcher.overseasMapRows(in: .traditionalChinese).first { $0.city == .fukuoka })
+        XCTAssertNotNil(closed.closed, "Japan waits for its flights")
+        XCTAssertEqual(launcher.overseasStartRows(for: closed, in: .traditionalChinese).map(\.name), ["日本"])
+
+        launcher.rememberAirRoutes([OverseasMap.fukuoka.rawValue])
+        let rows = launcher.overseasMapRows(in: .traditionalChinese)
+        let japan = try XCTUnwrap(rows.first { $0.city == .fukuoka })
+        XCTAssertNil(japan.closed)
+        let starts = launcher.overseasStartRows(for: japan, in: .traditionalChinese)
+        XCTAssertEqual(starts.map(\.name), ["日本：從福岡開始", "日本：從佐賀開始", "日本：從熊本開始"])
+        XCTAssertEqual(starts.map(\.id), ["realWorld.overseas.fukuoka", "realWorld.overseas.fukuoka.start.1", "realWorld.overseas.fukuoka.start.2"])
+        XCTAssertEqual(starts.map(\.start), [0, 1, 2])
+        XCTAssertEqual(starts[0].summary, OverseasMap.fukuoka.mapSummary(in: .traditionalChinese))
+        XCTAssertEqual(starts[2].summary, "一開始是熊本一帶約 33 × 33 公里，地圖其餘部分用買的。")
+        XCTAssertEqual(
+            launcher.overseasStartRows(for: japan, in: .english).map(\.name),
+            ["Japan: start in Fukuoka", "Japan: start in Saga", "Japan: start in Kumamoto"]
+        )
+        XCTAssertEqual(OverseasMap.fukuoka.wholeMapName(in: .traditionalChinese), "日本（整張全開）")
+        let hongKong = try XCTUnwrap(rows.first { $0.city == .hongKong })
+        XCTAssertEqual(launcher.overseasStartRows(for: hongKong, in: .traditionalChinese).map(\.id), ["realWorld.overseas.hongKong"])
+
+        let ground = Self.fukuoka
+        for row in starts {
+            XCTAssertTrue(launcher.startOverseasMap(.fukuoka, start: row.start), launcher.message?.text ?? "")
+            let world = try XCTUnwrap(launcher.session?.world)
+            XCTAssertEqual(world.mapExpansion?.owned, ground.layout.startTiles(at: row.start), row.name)
+            XCTAssertFalse(world.wholeMapOpen, row.name)
+        }
+        XCTAssertNotEqual(ground.layout.startTiles(at: 0), ground.layout.startTiles(at: 2), "Kumamoto is not Fukuoka")
+        // The whole map is the whole map wherever it was asked from.
+        XCTAssertTrue(launcher.startOverseasMap(.fukuoka, wholeMap: true, start: 2), launcher.message?.text ?? "")
+        XCTAssertNil(launcher.session?.world.mapExpansion)
+        XCTAssertEqual(launcher.session?.world.wholeMapOpen, true)
+    }
+
     /// A map opened whole counts no achievements, and their list says so;
     /// the same network on a map bought tile by tile counts them.
     func testAWholeMapCountsNoAchievements() throws {

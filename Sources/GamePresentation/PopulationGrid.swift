@@ -240,8 +240,34 @@ public struct PopulationCell: Equatable, Hashable, Sendable {
 }
 
 /// People per cell of WorldPop's grid of Taiwan.
+///
+/// Decision 1000 (JAPAN-CENSUS-GRID): a map pack's grid may also hold the
+/// jobs of each cell, in the four kinds ``LandImport`` lays out (offices,
+/// shops, schools and public offices, sights and leisure), counted by the
+/// country's own census of workplaces on the same cells. A map whose grid
+/// has them takes its jobs from them, not from ``PlaceGrid``'s places.
 public struct PopulationGrid: Sendable {
+    /// The kinds of job a grid may hold (decision 1000), as ``LandImport``
+    /// lays them out.
+    public enum JobKind: String, CaseIterable, Sendable {
+        case office, shop, civic, leisure
+    }
+
     let people: GridCounts
+
+    /// Decision 1000: the jobs of each kind on the people's own cells;
+    /// empty for a grid without them (Taiwan's, WorldPop's).
+    let jobs: [JobKind: GridCounts]
+
+    /// Every job in the grid, of every kind; 0 for a grid without them.
+    public var totalJobs: Int {
+        jobs.values.reduce(0) { $0 + $1.total }
+    }
+
+    /// Whether the grid holds its own jobs (decision 1000).
+    public var hasJobs: Bool {
+        !jobs.isEmpty
+    }
 
     /// Everyone in the grid.
     public var total: Int {
@@ -249,17 +275,34 @@ public struct PopulationGrid: Sendable {
     }
 
     /// Reads the app's grid file: its north-west corner, cell size in
-    /// degrees, and runs of people per cell along a row. Throws for a file
-    /// out of shape or a negative count.
+    /// degrees, and runs of people per cell along a row, and, when it has
+    /// them (decision 1000), `jobs`: runs of jobs per cell for each
+    /// ``JobKind`` it names. Throws for a file out of shape, a negative
+    /// count or a kind of job it does not know.
     public init(data: Data) throws {
         struct File: Decodable {
             let north: Double
             let west: Double
             let cellDegrees: Double
             let runs: [GridCounts.Run]
+            let jobs: [String: [GridCounts.Run]]?
         }
         let file = try JSONDecoder().decode(File.self, from: data)
         people = try GridCounts(north: file.north, west: file.west, cellDegrees: file.cellDegrees, runs: file.runs)
+        var jobs: [JobKind: GridCounts] = [:]
+        for (name, runs) in file.jobs ?? [:] {
+            guard let kind = JobKind(rawValue: name) else {
+                throw DecodingError.dataCorrupted(.init(codingPath: [], debugDescription: "No kind of job is called \(name)."))
+            }
+            jobs[kind] = try GridCounts(north: file.north, west: file.west, cellDegrees: file.cellDegrees, runs: runs)
+        }
+        self.jobs = jobs
+    }
+
+    /// Decision 1000: the jobs of `kind` in `cell`; 0 for a grid without
+    /// them.
+    func jobs(of kind: JobKind, in cell: GridCounts.Cell) -> Int {
+        jobs[kind]?.counts[cell] ?? 0
     }
 
     /// How far around a place the grid must have someone living for the
