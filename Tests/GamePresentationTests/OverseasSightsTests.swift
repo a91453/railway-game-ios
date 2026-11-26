@@ -19,7 +19,7 @@ final class OverseasSightsTests: XCTestCase {
     /// Each country's table: Taiwan's first, then Hong Kong's, Finland's
     /// and Japan's; every id and name once across them all.
     func testEachCountryHasATableOfItsOwn() {
-        XCTAssertEqual(AttractionCatalog.byCountry.map(\.count), [217, 21, 10, 67])
+        XCTAssertEqual(AttractionCatalog.byCountry.map(\.count), [217, 21, 10, 88])
         XCTAssertEqual(AttractionCatalog.allSpots.map(\.id), AttractionCatalog.byCountry.flatMap { $0 }.map(\.id))
         XCTAssertEqual(Set(AttractionCatalog.allSpots.map(\.id)).count, AttractionCatalog.allSpots.count)
         XCTAssertEqual(Set(AttractionCatalog.allSpots.map(\.name)).count, AttractionCatalog.allSpots.count)
@@ -47,6 +47,7 @@ final class OverseasSightsTests: XCTestCase {
             if city == .fukuoka {
                 XCTAssertTrue(Set(spots.prefix(13).map(\.englishName)).isSubset(of: Set(names)), "Fukuoka city's thirteen are all on the map")
                 XCTAssertTrue(inside.contains("Kumamoto Castle"), "the map reaches Kumamoto")
+                XCTAssertTrue(inside.contains("Hirado Castle"), "decision 997: the map reaches Hirado")
             } else {
                 XCTAssertEqual(names, spots.map(\.englishName), "\(city)")
             }
@@ -76,12 +77,13 @@ final class OverseasSightsTests: XCTestCase {
     }
 
     /// Decision 994: every Japanese sight lies in Fukuoka, Saga or
-    /// Kumamoto prefecture (their box: 32.0–34.3 N, 129.7–131.4 E), and a
+    /// Kumamoto prefecture, decision 997: or Nagasaki (their box:
+    /// 32.0–34.3 N, 129.3–131.4 E), and a
     /// Fukuoka game saved before them gets those inside its map after its
     /// own, keeping its own numbers.
     func testJapansSightsCoverTheThreePrefecturesAndReachOlderSaves() throws {
         for spot in AttractionCatalog.japanSpots {
-            XCTAssertTrue((32.0...34.3).contains(spot.latitude) && (129.7...131.4).contains(spot.longitude), spot.name)
+            XCTAssertTrue((32.0...34.3).contains(spot.latitude) && (129.3...131.4).contains(spot.longitude), spot.name)
         }
         var world = AttractionCatalog.withSights(GameWorld.newOverseasGame(try ground(.fukuoka)))
         let all = try XCTUnwrap(world.tourism?.attractions)

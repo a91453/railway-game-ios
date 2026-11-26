@@ -50,10 +50,10 @@ final class FukuokaGroundTests: XCTestCase {
         XCTAssertFalse(water.isWater(latitude: 33.5300, longitude: 130.4700), "the south-east corner, inland")
     }
 
-    /// The people, WorldPop's: some 9.1 million on the map of Fukuoka,
-    /// Saga and Kumamoto Prefectures and the corners of their neighbours
-    /// (decision 991), some 1.7 million of them on the map as it was
-    /// first, Fukuoka's 17.6 by 22.2 km.
+    /// The people, WorldPop's: some 9.4 million on the map of Fukuoka,
+    /// Saga, Kumamoto and Nagasaki Prefectures and the corners of their
+    /// neighbours (decisions 991 and 997), some 1.7 million of them on the
+    /// map as it was first, Fukuoka's 17.6 by 22.2 km.
     func testThePeople() throws {
         let population = try XCTUnwrap(try FukuokaRailwaysTests.ground().population)
         XCTAssertTrue((8_500_000...9_800_000).contains(population.total), "\(population.total)")
@@ -80,6 +80,23 @@ final class FukuokaGroundTests: XCTestCase {
         }
         XCTAssertTrue(water.isWater(latitude: 32.9000, longitude: 130.3500), "the Ariake Sea")
         XCTAssertEqual(heights.height(latitude: 32.9000, longitude: 130.3500), 0, "the Ariake Sea")
+    }
+
+    /// Decision 997: the ground reaches Nagasaki Prefecture, west to
+    /// Hirado. Inasayama (333 m) stands over Nagasaki's harbour, the towns
+    /// by the stations are low and dry, and Omura Bay is sea.
+    func testTheGroundReachesNagasaki() throws {
+        let (heights, water) = try ground()
+        XCTAssertEqual(top(heights, 32.7539, 129.8492), 333, accuracy: 25, "Inasayama")
+        for (name, latitude, longitude, range) in [
+            ("Nagasaki Station", 32.7523, 129.8695, 0.0...30.0), ("Sasebo Station", 33.1660, 129.7240, 0...30),
+            ("Isahaya Station", 32.8518, 130.0415, 0...30), ("Hirado's harbour town", 33.3687, 129.5537, 0...40),
+        ] {
+            XCTAssertFalse(water.isWater(latitude: latitude, longitude: longitude), name)
+            XCTAssertTrue(range.contains(heights.height(latitude: latitude, longitude: longitude)), "\(name): \(heights.height(latitude: latitude, longitude: longitude))")
+        }
+        XCTAssertTrue(water.isWater(latitude: 32.9500, longitude: 129.8500), "Omura Bay")
+        XCTAssertEqual(heights.height(latitude: 32.9500, longitude: 129.8500), 0, "Omura Bay")
     }
 
     /// The ground across the edges the map had (33.52°N and 130.48°E) has

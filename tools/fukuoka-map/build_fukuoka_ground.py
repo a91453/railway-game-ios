@@ -66,7 +66,7 @@ POPULATION_SHA256 = '0e6e4155c86d5e87f61a837ad3bd90f993dd19b7a34c475f7a05cb36d63
 POPULATION_URL = ('https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/JPN/v1/1km_ua/constrained/'
                   'jpn_pop_2025_CN_1km_R2025A_UA_v1.tif')
 # The extract's box (west, south, east, north), as cut with osmium.
-BOX = (129.69, 32.05, 131.37, 34.07)
+BOX = (129.30, 32.05, 131.37, 34.07)
 SEA_MARGIN = 0.05
 GSI_CREDIT = '国土地理院の標高タイルを加工して作成'
 GSI_TERMS = '国土地理院コンテンツ利用規約 (https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html), compatible with CC BY 4.0'
