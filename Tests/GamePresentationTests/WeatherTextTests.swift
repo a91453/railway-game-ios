@@ -77,6 +77,29 @@ final class WeatherTextTests: XCTestCase {
         }
     }
 
+    /// Decision 1004: on a map of Taiwan the panel says the station's own
+    /// weather, and its forecast is the station's.
+    func testOnARealMapThePanelSaysTheWeatherThere() throws {
+        let north = GeoAnchor(latitude: 251_333_000, longitude: 1_217_405_000)!, south = GeoAnchor(latitude: 226_273_000, longitude: 1_203_014_000)!
+        func world(_ anchor: GeoAnchor, day: Int64) throws -> GameWorld {
+            var world = try self.world(seed: 7, day: day)
+            world.setGeoAnchor(anchor)
+            return world
+        }
+        let (keelungAtFirst, kaohsiungAtFirst) = (try world(north, day: 0), try world(south, day: 0))
+        let point = keelungAtFirst.station(id: Self.alpha)!.point
+        let day = try XCTUnwrap((Int64(360)...1_800).first {
+            keelungAtFirst.holiday(onDay: $0) == nil && keelungAtFirst.weather(onDay: $0, at: point) == .rain
+                && kaohsiungAtFirst.weather(onDay: $0, at: point) == .clear
+        })
+        let keelung = try world(north, day: day), kaohsiung = try world(south, day: day)
+        XCTAssertTrue(keelung.weatherTexts(at: Self.alpha, in: .traditionalChinese).contains("今天這裡下雨：這站需求 −10%"))
+        XCTAssertTrue(keelung.weatherTexts(at: Self.alpha, in: .english).contains("Rain here today: −10% demand"))
+        XCTAssertFalse(kaohsiung.weatherTexts(at: Self.alpha, in: .english).contains { $0.contains("Rain") })
+        XCTAssertEqual(keelung.forecast(days: 1, at: point).first?.weather, .rain)
+        XCTAssertEqual(kaohsiung.forecast(days: 1, at: point).first?.weather, .clear)
+    }
+
     func testTheStationMasterWarnsOfATyphoonFirst() throws {
         let (seed, typhoon) = try typhoonOverAlpha()
         let coming = try XCTUnwrap(StationMasterAdvice(world: try world(seed: seed, day: typhoon.announced)))

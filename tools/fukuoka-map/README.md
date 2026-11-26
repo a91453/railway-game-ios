@@ -11,7 +11,7 @@
 | 檔案 | 從哪裡來 | 授權 |
 |---|---|---|
 | `N02-25_Station.geojson` | 国土数値情報 鉄道データ N02 2025 年版，`https://nlftp.mlit.go.jp/ksj/gml/data/N02/N02-25/N02-25_GML.zip`（14.2 MB，取 `UTF-8/N02-25_Station.geojson`） | CC BY 4.0；署名「『国土数値情報（鉄道データ）』（国土交通省）を加工して作成」 |
-| `jpn_pop_2025_CN_1km_R2025A_UA_v1.tif` | WorldPop 日本 2025，constrained，1 km | CC BY 4.0，WorldPop |
+| e-Stat 統計 GIS 的 500 m 網格（決策 1000） | 令和 2 年國勢調查（住的人，`T001141`）與令和 3 年經濟普查‐活動調查（上班的人，`T001162`），地圖碰到的每個 1 次網格一個 zip（四縣 12 格、約 3.5 MB），`tools/census-grid/japan_census_grid.py fetch` 下載，讀了什麼寫在 `tools/census-grid/japan_sources.json` | 政府統計の総合窓口（e-Stat）利用規約（政府標準利用規約 2.0，與 CC BY 4.0 相容）；署名「『令和2年国勢調査』『令和3年経済センサス‐活動調査』（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成」 |
 | 國土地理院標高圖磚 | `https://cyberjapandata.gsi.go.jp/xyz/dem5a_png/15/…`（沒有就 dem5b、dem5c），另抓 `dem_png/14/…`（DEM10B） 補 5 m 沒有值的點；`fetch_gsi_dem.py` 一次六片地抓（三縣是 5 m 31,672 片、10 m 8,100 片；決策 997 的四縣是 5 m 39,376 片、10 m 10,044 片，約 2 小時，兩個程序從兩頭抓約 1 小時；中斷了再跑會接著抓） | 国土地理院コンテンツ利用規約（與 CC BY 4.0 相容），署名「国土地理院の標高タイルを加工して作成」 |
 | `kyushu.pbf`、`chugoku.pbf` | OpenStreetMap 九州與中國地方，`https://osmtoday.com/asia/japan/kyushu.pbf`（約 354 MB，會轉到 geo2day.com）與 `chugoku.pbf`（約 265 MB）。九州的用 `osmium extract` 切成 `fukuoka.pbf`（約 30 MB，鐵道用）；兩包 `osmium merge` 後切成 `four.pbf`（約 233 MB，地面用，決策 991：北邊到關門海峽對岸的下關；決策 997：西邊到平戶） | ODbL 1.0，© OpenStreetMap 貢獻者 |
 
@@ -43,11 +43,13 @@ python3 -I tools/fukuoka-map/build_fukuoka_rail.py /tmp/fk/n02/N02-25_GML/UTF-8/
 # 2. 排班（`tools/real-timetables/extract_metro_runs.py`，和香港同一套）。
 python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/MapPacks/fukuoka
 
-# 3. 人口、底圖、機場、不蓋區、高度與水域（FUKUOKA-GROUND）。
-mkdir -p /tmp/fk/pop /tmp/fk/gsi
-curl -L -o /tmp/fk/pop/jpn.tif https://data.worldpop.org/GIS/Population/Global_2015_2030/R2025A/2025/JPN/v1/1km_ua/constrained/jpn_pop_2025_CN_1km_R2025A_UA_v1.tif
-pip install tifffile imagecodecs numpy
-python3 -I tools/fukuoka-map/build_fukuoka_ground.py population /tmp/fk/pop/jpn.tif RailwayGameApp/Resources/MapPacks/fukuoka
+# 3. 人口與上班人數（決策 1000，國勢調查＋經濟普查 500 m，tools/census-grid/README.md）、底圖、機場、不蓋區、
+#    高度與水域（FUKUOKA-GROUND）。高度格的角落寫死在 build_fukuoka_ground.py 的 GRID_CORNER（以前的
+#    WorldPop 30″ 格網），不跟著人口的 7.5″ 格走。
+mkdir -p /tmp/fk/estat /tmp/fk/gsi
+python3 -I tools/census-grid/japan_census_grid.py fetch RailwayGameApp/Resources/MapPacks/fukuoka /tmp/fk/estat
+python3 -I tools/census-grid/japan_census_grid.py build /tmp/fk/estat RailwayGameApp/Resources/MapPacks/fukuoka
+pip install imagecodecs numpy
 python3 -I tools/fukuoka-map/build_fukuoka_ground.py basemap /tmp/fk/osm/four.pbf RailwayGameApp/Resources/MapPacks/fukuoka
 # 建物（決策 1001）：先抓 Overture 的機器畫建物與 PLATEAU 的官方建物，再疊上 OSM。
 pip install duckdb   # MIT，只有讀 Overture 用
@@ -87,7 +89,7 @@ swift test --skip-build --filter FukuokaRailwaysTests
 | | 福岡（以前） | 到熊本 |
 |---|--:|--:|
 | 範圍 | 17.6 × 22.2 km | 56.5 × 114.1 km（地圖塊 4 × 7） |
-| 人口（WorldPop） | 約 170 萬 | 484 萬 |
+| 人口（WorldPop，當時） | 約 170 萬 | 484 萬 |
 | 高度格（1.875″） | 400 × 384 | 2000 × 1200 |
 | 建物 | 28.5 萬棟 | 107.9 萬棟 |
 | `basemap.pmtiles` | 3.1 MB | 23.7 MB |

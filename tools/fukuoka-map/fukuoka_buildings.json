@@ -68,12 +68,12 @@
  "storeys": {
   "median": 2,
   "tallest": 48,
-  "of1": 1218177,
-  "of2": 2104840,
-  "of3to5": 240517,
-  "of6andMore": 30657
+  "of1": 1224299,
+  "of2": 2094833,
+  "of3to5": 243085,
+  "of6andMore": 31974
  },
  "rawBytes": 58569918,
- "archiveBytes": 47541937,
- "sha256": "93f62d0257f41a57462ab7e464e0a51c1d746415ca25770b353b826419efb76c"
+ "archiveBytes": 47537625,
+ "sha256": "c0931ea76e0841b0f8a64b35634e255eaea85751c49d169ed1847c93dc5304a4"
 }

@@ -232,6 +232,11 @@ def build(folder, pack, compare=None):
         'jobs': by_kind,
     }
     out = os.path.join(pack, 'population.json') if os.path.isdir(pack) else pack
+    # Read the file to compare with first: it may be the one written here.
+    old = None
+    if compare:
+        with open(compare, encoding='utf-8') as f:
+            old = json.load(f)
     with open(out, 'w', encoding='utf-8') as f:
         json.dump(value, f, ensure_ascii=False, separators=(',', ':'))
         f.write('\n')
@@ -245,9 +250,7 @@ def build(folder, pack, compare=None):
     jobs_total = sum(total(v) for v in by_kind.values())
     print(f'{out}: {rows} x {columns} cells of 7.5", {total(people):,} residents, {jobs_total:,} jobs '
           f'({", ".join(f"{k} {total(v):,}" for k, v in by_kind.items())}), {os.path.getsize(out):,} bytes')
-    if compare:
-        with open(compare, encoding='utf-8') as f:
-            old = json.load(f)
+    if old:
         print(f'{compare}: {total(old["runs"]):,} residents on {old["cellDegrees"] * 3600:.1f}" cells')
 
 
