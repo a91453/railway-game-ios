@@ -48,4 +48,19 @@ final class ProblemReportTests: XCTestCase {
         let free = GameSession(world: try makeWorld())
         XCTAssertTrue(free.problemReportGame.hasPrefix("blank map · free · "))
     }
+
+    /// REVIEW-L37 (0.7.0, the first App Store build): a TestFlight tester is
+    /// told to send it through TestFlight; a player of the App Store's build,
+    /// who has no TestFlight, is pointed at the game's App Store page. The
+    /// help answer says neither and points at the report itself.
+    func testWhereToSendNamesTestFlightOnlyToTesters() throws {
+        for language in [DisplayLanguage.english, .traditionalChinese] {
+            XCTAssertTrue(ProblemReport.whereToSend(in: language, testing: true).contains("TestFlight"), "\(language)")
+            let store = ProblemReport.whereToSend(in: language, testing: false)
+            XCTAssertFalse(store.contains("TestFlight"), "\(language)")
+            XCTAssertTrue(store.contains("App Store"), "\(language)")
+            let help = try XCTUnwrap(HelpGuide.entries.first { $0.id == "reportProblem" }).answer(in: language)
+            XCTAssertFalse(help.contains("TestFlight"), "\(language)")
+        }
+    }
 }

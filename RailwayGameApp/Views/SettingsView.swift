@@ -873,8 +873,8 @@ struct ProblemReportRows: View {
     /// What the rows do, under them.
     static func footer(in language: DisplayLanguage) -> String {
         language.text(
-            "Report a Problem writes a note with the version, your device, how long each lesson took and, from a game, what is in it, for Mail, Messages or any app you choose. If the game lately froze or closed unexpectedly, the note also says when and where, and how smoothly the map moved lately; that is kept only on this device. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. " + ProblemReport.whereToSend(in: .english),
-            "「回報問題」會寫好一則附上版本、裝置、每一關花了多久（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。最近遊戲卡住或意外關閉過的話，訊息也會寫上時間與卡在哪裡，並附上最近地圖畫面是否順暢；這些只記在這台裝置上。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。" + ProblemReport.whereToSend(in: .traditionalChinese)
+            "Report a Problem writes a note with the version, your device, how long each lesson took and, from a game, what is in it, for Mail, Messages or any app you choose. If the game lately froze or closed unexpectedly, the note also says when and where, and how smoothly the map moved lately; that is kept only on this device. From a game you may also attach its save and what you did since, so the problem can be played again; you see what it holds before you send it. Nothing is sent until you send it. " + ProblemReport.whereToSend(in: .english, testing: TestBuild.isTest),
+            "「回報問題」會寫好一則附上版本、裝置、每一關花了多久（在遊戲中開啟時還有遊戲的狀態）的訊息，由你選擇用郵件、訊息或其他 App 傳送。最近遊戲卡住或意外關閉過的話，訊息也會寫上時間與卡在哪裡，並附上最近地圖畫面是否順暢；這些只記在這台裝置上。在遊戲中也可以選擇附上這局的存檔和之後做過的事，讓問題可以重現；傳送前會列出裡面有什麼。你按下傳送前不會送出任何東西。" + ProblemReport.whereToSend(in: .traditionalChinese, testing: TestBuild.isTest)
         )
     }
 
@@ -1006,7 +1006,7 @@ struct ProblemReportSheet: View {
                 // Decision 573: where the note goes, before the rows.
                 Section {
                     Label {
-                        Text(verbatim: ProblemReport.whereToSend(in: language))
+                        Text(verbatim: ProblemReport.whereToSend(in: language, testing: TestBuild.isTest))
                             .font(.footnote)
                             .fixedSize(horizontal: false, vertical: true)
                     } icon: {
