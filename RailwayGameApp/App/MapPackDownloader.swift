@@ -100,6 +100,7 @@ enum MapPackDownloader {
             return false
         }
         MapPackChoices.set(city, removed: true)
+        Copier(city: city, manager: AssetPackManager.shared).removeCopies()
         MapPackDownloads.forget(city)
         MapPackDownloads.note(city, .removed)
         log.notice("map pack \(city.assetPackID, privacy: .public) removed by the player")
@@ -160,7 +161,10 @@ enum MapPackDownloader {
             // said to be on the device, yet not one of its files could be
             // found (the day before, 147 read them). The system's copy is
             // thrown away and fetched again, once each time this is asked.
-            if refusal == .noManifest, !city.isCarried {
+            // MAP-PACK-COPY: in an app that carries the city too, once a
+            // build (the player reads the carried one meanwhile), so a
+            // problem report tells whether fetching again mends it.
+            if refusal == .noManifest, !city.isCarried || refetchOnceThisBuild(city) {
                 log.notice("map pack \(city.assetPackID, privacy: .public) said to be on the device but not found; fetching it again")
                 MapPackDownloads.note(city, .downloading)
                 for id in city.assetPackIDs {
@@ -171,7 +175,11 @@ enum MapPackDownloader {
                     try await manager.ensureLocalAvailability(of: pack)
                 }
                 refusal = take(city, from: manager)
-                if refusal != nil { MapPackDownloads.addToClue(city, "fetched again") }
+                if refusal != nil {
+                    MapPackDownloads.addToClue(city, "fetched again")
+                } else {
+                    MapPackDownloads.noteWay(city, ["fetched again", MapPackDownloads.way(city)].compactMap { $0 }.joined(separator: ", "))
+                }
             }
             // Decision 858: the app carries no pack of the city, and the
             // one it lists has not come (a new version of the pack still
@@ -203,6 +211,16 @@ enum MapPackDownloader {
             MapPackDownloads.note(city, .failed(String(describing: error)))
             return false
         }
+    }
+
+    /// MAP-PACK-COPY: whether `city`'s pack is to be fetched again now in
+    /// an app that carries it: the first time in this build of the app.
+    private static func refetchOnceThisBuild(_ city: OverseasMap) -> Bool {
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+        let key = "mapPacks.refetchedInBuild.\(city.rawValue)"
+        guard UserDefaults.standard.string(forKey: key) != build else { return false }
+        UserDefaults.standard.set(build, forKey: key)
+        return true
     }
 
     /// Takes `city`'s pack as it lies on the device now (``MapPackDownloads``),
@@ -243,6 +261,10 @@ enum MapPackDownloader {
             shared = found
             return found
         }
+        // MAP-PACK-COPY: fourth, each file copied out of the system's into
+        // the app's own folder through a file descriptor, which asks the
+        // system to stage nothing (``Copier``).
+        let copier = Copier(city: city, manager: manager)
         let locators: [MapPackDownloads.Locator] = [
             { ask(city.assetPackPath(of: $0)) },
             { name in
@@ -254,12 +276,149 @@ enum MapPackDownloader {
                 return folderURLs[folder]??.appendingPathComponent((path as NSString).lastPathComponent)
             },
             { sharedFiles()[city.assetPackPath(of: $0)] },
+            { copier.locate($0) },
         ]
         let refusal = MapPackDownloads.use(city, locators: locators, expected: expected)
+        if refusal == nil {
+            if copier.used > 0 {
+                MapPackDownloads.noteWay(city, "copied out: \(copier.used) files, \(copier.copied) new")
+            } else {
+                // Read the usual way: a copy left from before is not needed.
+                MapPackDownloads.noteWay(city, nil)
+                copier.removeCopies()
+            }
+        }
         if refusal == .noManifest {
             let said = refusals.isEmpty ? "url(for:) gave no error" : "url(for:) said \(refusals.joined(separator: " | "))"
-            MapPackDownloads.addToClue(city, "\(said); \(MapPackDownloads.describeMapPackFiles(sharedFiles()))")
+            let copied = copier.errors.isEmpty ? "copy gave no error" : "copy said \(copier.errors.joined(separator: " | "))"
+            MapPackDownloads.addToClue(city, "\(said); \(copied); \(MapPackDownloads.describeMapPackFiles(sharedFiles()))")
         }
         return refusal
+    }
+
+    /// MAP-PACK-COPY: where the files copied out of the system's lie, a
+    /// folder of each city's (`MapPacks/<folder>`, and each part's beside
+    /// it), as in the bundle.
+    fileprivate static var copiesFolder: URL? {
+        guard let support = try? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true) else { return nil }
+        return support.appendingPathComponent("MapPackCopies/MapPacks", isDirectory: true)
+    }
+
+    /// MAP-PACK-COPY (after DEBUG-150): 0.6.0 (150) and (151) on the
+    /// owner's iPhone could not read one file of the packs: `url(for:)`
+    /// answered for every file and folder that it had no permission to
+    /// save "Staged Subpaths.plist" in the pack's folder (NSCocoaErrorDomain
+    /// 513), on the first build whose packs were new versions of ones
+    /// already on the device. Apple's forums tell of the same after an
+    /// update (threads 859906 and 845723: reinstalling the app mends it).
+    /// `url(for:)` stages the file it gives; `descriptor(for:)` opens the
+    /// file and stages nothing, so each file is copied from it, once, into
+    /// the app's own folder (`contents(at:)` when that fails), and read
+    /// from there. A copy is kept while its `pack.json` is the one the
+    /// system holds, and removed once the pack is read the usual way again.
+    private final class Copier {
+        let city: OverseasMap
+        let manager: AssetPackManager
+        private var found: [String: URL?] = [:]
+        /// Files handed over, and of them copied in this pass.
+        private(set) var used = 0
+        private(set) var copied = 0
+        /// What the system said when a file could not be copied (two at most).
+        private(set) var errors: [String] = []
+
+        init(city: OverseasMap, manager: AssetPackManager) {
+            self.city = city
+            self.manager = manager
+        }
+
+        func locate(_ name: String) -> URL? {
+            if let known = found[name] { return known }
+            let url = copy(name)
+            found[name] = .some(url)
+            if url != nil { used += 1 }
+            return url
+        }
+
+        /// The city's folder of copies and each of its parts'.
+        private var folders: [URL] {
+            guard let root = MapPackDownloader.copiesFolder else { return [] }
+            return ([city.packFolder] + city.partFolders).map { root.appendingPathComponent($0, isDirectory: true) }
+        }
+
+        func removeCopies() {
+            for folder in folders where FileManager.default.fileExists(atPath: folder.path) {
+                try? FileManager.default.removeItem(at: folder)
+            }
+        }
+
+        private func copy(_ name: String) -> URL? {
+            guard let root = MapPackDownloader.copiesFolder, let own = folders.first else { return nil }
+            let fileManager = FileManager.default
+            let destination = MapPack.place(of: name, root: own)
+            // `pack.json` is copied each time: when it is not the one copied
+            // before, nor is anything else, and the copies start again.
+            if name != "pack.json", fileManager.fileExists(atPath: destination.path) { return destination }
+            let path = city.assetPackPath(of: name)
+            let pack = name.contains("/") ? "mappack-\(name.split(separator: "/")[0])" : city.assetPackID
+            let staging = root.deletingLastPathComponent().appendingPathComponent("staging-\(UUID().uuidString)")
+            do {
+                var values = URLResourceValues()
+                values.isExcludedFromBackup = true
+                var top = root.deletingLastPathComponent()
+                try fileManager.createDirectory(at: top, withIntermediateDirectories: true)
+                try? top.setResourceValues(values)
+                try write(path, of: pack, to: staging)
+                if name == "pack.json" {
+                    if let held = try? Data(contentsOf: destination), let new = try? Data(contentsOf: staging), held == new {
+                        try? fileManager.removeItem(at: staging)
+                        return destination
+                    }
+                    removeCopies()
+                }
+                try fileManager.createDirectory(at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                if fileManager.fileExists(atPath: destination.path) { try fileManager.removeItem(at: destination) }
+                try fileManager.moveItem(at: staging, to: destination)
+                copied += 1
+                return destination
+            } catch {
+                try? fileManager.removeItem(at: staging)
+                if errors.count < 2 { errors.append("\(path): \(String(describing: error).prefix(160))") }
+                return nil
+            }
+        }
+
+        /// Writes the file at `path` of the asset pack `pack` to `url`: read
+        /// through a file descriptor, or whole when that cannot be opened.
+        private func write(_ path: String, of pack: String, to url: URL) throws {
+            let descriptor: FileDescriptor
+            do {
+                descriptor = try manager.descriptor(for: FilePath(path), searchingInAssetPackWithID: pack)
+            } catch let opening {
+                do {
+                    let data = try manager.contents(at: FilePath(path), searchingInAssetPackWithID: pack, options: .mappedIfSafe)
+                    try data.write(to: url)
+                    return
+                } catch {
+                    throw CopyFailure(text: "descriptor: \(opening); contents: \(error)")
+                }
+            }
+            defer { try? descriptor.close() }
+            guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
+                throw CopyFailure(text: "cannot create the copy")
+            }
+            let out = try FileHandle(forWritingTo: url)
+            defer { try? out.close() }
+            var buffer = [UInt8](repeating: 0, count: 1 << 20)
+            while true {
+                let count = try buffer.withUnsafeMutableBytes { try descriptor.read(into: $0) }
+                if count == 0 { break }
+                try out.write(contentsOf: buffer[0 ..< count])
+            }
+        }
+    }
+
+    private struct CopyFailure: Error, CustomStringConvertible {
+        let text: String
+        var description: String { text }
     }
 }

@@ -63,6 +63,18 @@ on:
           - changed
           - all
         default: changed
+      carry_map_packs:
+        description: >-
+          Whether the app carries every map pack whole (DEBUG-150), so a city
+          whose download does not come is still played. "yes" (default): the
+          app is some 140 MB larger. "no": only each city's pack.json, so a
+          city is there once its pack has downloaded (MAP-PACK-COPY: choose it
+          only once a build that carries them showed the download works).
+        type: choice
+        options:
+          - "yes"
+          - "no"
+        default: "yes"
 
 permissions:
   contents: read
@@ -143,6 +155,7 @@ jobs:
       APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
       ARCHIVE_SIGNING: ${{ inputs.archive_signing }}
       TESTING_SCOPE: ${{ inputs.testing_scope }}
+      CARRY_MAP_PACKS_INPUT: ${{ inputs.carry_map_packs }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

@@ -33,6 +33,8 @@
 #   UPLOAD_OPTIONS                    from testflight-signing.sh
 #   APPLE_TEAM_ID                     adhoc, automatic
 #   BUILD_NUMBER                      optional: CFBundleVersion of this build
+#   CARRY_MAP_PACKS_INPUT             optional: yes (default) or no, whether
+#                                     the app carries the map packs whole
 #   TESTFLIGHT_OPTIONS_ONLY           dry run only: 1 writes the options for
 #                                     the archive already made, no archive
 # The optional second argument selects TestFlight scope and defaults to
@@ -99,6 +101,16 @@ esac
 if [[ -n "${BUILD_NUMBER:-}" ]]; then
   args+=("CURRENT_PROJECT_VERSION=$BUILD_NUMBER")
 fi
+# MAP-PACK-COPY: testflight.yml's carry_map_packs; "no" builds the app with
+# each city's pack.json only (project.yml's CARRY_MAP_PACKS, default YES).
+case "${CARRY_MAP_PACKS_INPUT:-yes}" in
+  yes) ;;
+  no) args+=(CARRY_MAP_PACKS=NO) ;;
+  *)
+    echo "CARRY_MAP_PACKS_INPUT must be yes or no, not ${CARRY_MAP_PACKS_INPUT}." >&2
+    exit 64
+    ;;
+esac
 
 # testflight-checks.yml's dry run: the archive does not depend on the
 # TestFlight scope, only the options below do, so its second scope rewrites

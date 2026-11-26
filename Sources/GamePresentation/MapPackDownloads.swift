@@ -25,6 +25,7 @@ public enum MapPackDownloads {
         var packs: [OverseasMap: MapPack] = [:]
         var statuses: [OverseasMap: MapPackStatus] = [:]
         var clues: [OverseasMap: String] = [:]
+        var ways: [OverseasMap: String] = [:]
         var changes = 0
         var changesRead = 0
     }
@@ -99,6 +100,23 @@ public enum MapPackDownloads {
         if store.packs.removeValue(forKey: city) != nil { store.changes += 1 }
         store.statuses[city] = nil
         store.clues[city] = nil
+        store.ways[city] = nil
+    }
+
+    /// MAP-PACK-COPY: how the download of `city` that was taken was read,
+    /// when not the usual way (its files copied out of the system's,
+    /// fetched again first), for a problem report; `nil` clears it.
+    public static func noteWay(_ city: OverseasMap, _ text: String?) {
+        store.lock.lock()
+        defer { store.lock.unlock() }
+        store.ways[city] = text
+    }
+
+    /// MAP-PACK-COPY: what ``noteWay(_:_:)`` last said of `city`.
+    public static func way(_ city: OverseasMap) -> String? {
+        store.lock.lock()
+        defer { store.lock.unlock() }
+        return store.ways[city]
     }
 
     /// REVIEW-L27 P3-1 (MAP-PACK-ONCE): how many times a download was
@@ -231,8 +249,12 @@ public enum MapPackDownloads {
     public static func report(of cities: Set<OverseasMap> = OverseasMaps.open) -> String? {
         let parts = OverseasMap.allCases.filter(cities.contains).map { city -> String in
             let line = "\(city.assetPackID) \(status(city).reportText)"
-            guard case .refused = status(city), let clue = clue(city) else { return line }
-            return "\(line) (\(clue))"
+            switch status(city) {
+            case .refused: if let clue = clue(city) { return "\(line) (\(clue))" }
+            case .downloaded, .earlier: if let way = way(city) { return "\(line) (\(way))" }
+            default: break
+            }
+            return line
         }
         return parts.isEmpty ? nil : parts.joined(separator: "; ")
     }
