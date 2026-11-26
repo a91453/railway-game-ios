@@ -35,7 +35,7 @@ final class ThsrSaleTests: XCTestCase {
         XCTAssertEqual(runs.stops, Self.stops)
         XCTAssertEqual(runs.runs.filter { !$0.positioning }.count, 169)
         XCTAssertEqual(runs.overnight, ["南港": 10, "左營": 30])
-        XCTAssertEqual(RealLineDepotSite.sites(of: Self.id).map(\.chinese), ["南港留置線", "左營機廠"])
+        XCTAssertEqual(RealLineDepotSite.sites(of: Self.id).map(\.chinese), ["南港留置線", "烏日基地", "左營機廠"])
         XCTAssertEqual(TrackGauge.ofRealLine(Self.id), .shinkansen)
     }
 
@@ -138,6 +138,59 @@ final class ThsrSaleTests: XCTestCase {
             nodes.append(ids)
         }
         print("THSR laid \(nodes.count) of \(acquisition.pieces.count) pieces")
+    }
+
+    /// `THSR_LATE=<hours>`: the line bought in the checkup's world
+    /// (``DepotReturnReportTests/bought(_:rules:side:balance:)``, realistic
+    /// rules; `THSR_LATE_SIMPLE=1` simple), played that many hours, and how
+    /// late its trains reach each stop, by way and station (mean and worst,
+    /// minutes): whether the lateness grows along the line (running times)
+    /// or comes at a station (its tracks).
+    func testLateness() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let value = environment["THSR_LATE"], let hours = Int(value) else { throw XCTSkip("THSR_LATE=<hours>") }
+        var world = try DepotReturnReportTests.bought(
+            Self.id, rules: environment["THSR_LATE_SIMPLE"] != nil ? .simple : .realistic, side: 1 << 25, balance: Money(1_000_000_000_000)
+        )
+        world.setSpeed(.normal)
+        let order = Dictionary(uniqueKeysWithValues: Self.stops.enumerated().map { ($1, $0) })
+        func name(_ id: StationID) -> String { world.station(id: id)?.name ?? "?" }
+        var seen: Set<String> = []
+        // (southbound, station) -> delays in seconds.
+        var delays: [String: [Int64]] = [:]
+        var worstTrip: [String: [(String, Int64)]] = [:]
+        for _ in 0..<(hours * 60) {
+            try world.advance(ticks: 1)
+            let now = world.clock.now.seconds
+            for train in world.trains {
+                let at = Set(world.stationsStoppedAt(by: train.id))
+                guard !at.isEmpty, let first = train.timetable.first, let last = train.timetable.last,
+                      let a = order[name(first.station)], let b = order[name(last.station)], a != b else { continue }
+                for stop in train.timetable where at.contains(stop.station) && abs(now - stop.arrival.seconds) < 4 * 3_600 {
+                    let key = "\(train.id)|\(stop.arrival.seconds)"
+                    guard !seen.contains(key) else { continue }
+                    seen.insert(key)
+                    let way = b > a ? "S" : "N"
+                    delays["\(way) \(name(stop.station))", default: []].append(now - stop.arrival.seconds)
+                    let trip = "\(train.name) \(name(first.station))@\(first.departure.seconds % 86_400 / 60)"
+                    worstTrip[trip, default: []].append((name(stop.station), now - stop.arrival.seconds))
+                }
+            }
+        }
+        var text = "THSR_LATE \(hours) h, minutes late on arrival:\n"
+        for way in ["S", "N"] {
+            let stations = way == "S" ? Self.stops : Self.stops.reversed()
+            for station in stations {
+                guard let list = delays["\(way) \(station)"], !list.isEmpty else { continue }
+                let late = list.filter { $0 > GameWorld.punctualSeconds }.count
+                text += String(format: "  %@ %@: %d calls, mean %.1f, worst %.1f, late %d\n", way, station, list.count,
+                               Double(list.reduce(0, +)) / Double(list.count) / 60, Double(list.max() ?? 0) / 60, late)
+            }
+        }
+        for (trip, calls) in worstTrip.sorted(by: { ($0.value.map(\.1).max() ?? 0) > ($1.value.map(\.1).max() ?? 0) }).prefix(12) {
+            text += "  \(trip): " + calls.map { "\($0.0) \($0.1 / 60)" }.joined(separator: ", ") + "\n"
+        }
+        FileHandle.standardError.write(Data(text.utf8))
     }
 
     /// `THSR_SALE_PROFIT=<days>`: from Taipei, the line bought (funds

@@ -132,7 +132,15 @@ public struct RealBranchLine: Hashable, Sendable {
     /// ends, so it is laid with a crossover either side of each such
     /// station (the Taoyuan Airport MRT's expresses turn at Airport
     /// Terminal 2, its shuttles at Terminal 1 and Huanbei).
-    var turnsBackBetween: Bool { isTaoyuanAirport }
+    /// THSR-SALE (decision 993): the Taiwan High Speed Rail's trains turn
+    /// at Taichung (17 a day start or end there); with no crossover there
+    /// a train in from Zuoying left for Zuoying again on the northbound
+    /// track, against the trains coming north, and the line deadlocked
+    /// south of Taichung on its first morning.
+    var turnsBackBetween: Bool { isTaoyuanAirport || isTaiwanHighSpeedRail }
+
+    /// THSR-SALE (decision 993): whether it is the Taiwan High Speed Rail.
+    var isTaiwanHighSpeedRail: Bool { system == "thsr_sched" && network == "THSR" }
 
     /// Decision 605: the stations between its ends (by their names in the
     /// timetable) laid with a passing loop outside each of its two tracks,
