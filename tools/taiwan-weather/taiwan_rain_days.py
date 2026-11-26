@@ -42,6 +42,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 import zipfile
 
 CWA_FILE = "https://opendata.cwa.gov.tw/fileapi/v1/opendataapi/{id}"
@@ -145,6 +146,29 @@ def daily_from_json(doc):
     return out
 
 
+def daily_from_xml(raw):
+    """The same from the CWA's XML (the yearly files of C-B0025-002)."""
+    out = {}
+    root = ET.fromstring(raw)
+    for el in root.iter():
+        if "}" in el.tag:
+            el.tag = el.tag.split("}", 1)[1]
+    for loc in root.iter("location"):
+        name = loc.findtext("station/StationName")
+        if not name:
+            continue
+        days = out.setdefault(name.strip(), {})
+        for t in loc.iter("stationObsTime"):
+            date = (t.findtext("Date") or "").strip()
+            if len(date) < 10:
+                continue
+            y, m, d = (int(x) for x in date[:10].split("-"))
+            mm = reading(t.findtext("weatherElements/Precipitation"))
+            if mm is not None:
+                days[(y, m, d)] = mm
+    return out
+
+
 def daily_from_csv(text):
     """The same from the CSV the metadata describes: a row per station,
     year and day of the month, a column per month."""
@@ -195,6 +219,14 @@ def cwa_daily(key):
             if name.endswith("/"):
                 continue
             raw = zf.read(name)
+            if name.lower().endswith(".xml"):
+                got = daily_from_xml(raw)
+                print(f"  {name}: {len(got)} stations")
+                for station, days in got.items():
+                    daily.setdefault(station, {}).update(days)
+                continue
+            if name.lower() in ("schema-file.csv", "manifest.csv", "file.csv"):
+                continue
             for codec in ("utf-8-sig", "big5", "cp950"):
                 try:
                     text = raw.decode(codec)
