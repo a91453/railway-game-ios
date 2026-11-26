@@ -6,8 +6,9 @@ import XCTest
 /// Decision 389: Overture's building footprints in the 3D map of a
 /// real-world game, read from decision 386's tiles.
 final class Map3DFootprintsTests: XCTestCase {
-    /// A tile as the tool's `encode_tile` writes it: `footprints/2`.
-    static func tile(_ buildings: [(attributes: Int, rings: [[(Int, Int)]])]) -> [UInt8] {
+    /// A tile as the tool's `encode_tile` wrote it before decision 1005:
+    /// `footprints/2` (or `version` 3, decision 1005's).
+    static func tile(_ buildings: [(attributes: Int, rings: [[(Int, Int)]])], version: Int = 2) -> [UInt8] {
         var out: [UInt8] = []
         func varint(_ value: Int) {
             var value = value
@@ -17,7 +18,7 @@ final class Map3DFootprintsTests: XCTestCase {
             }
             out.append(UInt8(value))
         }
-        varint(2)
+        varint(version)
         varint(buildings.count)
         var cursor = (0, 0)
         for building in buildings {
@@ -54,7 +55,22 @@ final class Map3DFootprintsTests: XCTestCase {
         // Cut short, or of another version: refused.
         XCTAssertThrowsError(try Map3DFootprints.decode(Array(bytes.dropLast(3))))
         XCTAssertThrowsError(try Map3DFootprints.decode([1] + bytes.dropFirst()))
+        XCTAssertThrowsError(try Map3DFootprints.decode([4] + bytes.dropFirst()))
         XCTAssertThrowsError(try Map3DFootprints.decode(bytes + [0]))
+    }
+
+    /// Decision 1005: `footprints/3` writes 2048 units a side, half of
+    /// version 2's, and reads as the same building in 4096.
+    func testAVersion3TileReadsInTheSameUnits() throws {
+        let attributes = 7 << 8 | 2 << 5 | 11 << 1 | 1
+        let old = try Map3DFootprints.decode(Self.tile([(attributes, [[(100, 100), (100, 300), (400, 300), (400, 100)]])]))
+        let new = try Map3DFootprints.decode(Self.tile([(attributes, [[(50, 50), (50, 150), (200, 150), (200, 50)]])], version: 3))
+        XCTAssertEqual(new.count, 1)
+        XCTAssertEqual(new[0].storeys, old[0].storeys)
+        XCTAssertEqual(new[0].storeysFrom, old[0].storeysFrom)
+        XCTAssertEqual(new[0].use, old[0].use)
+        XCTAssertEqual(new[0].rings.map { $0.map(\.x) }, old[0].rings.map { $0.map(\.x) })
+        XCTAssertEqual(new[0].rings.map { $0.map(\.y) }, old[0].rings.map { $0.map(\.y) })
     }
 
     /// The owner's report on 133: one building mapped twice is drawn once,

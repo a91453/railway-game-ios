@@ -168,8 +168,11 @@ def spread(mask, seed):
             return filled
 
 
-def raster(folder):
-    """The whole raster's covers (``FOLD``), the sea 0."""
+def land_codes(folder):
+    """The whole raster's land use codes (the module's docstring), 10 m
+    from its north-west corner: the sea 0 and the housing the stretch draws
+    black (private and public, 1 and 2, which it does not tell apart) 1.
+    Also the counts of the housing's and the sea's pixels."""
     from PIL import Image
     record = json.load(open(os.path.join(folder, 'calibration.json')))
     for name, digest in record['tiles'].items():
@@ -183,21 +186,30 @@ def raster(folder):
         elif code not in FOLD:
             sys.exit(f'land use code {code}: not in FOLD (a new class: fold it)')
         else:
-            lookup[int(grey)] = FOLD[code]
+            lookup[int(grey)] = code
     rows, columns = (NORTH - SOUTH) // PIXEL, (EAST - WEST) // PIXEL
-    cover = np.zeros((rows, columns), dtype=np.uint8)
+    codes = np.zeros((rows, columns), dtype=np.uint8)
     dark = np.zeros((rows, columns), dtype=bool)
     for x, y in tiles():
         grey = np.array(Image.open(os.path.join(folder, f'tile_{x}_{y}.png')).convert('L'))
         r0, c0 = (NORTH - y) // PIXEL - TILE_H, (x - WEST) // PIXEL
-        cover[r0:r0 + TILE_H, c0:c0 + TILE_W] = lookup[grey]
+        codes[r0:r0 + TILE_H, c0:c0 + TILE_W] = lookup[grey]
         dark[r0:r0 + TILE_H, c0:c0 + TILE_W] = black[grey]
     edge = np.zeros_like(dark)
     edge[0, :] = edge[-1, :] = True
     edge[:, 0] = edge[:, -1] = True
     sea = spread(dark, edge)
-    cover[dark & ~sea] = 5
-    return cover, int((dark & ~sea).sum()), int(sea.sum())
+    codes[dark & ~sea] = 1
+    return codes, int((dark & ~sea).sum()), int(sea.sum())
+
+
+def raster(folder):
+    """The whole raster's covers (``FOLD``), the sea 0."""
+    codes, housing, sea = land_codes(folder)
+    fold = np.zeros(256, dtype=np.uint8)
+    for code, cover in FOLD.items():
+        fold[code] = cover
+    return fold[codes], housing, sea
 
 
 def build(folder, pack):

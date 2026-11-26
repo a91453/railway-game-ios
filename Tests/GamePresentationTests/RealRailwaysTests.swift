@@ -359,7 +359,7 @@ final class RealRailwaysTests: XCTestCase {
             XCTAssertEqual(credits.map(\.id), [
                 "realRailways", "tra", "thsr", "afr", "taipeiMetro", "newTaipeiMetro", "taoyuanMetro", "taichungMetro", "kaohsiungMetro", "operators",
                 "tdx", "realBuses", "realCoaches", "traOpenData", "nlsc", "openStreetMap",
-                "taiwanCensus", "ridership", "travelSurvey", "sightVisitors", "airports", "overtureBuildings",
+                "taiwanCensus", "ridership", "travelSurvey", "sightVisitors", "airports", "taiwanWeather", "overtureBuildings",
                 "appleMaps", "taiwanBaseMap", "openFreeMap", "mapLibre", "moiTerrain", "copernicusDEM", "esaWorldCover", "wikidata", "worldUrbanizationProspects",
                 "map3DGround", "temples", "taipeiTempleModels", "buildingStoreys", "noBuildLand", "freewayBridges", "highSpeedTrainModel", "highSpeed700Model", "coalBunkerModel", "meshy", "kenney", "taipeiGarbageTrucks", "slopNewYork",
                 // Decision 882: the platforms' name boards' letters.

@@ -33,9 +33,9 @@ final class Map3DHousesByPeopleTests: XCTestCase {
     }
 
     /// The owner, 2026-11-26: 「但也要顧慮目前照官方的只有日本 日本先做 其他還在使用world pop」.
-    /// Only a map whose people and jobs are the census's lays the houses by
-    /// them: Japan's, Taiwan's since decision 1002 and Finland's since
-    /// decision 1007; Hong Kong's (WorldPop) and the blank map's keep
+    /// Only a map whose people and jobs are a census's (Japan's, Taiwan's
+    /// since decision 1002, Finland's since decision 1007 and Hong Kong's
+    /// since decision 1008) lays the houses by them; the blank map's keep
     /// every lot full.
     func testOnlyACensusMapsHousesFollowItsPeople() throws {
         func look(_ latitude: Double, _ longitude: Double) throws -> Map3DRegionLook.Buildings {
@@ -44,8 +44,8 @@ final class Map3DHousesByPeopleTests: XCTestCase {
         }
         XCTAssertTrue(CitySkyline.housesByPeople(try look(33.5906, 130.3989)), "Fukuoka")
         XCTAssertTrue(CitySkyline.housesByPeople(try look(32.8032, 130.7079)), "Kumamoto")
-        XCTAssertTrue(CitySkyline.housesByPeople(try look(25.0478, 121.5170)), "Taipei")
-        XCTAssertFalse(CitySkyline.housesByPeople(try look(22.2819, 114.1582)), "Hong Kong")
+        XCTAssertTrue(CitySkyline.housesByPeople(try look(25.0478, 121.5170)), "Taipei (decision 1002)")
+        XCTAssertTrue(CitySkyline.housesByPeople(try look(22.2819, 114.1582)), "Hong Kong (decision 1008)")
         XCTAssertTrue(CitySkyline.housesByPeople(try look(66.4977, 25.7155)), "Rovaniemi (decision 1007)")
         // The blank map's towns: every lot full, as before.
         let world = GameWorld.newGame()

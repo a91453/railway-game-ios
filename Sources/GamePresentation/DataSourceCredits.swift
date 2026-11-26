@@ -319,22 +319,34 @@ public enum DataSourceCredits {
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
                         ]
                     ),
-                    // Decision 712: the people of Hong Kong's map
-                    // (`MapPacks/hongkong/population.json`).
+                    // Decisions 712 and 1008: the people and jobs of Hong
+                    // Kong's map (`MapPacks/hongkong/population.json`,
+                    // `tools/census-grid/hongkong_census_grid.py`).
                     DataSourceCredit(
                         id: "hongKongPeople",
                         title: language.text("Hong Kong’s people", "香港的人口"),
                         detail: language.text(
-                            "On Hong Kong’s map, how many people live round each station, which sets how many ride from it and where the city’s buildings stand.",
-                            "香港地圖上每座車站周圍住了多少人，決定有多少人從那裡搭車，以及城市的建物蓋在哪裡。"
+                            "On Hong Kong’s map, how many people live and work round each station, which sets how many ride from it and where they go.",
+                            "香港地圖上每座車站周圍住了多少人、有多少人在那裡上班，決定有多少人從那裡搭車、往哪裡去。"
                         ),
                         notice: language.text(
-                            "WorldPop (www.worldpop.org), University of Southampton: population estimates per square kilometre of Hong Kong, 2025 (R2025A), under the Creative Commons Attribution 4.0 International licence (CC BY 4.0). Each cell is rounded to whole people.",
-                            "WorldPop（www.worldpop.org），英國南安普敦大學：香港 2025 年每平方公里人口估計（R2025A），依創用 CC 姓名標示 4.0 國際授權（CC BY 4.0）。每格四捨五入到整數人。"
+                            "Residents: 2021 Population Census, Census and Statistics Department. Jobs: Quarterly Survey of Employment and Vacancies, 2021, Census and Statistics Department. Tertiary Planning Units and land use: Planning Department. All Government of the Hong Kong SAR, via DATA.GOV.HK and the CSDI Portal (Common Spatial Data Infrastructure), used under their Terms and Conditions of Use. Spread over the homes and workplaces for the game.",
+                            "住的人：2021 年人口普查，政府統計處。上班的人：2021 年就業及職位空缺按季統計調查，政府統計處。小規劃統計區與土地用途：規劃署。都是香港特別行政區政府的資料，經「資料一線通」（DATA.GOV.HK）與空間數據共享平台（CSDI）提供，依兩者的使用條款使用；為遊戲分配到住宅與工作的地方。"
                         ),
                         links: [
-                            DataSourceCredit.Link(title: "WorldPop", url: worldPopURL),
-                            DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                            DataSourceCredit.Link(
+                                title: language.text("2021 Population Census", "2021 年人口普查"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-censtatd-census_geo-2021-population-census-by-ssg"
+                            ),
+                            DataSourceCredit.Link(
+                                title: language.text("Persons engaged by Tertiary Planning Unit", "按小規劃統計區劃分的就業人數"),
+                                url: "https://data.gov.hk/en-data/dataset/hk-censtatd-tablechart-215-16009"
+                            ),
+                            DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
+                            DataSourceCredit.Link(
+                                title: language.text("CSDI Portal Terms and Conditions of Use", "空間數據共享平台使用條款"),
+                                url: "https://portal.csdi.gov.hk/csdi-webpage/doc/TNC"
+                            ),
                         ]
                     ),
                     // Decision 1003: the months' rain and thunder
@@ -588,12 +600,12 @@ public enum DataSourceCredits {
                         id: "fukuokaWeather",
                         title: language.text("Kyushu’s weather", "九州的天氣"),
                         detail: language.text(
-                            "How often it rains or thunders in each month on Kyushu’s map.",
-                            "九州地圖上每個月多常下雨、打雷。"
+                            "How often it rains or thunders in each month in each part of Kyushu’s map.",
+                            "九州地圖上各地每個月多常下雨、打雷。"
                         ),
                         notice: language.text(
-                            "Japan Meteorological Agency, normals of 1991–2020 at Fukuoka: days with 1.0 mm of precipitation or more and days with thunder (edited).",
-                            "日本氣象廳 1991–2020 年平年值（福岡）：日降水量 1.0 毫米以上日數與雷日數（經加工）。"
+                            "Japan Meteorological Agency, normals of 1991–2020 at Fukuoka, Saga, Nagasaki and Kumamoto: days with 1.0 mm of precipitation or more and days with thunder (edited).",
+                            "日本氣象廳 1991–2020 年平年值（福岡、佐賀、長崎、熊本）：日降水量 1.0 毫米以上日數與雷日數（經加工）。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Japan Meteorological Agency: normals", "日本氣象廳：平年值"), url: "https://www.data.jma.go.jp/obd/stats/data/mdrr/normal/index.html"),
@@ -1006,6 +1018,23 @@ public enum DataSourceCredits {
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
+                        ]
+                    ),
+                    // Decision 1004: how often it rains in each part of
+                    // Taiwan, from the weather station nearest each place.
+                    DataSourceCredit(
+                        id: "taiwanWeather",
+                        title: language.text("Taiwan’s weather", "台灣的天氣"),
+                        detail: language.text(
+                            "On a map of Taiwan, how often it rains in each month in each part of the island: the north’s wet winters, the south’s dry ones.",
+                            "台灣地圖上各地每個月多常下雨：北部冬天多雨、南部冬天少雨。"
+                        ),
+                        notice: language.text(
+                            "Central Weather Administration, climate statistics: days with 0.1 mm of precipitation or more in the monthly means of 1991–2020 at 19 stations (edited). Station positions: NOAA National Centers for Environmental Information.",
+                            "中央氣象署氣候統計：19 個氣象站 1991–2020 年月平均的降水量 0.1 毫米以上日數（經加工）。測站位置：美國國家海洋暨大氣總署國家環境資訊中心（NOAA NCEI）。"
+                        ),
+                        links: [
+                            DataSourceCredit.Link(title: language.text("Central Weather Administration: climate statistics", "中央氣象署：氣候統計"), url: "https://www.cwa.gov.tw/V8/C/C/Statistics/monthlymean.html"),
                         ]
                     ),
                     // Decision 147: how much of the ground real buildings

@@ -388,9 +388,18 @@ extension GameWorld {
     public func cablewayIsOpen(_ id: CablewayID, onDay day: Int64) -> Bool {
         guard let cableway = cableway(id: id) else { return false }
         if StationDemand.weekday(ofDay: day) == 1, holiday(onDay: day) == nil { return false }
-        if weather(onDay: day) == .thunderstorm { return false }
+        // Decision 1004: the weather at its first stop.
         let first = Self.middle(of: cableway.stops[0].cell)
+        if weather(onDay: day, at: first) == .thunderstorm { return false }
         return !typhoons(onDay: day).contains { $0.isActive(onDay: day) && $0.covers(first) }
+    }
+
+    /// Decision 1004: the weather of game day `day` at cableway `id`'s
+    /// first stop, the one ``cablewayIsOpen(_:onDay:)`` asks; the map's
+    /// for no such cableway.
+    public func weather(onDay day: Int64, atCableway id: CablewayID) -> Weather {
+        guard let cableway = cableway(id: id) else { return weather(onDay: day) }
+        return weather(onDay: day, at: Self.middle(of: cableway.stops[0].cell))
     }
 
     // MARK: - Internals

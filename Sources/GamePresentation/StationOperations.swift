@@ -264,7 +264,7 @@ public struct StationOperations: Equatable, Sendable {
         }
         let today = now.seconds / GameTime.secondsPerDay
         let typhoons = world.typhoons(onDay: today).filter { $0.covers(point) }
-        self.days = world.forecast(days: Self.forecastDays).map { forecast in
+        self.days = world.forecast(days: Self.forecastDays, at: point).map { forecast in
             let day = forecast.date.day
             let typhoon = typhoons.filter { $0.isActive(onDay: day) }.map(\.drop).max()
             return Day(
@@ -272,7 +272,7 @@ public struct StationOperations: Equatable, Sendable {
                 isToday: day == today,
                 weather: forecast.weather,
                 typhoon: typhoon != nil,
-                weatherDropPercent: Int(world.weatherDrop(onDay: day) / 10),
+                weatherDropPercent: Int(world.weatherDrop(onDay: day, at: station) / 10),
                 typhoonDropPercent: Int((typhoon ?? 0) / 10)
             )
         }

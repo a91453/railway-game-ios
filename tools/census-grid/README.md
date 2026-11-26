@@ -69,6 +69,32 @@ python3 -I tools/census-grid/taiwan_census_grid.py build /tmp/tw /tmp/places75.j
   工業區每個 64 m 格 29 人（`office`），公園裡的地點不算；鄉鎮裡什麼都沒標的，照住的人分。
   工商普查不含公務機關、軍隊與農林漁牧，所以全台約 966 萬人，比舊的 OSM 估算（約 1,200 萬）少；農地仍每格 1 人（遊戲加）。
 
+## 香港：`hongkong_census_grid.py`（決策 1008）
+
+| 資料 | 用途 |
+|---|---|
+| 2021 年人口普查，單元區小合併組（2,342 個）的總人口與界線（CSDI `censtatd_rcd_1635933365202_19171`） | `runs` |
+| 表 215-16009，2021 年各小規劃統計區的就業人數（按行業主要類別，公務員除外） | `jobs` |
+| 2021 年小規劃統計區及單元區界線（規劃署，CSDI `pland_rcd_1634022783366_65050`） | 把就業人數放到地上 |
+| 2025 年土地利用網格（規劃署，10 m，`tools/hk-map/build_hk_landcover.py fetch` 取的那份） | 人放在住宅用地、工作放在工作用地 |
+
+```sh
+pip install numpy pillow osmium
+# 1. 下載（約 120 MB，多半是兩份界線）
+python3 -I tools/census-grid/hongkong_census_grid.py fetch /tmp/hk-census
+# 2. 寫 population.json，讀了哪些檔、sha256、總數寫進 hongkong_sources.json；再更新 pack.json
+python3 -I tools/census-grid/hongkong_census_grid.py build /tmp/hk-census RailwayGameApp/Resources/MapPacks/hongkong \
+  --compare RailwayGameApp/Resources/MapPacks/hongkong/population.json
+python3 -I -c "import sys; sys.path.insert(0, 'tools/hk-map'); import build_hk_mtr; \
+  build_hk_mtr.write_manifest('RailwayGameApp/Resources/MapPacks/hongkong')"
+```
+
+- 格網和日本一樣是 7.5″ 正方格。每格取 10 × 10 個點，看點落在哪一區、哪一種用地；每區的人與工作按點數分到格子，
+  最大餘數四捨五入，每區總數不變。分法、行業分四種的規則寫在工具開頭與決策 1008。
+- 上班的人約 260 萬（調查不含公務員、建造地盤、漁農、外傭）。
+- 授權：資料一線通（DATA.GOV.HK）與空間數據共享平台（CSDI）的使用條款，可商用，要標出處。
+- WorldPop 的舊做法（`tools/hk-map/build_hk_ground.py`）留作備用。
+
 ## 芬蘭：`finland_census_grid.py`（決策 1007）
 
 芬蘭統計局的 250 m 格與上班格網（Ruututietokanta）是付費、不能轉發的，所以只用它的開放資料（CC BY 4.0，WFS
@@ -96,5 +122,5 @@ python3 -I tools/census-grid/finland_census_grid.py build /tmp/statfin RailwayGa
 
 ## 其他地方
 
-香港的下一步寫在 `docs/handoff/JAPAN-CENSUS-GRID.md`。新的國家照這裡的格式寫一支 `<地方>_census_grid.py`，
+日本、台灣、香港、芬蘭的下一步寫在各自的交接（`docs/handoff/JAPAN-CENSUS-GRID.md`、`TAIWAN-CENSUS-GRID.md`）。新的國家照這裡的格式寫一支 `<地方>_census_grid.py`，
 遊戲端不用改。

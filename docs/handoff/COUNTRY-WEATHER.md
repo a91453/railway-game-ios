@@ -8,7 +8,20 @@
 見 `docs/decisions/1003.md`。`Disruptions.countryRain`（HK、JP、FI）、`HolidayCalendar` 加 FI、`CountryBorders` 加芬蘭、
 `CountryLookup.withMapCountry` 改正舊的羅瓦涅米存檔、三地的資料來源署名（`DataSourceCredits`）。
 
-## 第二張要做的
+## 第二張做了什麼
+
+見 `docs/decisions/1004.md`。`Disruptions.weatherStations`（台灣 19 站、九州 4 站），地圖上每一點用最近的站
+（`GameWorld.weather(onDay:at:)`），擲骰仍是一天一個 `weather.<day>` 全圖共用。乘客看出發站、景點看景點、纜車看第一站、
+車站面板看那一站；頂列、地圖上的雨、3D、雨聲看錨點。
+
+## 還沒做的（可以另開單）
+
+1. **地圖上的雨、3D 天氣、雨聲看鏡頭中心**：`MapWeather(world:)`、`Map3DWeather`、`WeatherSound` 現在用錨點；
+   要改就把鏡頭中心的 `PlanPoint` 傳進去，用 `world.weather(onDay:at:)`。
+2. **台灣 ≥ 1 mm 與雷日**：下面第 4 項的選項。
+3. **羅瓦涅米的雪與雨**：北緯 60° 以北的 3D 一年都畫雪（`Map3DRegionLook.snow`），頂列卻寫「下雨」；可照月份分（例如 10–4 月雪）。
+
+## 第二張當初的計畫與資料（留作紀錄）
 
 1. **天氣分區**：`weather(onDay:)` 現在整張圖一個值。做法建議：`weather(onDay:at:)`，用站或地點所在的「氣候區」查表、
    擲骰的鍵加區名（`weather.<區>.<day>`），全圖一區時鍵不變（舊世界逐日相同，golden 不動）。
