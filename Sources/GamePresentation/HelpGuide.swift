@@ -292,8 +292,8 @@ public enum HelpGuide {
             "oneTrain", .running,
             question: ("Why does my line run only one train at a time?", "為什麼我的路線一次只跑一列車？"),
             answer: (
-                "A new game has Traffic control on: a train takes its whole route before it leaves, so on single track with nowhere to pass, only one train fits. Give trains somewhere to pass: open the station panel of a station in the middle and add a platform track to make a passing loop; or turn Snap to track off in Network and lay a second track 4 m or more beside the first, for double track; or add a second platform at the end stations. Turning Traffic control off lets trains run regardless: the switch is under Whole network at the top of Lines.",
-                "新遊戲預設開啟「交通控制」：列車要先取得整段路線才會發車，所以單線又沒有地方會車時，只能跑一列。讓列車有地方會車：打開中間某站的車站面板，用「加月台軌道」做一條待避線；或在「路網」關掉「吸附軌道」，在旁邊相距 4 公尺以上鋪第二條軌道，做成雙線；或在終點站加第二股月台。關掉「交通控制」，列車也能照開：開關在「路線」最上面的「整個路網」。"
+                "A new game has Traffic control on: a train takes its whole route before it leaves, so on single track with nowhere to pass, only one train fits. Give trains somewhere to pass: open the station panel of a station in the middle and add a platform track to make a passing loop; or turn Snap to track off under More options in Network and lay a second track 4 m or more beside the first, for double track; or add a second platform at the end stations. Turning Traffic control off lets trains run regardless: the switch is under Whole network at the top of Lines.",
+                "新遊戲預設開啟「交通控制」：列車要先取得整段路線才會發車，所以單線又沒有地方會車時，只能跑一列。讓列車有地方會車：打開中間某站的車站面板，用「加月台軌道」做一條待避線；或在「路網」的「更多選項」關掉「吸附軌道」，在旁邊相距 4 公尺以上鋪第二條軌道，做成雙線；或在終點站加第二股月台。關掉「交通控制」，列車也能照開：開關在「路線」最上面的「整個路網」。"
             ),
             keywords: "single track passing loop double one train capacity signal 單線 會車 待避 雙線 一列 列車數 上限"
         ),

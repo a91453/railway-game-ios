@@ -547,7 +547,8 @@ struct RailwayGameApp: App {
         // maps' land is read in with, mapped rather than read (the file
         // `BaseMapFiles.tiles` names, found here off the main actor).
         // Decision 712: with the base maps of the cities outside Taiwan.
-        let cities = data.overseas.compactMap(\.baseMap)
+        // Decision 991: and of the parts of their maps downloaded apart.
+        let cities = data.overseas.flatMap(\.baseMaps)
         data.baseMap = Bundle.main.url(forResource: "taiwan", withExtension: "pmtiles", subdirectory: "BaseMap").flatMap { try? Data(contentsOf: $0, options: .alwaysMapped) }.flatMap { try? BaseMapTiles(data: $0, cities: cities) }
         #if DEBUG
         for issue in data.issues {
