@@ -14,16 +14,16 @@
   "east": 27.6
  },
  "files": {
-  "pno_tilasto_2025.json": "744bcc1c52f1cefca22929ab3822ea2226a96583812f09e1e5f315bdb58b17d3",
-  "vaki2025_1km.json": "f31358841051c4d8945288f78c19261dec4a49890bbc343fb390e9f305cece13"
+  "pno_tilasto_2025.json": "d122cc6ba89efcbdeca8b96cda367ccd02697fe945827123f70639d9e9d75069",
+  "vaki2025_1km.json": "a5c1aa77ba4d405a43dc482ff9beb43a3d070564b39fd02e64728c0c1dfef68a"
  },
- "buildings.pmtiles": "0f490140f0b8f1bb85af09e2f6401b08ec22e05479e8cf0ee716312c7e7df42e",
+ "buildings.pmtiles": "638d4669281700a1e76dd0e6a778d444e23e310ed6855d68502109585cceeaf3",
  "residents": 69768,
  "jobs": {
-  "office": 10224,
-  "shop": 4369,
-  "civic": 12561,
-  "leisure": 1381
+  "office": 10223,
+  "shop": 4368,
+  "civic": 12563,
+  "leisure": 1380
  },
  "cells": [
   240,
@@ -53,7 +53,7 @@
   "96300": {
    "name": "Niemelänkangas-Korvanniemi",
    "workplaces": 2843,
-   "kept": 0.99
+   "kept": 1.0
   },
   "96320": {
    "name": "Teollisuuskylä",
@@ -103,7 +103,7 @@
   "96910": {
    "name": "Syväsenvaara",
    "workplaces": 627,
-   "kept": 0.975
+   "kept": 0.969
   },
   "96930": {
    "name": "Napapiiri Rovaniemi",
@@ -118,7 +118,7 @@
   "97110": {
    "name": "Rautionsaari",
    "workplaces": 53,
-   "kept": 0.98
+   "kept": 0.966
   },
   "97130": {
    "name": "Hirvas",
@@ -128,7 +128,7 @@
   "97140": {
    "name": "Muurola",
    "workplaces": 258,
-   "kept": 0.83
+   "kept": 0.866
   },
   "97170": {
    "name": "Jaatila",
@@ -143,7 +143,7 @@
   "97240": {
    "name": "Sonka",
    "workplaces": 33,
-   "kept": 0.717
+   "kept": 0.727
   },
   "97280": {
    "name": "Tapio",
@@ -153,7 +153,7 @@
   "97290": {
    "name": "Marraskoski",
    "workplaces": 8,
-   "kept": 0.699
+   "kept": 0.66
   },
   "97510": {
    "name": "Vikajärvi",
@@ -168,7 +168,7 @@
   "97530": {
    "name": "Nampa-Yli-Nampa",
    "workplaces": 4,
-   "kept": 0.593
+   "kept": 0.605
   },
   "97580": {
    "name": "Misi",
@@ -208,12 +208,12 @@
   "97650": {
    "name": "Juotas",
    "workplaces": 7,
-   "kept": 0.874
+   "kept": 0.835
   },
   "97655": {
    "name": "Autti",
    "workplaces": 8,
-   "kept": 0.694
+   "kept": 0.702
   },
   "97665": {
    "name": "Pohjasperä",
@@ -228,7 +228,7 @@
   "97675": {
    "name": "Narkaus-Kämät",
    "workplaces": 10,
-   "kept": 0.404
+   "kept": 0.384
   },
   "97690": {
    "name": "Sulaoja",
@@ -248,7 +248,7 @@
   "98100": {
    "name": "Kemijärvi Keskus",
    "workplaces": 1255,
-   "kept": 0.996
+   "kept": 0.967
   },
   "98120": {
    "name": "Särkikangas",
@@ -268,7 +268,7 @@
   "98400": {
    "name": "Isokylä-Ryti-Lehtola",
    "workplaces": 45,
-   "kept": 0.518
+   "kept": 0.52
   },
   "98420": {
    "name": "Ryti-Lehtola",

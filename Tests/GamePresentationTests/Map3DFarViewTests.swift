@@ -171,6 +171,11 @@ final class Map3DFarViewTests: XCTestCase {
         XCTAssertEqual(Map3DFarDetail.rank(size: .infinity), Map3DFarDetail.always)
         XCTAssertEqual(Map3DFarDetail.level(distance: Map3DCamera.nearest), 0)
         XCTAssertEqual(Map3DFarDetail.level(distance: Map3DFarDetail.from), 0)
+        // From afar the camera looks straight down, however leaned, so a
+        // building's height counts only as far as perspective leans it.
+        XCTAssertEqual(Map3DCamera.tilt(atDistance: Map3DFarDetail.from, lean: Map3DCamera.mostLean), 0)
+        let corner = tanf(Map3DCamera.fieldOfView / 2) * (1 + (874.0 / 402.0) * (874.0 / 402.0)).squareRoot()
+        XCTAssertEqual(Map3DFarDetail.heightSeen, corner, accuracy: 0.002)
         var last = 0
         for distance in stride(from: Float(0), through: Map3DCamera.farthest, by: 50) {
             let level = Map3DFarDetail.level(distance: distance)
