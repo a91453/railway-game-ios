@@ -78,7 +78,15 @@ extension GameWorld {
     /// it, and (decision 970) its wheels fit every gauge there. A line
     /// with no way through yet has no track to say no.
     public func runsOnTrack(_ type: TrainType?, ofLine id: LineID) -> Bool {
-        trackKinds(ofLine: id).allSatisfy { TrackCompatibility.runs(type, on: $0) } && fitsGauge(type, ofLine: id)
+        lineTrack(ofLine: id).carries(type)
+    }
+
+    /// The kinds and gauges of track line `id` runs on, walked once, so
+    /// that a list of types is checked against them without driving the
+    /// line again for each (TAP-FREEZE-151: the type menus drove the line
+    /// twice a type, some 3 seconds on the Nishi-Kyushu Shinkansen).
+    public func lineTrack(ofLine id: LineID) -> LineTrack {
+        LineTrack(kinds: trackKinds(ofLine: id), gauges: trackGauges(ofLine: id))
     }
 
     /// Decision 955: the offered type line `id`'s guideway carries, when
@@ -100,5 +108,21 @@ extension GameWorld {
             " It runs only on its own guideway: lay one first, choosing \(name) in the track tool.",
             "它只能跑自己的軌道梁：請先在鋪軌工具選「\(name)」蓋梁。"
         )
+    }
+}
+
+/// What a line's track is made of (``GameWorld/lineTrack(ofLine:)``): the
+/// kinds of track and the gauges of its ordinary track.
+public struct LineTrack: Equatable, Sendable {
+    public let kinds: Set<TrackKind>
+    public let gauges: Set<TrackGauge>
+
+    /// ``GameWorld/runsOnTrack(_:ofLine:)``: every kind of track carries a
+    /// train of `type` (decision 955) and its wheels fit every gauge
+    /// (decision 970). A line with no way through has neither, and says
+    /// no to nothing.
+    public func carries(_ type: TrainType?) -> Bool {
+        kinds.allSatisfy { TrackCompatibility.runs(type, on: $0) }
+            && gauges.allSatisfy { TrackCompatibility.runs(type, onGauge: $0) }
     }
 }

@@ -42,12 +42,15 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
         XCTAssertFalse(try model("set-highSpeed-car").vertices.contains(where: \.glows), "no lamps between")
     }
 
-    /// Half the high-speed trains, the odd-numbered, are the N700S; a
-    /// real train by its run's number; other types as they were.
+    /// Half the high-speed trains, the odd-numbered, are the N700S; other
+    /// types as they were. TAP-FREEZE-151: the Taiwan High Speed Rail's
+    /// own trains (the 700T's key) are all 700Ts, odd-numbered too.
     func testWhichTrainsAreTheN700S() {
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700s")
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 2), "HSR")
-        XCTAssertEqual(Map3DTrainSet.variant(of: "highSpeed", number: 7), "n700s")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "highSpeed", number: 7), "highSpeed")
+        XCTAssertEqual(Map3DRealTrains.variantKey(system: "thsr", key: Map3DRealTrains.formation(system: "thsr", id: "THSR", name: "台灣高鐵").key, number: 7), Map3DTHSR700T.key)
+        XCTAssertEqual(RealLineStock.setKey(ofRealLine: "thsr:HSR").map { Map3DTrainSet.variant(of: $0, number: 7) }, Map3DTHSR700T.key)
         XCTAssertEqual(Map3DTrainSet.variant(of: "EMU3000", number: 1), "EMU3000")
         XCTAssertEqual(Map3DTrainSet.variant(of: "", number: 3), "")
         XCTAssertEqual(Map3DTrainSet.number(ofRealTrain: "thsr-12"), 12)
