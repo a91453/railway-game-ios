@@ -254,7 +254,9 @@ needs OSM data reads the same extract.
   for changes the app cannot see: docs, the
   package's tests and fixtures, `Web/`, `tools/`, `.claude/`, the other
   workflows' files.
-  A pull request runs a short gate list of UI tests,
+  A pull request runs a short gate list of UI tests (only the toolbar
+  test when it changes only 3D models, map data or the release notes,
+  decision 1019, `ui-gate.py`),
   and the iPad tutorial tests only when it touches the tutorial's own files;
   the full lane runs every UI test, its iPhone tests split over three jobs
   (`FULL_LANE_SECOND_JOB` and `FULL_LANE_LESSONS_JOB` name two jobs'
