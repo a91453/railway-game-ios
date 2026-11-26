@@ -57,36 +57,12 @@ final class Map3DTrainMaterialTests: XCTestCase {
                 XCTAssertEqual(after.first!.glows, lamp, "\(recipe.name): a lamp stays a lamp")
                 let layer = after.first!.layer
                 // Decision 615: a cable car cabin's recipe marks its own glass
-                // by meaning, not by colour, and so do the studio's Hong Kong
-                // trains (decision 450's later note), Finnish intercity
-                // (decision 864), Fukuoka's (decision 893), the EMU900's cab
-                // (decision 904), the Puyuma (decision 905), the Taroko
-                // (decision 906), decision 930's trains, decision 957's steam
-                // coaches and the Keikyu New 1000 (decision 956); the pack keeps
-                // that layer.
+                // by meaning, not by colour, and so do the studio's trains
+                // after it (`Map3DTrainOwnGlassList.prefixes`, one a line);
+                // the pack keeps that layer.
                 if materials.contains(before.layer) {
                     XCTAssertEqual(layer, before.layer, recipe.name)
-                    XCTAssertTrue(train && ["cablecar-cabin-", "set-mtr", "set-finlandIntercity", "set-finlandNight", "set-fukuoka", "set-emu900-head",
-                                            "set-emu900-tail", "set-puyuma", "set-taroko", "temu1000-",
-                                            // Decision 930.
-                                            "set-EMU100", "set-MONORAIL", "set-MAGLEV", "set-SKYRAIL", "set-hkPeakTram", "set-SUMMER-head",
-                                            "set-SUMMERFar-head",
-                                            // Decision 957: the steam train's wooden coaches.
-                                            "set-STEAM-car", "set-STEAM-tail", "set-STEAMFar-car", "set-STEAMFar-tail",
-                                            // Decision 956: the Keikyu New 1000, near and far.
-                                            "set-redCommuter",
-                                            // Decision 986: the same cars at 18 m.
-                                            "set-keikyuNew1000",
-                                            // Decision 977: the Kyushu Shinkansen's N700 series.
-                                            "set-kyushuN700",
-                                            // Decision 979: the N700S.
-                                            "set-n700s-",
-                                            // Decision 988: the 700T, the owner's old 700 series.
-                                            "set-highSpeed-",
-                                            // Decision 989: the 700 series in its own paint.
-                                            "set-series700-",
-                                            // Decision 978: the Kyushu Shinkansen's 800 series.
-                                            "set-kyushu800"].contains { recipe.name.hasPrefix($0) },
+                    XCTAssertTrue(train && Map3DTrainOwnGlassList.prefixes.contains { recipe.name.hasPrefix($0) },
                                   "\(recipe.name): only a cabin or a studio train marks its own glass")
                     continue
                 }
