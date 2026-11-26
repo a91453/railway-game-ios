@@ -23,8 +23,8 @@ extension DataSourceCredits {
                         "車站與日文站名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成，CC BY 4.0。軌道、隧道、高架與路線色：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與福岡市交通局、日本政府沒有任何關係。"
                     ),
                     links: [
-                        DataSourceCredit.Link(title: language.text("National Land Numerical Information: Railway Data", "国土数値情報 鉄道データ"), url: "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html"),
-                        DataSourceCredit.Link(title: language.text("CC BY 4.0", "CC BY 4.0"), url: "https://creativecommons.org/licenses/by/4.0/"),
+                        landNumericalRailwayData(in: language),
+                        ccByLicense,
                         openStreetMapCopyright(in: language),
                     ]
                 ),
@@ -42,8 +42,8 @@ extension DataSourceCredits {
                         "車站與日文站名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成，CC BY 4.0。軌道、隧道與高架：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與九州旅客鐵道、日本政府沒有任何關係。"
                     ),
                     links: [
-                        DataSourceCredit.Link(title: language.text("National Land Numerical Information: Railway Data", "国土数値情報 鉄道データ"), url: "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html"),
-                        DataSourceCredit.Link(title: language.text("CC BY 4.0", "CC BY 4.0"), url: "https://creativecommons.org/licenses/by/4.0/"),
+                        landNumericalRailwayData(in: language),
+                        ccByLicense,
                         openStreetMapCopyright(in: language),
                     ]
                 ),
@@ -142,7 +142,7 @@ extension DataSourceCredits {
                         "2025 年的旅客與 2025 年度（到 2026 年 3 月）的航班：福岡市整理的日本國土交通省機場統計。飛台灣的航線：交通部民用航空局《民航統計年報》2025 年。位置：OpenStreetMap 貢獻者。本遊戲與福岡國際機場沒有任何關係。"
                     ),
                     links: [
-                        DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
+                        civilAviation(in: language),
                         DataSourceCredit.Link(title: language.text("Fukuoka City: Fukuoka Airport", "福岡市：福岡空港について"), url: "https://www.city.fukuoka.lg.jp/shisei/kotsu-toshiseibi/kukouchosa.html"),
                     ]
                 ),
@@ -165,5 +165,10 @@ extension DataSourceCredits {
                 ),
             ]
         )
+    }
+
+    /// National Land Numerical Information's railway data (MLIT).
+    private static func landNumericalRailwayData(in language: DisplayLanguage) -> DataSourceCredit.Link {
+        DataSourceCredit.Link(title: language.text("National Land Numerical Information: Railway Data", "国土数値情報 鉄道データ"), url: "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html")
     }
 }

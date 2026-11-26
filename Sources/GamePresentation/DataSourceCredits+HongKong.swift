@@ -22,7 +22,7 @@ extension DataSourceCredits {
                         "軌道、車站位置、站名、橋梁、隧道與路綫色：© OpenStreetMap 貢獻者，ODbL 1.0。站名與站序用香港鐵路有限公司在「資料一線通」（DATA.GOV.HK）公開的「港鐵路綫及車站」資料核對，車站代號取自該資料，依「資料一線通」的使用條款及條件使用。班距與行車時間：由港鐵在「資料一線通」公開的「下一班列車」資料（2026 年 11 月）算出。港鐵資料的知識產權屬香港鐵路有限公司所有。本遊戲與香港鐵路有限公司、香港特別行政區政府沒有任何關係。"
                     ),
                     links: [
-                        DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
+                        dataGovHKTerms(in: language),
                         openStreetMapCopyright(in: language),
                     ]
                 ),
@@ -87,7 +87,7 @@ extension DataSourceCredits {
                             title: language.text("Raster Grids on Land Utilization", "土地利用網格"),
                             url: "https://data.gov.hk/en-data/dataset/hk-pland-pland1-land-utilization-in-hong-kong-raster-grid"
                         ),
-                        DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
+                        dataGovHKTerms(in: language),
                     ]
                 ),
                 // Decisions 712, 729 and 791: the buildings of Hong Kong's
@@ -141,7 +141,7 @@ extension DataSourceCredits {
                             title: language.text("Persons engaged by Tertiary Planning Unit", "按小規劃統計區劃分的就業人數"),
                             url: "https://data.gov.hk/en-data/dataset/hk-censtatd-tablechart-215-16009"
                         ),
-                        DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions"),
+                        dataGovHKTerms(in: language),
                         DataSourceCredit.Link(
                             title: language.text("CSDI Portal Terms and Conditions of Use", "空間數據共享平台使用條款"),
                             url: "https://portal.csdi.gov.hk/csdi-webpage/doc/TNC"
@@ -179,10 +179,15 @@ extension DataSourceCredits {
                         "2025 年的旅客與航班：香港機場管理局公布的航空交通量。飛台灣的航線：交通部民用航空局《民航統計年報》2025 年。位置：OpenStreetMap 貢獻者。本遊戲與香港機場管理局沒有任何關係。"
                     ),
                     links: [
-                        DataSourceCredit.Link(title: language.text("Civil Aviation Administration", "交通部民用航空局"), url: civilAviationURL),
+                        civilAviation(in: language),
                     ]
                 ),
             ]
         )
+    }
+
+    /// DATA.GOV.HK's terms, linked from every source of Hong Kong's open data.
+    private static func dataGovHKTerms(in language: DisplayLanguage) -> DataSourceCredit.Link {
+        DataSourceCredit.Link(title: language.text("DATA.GOV.HK Terms and Conditions of Use", "資料一線通使用條款及條件"), url: "https://data.gov.hk/en/terms-and-conditions")
     }
 }

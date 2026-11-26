@@ -56,7 +56,7 @@ extension DataSourceCredits {
                         "含芬蘭國土測量局（Maanmittauslaitos）地形資料庫與 3D 建物（2022）的資料，依創用 CC 姓名標示 4.0 授權使用。用途與新建物：© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。沒有實測也沒有記錄的樓層數是本遊戲的估計。"
                     ),
                     links: [
-                        DataSourceCredit.Link(title: language.text("National Land Survey open data licence", "芬蘭國土測量局開放資料授權"), url: "https://www.maanmittauslaitos.fi/en/opendata-licence-cc40"),
+                        nationalLandSurveyLicence(in: language),
                         openStreetMapCopyright(in: language),
                     ]
                 ),
@@ -72,7 +72,7 @@ extension DataSourceCredits {
                         "含芬蘭國土測量局（Maanmittauslaitos）10 公尺高程模型 2023 年 8 月的資料，依創用 CC 姓名標示 4.0 授權使用。"
                     ),
                     links: [
-                        DataSourceCredit.Link(title: language.text("National Land Survey open data licence", "芬蘭國土測量局開放資料授權"), url: "https://www.maanmittauslaitos.fi/en/opendata-licence-cc40"),
+                        nationalLandSurveyLicence(in: language),
                     ]
                 ),
                 DataSourceCredit(
@@ -90,7 +90,7 @@ extension DataSourceCredits {
                         "資料來源：芬蘭統計局（Statistics Finland）1 公里人口格網 2025 年、郵遞區開放統計 Paavo 2025 年，依創用 CC 姓名標示 4.0 授權使用；已依地圖上的建物細分。"
                     ),
                     links: [
-                        DataSourceCredit.Link(title: "CC BY 4.0", url: ccByURL),
+                        ccByLicense,
                     ]
                 ),
                 // Decision 1003: the months' rain and thunder
@@ -113,5 +113,10 @@ extension DataSourceCredits {
                 ),
             ]
         )
+    }
+
+    /// The National Land Survey of Finland's open data licence.
+    private static func nationalLandSurveyLicence(in language: DisplayLanguage) -> DataSourceCredit.Link {
+        DataSourceCredit.Link(title: language.text("National Land Survey open data licence", "芬蘭國土測量局開放資料授權"), url: "https://www.maanmittauslaitos.fi/en/opendata-licence-cc40")
     }
 }
