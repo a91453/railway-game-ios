@@ -5,6 +5,7 @@
 - 做到哪：#2747（rest 重排）、#2748（受影響測試選到基底類別）、#2750（MAC-RUNNER，決策 1014）已合。發版日的量測在量測檔 §6。
 - 已驗證：#2747 自己的完整 tier，rest-1 12.6 分、rest-2 12.0 分（11-26 夜間是 19.9 分）。
 - 下一步：開新的一串做下面的「只改發版說明的 PR」（量測檔 §6：發版 PR 推 8 次、每次約 31 分，卡在 hosted iOS build 29.9 分）。本串已壓縮兩次，停手。
+- 2026-11-27 後來：第 2 項由串「讓核心改動跑完整測試」做了（決策 1012 §7）：寬層是 full 的拉取請求不縮小。
 - 2026-11-26 後來：第 1 項與第 6 項由串「讓只改說明的 PR 不重建 App」（分支 `claude/project-thread-s43n4g`，決策 1017）做了：只改發版說明的 PR 是 `notes` tier，只跑 `WhatsNewTests`、`ReviewL19FixTests`，iOS 的 macOS job 全跳過；發版 PR 不加 `full-ci`。剩下照下面第 2–5、7 項。
 - 等作者：runner 加 `xcode-27.2` 標籤、關掉 Mac 的 Xcode 自動更新（`docs/MAC_RUNNER.md`）；在那之前 PR 的 iOS build 都照舊用 hosted。
 
@@ -27,7 +28,7 @@
    - 要改的地方：`ios-build.yml` 的 changes job，以及 `swift-shards.sh plan` 或 `affected-tests.py`。
    - 怎麼判斷：檔案清單只含這三種；`WhatsNew.swift` 的 diff 只在條目陣列裡，其他程式碼沒動。判斷不了就照舊全跑。
    - selftest 兩個情況都要有：只改條目的 PR 走快速路線，改到條目以外程式碼的 PR 照舊。
-2. **GameCore 的改動不縮小測試範圍**（審查串 P3-4，11-26）。現在 PR 縮小範圍（決策 1012）之後，GameCore 內部的改動在合併前不會跑死結、排程那些大測試，要等合進 main 才抓得到。
+2. ~~**GameCore 的改動不縮小測試範圍**~~（做了：決策 1012 §7，GAMECORE-NO-NARROW，2026-11-27）。原本的規格：（審查串 P3-4，11-26）。現在 PR 縮小範圍（決策 1012）之後，GameCore 內部的改動在合併前不會跑死結、排程那些大測試，要等合進 main 才抓得到。
    - 改法：`swift-shards.sh decide` 遇到 `plan` 給的 tier 是 `full`（GameCore、package 或 CI 腳本）就不呼叫 `affected_plan`，narrowing 只用在 presentation、tests-only、fixtures 這幾種 tier。
    - selftest 要加一個情況：改 `Sources/GameCore/` 的 PR 是 full。現有的「source folder by its path」那個情況要改成用 GamePresentation 的路徑。
    - 決策 1012 補一段「後來」。

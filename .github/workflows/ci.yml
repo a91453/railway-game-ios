@@ -28,7 +28,9 @@ name: CI
 # its changed files reach by name, plus a smoke list of the core (golden
 # scenarios, saves, replays, every start, the real data, the short timetable
 # checkup), when every changed file can be followed and the selection is at
-# most half the broad tier. A push to main keeps the broad tier, and the
+# most half the broad tier. A full tier (GameCore, the package, the CI
+# scripts) is never narrowed: it runs every shard on its pull request too
+# (decision 1012's later note). A push to main keeps the broad tier, and the
 # nightly run every shard, so what the names miss is caught on main.
 #
 # Nightly full run (decision 413): a push to main runs only its tier, as its

@@ -219,7 +219,9 @@ needs OSM data reads the same extract.
   classes its changed files reach by name, plus a smoke list of the core,
   when every file can be followed and the result is at most half the tier
   (decision 1012, `affected-tests.py`); so a test should name the type it
-  tests. A pull request that changes only the release notes
+  tests. A full tier (GameCore, the package, the CI scripts) is never
+  narrowed: its pull request runs every shard (decision 1012's later
+  note). A pull request that changes only the release notes
   (`WhatsNew.entries`, `WhatsNewNext/` lines, the What to Test text, docs)
   runs only `WhatsNewTests` and `ReviewL19FixTests` and no macOS job
   (decision 1017, `release-notes-only.py`); the release pull request
