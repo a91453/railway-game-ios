@@ -41,6 +41,60 @@ final class Map3DN700STests: XCTestCase {
         }
     }
 
+    /// Each coupled end has its hood: the body's outline (its white over
+    /// its skirt's grey, the full width and height) drawn out to 2 cm from
+    /// the coupling on the centre line, so two cars are 4 cm apart and not
+    /// 0.6 m of open air beside a narrow gangway (the owner: the first car
+    /// and the second were too far apart). The blue lines are not carried
+    /// across it. Seen from above its mouth is a shallow V, closed in the
+    /// dark grey; only the coupler's dark wedge reaches the coupling.
+    func testTheHoodsCloseTheGapBetweenCars() throws {
+        let gap = Map3DN700S.hoodGap, taper = Map3DN700S.hoodTaper
+        for unit in Map3DN700S.Unit.allCases {
+            let model = try XCTUnwrap(Map3DN700S.model(unit))
+            let half = Map3DN700S.length(unit) / 2
+            for end: Float in unit.isCab ? [-1] : [-1, 1] {
+                let name = "\(unit.rawValue) \(end)"
+                func mouth(_ vertex: Map3DVertex) -> Float { half - gap - abs(vertex.y) * taper }
+                // Its outside: the white and the grey past the end wall.
+                let hood = model.vertices.filter { $0.x * end > half - 0.29 && $0.color != Map3DPalette.dark }
+                let rim = hood.filter { abs($0.x * end - mouth($0)) < 0.002 }
+                XCTAssertEqual(hood.map { $0.x * end }.max() ?? 0, half - gap, accuracy: 0.002, "\(name): 2 cm short in the middle")
+                XCTAssertTrue(hood.allSatisfy { $0.x * end <= mouth($0) + 0.002 }, "\(name): the V")
+                XCTAssertEqual(rim.map { abs($0.y) }.max() ?? 0, 1.68, accuracy: 0.01, "\(name): as wide as the body")
+                XCTAssertEqual(rim.map(\.z).max() ?? 0, 3.60, accuracy: 0.01, "\(name): to the roof")
+                XCTAssertEqual(rim.map(\.z).min() ?? 9, 0.20, accuracy: 0.02, "\(name): to the skirt's foot")
+                XCTAssertTrue(rim.allSatisfy { $0.color == ($0.z > 0.95 ? Map3DTrainShapeRefresh.highSpeedBodyColor : $0.z < 0.94 ? Map3DPalette.steel : $0.color) }, name)
+                // Past the mouth only the dark coupler, its edge at the
+                // coupling on the centre line.
+                let past = model.vertices.filter { $0.x * end > mouth($0) + 0.002 }
+                XCTAssertTrue(past.allSatisfy { $0.color == Map3DPalette.dark && abs($0.y) <= 0.05 && $0.z > 0.9 && $0.z < 1.1 }, name)
+                XCTAssertEqual(model.vertices.map { $0.x * end }.max() ?? 0, half, accuracy: 0.001, "\(name): the coupler")
+            }
+        }
+    }
+
+    /// Two cars turned 3 degrees to each other on a curve, each half that
+    /// about their joint, keep their hoods 3 cm apart (a straight mouth's
+    /// would cross 5 cm into each other: the studio's first review); only
+    /// the couplers' tips, on the centre line at the joint, touch.
+    func testTheHoodsKeepApartOnACurve() throws {
+        let turn = Float(1.5) * .pi / 180
+        for unit in Map3DN700S.Unit.allCases {
+            let model = try XCTUnwrap(Map3DN700S.model(unit))
+            let half = Map3DN700S.length(unit) / 2
+            for end: Float in unit.isCab ? [-1] : [-1, 1] {
+                var nearest = -Float.infinity
+                for vertex in model.vertices where vertex.x * end > half - 0.4 {
+                    let behind = vertex.x * end - half
+                    if abs(behind) < 0.0005 && abs(vertex.y) < 0.0005 { continue }   // the coupler's tip
+                    nearest = max(nearest, behind * cos(turn) + abs(vertex.y) * sin(turn))
+                }
+                XCTAssertLessThan(nearest, -0.015, "\(unit.rawValue) \(end): \(nearest)")
+            }
+        }
+    }
+
     /// The real livery: a white body, the two blue lines along its side
     /// under the windows (the upper one the wider), a grey skirt, and no
     /// colour that is not the palette's.
@@ -74,7 +128,7 @@ final class Map3DN700STests: XCTestCase {
     func testTheDoorsHaveTheirFrames() throws {
         for unit in Map3DN700S.Unit.allCases {
             let model = try XCTUnwrap(Map3DN700S.model(unit))
-            let wall = model.vertices.filter { abs($0.y) > 1.67 && $0.x < 4 }
+            let wall = model.vertices.filter { abs($0.y) > 1.67 && $0.x < 4.9 }
             let frame = wall.filter { $0.color == Map3DPalette.steel && $0.z > 1.0 }.map(\.z)
             let glass = wall.filter { $0.color == Map3DTrainStyle.glass }.map(\.z)
             let top = try XCTUnwrap(frame.max(), unit.rawValue), sill = try XCTUnwrap(frame.min(), unit.rawValue)
@@ -86,42 +140,71 @@ final class Map3DN700STests: XCTestCase {
         }
     }
 
-    /// Each door is a piece of its own: no triangle is partly a door's and
-    /// partly the wall's, on either side, so a door can be moved apart
-    /// from the wall (to open at a station) without the mesh cut again.
+    /// Each door is a piece of its own: its triangles, on each side, are
+    /// the model's run the tool wrote as the door's node, all of them
+    /// inside its box, and no triangle of the wall's is on the door
+    /// (without the door the wall has its opening, as whole as the door
+    /// was: the studio's first review found wall faces 161 to 343 mm²
+    /// over the doors), so a door can be moved apart from the wall (to
+    /// open at a station) without the mesh cut again.
     func testEachDoorIsAPieceOfItsOwn() throws {
         XCTAssertEqual(Map3DN700S.Unit.allCases.map { Map3DN700S.doors($0).count }, [3, 2, 2])
         XCTAssertEqual(Map3DN700S.doors(.cab).map(\.crew), [true, false, false])
+        func corners(_ model: Map3DModelPack.Model, _ triangle: Int) -> [Map3DPoint] {
+            model.vertices[3 * triangle..<3 * triangle + 3].map { Map3DPoint($0.x, $0.y, $0.z) }
+        }
+        // Whether (x, z) is inside `points`, seen from the side.
+        func inside(_ x: Float, _ z: Float, _ points: [Map3DPoint]) -> Bool {
+            func cross(_ a: Map3DPoint, _ b: Map3DPoint) -> Float { (b.x - a.x) * (z - a.z) - (b.z - a.z) * (x - a.x) }
+            let turns = [cross(points[0], points[1]), cross(points[1], points[2]), cross(points[2], points[0])]
+            return turns.allSatisfy { $0 > 1e-7 } || turns.allSatisfy { $0 < -1e-7 }
+        }
+        // The area a triangle covers seen from the side.
+        func side(_ points: [Map3DPoint]) -> Float {
+            abs((points[1].x - points[0].x) * (points[2].z - points[0].z) - (points[2].x - points[0].x) * (points[1].z - points[0].z)) / 2
+        }
         for unit in Map3DN700S.Unit.allCases {
             let model = try XCTUnwrap(Map3DN700S.model(unit))
-            // The side walls' triangles.
-            var walls: [(points: [Map3DPoint], color: UInt32)] = []
-            for first in stride(from: 0, to: model.vertices.count, by: 3) {
-                let points = model.vertices[first..<first + 3].map { Map3DPoint($0.x, $0.y, $0.z) }
-                if points.allSatisfy({ abs($0.y) > 1.5 }) { walls.append((points, model.vertices[first].color)) }
-            }
-            for door in Map3DN700S.doors(unit) {
+            let doors = Map3DN700S.doors(unit)
+            // The doors' nodes follow the body's, one after the other, to
+            // the model's last triangle.
+            let runs = doors.flatMap { [$0.left, $0.right] }.sorted { $0.lowerBound < $1.lowerBound }
+            XCTAssertEqual(runs.last?.upperBound, model.triangleCount, unit.rawValue)
+            for (run, next) in zip(runs, runs.dropFirst()) { XCTAssertEqual(run.upperBound, next.lowerBound, unit.rawValue) }
+            let wall = Set(0..<model.triangleCount).subtracting(runs.flatMap { Array($0) })
+            for door in doors {
                 XCTAssertGreaterThan(door.x.upperBound - door.x.lowerBound, 0.45, unit.rawValue)
                 XCTAssertGreaterThan(door.z.upperBound - door.z.lowerBound, 1.4, unit.rawValue)
-                for side in [Float(1), -1] {
-                    var own = 0, glass = 0, frame = 0
-                    for (triangle, color) in walls where triangle[0].y * side > 0 {
-                        if triangle.allSatisfy({ door.contains($0) }) {
-                            own += 1
-                            if color == Map3DTrainStyle.glass { glass += 1 }
-                            if color == Map3DPalette.steel { frame += 1 }
-                        } else if !door.crew {
-                            // (The driver's door is on the nose's taper,
-                            // where its outline is not square to the car:
-                            // the tool's node is its piece, this box only
-                            // its place.)
-                            XCTAssertFalse(triangle.contains { door.contains($0, margin: -0.01) },
-                                           "\(unit.rawValue): a triangle crosses the door at x \(door.x)")
-                        }
+                for sign in [Float(1), -1] {
+                    let name = "\(unit.rawValue): the door at x \(door.x), side \(sign)"
+                    let own = door.triangles(side: sign)
+                    XCTAssertGreaterThan(own.count, 40, name)
+                    var glass = 0, frame = 0, covered: Float = 0
+                    for triangle in own {
+                        let points = corners(model, triangle)
+                        XCTAssertTrue(points.allSatisfy { door.contains($0) && $0.y * sign > 1.5 }, name)
+                        covered += side(points)
+                        if model.vertices[3 * triangle].color == Map3DTrainStyle.glass { glass += 1 }
+                        if model.vertices[3 * triangle].color == Map3DPalette.steel { frame += 1 }
                     }
-                    XCTAssertGreaterThan(own, 40, "\(unit.rawValue): the door at x \(door.x), side \(side)")
-                    XCTAssertGreaterThan(glass, 0, unit.rawValue)
-                    XCTAssertGreaterThan(frame, 5, unit.rawValue)
+                    XCTAssertGreaterThan(glass, 0, name)
+                    XCTAssertGreaterThan(frame, 5, name)
+                    // Nothing of the wall's is on the door: no wall face's
+                    // middle inside one of the door's faces, seen from the
+                    // side. (Its outline is near its box, a little off square
+                    // where the texture was: a passenger door covers its box
+                    // within 1%.)
+                    let leaf = own.map { corners(model, $0) }
+                    for triangle in wall {
+                        let points = corners(model, triangle)
+                        guard points.allSatisfy({ $0.y * sign > 1.5 }) else { continue }
+                        let x = (points[0].x + points[1].x + points[2].x) / 3, z = (points[0].z + points[1].z + points[2].z) / 3
+                        guard door.contains(Map3DPoint(x, points[0].y, z), margin: 0.01) else { continue }
+                        XCTAssertFalse(leaf.contains { inside(x, z, $0) }, "\(name): the wall's triangle \(triangle) on it")
+                    }
+                    guard !door.crew else { continue }
+                    let box = (door.x.upperBound - door.x.lowerBound) * (door.z.upperBound - door.z.lowerBound)
+                    XCTAssertEqual(covered, box, accuracy: box * 0.01, name)
                 }
             }
         }
@@ -134,11 +217,31 @@ final class Map3DN700STests: XCTestCase {
             XCTAssertTrue(Map3DTrainMaterial.marksOwnGlass(model), unit.rawValue)
         }
         let cab = try XCTUnwrap(Map3DN700S.model(.cab))
-        for lens in [Map3DTrainStyle.headlamp, Map3DPalette.lantern] {
+        for (lens, faces) in [(Map3DTrainStyle.headlamp, 11), (Map3DPalette.lantern, 9)] {
             let lamps = cab.vertices.filter { $0.color == lens }
-            XCTAssertFalse(lamps.isEmpty)
             XCTAssertGreaterThan(lamps.map(\.x).min() ?? 0, Map3DN700S.pitch * 0.3, "the lamps on the nose")
-            XCTAssertTrue(lamps.contains { $0.y > 0.5 } && lamps.contains { $0.y < -0.5 }, "a lamp on each shoulder")
+            // The same lamp on each shoulder: as many faces, each where the
+            // other's mirror image is to 5 mm (the old car's two sides are
+            // a few millimetres apart).
+            for sign in [Float(1), -1] {
+                XCTAssertEqual(lamps.filter { $0.y * sign > 0.5 }.count, 3 * faces, "\(lens) on the \(sign) shoulder")
+            }
+            // The lamp's middle, its faces weighed by their areas.
+            func middle(_ side: [Map3DVertex]) -> Map3DPoint {
+                var sum = Map3DPoint(0, 0, 0), total: Float = 0
+                for first in stride(from: 0, to: side.count, by: 3) {
+                    let a = side[first], b = side[first + 1], c = side[first + 2]
+                    let p = Map3DPoint(a.x, abs(a.y), a.z), q = Map3DPoint(b.x, abs(b.y), b.z), r = Map3DPoint(c.x, abs(c.y), c.z)
+                    let area = (q - p).cross(r - p).length / 2
+                    sum = sum + (p + q + r) * (area / 3)
+                    total += area
+                }
+                return sum * (1 / total)
+            }
+            let left = middle(lamps.filter { $0.y > 0 }), right = middle(lamps.filter { $0.y < 0 })
+            XCTAssertEqual(left.x, right.x, accuracy: 0.005, "\(lens)")
+            XCTAssertEqual(left.y, right.y, accuracy: 0.005, "\(lens)")
+            XCTAssertEqual(left.z, right.z, accuracy: 0.005, "\(lens)")
         }
         // The windscreen over the nose, on the car's centre line too.
         XCTAssertFalse(cab.vertices.filter { $0.color == Map3DTrainStyle.glass && $0.x > 5.5 && abs($0.y) < 0.3 }.isEmpty)
@@ -148,11 +251,10 @@ final class Map3DN700STests: XCTestCase {
         }
     }
 
-    /// The cab car is the real one's 27.35 m, made longer as a whole car:
-    /// its nose is given no stretch of its own (the owner's rule). The old
-    /// car's nose, 7.41 units from where its full-width side wall ends to
-    /// its tip, times the one factor the whole car's length has
-    /// (13.675 / 10.501); and its windows as many as the old car's.
+    /// The cab car is the real one's 27.35 m, and its nose has no stretch
+    /// of its own (the owner's rule): the tip is at the car's front end,
+    /// and the side walls reach their full width as far behind it as the
+    /// old car's did, times the factor the middle cars' length has.
     func testTheNoseHasNoStretchOfItsOwn() throws {
         let cab = try XCTUnwrap(Map3DN700S.model(.cab))
         XCTAssertEqual(Map3DN700S.cabLength, 27.35)
@@ -160,7 +262,61 @@ final class Map3DN700STests: XCTestCase {
         // (Full width: 1.68 m from the centre line. A cut's new vertex a
         // little way into the nose's taper is not the wall's end.)
         let wall = cab.vertices.filter { abs($0.y) > 1.675 && $0.z > 2.5 }.map(\.x).max() ?? 0
-        XCTAssertEqual(cab.maximum.x - wall, 7.41 * 13.675 / 10.501, accuracy: 0.03)
+        XCTAssertEqual(Map3DN700S.noseLength, 8.82, accuracy: 0.005)
+        XCTAssertEqual(cab.maximum.x - wall, Map3DN700S.noseLength, accuracy: 0.03)
+    }
+
+    /// The cab car's saloon is the real first car's: thirteen windows on
+    /// each side, 1.023 m from one to the next (the cab cars' seat pitch),
+    /// each as wide as a middle car's (0.52 m), and passenger doors as
+    /// wide as a middle car's (0.74 m); the driver's door 8.4 m behind
+    /// the tip (the real car's some 8.0 to 8.3 m, by photographs).
+    func testTheCabCarHasTheRealCarsProportions() throws {
+        func windows(_ unit: Map3DN700S.Unit, side: Float) throws -> [ClosedRange<Float>] {
+            let model = try XCTUnwrap(Map3DN700S.model(unit))
+            let doors = Map3DN700S.doors(unit)
+            var spans: [ClosedRange<Float>] = []
+            for first in stride(from: 0, to: model.vertices.count, by: 3) where model.vertices[first].color == Map3DTrainStyle.glass {
+                let points = model.vertices[first..<first + 3]
+                guard points.allSatisfy({ $0.y * side > 1.5 }),
+                      !doors.contains(where: { $0.triangles(side: side).contains(first / 3) }) else { continue }
+                let xs = points.map(\.x)
+                let low = try XCTUnwrap(xs.min()), high = try XCTUnwrap(xs.max())
+                spans.append(low...high)
+            }
+            var merged: [ClosedRange<Float>] = []
+            for span in spans.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+                if let last = merged.last, span.lowerBound <= last.upperBound + 0.002 {
+                    merged[merged.count - 1] = last.lowerBound...max(last.upperBound, span.upperBound)
+                } else {
+                    merged.append(span)
+                }
+            }
+            return merged
+        }
+        let cab = try XCTUnwrap(Map3DN700S.model(.cab))
+        let doors = Map3DN700S.doors(.cab)
+        for side in [Float(1), -1] {
+            // (Behind the front passenger door: the windscreen and the
+            // cab's side windows are ahead of it.)
+            let saloon = try windows(.cab, side: side).filter { $0.upperBound < doors[1].x.lowerBound }
+            XCTAssertEqual(saloon.count, Map3DN700S.cabWindows)
+            let middle = try windows(.middle, side: side).filter { $0.upperBound - $0.lowerBound > 0.4 }
+            let width = try XCTUnwrap(middle.first.map { $0.upperBound - $0.lowerBound })
+            XCTAssertEqual(width, 0.52, accuracy: 0.005, "a middle car's window")
+            for window in saloon {
+                XCTAssertEqual(window.upperBound - window.lowerBound, width, accuracy: 0.005)
+            }
+            for (window, next) in zip(saloon, saloon.dropFirst()) {
+                XCTAssertEqual(next.lowerBound - window.lowerBound, Map3DN700S.cabWindowPitch, accuracy: 0.003)
+            }
+        }
+        let middleDoor = try XCTUnwrap(Map3DN700S.doors(.middle).first)
+        for door in doors where !door.crew {
+            XCTAssertEqual(door.x.upperBound - door.x.lowerBound, middleDoor.x.upperBound - middleDoor.x.lowerBound, accuracy: 0.01)
+        }
+        let crew = try XCTUnwrap(doors.first { $0.crew })
+        XCTAssertEqual(cab.maximum.x - (crew.x.lowerBound + crew.x.upperBound) / 2, 8.43, accuracy: 0.02)
     }
 
     /// Twelve cars as the N700S-G's were laid (decision 408): the cab at
@@ -202,6 +358,26 @@ final class Map3DN700STests: XCTestCase {
         let tail = try XCTUnwrap(pack.lights[try XCTUnwrap(pack.index(of: set.tailName))]).lamps(atFront: false)
         XCTAssertFalse(tail.tail.isEmpty)
         XCTAssertTrue(tail.tail.allSatisfy { $0.color == Map3DPalette.lantern && $0.x < -5 })
+        // The nose has both lamps side by side: only the white ones glow
+        // on the first car and only the red ones on the last, as the real
+        // train's do.
+        // (The set's own models: the pack keeps a running car's lamps apart.)
+        let cars = set.build()
+        // Every face of the lamps' lit, eleven white ones a shoulder at the
+        // head and nine red ones at the tail, and nothing else.
+        let first = cars.head.vertices.filter { $0.layer == Map3DVertex.glowing }
+        let last = try XCTUnwrap(cars.tail).vertices.filter { $0.layer == Map3DVertex.glowing }
+        XCTAssertTrue(first.allSatisfy { $0.color == Map3DTrainStyle.headlamp })
+        XCTAssertTrue(last.allSatisfy { $0.color == Map3DPalette.lantern })
+        for sign in [Float(1), -1] {
+            XCTAssertEqual(first.filter { $0.y * sign > 0.5 }.count, 3 * 11, "the head's white lamp on the \(sign) shoulder")
+            XCTAssertEqual(last.filter { $0.y * sign > 0.5 }.count, 3 * 9, "the tail's red lamp on the \(sign) shoulder")
+        }
+        XCTAssertEqual(first.count, 3 * 22)
+        XCTAssertEqual(last.count, 3 * 18)
+        for car in [try XCTUnwrap(cars.middle), try XCTUnwrap(cars.pantograph)] {
+            XCTAssertFalse(car.vertices.contains { $0.layer == Map3DVertex.glowing })
+        }
     }
 
     /// It has the N700S-G's place: the train pack's set, the odd-numbered
