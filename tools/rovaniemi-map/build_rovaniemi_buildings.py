@@ -5,7 +5,7 @@
     python3 -I tools/rovaniemi-map/build_rovaniemi_buildings.py \\
         rovaniemi.pbf RailwayGameApp/Resources/MapPacks/rovaniemi
 
-The tiles are Taiwan's (`tools/overture-footprint-tiles/`, `footprints/2`:
+The tiles are Taiwan's (`tools/overture-footprint-tiles/`, `footprints/3`, decision 1005:
 one gzipped z16 tile of outlines, storeys and uses, in a PMTiles archive),
 written by that tool's own encoder as Hong Kong's are
 (`tools/hk-map/build_hk_buildings.py`, whose reader of the extract and

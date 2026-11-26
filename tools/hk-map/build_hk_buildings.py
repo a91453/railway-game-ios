@@ -6,7 +6,7 @@
         Building_Outline_Public_<version>_Building_converted.geojson \\
         hong_kong.pbf RailwayGameApp/Resources/MapPacks/hongkong
 
-The tiles are Taiwan's (`tools/overture-footprint-tiles/`, `footprints/2`:
+The tiles are Taiwan's (`tools/overture-footprint-tiles/`, `footprints/3`, decision 1005:
 one gzipped z16 tile of outlines, storeys and uses, in a PMTiles archive),
 written by that tool's own encoder, so the 3D map's one reader
 (`Map3DFootprints.swift`) reads both.
@@ -378,7 +378,7 @@ def main(landsd_path, extract, folder):
         raw_bytes += len(raw)
         entries.append((tile_id(tiles.ZOOM, key[0], key[1]), gzip.compress(raw, 9, mtime=0)))
     metadata = {'name': 'Hong Kong building footprints', 'format': f'footprints/{tiles.VERSION}', 'zoom': tiles.ZOOM,
-                'extent': tiles.EXTENT, 'tolerance': TOLERANCE, 'uses': tiles.USES, 'storeysFrom': STOREYS_FROM,
+                'extent': tiles.WRITTEN_EXTENT, 'tolerance': TOLERANCE, 'uses': tiles.USES, 'storeysFrom': STOREYS_FROM,
                 'attribution': 'Outlines and heights: Building, Lands Department, Government of the Hong Kong SAR, via the '
                                'CSDI Portal. Uses: © OpenStreetMap contributors (ODbL 1.0). Storeys where not measured: '
                                'this project, from the measured buildings and WorldPop (CC BY 4.0)',

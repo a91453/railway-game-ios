@@ -264,7 +264,7 @@ final class BaseMapStyleTests: XCTestCase {
     }
 
     /// The terrain the app bundles: a PMTiles v3 archive of PNG tiles
-    /// (Terrarium heights), zooms 0–10, over the heights' grid.
+    /// (Terrarium heights), zooms 0–9, over the heights' grid.
     func testTheBundledTerrainIsTheGamesHeights() throws {
         let file = Self.resources.appendingPathComponent("BaseMap/taiwan_terrain.pmtiles")
         let handle = try FileHandle(forReadingFrom: file)
@@ -275,7 +275,7 @@ final class BaseMapStyleTests: XCTestCase {
         XCTAssertEqual(bytes[98], 1, "uncompressed tiles")
         XCTAssertEqual(bytes[99], 2, "PNG tiles")
         XCTAssertEqual(bytes[100], 0, "first zoom")
-        XCTAssertEqual(bytes[101], 10, "last zoom")
+        XCTAssertEqual(bytes[101], 9, "last zoom")
     }
 
     /// Every font the style asks for has the ranges of Latin and of
