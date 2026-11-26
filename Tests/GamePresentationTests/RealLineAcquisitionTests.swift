@@ -446,9 +446,10 @@ final class RealLineAcquisitionTests: XCTestCase {
 
     /// Decision 401: on a map bought tile by tile, a line reaching past the
     /// land owned buys the tiles under it too (decision 315 §1's price),
-    /// whatever the riders' milestone. The Jiji and Neiwan Lines cross
-    /// three tiles; a game starts with one, so neither could be bought, nor
-    /// the Pingxi Line from its junction: "this land is not yours yet".
+    /// whatever the riders' milestone. The Jiji Line crosses three tiles
+    /// past the four a game starts with (decision 992; with one, the
+    /// Neiwan and Pingxi Lines did too), so it could not be bought from
+    /// its junction: "this land is not yours yet".
     func testALineReachingPastTheLandOwnedBuysTheTilesUnderIt() throws {
         let data = RealWorldData.load(pack: HongKongRailwaysTests.pack, file: RealWorldDataLoadTests.file)
         for network in ["PINGXI", "SHENAO", "JIJI", "NEIWAN", "LIUJIA", "SHALUN"] {
@@ -464,7 +465,7 @@ final class RealLineAcquisitionTests: XCTestCase {
             XCTAssertTrue(Set(tiles).isDisjoint(with: owned), network)
             XCTAssertTrue(under.subtracting(owned).isSubset(of: tiles), network)
             XCTAssertEqual(price.land > .zero, !tiles.isEmpty, network)
-            if ["JIJI", "NEIWAN", "PINGXI"].contains(network) { XCTAssertFalse(tiles.isEmpty, "\(network) reaches past the first tile") }
+            if network == "JIJI" { XCTAssertFalse(tiles.isEmpty, "\(network) reaches past the first tiles") }
             print("\(network): \(tiles.count) tiles for \(price.land.moneyText), total \(price.total.moneyText)")
             XCTAssertEqual(offer.priceRows(in: .traditionalChinese).dropLast().map(\.amount).reduce(.zero, +), price.total, network)
             // Bought with money enough (the prices above are a standard

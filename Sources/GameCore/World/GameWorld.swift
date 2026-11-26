@@ -351,6 +351,12 @@ public struct GameWorld: Equatable, Sendable {
     /// games turn it on. Set by ``enableMapExpansion(owning:townSeed:ridersStep:)``,
     /// ``buyMapTile(_:)`` and every midnight only.
     public internal(set) var mapExpansion: MapExpansion?
+    /// Decision 992: whether the player chose to open the whole map from
+    /// the start, rather than start with part of it and buy the rest:
+    /// kept with the game so the app counts no achievements for it, as it
+    /// does not for the whole of Taiwan. Off in a new world and in saves
+    /// from before it. Set by ``openWholeMap()`` only.
+    public internal(set) var wholeMapOpen: Bool = false
     /// The trips that release passengers, derived from the demands and the
     /// lines' stops and kept between calls of ``advance(ticks:)``; not game
     /// state (see ``PassengerPlanCache``).
@@ -3495,7 +3501,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, annualTaxes, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor, geoAnchorBounds
         case land, landBlocks, landDemand, distanceDemand, farDemand, doorCrowding, keepLeft, switchInterlocking, switchLies, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, airRoutes, nextAirRouteID, driving
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, wholeMapOpen, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, airRoutes, nextAirRouteID, driving
         case playerMelodies, nextPlayerMelodyID
     }
 
@@ -3674,6 +3680,7 @@ extension GameWorld: Codable {
         ground = container.contains(.ground) ? try container.decode(Ground.self, forKey: .ground) : Ground()
         freight = try container.decodeIfPresent(FreightState.self, forKey: .freight)
         mapExpansion = try container.decodeIfPresent(MapExpansion.self, forKey: .mapExpansion)
+        wholeMapOpen = try container.decodeIfPresent(Bool.self, forKey: .wholeMapOpen) ?? false
         // Decision 400's later point 2: no more road cells than the world
         // has, refused before they are spread out.
         if container.contains(.roads), try !container.decodeNil(forKey: .roads) {
@@ -3880,6 +3887,9 @@ extension GameWorld: Codable {
             try container.encode(freight, forKey: .freight)
         }
         try container.encodeIfPresent(mapExpansion, forKey: .mapExpansion)
+        if wholeMapOpen {
+            try container.encode(true, forKey: .wholeMapOpen)
+        }
         try container.encodeIfPresent(roads, forKey: .roads)
         if !busRoutes.isEmpty {
             try container.encode(busRoutes, forKey: .busRoutes)

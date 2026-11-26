@@ -83,7 +83,7 @@ final class RealWorldExpansionReportTests: XCTestCase {
             GameSession.readLand(roundStationsOf: &world, population: Self.population, places: Self.places)
             let residents = world.land.cells.reduce(0) { $0 + $1.residents }
             let trips = residents * StationDemand.tripsPerHundredResidents / 100
-            let towns = try XCTUnwrap(PolicyMap.densestTowns(in: world, tile: layout.start))
+            let towns = try XCTUnwrap(PolicyMap.densestTowns(in: world, tiles: layout.startTiles))
             let sites = (towns[0], towns[1])
             let apart = hypot(Double(sites.0.x - sites.1.x), Double(sites.0.y - sites.1.y)) / 64 / 1_000
             let catchments = [sites.0, sites.1].map { world.land.totals(within: Land.catchmentRadius, of: $0).residents }
@@ -160,7 +160,7 @@ final class RealWorldExpansionReportTests: XCTestCase {
         var world = GameWorld.newRealWorldExpansionGame(layout, ridersStep: MapExpansion.standardRidersStep, balance: 1_000_000_000_000)
         world.setEconomyMode(.free)
         GameSession.readLand(roundStationsOf: &world, population: Self.population, places: Self.places)
-        let pair = try XCTUnwrap(PolicyMap.densestTowns(in: world, tile: layout.start))
+        let pair = try XCTUnwrap(PolicyMap.densestTowns(in: world, tiles: layout.startTiles))
         let towns = (pair[0], pair[1])
         world = try newGameLine(through: [towns.0, towns.1], in: world)
         var lines = [

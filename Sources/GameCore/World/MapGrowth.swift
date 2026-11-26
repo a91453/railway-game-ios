@@ -86,12 +86,23 @@ extension GameWorld {
         return cut
     }
 
+    // MARK: - The whole map open
+
+    /// Decision 992: marks the map as opened whole at the player's choice
+    /// (``wholeMapOpen``). Refused on a map bought tile by tile, whose
+    /// land is not all open.
+    public mutating func openWholeMap() throws(GameError) {
+        guard mapExpansion == nil else { throw .mapExpansionEnabled }
+        wholeMapOpen = true
+    }
+
     // MARK: - Validation
 
     /// Why the part of the world its anchor is the middle of breaks a rule
     /// (decision 969), or `nil`: only a world with an anchor has one, it
     /// lies in the world, and it is not the whole world (which `nil` says).
     func mapGrowthProblem() -> String? {
+        if wholeMapOpen, mapExpansion != nil { return "A map opened whole is not bought tile by tile." }
         guard let part = geoAnchorBounds else { return nil }
         guard geoAnchor != nil else { return "Only a map laid over the Earth says which part of it its anchor is the middle of." }
         guard part.width <= bounds.width, part.height <= bounds.height, part != bounds else {

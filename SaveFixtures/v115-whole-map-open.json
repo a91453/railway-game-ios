@@ -1,0 +1,167 @@
+{
+  "saveVersion" : 115,
+  "world" : {
+    "accounts" : {
+      "assets" : [
+        {
+          "acquired" : 0,
+          "cost" : 136800,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "track",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 1
+        },
+        {
+          "acquired" : 0,
+          "cost" : 1000,
+          "days" : 0,
+          "depreciation" : 0,
+          "kind" : "station",
+          "owner" : 2
+        }
+      ],
+      "capitalDays" : [
+        {
+          "capitalSpending" : 138800,
+          "day" : 0
+        }
+      ],
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 1600000,
+      "width" : 2200000
+    },
+    "clock" : {
+      "now" : 180,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 99999861200,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "geoAnchor" : {
+      "latitude" : 223000000,
+      "longitude" : 1141000000
+    },
+    "landBlocks" : [
+
+    ],
+    "lines" : [
+      {
+        "id" : 1,
+        "name" : "Main",
+        "stops" : [
+          1,
+          2
+        ],
+        "trainsInService" : {
+          "low" : 0,
+          "offPeak" : 0,
+          "peak" : 0
+        },
+        "window" : {
+          "close" : 1440,
+          "open" : 360
+        }
+      }
+    ],
+    "network" : {
+      "edges" : [
+        {
+          "curve" : {
+            "straight" : {
+
+            }
+          },
+          "from" : 1,
+          "id" : 1,
+          "to" : 2
+        }
+      ],
+      "nextEdgeID" : 2,
+      "nextNodeID" : 3,
+      "nodes" : [
+        {
+          "id" : 1,
+          "x" : 500000,
+          "y" : 700000,
+          "z" : 0
+        },
+        {
+          "id" : 2,
+          "x" : 1900000,
+          "y" : 700000,
+          "z" : 0
+        }
+      ],
+      "platforms" : [
+        {
+          "edge" : 1,
+          "end" : 30000,
+          "start" : 10000,
+          "station" : 1
+        },
+        {
+          "edge" : 1,
+          "end" : 1390000,
+          "start" : 1370000,
+          "station" : 2
+        }
+      ]
+    },
+    "nextLineID" : 2,
+    "nextStationID" : 3,
+    "nextTrainID" : 1,
+    "stations" : [
+      {
+        "id" : 1,
+        "name" : "West",
+        "point" : {
+          "x" : 520000,
+          "y" : 705000
+        }
+      },
+      {
+        "id" : 2,
+        "name" : "East",
+        "point" : {
+          "x" : 1880000,
+          "y" : 705000
+        }
+      }
+    ],
+    "trains" : [
+
+    ],
+    "wholeMapOpen" : true
+  }
+}
