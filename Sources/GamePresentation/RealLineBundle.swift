@@ -157,6 +157,13 @@ public struct RealLineBundleOffer: Sendable {
         ]
     }
 
+    /// Decision 993: what the card says under the price of the lines that
+    /// pay a monthly fee once bought, one sentence each; `nil` for none.
+    public func monthlyFeeText(in language: DisplayLanguage) -> String? {
+        let texts = offers.compactMap { $0.monthlyFeeText(in: language) }
+        return texts.isEmpty ? nil : texts.joined(separator: language.text(" ", ""))
+    }
+
     /// What the card's foot says of lines sold together, above Buy: the
     /// price of them all, whose rows are further down the card than a
     /// phone on its side shows at once. `nil` for one line (its card is

@@ -212,18 +212,28 @@ final class ThsrSaleTests: XCTestCase {
         var world = session.world
         world.setUnlimitedFunds(false)
         let line = try XCTUnwrap(world.acquisition(of: Self.id)?.line)
-        print("| day | boardings | fares | operating | maintenance | energy | staff | line profit | company fares | company costs | tax | balance |")
+        print("| day | boardings | fares | operating | maintenance | energy | staff | line profit | company fares | company costs | interest | property in | property out | tax | balance | balance change |")
+        var lastBalance = world.economy.balance
         var total: Int64 = 0, counted = 0
-        for _ in 0..<days {
-            try world.advance(ticks: 24 * 60)
-            guard let tally = world.lineAccounts?.lines.first(where: { $0.line == line })?.days.last?.tally, let day = world.accounts.days.last else { continue }
+        for index in 0..<days {
+            // A minute past midnight the day before is settled: its
+            // energy, staff and the monthly fee are booked to it.
+            try world.advance(ticks: 24 * 60 + (index == 0 ? 1 : 0))
+            let ended = GameTime.floorDivide(world.clock.now.seconds, GameTime.secondsPerDay) - 1
+            guard let tally = world.lineAccounts?.lines.first(where: { $0.line == line })?.days.first(where: { $0.day == ended })?.tally,
+                  let day = world.accounts.days.first(where: { $0.day == ended }) else { continue }
             let profit = tally.fareRevenue - tally.operatingCost - tally.maintenanceCost - tally.energyCost - tally.staffCost
-            if day.day >= 7 { total += profit.amount; counted += 1 }
-            print("| \(day.day) | \(tally.boardings) | \(tally.fareRevenue.moneyText) | \(tally.operatingCost.moneyText) | \(tally.maintenanceCost.moneyText) | \(tally.energyCost.moneyText) | \(tally.staffCost.moneyText) | \(profit.moneyText) | \(day.fareRevenue.moneyText) | \(day.totalCost.moneyText) | \(day.taxCost.moneyText) | \(world.economy.balance.moneyText) |")
+            if day.day >= 1 { total += profit.amount; counted += 1 }
+            print("| \(day.day) | \(tally.boardings) | \(tally.fareRevenue.moneyText) | \(tally.operatingCost.moneyText) | \(tally.maintenanceCost.moneyText) | \(tally.energyCost.moneyText) | \(tally.staffCost.moneyText) | \(profit.moneyText) | \(day.fareRevenue.moneyText) | \(day.totalCost.moneyText) | \(day.interestCost.moneyText) | \(day.propertyRevenue.moneyText) | \(day.propertyCost.moneyText) | \(day.taxCost.moneyText) | \(world.economy.balance.moneyText) | \((world.economy.balance - lastBalance).moneyText) |")
+            lastBalance = world.economy.balance
+            // Decision 993: the day's ledger rows other than the hours'.
+            let rows = Dictionary(grouping: world.accounts.entries.filter { GameTime.floorDivide($0.time.seconds, GameTime.secondsPerDay) == ended && $0.kind != .hourlyNet }, by: \.kind)
+                .map { "\($0.key.rawValue) \($0.value.reduce(Money.zero) { $0 + $1.amount }.moneyText)" }.sorted()
+            print("  rows: " + rows.joined(separator: ", "))
         }
         if counted > 0 {
             let average = total / Int64(counted)
-            print("THSR average line profit a day from day 7: \(Money(average).moneyText); a year \(Money(average * 365).moneyText); price \(price.total.moneyText) is \(String(format: "%.1f", Double(price.total.amount) / Double(max(1, average * 365)))) years of it")
+            print("THSR average line profit a day from day 1: \(Money(average).moneyText); a year \(Money(average * 360).moneyText); price \(price.total.moneyText) is \(String(format: "%.1f", Double(price.total.amount) / Double(max(1, average * 360)))) years of it")
         }
     }
 }

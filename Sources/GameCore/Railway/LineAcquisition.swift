@@ -40,6 +40,23 @@ public struct LineAcquisition: Hashable, Sendable {
     /// (``stateTrackFare(squaredDistance:)``). `false` for a bus route's
     /// and a purchase saved before version 108.
     public private(set) var stateTrack = false
+    /// Decision 993: what the line pays each month for its upkeep on top of
+    /// its running costs, a thirtieth of it each day
+    /// (``GameWorld/settleLineFees(day:time:)``), in whole dollars: the
+    /// Taiwan High Speed Rail's, so its price and what it earns after the
+    /// fee pay back in some years. Zero for every other line, a bus
+    /// route's and a purchase saved before it.
+    public private(set) var monthlyFee = Money.zero
+
+    /// Decision 993: the largest monthly fee a line bought may pay,
+    /// NT$100,000,000,000.
+    public static let maximumMonthlyFee = Money(10_000_000_000_000)
+
+    /// Decision 993: what a day of ``monthlyFee`` is, a thirtieth of it in
+    /// whole dollars, rounded half up.
+    public var dailyFee: Money {
+        Money((monthlyFee.amount / 100 * 2 + 30) / 60 * 100)
+    }
 
     /// What kind of railway a line bought is, which sets what each of its
     /// riders costs (decision 400, 10j-3).
@@ -119,7 +136,7 @@ public struct LineAcquisition: Hashable, Sendable {
 
     /// Railway `realLine`, bought as `line`, laying `track`, on the
     /// state's track if `stateTrack` (decision 828).
-    public init(realLine: String, line: LineID, day: Int64, value: Money, track: [TrackEdgeID]? = nil, stateTrack: Bool = false) {
+    public init(realLine: String, line: LineID, day: Int64, value: Money, track: [TrackEdgeID]? = nil, stateTrack: Bool = false, monthlyFee: Money = .zero) {
         kind = .railway
         self.realLine = realLine
         self.line = line
@@ -128,6 +145,7 @@ public struct LineAcquisition: Hashable, Sendable {
         self.value = value
         self.track = track
         self.stateTrack = stateTrack
+        self.monthlyFee = monthlyFee
     }
 
     /// Bus route `realLine`, bought as `busRoute`.
@@ -152,13 +170,15 @@ public struct LineAcquisition: Hashable, Sendable {
     var isValid: Bool {
         !realLine.isEmpty && realLine.count <= Self.maximumNameLength && day >= 0 && value >= .zero
             && (kind == .railway) == (line != nil) && (kind == .bus) == (busRoute != nil)
-            && (kind == .railway || (track == nil && !stateTrack)) && track.map { !$0.isEmpty && Set($0).count == $0.count } ?? true
+            && (kind == .railway || (track == nil && !stateTrack && monthlyFee == .zero))
+            && monthlyFee >= .zero && monthlyFee <= Self.maximumMonthlyFee && monthlyFee.amount % 100 == 0
+            && track.map { !$0.isEmpty && Set($0).count == $0.count } ?? true
     }
 }
 
 extension LineAcquisition: Codable {
     private enum CodingKeys: String, CodingKey {
-        case kind, realLine, line, busRoute, day, value, track, stateTrack
+        case kind, realLine, line, busRoute, day, value, track, stateTrack, monthlyFee
     }
 
     /// A railway's without `"kind"` (saves before version 73), a bus
@@ -173,6 +193,7 @@ extension LineAcquisition: Codable {
         value = try container.decode(Money.self, forKey: .value)
         track = try container.decodeIfPresent([Int].self, forKey: .track)?.map(TrackEdgeID.edge)
         stateTrack = try container.decodeIfPresent(Bool.self, forKey: .stateTrack) ?? false
+        monthlyFee = try container.decodeIfPresent(Money.self, forKey: .monthlyFee) ?? .zero
         guard isValid else {
             throw DecodingError.dataCorruptedError(forKey: .realLine, in: container, debugDescription: "A line bought has a name, a day and a value of at least 0.")
         }
@@ -191,6 +212,9 @@ extension LineAcquisition: Codable {
         try container.encodeIfPresent(track?.compactMap(\.networkNumber), forKey: .track)
         if stateTrack {
             try container.encode(true, forKey: .stateTrack)
+        }
+        if monthlyFee > .zero {
+            try container.encode(monthlyFee, forKey: .monthlyFee)
         }
     }
 }
@@ -263,15 +287,21 @@ extension GameWorld {
     ///
     /// Decision 828: with `stateTrack` the line runs on the state's track
     /// (``LineAcquisition/stateTrack``).
+    ///
+    /// Decision 993: with `monthlyFee`, whole dollars from zero to
+    /// ``LineAcquisition/maximumMonthlyFee``, the line pays it each month
+    /// (``LineAcquisition/monthlyFee``); outside them,
+    /// ``GameError/invalidAcquisition``.
     public mutating func recordLineAcquisition(
         line id: LineID, realLine: String, dailyRiders: Int64, tier: LineAcquisition.Tier = .branch, track: [TrackEdgeID]? = nil,
-        stateTrack: Bool = false
+        stateTrack: Bool = false, monthlyFee: Money = .zero
     ) throws(GameError) {
         let index = try lineIndex(of: id)
         guard !acquisitions.contains(where: { $0.realLine == realLine || $0.line == id }) else { throw .lineAlreadyAcquired }
         let line = lines[index]
         guard !realLine.isEmpty, realLine.count <= LineAcquisition.maximumNameLength,
               (0...LineAcquisition.maximumDailyRiders).contains(dailyRiders),
+              monthlyFee >= .zero, monthlyFee <= LineAcquisition.maximumMonthlyFee, monthlyFee.amount % 100 == 0,
               !line.runs.isEmpty, line.runDays.allSatisfy({ $0 == nil }),
               track.map({ !$0.isEmpty && Set($0).count == $0.count && $0.allSatisfy { network.edge($0) != nil } }) ?? true else {
             throw .invalidAcquisition
@@ -280,7 +310,7 @@ extension GameWorld {
         try economy.spend(value)
         let lastDayDone = LineAcquisition.firstServiceDay(at: clock.now) - 1
         setRunsDone(ofLine: index, through: lastDayDone >= 0 ? lastDayDone : nil)
-        acquisitions.append(LineAcquisition(realLine: realLine, line: id, day: dayIndex(of: clock.now), value: value, track: track, stateTrack: stateTrack))
+        acquisitions.append(LineAcquisition(realLine: realLine, line: id, day: dayIndex(of: clock.now), value: value, track: track, stateTrack: stateTrack, monthlyFee: monthlyFee))
         acquireAsset(.acquiredLine, owner: id.rawValue, cost: value)
         leftTrack = leftTrack.compactMap { left in
             let standing = left.edges.filter { network.edge($0) != nil }
@@ -332,6 +362,25 @@ extension GameWorld {
             }
         }
         try body(&self)
+    }
+
+    /// Decision 993: as a day ends, each line bought with a monthly fee
+    /// pays a thirtieth of it, in one ledger row for them all, and each
+    /// line's day books its own as upkeep.
+    mutating func settleLineFees(day: Int64, time: GameTime) {
+        var total = Money.zero
+        for bought in acquisitions where bought.monthlyFee > .zero {
+            guard let id = bought.line, lines.contains(where: { $0.id == id }) else { continue }
+            let fee = bought.dailyFee
+            guard fee > .zero else { continue }
+            total = total + fee
+            recordLineFee(fee, of: id, day: day)
+        }
+        guard total > .zero else { return }
+        write(LedgerEntry(
+            kind: .dailyLineFee, time: time, amount: .zero - total,
+            breakdown: [LedgerLine(item: .lineFee, amount: .zero - total)]
+        ), day: day)
     }
 
     /// Whether line `id` was bought on the state's track (decision 828).

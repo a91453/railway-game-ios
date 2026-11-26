@@ -20,7 +20,10 @@ the Kyushu Shinkansen's:
 - The line is bought with a depot past each end (`RealLineDepotSite`
   `nangang` and `zuoying`): its trains stand there overnight and while
   the line does not need them, so the ends are laid with no more than
-  `END_TRACKS` and the game sends the rest into the depots.
+  `DEPOT_END_TRACKS` (seven, as a light rail's end with a depot: with
+  five, under a new game's rules both ends filled up by day, the trains
+  in the way were sent into the depots and 59 of the second day's 202
+  runs found no train) and the game sends the rest into the depots.
 - A train has five minutes at either end to make a delay good, as the
   Kyushu Shinkansen's at Kumamoto.
 
@@ -112,8 +115,8 @@ def main(folder):
         sys.exit(f"{GAME_ID}: left out: {problem}")
     line["tracks"] = tool.depot_tracks(branch, line["runs"], line["overnight"], STATIONS, ENDS_WITH_DEPOTS)
     for end in ENDS_WITH_DEPOTS:
-        line["tracks"][end] = min(line["tracks"][end], tool.END_TRACKS)
-    worst = {s: n for s, n in line["tracks"].items() if n > (tool.END_TRACKS if s in ENDS_WITH_DEPOTS else tool.BETWEEN_TRACKS)}
+        line["tracks"][end] = min(max(line["tracks"][end], tool.DEPOT_END_TRACKS), tool.DEPOT_END_TRACKS)
+    worst = {s: n for s, n in line["tracks"].items() if n > (tool.DEPOT_END_TRACKS if s in ENDS_WITH_DEPOTS else tool.BETWEEN_TRACKS)}
     if worst:
         sys.exit(f"{GAME_ID}: stations need more tracks than the game lays, with the depots: {worst}")
     for run in line["runs"]:

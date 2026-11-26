@@ -229,6 +229,7 @@ extension LedgerEntry.Kind {
         case .annualHouseTax: language.text("House tax (annual)", "房屋稅（年度）")
         case .annualLandTax: language.text("Land tax (annual)", "地價稅（年度）")
         case .dailyStationUpkeep: language.text("Platform upkeep (daily)", "月台維持費（日結）")
+        case .dailyLineFee: language.text("High-speed line upkeep (daily)", "高鐵維護費（日結）")
         }
     }
 }
@@ -274,6 +275,7 @@ extension LedgerItem {
         case .drivingBonus: language.text("Well-driven runs", "手動駕駛的好評")
         case .houseTax: language.text("House tax", "房屋稅")
         case .stationUpkeep: language.text("Platform upkeep", "月台維持費")
+        case .lineFee: language.text("High-speed line upkeep", "高鐵維護費")
         }
     }
 }

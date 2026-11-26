@@ -140,7 +140,32 @@ public struct RealBranchLine: Hashable, Sendable {
     var turnsBackBetween: Bool { isTaoyuanAirport || isTaiwanHighSpeedRail }
 
     /// THSR-SALE (decision 993): whether it is the Taiwan High Speed Rail.
-    var isTaiwanHighSpeedRail: Bool { system == "thsr_sched" && network == "THSR" }
+    var isTaiwanHighSpeedRail: Bool { id == Self.taiwanHighSpeedRail }
+
+    /// THSR-SALE (decision 993): the Taiwan High Speed Rail's name in the
+    /// data.
+    static let taiwanHighSpeedRail = "thsr_sched:THSR"
+
+    /// Decision 993: what the Taiwan High Speed Rail pays a month for its
+    /// upkeep once bought, NT$100,000,000, so that what it earns after
+    /// every cost pays back its price in some years rather than one, and
+    /// a dearer fee would not leave a line with fewer riders losing money
+    /// (the measured figures are in the decision). Every other line pays
+    /// none.
+    static let highSpeedMonthlyFee = Money(10_000_000_000)
+
+    /// Decision 993: what line `id` pays a month once bought.
+    static func monthlyFee(of id: String) -> Money {
+        id == taiwanHighSpeedRail ? highSpeedMonthlyFee : .zero
+    }
+
+    /// Decision 993: the tier line `id`'s riders are priced at: the
+    /// Taiwan High Speed Rail's as a branch line's, since its riders go
+    /// far, as a branch line's do, not a few stops as a metro's; every
+    /// other line's at `tier`.
+    static func pricedTier(of id: String, tier: LineAcquisition.Tier) -> LineAcquisition.Tier {
+        id == taiwanHighSpeedRail ? .branch : tier
+    }
 
     /// Decision 605: the stations between its ends (by their names in the
     /// timetable) laid with a passing loop outside each of its two tracks,
@@ -378,6 +403,17 @@ struct RealLineLayout {
     func holding(half: Double) -> RealLineLayout {
         let reach = max(loopReach, half + loopRamp)
         return RealLineLayout(loopReach: reach, loopRamp: loopRamp, loopOffset: loopOffset, endLevels: endLevels)
+    }
+
+    /// THSR-SALE (decision 993): the High Speed Rail's ends lie three
+    /// deep either side, seven tracks, as a light rail's end with a
+    /// depot: with five, under a new game's rules both ends filled up by
+    /// day and the trains in the way were sent into the depots, leaving
+    /// 59 of the second day's 202 runs without a train. Every other line's
+    /// as it was.
+    func ends(of line: RealBranchLine) -> RealLineLayout {
+        guard line.isTaiwanHighSpeedRail else { return self }
+        return RealLineLayout(loopReach: loopReach, loopRamp: loopRamp, loopOffset: loopOffset, endLevels: 3)
     }
 
     /// The `level`th loop out (from 1): its reach and its ramp.
@@ -682,6 +718,17 @@ public struct RealLineOffer: Sendable {
     public let price: RealLineAcquisitionPrice?
     /// Why it cannot be bought, as the player reads it.
     public let problem: String?
+
+    /// Decision 993: what the card says under the price of a line that
+    /// pays a monthly fee once bought; `nil` for any other.
+    public func monthlyFeeText(in language: DisplayLanguage) -> String? {
+        let fee = RealBranchLine.monthlyFee(of: line.id)
+        guard fee > .zero else { return nil }
+        return language.text(
+            "Once bought, it pays \(fee.moneyText) a month for its upkeep.",
+            "買下後每月另付維護費 \(fee.moneyText)。"
+        )
+    }
 
     /// The card's price rows (decision 315 §2), and the total last.
     public func priceRows(in language: DisplayLanguage) -> [(label: String, amount: Money)] {
@@ -1278,7 +1325,7 @@ extension RealLineLaying {
     ) -> Double {
         func extent(_ line: RealBranchLine, _ runs: RealLineRuns, _ index: Int) -> ClosedRange<Double> {
             let name = runs.stops[index], tracks = runs.tracks[name] ?? 1
-            let layout = !line.isUrban ? RealLineLayout.branch : line.cars > RealLineLayout.lightRailCars ? .metro : .lightRail
+            let layout = (!line.isUrban ? RealLineLayout.branch : line.cars > RealLineLayout.lightRailCars ? .metro : .lightRail).ends(of: line)
             guard index > 0, index < runs.stops.count - 1 else {
                 return endStationExtent(of: line, name: name, tracks: tracks, layout: layout)
             }
@@ -1635,7 +1682,7 @@ extension RealLineLaying {
         let half = Double(platformLength) / 2
         let double = line.isDoubleTrack
         // THSR-SALE (decision 993): loops long enough for the platform.
-        let layout = (!line.isUrban ? RealLineLayout.branch : cars > RealLineLayout.lightRailCars ? .metro : .lightRail).holding(half: half)
+        let layout = (!line.isUrban ? RealLineLayout.branch : cars > RealLineLayout.lightRailCars ? .metro : .lightRail).holding(half: half).ends(of: line)
         // SHARED-STATION-LEVEL: a line's end at a station another of the
         // company's lines calls at, whose track lies along its way, is laid
         // beside that track, an island's width out, not over it.
@@ -2833,8 +2880,9 @@ extension RealLineLaying {
             let others = Set(world.acquisitions.flatMap { $0.track ?? [] })
             let laid = world.network.edges.map(\.id).filter { !standing.contains($0) && !others.contains($0) }
             try world.recordLineAcquisition(
-                line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders, tier: acquisition.tier ?? .branch,
-                track: laid.isEmpty ? nil : laid, stateTrack: stateTrack
+                line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders,
+                tier: RealBranchLine.pricedTier(of: acquisition.realLine, tier: acquisition.tier ?? .branch),
+                track: laid.isEmpty ? nil : laid, stateTrack: stateTrack, monthlyFee: RealBranchLine.monthlyFee(of: acquisition.realLine)
             )
         }
         return RealLineAcquisitionPrice(
