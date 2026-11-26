@@ -75,9 +75,10 @@ Overture Maps 的建物整體是 ODbL 1.0；台灣的足跡各自來自 OpenStre
 
 ## 使用執照的樓層（決策 1011）
 
-`usage_permits.py` 把新北市建築執照存查（data.gov.tw 123639）與臺北市歷年使用執照摘要（128203）的地上層數，用兩市的門牌坐標（OpenAddresses 收錄、Overture Maps addresses 轉載）對到內建檔的輪廓，改那幾棟的樓層（來源 `permits`），其他位元組不動。指令在它的開頭；`footprints/2`、`/3` 都讀。結果在 `usage_permits.json`。從 `main` 的檔跑，不要對已經跑過的檔再跑。
+`usage_permits.py` 把新北市建築執照存查（data.gov.tw 123639）、臺北市歷年使用執照摘要（128203）、新竹市使用執照清冊（163823）的地上層數，用門牌坐標（OpenAddresses 收錄、Overture Maps addresses 轉載）對到內建檔的輪廓；臺南市使用執照（121026）只有地號，用臺南市宗地地號屬性資料（176361）的地號中心點對到輪廓，其他縣市用內政部實價登錄（18703）每筆買賣的總樓層數，以全台門牌坐標對到輪廓（過半的交易同一個層數才用）；
+改那幾棟的樓層（來源 `permits`），其他位元組不動。指令在它的開頭；`footprints/2`、`/3` 都讀。結果在 `usage_permits.json`。從 `main` 的檔跑，不要對已經跑過的檔再跑。
 
-換樓高來源（國土測繪中心、其他縣市的建物圖、新一年的臺中圖）只要改 `storeys` 的來源順序、重跑 `storeys` 與 `build`，格式與 App 都不用改；樓層來源 3 位元還有 3 個空位。
+換樓高來源（國土測繪中心、其他縣市的建物圖、新一年的臺中圖）只要改 `storeys` 的來源順序、重跑 `storeys` 與 `build`，格式與 App 都不用改；樓層來源 3 位元還有 1 個空位（7；`nlsc` 留給國土測繪中心）。
 
 `footprints/1`（決策 386 第一版，樓層 << 5）App 不讀，`decode_tile` 也只收 2。
 

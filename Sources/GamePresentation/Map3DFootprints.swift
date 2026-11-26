@@ -48,7 +48,9 @@ struct Map3DFootprints: Sendable {
         case tags
         /// A city's building map (Taichung's of 2022).
         case cityMap
-        /// Taipei's building permit map.
+        /// An official record of the building: Taipei's building permit
+        /// map, and since decision 1011 the usage permits and the
+        /// real-price registry.
         case permits
         /// The national 3D buildings (NLSC), kept for later.
         case nlsc

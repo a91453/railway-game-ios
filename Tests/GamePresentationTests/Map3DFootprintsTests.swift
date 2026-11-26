@@ -264,4 +264,35 @@ final class Map3DFootprintsTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(permitted.count, 5)
         XCTAssertGreaterThanOrEqual(permitted.map(\.storeys).max() ?? 0, 18)
     }
+
+    /// Decision 1011: Tainan's usage permits, found by their parcels' centres,
+    /// reach the terrace houses of the science park's new town (guessed
+    /// before).
+    func testTainanHousesHaveTheirPermitsStoreys() throws {
+        let file = Map3DFrameCostReportTests.baseMap.appendingPathComponent("taiwan_buildings.pmtiles")
+        let tiles = try FootprintTiles(data: Data(contentsOf: file, options: .alwaysMapped))
+        let world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 23.1170, longitudeDegrees: 120.3050)!)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let m = Double(WorldCoordinate.unitsPerMetre)
+        let region = WorldRegion(minX: frame.middleX - 300 * m, minY: frame.middleY - 300 * m,
+                                 maxX: frame.middleX + 300 * m, maxY: frame.middleY + 300 * m)
+        let permitted = Map3DFootprints(tiles: tiles, frame: frame, region: region).buildings.filter { $0.storeysFrom == .permits }
+        XCTAssertGreaterThanOrEqual(permitted.count, 100)
+        XCTAssertTrue(permitted.allSatisfy { (1...30).contains($0.storeys) })
+    }
+
+    /// Decision 1011: Kaohsiung has no open usage permits; round the art
+    /// museum its towers take the real-price registry's storeys.
+    func testKaohsiungTowersHaveTheRegistrysStoreys() throws {
+        let file = Map3DFrameCostReportTests.baseMap.appendingPathComponent("taiwan_buildings.pmtiles")
+        let tiles = try FootprintTiles(data: Data(contentsOf: file, options: .alwaysMapped))
+        let world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 22.6560, longitudeDegrees: 120.2935)!)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let m = Double(WorldCoordinate.unitsPerMetre)
+        let region = WorldRegion(minX: frame.middleX - 300 * m, minY: frame.middleY - 300 * m,
+                                 maxX: frame.middleX + 300 * m, maxY: frame.middleY + 300 * m)
+        let official = Map3DFootprints(tiles: tiles, frame: frame, region: region).buildings.filter { $0.storeysFrom == .permits }
+        XCTAssertGreaterThanOrEqual(official.count, 40)
+        XCTAssertGreaterThanOrEqual(official.filter { $0.storeys >= 15 }.count, 15)
+    }
 }
