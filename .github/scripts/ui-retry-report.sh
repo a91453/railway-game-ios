@@ -24,6 +24,7 @@ report() {
   count="$(printf '%s\n' "$retried" | wc -l | tr -d ' ')"
   {
     echo "- **$job: $count UI test(s) failed once and passed on the retry** (flaky; see the log for the first failure):"
+    # shellcheck disable=SC2016 # the backticks are Markdown, not a command
     printf '%s\n' "$retried" | sed 's/^/  - `/; s/$/`/'
   } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
   while IFS= read -r test; do
