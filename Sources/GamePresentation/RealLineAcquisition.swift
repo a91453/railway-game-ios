@@ -147,24 +147,17 @@ public struct RealBranchLine: Hashable, Sendable {
     static let taiwanHighSpeedRail = "thsr_sched:THSR"
 
     /// Decision 993: what the Taiwan High Speed Rail pays a month for its
-    /// upkeep once bought, NT$100,000,000, so that what it earns after
-    /// every cost pays back its price in some years rather than one, and
-    /// a dearer fee would not leave a line with fewer riders losing money
-    /// (the measured figures are in the decision). Every other line pays
-    /// none.
-    static let highSpeedMonthlyFee = Money(10_000_000_000)
+    /// upkeep once bought, NT$10,000,000. It is sold with realistic rules
+    /// only, whose trains cost more to run: a day of a new Taiwan game
+    /// with it earned some NT$6.8 million on the line after the fee, so
+    /// after the year's taxes its price, land and all, pays back in about
+    /// three years, and a line with fewer riders still earns (the
+    /// measured figures are in the decision). Every other line pays none.
+    static let highSpeedMonthlyFee = Money(1_000_000_000)
 
     /// Decision 993: what line `id` pays a month once bought.
     static func monthlyFee(of id: String) -> Money {
         id == taiwanHighSpeedRail ? highSpeedMonthlyFee : .zero
-    }
-
-    /// Decision 993: the tier line `id`'s riders are priced at: the
-    /// Taiwan High Speed Rail's as a branch line's, since its riders go
-    /// far, as a branch line's do, not a few stops as a metro's; every
-    /// other line's at `tier`.
-    static func pricedTier(of id: String, tier: LineAcquisition.Tier) -> LineAcquisition.Tier {
-        id == taiwanHighSpeedRail ? .branch : tier
     }
 
     /// Decision 605: the stations between its ends (by their names in the
@@ -3039,7 +3032,7 @@ extension RealLineLaying {
             let laid = world.network.edges.map(\.id).filter { !standing.contains($0) && !others.contains($0) }
             try world.recordLineAcquisition(
                 line: line.id, realLine: acquisition.realLine, dailyRiders: acquisition.dailyRiders,
-                tier: RealBranchLine.pricedTier(of: acquisition.realLine, tier: acquisition.tier ?? .branch),
+                tier: acquisition.tier ?? .branch,
                 track: laid.isEmpty ? nil : laid, stateTrack: stateTrack, monthlyFee: RealBranchLine.monthlyFee(of: acquisition.realLine)
             )
         }

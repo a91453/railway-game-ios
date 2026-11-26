@@ -3,7 +3,7 @@
 ## 進度
 
 - 做到哪：台灣高鐵（南港–左營 12 站）可以在台灣新局整條收購，**只在寫實規則（閉塞區間）的局**（Chien 11-26「用對遊戲最好的方式」，由第三串定案）。第一串鋪線、高架、班次與兩端機廠；第二串修擬實規則的死結（台中折返渡線）、烏日基地、兩端 7 股、每月維護費（GameCore）並定價；第三串（分支 `claude/project-thread-cmg93c`）把台北到台南九站改成四股、停站的車進側線月台，並讓簡易規則的局不賣高鐵。決策檔 `docs/decisions/993.md`。
-- 已驗證（雲端 Linux release）：擬實規則一天檢查（四股）沒發 0、晚點 38、出庫晚 9、尖峰 +11.7 分（預算已寫）。
+- 已驗證（雲端 Linux release）：擬實規則一天檢查（四股）沒發 0、晚點 38、出庫晚 9、尖峰 +11.7 分（預算已寫）；寫實規則新局重新定價：每月維護費 NT$1,000 萬、乘客照捷運等級，價錢含地 NT$56.0 億，公司現金一天約 +663 萬，扣一年的稅後含地約 3 年回本。
 - **簡易規則還沒好**：兩端 5 股沒發 59、7 股 62、九站四股 51、再加側線月台 44（共 202 班），沒卡死。所以簡易規則的局先不賣。
 - 下一步：「還要做的」第 1 項（另一張單，GameCore）。
 
@@ -18,7 +18,7 @@
 | 檔 | 內容 |
 | --- | --- |
 | `tools/real-timetables/extract_thsr_runs.py`、`metro_runs.json` | 一天 169 班＋33 回送、40 組車；兩端各 7 股（`DEPOT_END_TRACKS`）。 |
-| `Sources/GamePresentation/RealLineAcquisition.swift` | `urbanLines` 加高鐵；`holding(half:)`（待避線放得下 300 m 月台）；`ends(of:)`（高鐵兩端三層 7 股）；`turnsBackBetween` 含高鐵（台中折返渡線）；`highSpeedMonthlyFee`（每月 NT$1 億）、`pricedTier`（乘客照支線算）；卡片的 `monthlyFeeText`。 |
+| `Sources/GamePresentation/RealLineAcquisition.swift` | `urbanLines` 加高鐵；`holding(half:)`（待避線放得下 300 m 月台）；`ends(of:)`（高鐵兩端三層 7 股）；`turnsBackBetween` 含高鐵（台中折返渡線）；`highSpeedMonthlyFee`（每月 NT$1,000 萬，第三串從 1 億降下來；乘客照捷運等級）；卡片的 `monthlyFeeText`。 |
 | `Sources/GamePresentation/RealLineDepot.swift` | 南港留置線、烏日基地（真實位置）、左營機廠（站南，不是真實位置）；`mayLeaveTheFirstTrack` 含高鐵。 |
 | `Sources/GamePresentation/RealLineBundle.swift`、`RailwayGameApp/Views/RealLineAcquisitionCards.swift` | 價錢區塊下面一行「買下後每月另付維護費」。 |
 | `Sources/GameCore/Railway/LineAcquisition.swift`、`Economy/Accounts.swift`、`Economy/Operations.swift`、`Economy/LineAccounts.swift` | `monthlyFee`、`dailyFee`、`settleLineFees`、帳的 `dailyLineFee`／`lineFee`。 |
