@@ -441,11 +441,15 @@ public struct Map3DTrainSet: Sendable {
     /// Decision 461: the player's metro three ways instead, by
     /// ``taipeiMetro(number:)``; the Taipei Metro's real lines by their own
     /// fleets (``Map3DRealTrains/formation(system:line:)``).
+    /// TAP-FREEZE-151 (the author, 2026-11-26: 「台灣高鐵實際還是 n700 系的
+    /// 樣子，不是 700T」): only a train of the high-speed type (`HSR`)
+    /// splits; the Taiwan High Speed Rail's own trains, the map's and a
+    /// bought line's, are drawn by the 700T's own key and are all 700Ts.
     public static func variant(of key: String, number: Int, locked: Set<String> = []) -> String {
         switch named(key)?.key {
         case "metroC381" where key != "L" || locked.contains("fourCarMetro"):
             return taipeiMetro(number: number)
-        case "highSpeed" where number % 2 != 0 && !locked.contains(Map3DN700S.key):
+        case "highSpeed" where key != Map3DTHSR700T.key && number % 2 != 0 && !locked.contains(Map3DN700S.key):
             return Map3DN700S.key
         case "emu800":
             return localTrain(number: number)

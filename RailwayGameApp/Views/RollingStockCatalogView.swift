@@ -247,10 +247,10 @@ struct RollingStockCatalogView: View {
         } label: {
             HStack(spacing: 10) {
                 // TRAIN-IDENTITY: the 3D map's own model of the type.
-                TrainPortraitView(key: TrainPortrait.key(of: other.type), cars: 2, stripe: stripe(other.family), dimmed: !other.isOpen)
+                TrainPortraitView(key: other.portraitKey, cars: 2, stripe: stripe(other.family), dimmed: !other.isOpen)
                     .frame(width: 84, height: 30)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: other.type.title(in: language))
+                    Text(verbatim: other.title(in: language))
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(Theme.textPrimary)
                     HStack(spacing: 6) {
@@ -362,7 +362,7 @@ struct RollingStockCatalogView: View {
             HStack {
                 // TRAIN-IDENTITY: its name alone; what a car carries and
                 // its doors are the figures under the train.
-                Text(verbatim: entry.type.title(in: language))
+                Text(verbatim: entry.title(in: language))
                     .font(.title3.weight(.heavy))
                     .foregroundStyle(Palette.markerFill)
                     .padding(.horizontal, 14)
@@ -378,7 +378,7 @@ struct RollingStockCatalogView: View {
                 arrow("chevron.left", to: RollingStockCatalog.step(in: list, from: entry.type, by: -1), label: language.text("Previous", "上一款"))
                 // TRAIN-IDENTITY: the train the 3D map draws, its head
                 // and two cars behind it.
-                TrainPortraitView(key: TrainPortrait.key(of: entry.type), cars: min(shownCars, 3), stripe: stripe(entry.family))
+                TrainPortraitView(key: entry.portraitKey, cars: min(shownCars, 3), stripe: stripe(entry.family))
                     .frame(maxWidth: .infinity, minHeight: 110, maxHeight: 150)
                     .padding(.bottom, 4)
                 arrow("chevron.right", to: RollingStockCatalog.step(in: list, from: entry.type, by: 1), label: language.text("Next", "下一款"))

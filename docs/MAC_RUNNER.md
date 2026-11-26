@@ -54,4 +54,38 @@ PR 會自動用 GitHub 的機器，不會卡住。
 
 ## 5. 不會用 Mac 的
 
-full lane（每晚與發版前）、`release-archive.yml`、`testflight.yml`、`ios-compilation-cache.yml`、別的 repository 開來的 PR。
+full lane（每晚與發版前）、`release-archive.yml`、`ios-compilation-cache.yml`、別的 repository 開來的 PR。
+`testflight.yml` 只用下面 §6 的發版專用 runner，不用 `cirunner`。
+
+## 6. 發版專用的 runner（決策 1016，約 15 分）
+
+TestFlight（從 main 手動按的 `testflight.yml`）要在 Mac 上跑，就在 Mac 上**再開一個帳號**、裝第二個 runner。
+不和 PR 共用 `cirunner`：PR 的程式會在 `cirunner` 裡跑，可能在那個帳號留下東西，等發版寫出上傳用的金鑰時讀走。
+沒做這一節之前，TestFlight 照舊全部用 GitHub 的機器，不會壞。
+
+**不用在這個帳號登入 Apple ID 或 Xcode 的開發者帳號**：簽章和上傳用的是 GitHub 上 `testflight` 環境裡已經存好的
+App Store Connect API key，和 GitHub 的機器一樣。你自己帳號裡登入的開發者帳號不會被用到。
+
+1. 系統設定 → 使用者與群組 → 加入使用者：**標準**，名稱 `cirelease`（不要用管理者）。
+2. 用 `cirelease` 登入一次，打開 Xcode（27.2，`/Applications` 裡同一個就好），按同意授權；如果問要不要裝 iOS 平台，裝 iOS 27.2。
+   不用登入 Apple 帳號。
+3. GitHub：railway-game-ios → Settings → Actions → Runners → New self-hosted runner → macOS、ARM64。
+   在 `cirelease` 帳號的終端機照頁面上的指令跑（`mkdir actions-runner && cd actions-runner`、下載、解壓、`./config.sh ...`）。
+   - 問名稱時填 `chien-mac-release`。
+   - 問 labels 時填 `chien-mac-release,xcode-27.2`。**不要**填 `chien-mac`（那是 PR 用的，填了 PR 就會排到這個帳號）。
+   - 其他按 Enter。
+4. 裝成服務：
+
+   ```sh
+   ./svc.sh install
+   ./svc.sh start
+   ```
+
+5. 回到 Runners 頁，`chien-mac-release` 應該是綠色 Idle，labels 只有 `self-hosted`、`macOS`、`ARM64`、`chien-mac-release`、`xcode-27.2`。
+6. 平常：
+   - `cirelease` 要保持登入（快速切換使用者切回自己的帳號就好），Mac 接電源時不要睡著
+     （系統設定 → 能源 → 「顯示器關閉時防止自動進入睡眠」）。重開機後要用 `cirelease` 登入一次。
+   - 按 TestFlight 之後，run 的第一個 job「Pick the Mac or a hosted runner」的摘要會寫用了 Mac 還是 GitHub、為什麼。
+   - Mac 不在線、在忙、睡著時自動用 GitHub 的機器。已經排給 Mac 卻一直等（Mac 半路睡著）：取消，按 **Re-run all jobs** 重選。
+   - 想要更保險：平常在 `cirelease` 帳號 `./svc.sh stop`，發版前 `./svc.sh start`，發完再停。停著的時候發版會用 GitHub 的機器。
+   - 想暫時不用 Mac 發版：Variables 的 `MAC_RUNNER` 設 `off`（PR 也一起不用 Mac）。

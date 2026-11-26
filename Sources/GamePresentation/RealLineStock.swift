@@ -50,6 +50,11 @@ public enum RealLineStock {
         case Map3DTrainSet.taoyuanAirport1000Key: language.text("Airport MRT Type 1000", "機場捷運 1000 型")
         case "klrtCAF": language.text("Kaohsiung light rail CAF Urbos", "高雄輕軌 CAF Urbos")
         case "klrtCitadis": language.text("Kaohsiung light rail Citadis", "高雄輕軌 Citadis")
+        // TAP-FREEZE-151: the Kyushu and Nishi-Kyushu Shinkansen's
+        // (decisions 977, 978 and 998).
+        case Map3DN700S.key: language.text("N700S", "N700S")
+        case Map3DKyushuN700.key: language.text("N700", "N700")
+        case Map3DKyushu800.key: language.text("Series 800", "800 系")
         default: nil
         }
     }
@@ -63,6 +68,7 @@ public enum RealLineStock {
         case "emu800": language.text("EMU500 / 800 / 900 local", "EMU500／800／900 區間車")
         case Map3DTrainSet.wenhu370Key: language.text("Wenhu Line VAL256 / Type 370", "文湖線 VAL256／370 型")
         case "klrtCitadis": language.text("Kaohsiung light rail CAF / Citadis", "高雄輕軌 CAF／Citadis")
+        case Map3DKyushuN700.key: language.text("N700 / Series 800", "N700／800 系")
         default: name(ofSet: key, in: language)
         }
     }
