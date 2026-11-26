@@ -5,8 +5,10 @@ import XCTest
 
 /// FUKUOKA-GROUND (decision 854, later): Fukuoka's map pack has its own
 /// ground, the Geospatial Information Authority of Japan's bare-earth
-/// heights, OpenStreetMap's sea, rivers and ponds, and WorldPop's people
-/// (`tools/fukuoka-map/build_fukuoka_ground.py`).
+/// heights, OpenStreetMap's sea, rivers and ponds
+/// (`tools/fukuoka-map/build_fukuoka_ground.py`), and since decision 1000
+/// Japan's census grids of residents and workers
+/// (`tools/census-grid/japan_census_grid.py`).
 @MainActor
 final class FukuokaGroundTests: XCTestCase {
     private func ground() throws -> (heights: HeightGrid, water: WaterGrid) {
@@ -50,7 +52,7 @@ final class FukuokaGroundTests: XCTestCase {
         XCTAssertFalse(water.isWater(latitude: 33.5300, longitude: 130.4700), "the south-east corner, inland")
     }
 
-    /// The people, WorldPop's: some 9.4 million on the map of Fukuoka,
+    /// The people, the 2020 census's: some 9.5 million on the map of Fukuoka,
     /// Saga, Kumamoto and Nagasaki Prefectures and the corners of their
     /// neighbours (decisions 991 and 997), some 1.7 million of them on the
     /// map as it was first, Fukuoka's 17.6 by 22.2 km.
@@ -61,6 +63,27 @@ final class FukuokaGroundTests: XCTestCase {
             .filter { (33.52...33.72).contains($0.centerLatitude) && (130.29...130.48).contains($0.centerLongitude) }
             .reduce(0) { $0 + $1.count }
         XCTAssertTrue((1_400_000...2_000_000).contains(fukuoka), "\(fukuoka)")
+    }
+
+    /// Decision 1000: the jobs, the 2021 economic census's, some 4.5
+    /// million of them; within 800 m of Tenjin and of Hakata many more
+    /// work than live, and round Meinohama many more live than work.
+    func testTheJobs() throws {
+        let population = try XCTUnwrap(try FukuokaRailwaysTests.ground().population)
+        XCTAssertTrue(population.hasJobs)
+        XCTAssertTrue((4_000_000...5_000_000).contains(population.totalJobs), "\(population.totalJobs)")
+        func around(_ latitude: Double, _ longitude: Double) throws -> (residents: Int, jobs: Int) {
+            let radius = StationDemand.catchmentRadius
+            let residents = try XCTUnwrap(population.people(within: radius, ofLatitude: latitude, longitude: longitude))
+            let jobs = population.jobs.values.reduce(0.0) { $0 + $1.count(within: radius, ofLatitude: latitude, longitude: longitude) }
+            return (residents, Int(jobs.rounded()))
+        }
+        for (name, latitude, longitude) in [("Tenjin", 33.5913, 130.3990), ("Hakata", 33.5897, 130.4207)] {
+            let (residents, jobs) = try around(latitude, longitude)
+            XCTAssertGreaterThan(jobs, 3 * residents, "\(name): \(residents) residents, \(jobs) jobs")
+        }
+        let (residents, jobs) = try around(33.5838, 130.3243)
+        XCTAssertGreaterThan(residents, 2 * jobs, "Meinohama: \(residents) residents, \(jobs) jobs")
     }
 
     /// KUMAMOTO-GROUND: the ground reaches Kumamoto. Kinpozan (665 m)
@@ -127,7 +150,8 @@ final class FukuokaGroundTests: XCTestCase {
         }
         let licences = try XCTUnwrap(manifest?["licences"] as? [String: String])
         XCTAssertTrue(licences.values.contains { $0.contains("国土地理院の標高タイルを加工して作成") })
-        XCTAssertTrue(licences.values.contains { $0.contains("WorldPop") })
+        XCTAssertTrue(licences.values.contains { $0.contains("「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））を加工して作成") })
+        XCTAssertFalse(licences.keys.contains("WorldPop"), "the map's people are the census's now")
         for language in DisplayLanguage.allCases {
             let section = try XCTUnwrap(DataSourceCredits.sections(in: language, overseas: [.fukuoka]).first { $0.id == "fukuokaRailways" })
             XCTAssertEqual(section.credits.map(\.id), ["fukuokaSubway", "kyushuShinkansen", "fukuokaMap", "fukuokaBuildings", "fukuokaTerrain", "fukuokaPopulation", "fukuokaAirport", "kyushuAirports"])
