@@ -45,7 +45,7 @@ final class Map3DHousesByPeopleTests: XCTestCase {
         XCTAssertTrue(CitySkyline.housesByPeople(try look(32.8032, 130.7079)), "Kumamoto")
         XCTAssertFalse(CitySkyline.housesByPeople(try look(25.0478, 121.5170)), "Taipei")
         XCTAssertFalse(CitySkyline.housesByPeople(try look(22.2819, 114.1582)), "Hong Kong")
-        XCTAssertFalse(CitySkyline.housesByPeople(try look(66.4977, 25.7155)), "Rovaniemi")
+        XCTAssertTrue(CitySkyline.housesByPeople(try look(66.4977, 25.7155)), "Rovaniemi (decision 1007)")
         // The blank map's towns: every lot full, as before.
         let world = GameWorld.newGame()
         let skyline = CitySkyline(world: world)
