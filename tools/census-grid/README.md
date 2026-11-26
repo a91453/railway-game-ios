@@ -1,4 +1,4 @@
-# 普查網格：住的人與上班的人（決策 1000、1002）
+# 普查網格：住的人與上班的人（決策 1000、1002、1007）
 
 把各國官方普查的「住在哪裡」與「在哪裡上班」做成地圖包的 `population.json`，格式和 `taiwan_population.json` 一樣
 （`PopulationGrid`），多一個選填的 `jobs`：
@@ -69,7 +69,32 @@ python3 -I tools/census-grid/taiwan_census_grid.py build /tmp/tw /tmp/places75.j
   工業區每個 64 m 格 29 人（`office`），公園裡的地點不算；鄉鎮裡什麼都沒標的，照住的人分。
   工商普查不含公務機關、軍隊與農林漁牧，所以全台約 966 萬人，比舊的 OSM 估算（約 1,200 萬）少；農地仍每格 1 人（遊戲加）。
 
+## 芬蘭：`finland_census_grid.py`（決策 1007）
+
+芬蘭統計局的 250 m 格與上班格網（Ruututietokanta）是付費、不能轉發的，所以只用它的開放資料（CC BY 4.0，WFS
+`geo.stat.fi`，雲端連得到）：
+
+| 層 | 內容 |
+|---|---|
+| `vaestoruutu:vaki2025_1km` | 1 km 人口格 2025（2024 年底的住民，`vaesto`；人少的格也有總數），ETRS-TM35FIN |
+| `postialue:pno_tilasto_2025` | 郵遞區統計 Paavo 2025：工作人數 `tp_tyopy` 與各行業（TOL 2008） |
+
+```sh
+pip install shapely numpy
+python3 -I tools/census-grid/finland_census_grid.py fetch RailwayGameApp/Resources/MapPacks/rovaniemi /tmp/statfin
+python3 -I tools/census-grid/finland_census_grid.py build /tmp/statfin RailwayGameApp/Resources/MapPacks/rovaniemi \
+  --compare <舊的 population.json>
+```
+
+- 格子和日本一樣是 7.5″ 正方格（羅瓦涅米約 231 × 93 m）。
+- 住的人：每個 1 km 格的人，照格內住宅（OSM 的 residential 與沒標的 `building=yes`）的樓地板面積（包內 `buildings.pmtiles`
+  的外框 × 樓層）分到 7.5″ 格；沒有住宅就照所有建物，都沒有就平均。最大餘數法取整，每個 1 km 格總數不變。
+- 上班的人：商店＝G 批發零售＋I 住宿餐飲；學校與公家＝O 公務＋P 教育＋Q 醫療社福；休閒＝R 藝文娛樂＋S 其他服務；
+  辦公＝總數減掉以上。每個郵遞區每種工作的八成照那一類建物的樓地板分、兩成照所有建物分。郵遞區跨出地圖的，
+  只留「區內住在地圖裡的人」占「區內全部住民」那個比例的工作。
+- 讀了哪些檔、sha256、每個郵遞區留了多少寫在 `finland_sources.json`。
+
 ## 其他地方
 
-香港、芬蘭的下一步寫在 `docs/handoff/JAPAN-CENSUS-GRID.md`。新的國家照這裡的格式寫一支 `<地方>_census_grid.py`，
+香港的下一步寫在 `docs/handoff/JAPAN-CENSUS-GRID.md`。新的國家照這裡的格式寫一支 `<地方>_census_grid.py`，
 遊戲端不用改。
