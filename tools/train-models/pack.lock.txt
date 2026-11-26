@@ -528,10 +528,6 @@ prop-signalStop
 prop-tree
 prop-vending
 public-bike
-refresh-700t-cab
-refresh-700t-middle
-refresh-700t-panto
-refresh-700t-tail
 refresh-e200
 reindeer-grazing
 reindeer-grazing-far
@@ -896,9 +892,6 @@ set-wenhuVAL256Far-car lamps light-set-wenhuVAL256Far-car e61dcb2cfa5d2ff1
 set-wenhuVAL256Far-centre lamps light-set-wenhuVAL256Far-centre 2072be3d94c5f29
 set-wenhuVAL256Far-head lamps light-set-wenhuVAL256Far-head 2072be3d94c5f29
 set-wenhuVAL256Far-tail lamps light-set-wenhuVAL256Far-tail e61dcb2cfa5d2ff1
-steam-formation
-steam-locomotive
-steam-tender
 temu1000-formation
 temu1000-leading
 temu1000-middle

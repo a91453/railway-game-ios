@@ -82,7 +82,7 @@ try {
  await match(['before-set-emu3000-head','emu3000-ed'],'before-after');
  if(existsSync(resolve(root,'history/first-pass/models/emu3000-ed.m3dmodel')))await match(['first-pass-ed','emu3000-ed'],'first-pass-vs-final');
  await match(['before-formation','emu3000-formation'],'formation-before-after');
- await match(['refresh-700t-cab','refresh-e200','emu3000-ed'],'style-comparison');
+ await match(['refresh-e200','emu3000-ed'],'style-comparison');
  if(errors.length)throw Error(errors.join('\n'));
  manifest.render_verification={backend:'Chromium WebGL2 exact native geometry',views:manifest.models.length*7,transparent:true,scale:'all units share metres/pixel; each formation seven directions share metres/pixel; comparison cameras saved'};
  writeFileSync(resolve(root,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');console.log('Rendered '+manifest.models.length*7+' seven-way PNGs and fixed-camera comparisons.');

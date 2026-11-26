@@ -14,8 +14,8 @@ import Foundation
 enum Map3DRoundhouseStock {
     /// The locomotives the roundhouse keeps: the depot's diesels. No
     /// electric one, the model draws no overhead wire; no steam one yet,
-    /// ``Map3DSteamTender`` standing 4.76 m on the rails, above the
-    /// doorway's 4.50 m lintel (the decision's next step).
+    /// the steam locomotive then measured standing 4.76 m on the rails,
+    /// above the doorway's 4.50 m lintel (the decision's next step).
     enum Kind: CaseIterable, Sendable {
         /// The R100 in TRA orange (``Map3DR100``).
         case r100
