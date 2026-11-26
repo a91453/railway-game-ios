@@ -71,5 +71,7 @@ extension Map3DLandmarkRegistry {
         Map3DWongTaiSinGate.registration,
         Map3DChiLinNunnery.registration,
         Map3DCheKungTemple.registration,
+        Map3DKokuraCastle.registration,
+        Map3DKaratsuCastle.registration,
     ]
 }
