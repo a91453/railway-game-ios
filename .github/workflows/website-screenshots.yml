@@ -35,9 +35,9 @@ on:
   workflow_dispatch:
     inputs:
       kind:
-        description: "website: the website's screenshots; promo: material for a promotional video"
+        description: "website: the website's screenshots; promo: material for a promotional video; store: the website's tests one run each, for the App Store's screenshots"
         type: choice
-        options: [website, promo]
+        options: [website, promo, store]
         default: website
       device:
         description: "iphone (a Pro), iphone-max (a Pro Max: the App Store's 6.9-inch screenshots), ipad (the 13-inch iPad Pro) or iphone-small (the smallest iPhone, to check the tools fit)"
@@ -72,7 +72,7 @@ jobs:
   screenshots:
     name: Screenshots (iOS Simulator)
     runs-on: xcode-27
-    timeout-minutes: ${{ inputs.kind == 'promo' && 340 || 40 }}
+    timeout-minutes: ${{ (inputs.kind == 'promo' && 340) || (inputs.kind == 'store' && 180) || 40 }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -176,8 +176,12 @@ jobs:
         if: inputs.kind != 'promo'
         # One try: a failure warns instead of turning the run red.
         continue-on-error: true
-        timeout-minutes: 20
+        # store: one xcodebuild run per test, so one slow test loses only
+        # its own pictures (the 20 minutes cut a run of ten off before its
+        # result bundle was written, and every picture was lost).
+        timeout-minutes: ${{ inputs.kind == 'store' && 150 || 20 }}
         env:
+          KIND: ${{ inputs.kind }}
           WEBSITE_TESTS: ${{ inputs.tests }}
           # xcodebuild hands TEST_RUNNER_-prefixed variables to the tests
           # without the prefix (WebsiteScreenshotTests.launch).
@@ -189,6 +193,34 @@ jobs:
             only=()
             IFS=', ' read -r -a names <<<"$WEBSITE_TESTS"
             for name in "${names[@]}"; do only+=("-only-testing:RailwayGameUITests/WebsiteScreenshotTests/$name"); done
+          fi
+          if [[ "$KIND" == store ]]; then
+            [[ -n "$WEBSITE_TESTS" ]] || { echo "::error::store needs the tests to take"; exit 1; }
+            mkdir -p "$RUNNER_TEMP/bundles"
+            failed=0
+            for name in "${names[@]}"; do
+              echo "::group::$name"
+              set +e
+              xcodebuild test-without-building \
+                -project RailwayGameApp/RailwayGame.xcodeproj \
+                -scheme RailwayGame \
+                -configuration Debug \
+                -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+                -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+                -resultBundlePath "$RUNNER_TEMP/bundles/$name.xcresult" \
+                "-only-testing:RailwayGameUITests/WebsiteScreenshotTests/$name" \
+                -parallel-testing-enabled NO \
+                -test-timeouts-enabled YES \
+                -default-test-execution-time-allowance 600 \
+                -maximum-test-execution-time-allowance 900 \
+                CODE_SIGN_IDENTITY=- >"$RUNNER_TEMP/bundles/$name.log" 2>&1
+              status=$?
+              set -e
+              tail -n 30 "$RUNNER_TEMP/bundles/$name.log"
+              [[ "$status" == 0 ]] || { failed=1; echo "::warning::$name did not pass"; }
+              echo "::endgroup::"
+            done
+            exit "$failed"
           fi
           xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
@@ -217,16 +249,28 @@ jobs:
       # Each kept attachment as <name>.png, whether or not every test passed.
       - name: Export the screenshots
         if: always() && inputs.kind != 'promo' && steps.screenshots.outcome != 'skipped'
+        env:
+          KIND: ${{ inputs.kind }}
         run: |
           out="$RUNNER_TEMP/attachments"
           mkdir -p "$out" "$RUNNER_TEMP/website-screenshots"
-          xcrun xcresulttool export attachments --path "$RUNNER_TEMP/screenshots.xcresult" --output-path "$out"
+          bundles=("$RUNNER_TEMP/screenshots.xcresult")
+          [[ "$KIND" == store ]] && bundles=("$RUNNER_TEMP"/bundles/*.xcresult)
+          n=0
+          for bundle in "${bundles[@]}"; do
+            n=$((n + 1))
+            xcrun xcresulttool export attachments --path "$bundle" --output-path "$out/$n" \
+              || echo "::warning::Could not read $(basename "$bundle")"
+          done
           python3 - <<'PY' || echo "::warning::Could not name the screenshots; the result bundle has them"
           import json, os, re, shutil
           from pathlib import Path
-          out = Path(os.environ["RUNNER_TEMP"], "attachments")
           dest = Path(os.environ["RUNNER_TEMP"], "website-screenshots")
-          manifest = json.loads((out / "manifest.json").read_text())
+          manifest = []
+          for path in sorted(Path(os.environ["RUNNER_TEMP"], "attachments").glob("*/manifest.json")):
+              for test in json.loads(path.read_text()):
+                  test["folder"] = path.parent
+                  manifest.append(test)
           # Only the tests' own screenshots, named in letters, digits and
           # hyphens (airportQimei-3d-near): XCTest's own attachments (failure screenshots, debug
           # descriptions with quotes in their names) stay in the result bundle.
@@ -238,7 +282,7 @@ jobs:
                   if not match or not exported.endswith(".png"):
                       continue
                   target = dest / f"{match.group(1)}.png"
-                  shutil.copy(out / exported, target)
+                  shutil.copy(test["folder"] / exported, target)
                   print(f"{test.get('testIdentifier', '?')}: {target.name}")
           PY
           # The screen's screenshot is the display as it is built, upright:
