@@ -408,4 +408,25 @@ final class MapPackDownloadsTests: XCTestCase {
         MapPackDownloads.forget(.hongKong)
         XCTAssertEqual(MapPackDownloads.status(.hongKong), .bundled)
     }
+
+    /// MAP-PACK-COPY: a download read another way than the usual (its
+    /// files copied out of the system's) says so in a problem report, and
+    /// only while it is the one taken.
+    func testHowADownloadWasReadIsToldInAProblemReport() {
+        MapPackDownloads.noteWay(.hongKong, "copied 16 files")
+        MapPackDownloads.note(.hongKong, .downloaded)
+        XCTAssertEqual(MapPackDownloads.way(.hongKong), "copied 16 files")
+        XCTAssertEqual(MapPackDownloads.report(of: [.hongKong]), "mappack-hongkong used (copied 16 files)")
+        MapPackDownloads.note(.hongKong, .earlier)
+        XCTAssertEqual(MapPackDownloads.report(of: [.hongKong]), "mappack-hongkong used: not the version the app lists (copied 16 files)")
+        // Not said of a download that is not read.
+        MapPackDownloads.note(.hongKong, .failed("no network"))
+        XCTAssertEqual(MapPackDownloads.report(of: [.hongKong]), "mappack-hongkong not fetched: no network")
+        MapPackDownloads.noteWay(.hongKong, nil)
+        MapPackDownloads.note(.hongKong, .downloaded)
+        XCTAssertEqual(MapPackDownloads.report(of: [.hongKong]), "mappack-hongkong used")
+        MapPackDownloads.noteWay(.hongKong, "copied 1 file")
+        MapPackDownloads.forget(.hongKong)
+        XCTAssertNil(MapPackDownloads.way(.hongKong))
+    }
 }
