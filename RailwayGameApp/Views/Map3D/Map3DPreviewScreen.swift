@@ -1186,7 +1186,7 @@ final class Map3DSceneCache {
         // and cover, read from the file the 2D map draws.
         let tiles = world.geoAnchor == nil ? nil : BaseMapFiles.tiles
         // Decision 712: and the base maps of the cities outside Taiwan.
-        let cityTiles = world.geoAnchor == nil ? [] : BaseMapFiles.cityTiles.map(\.tiles)
+        let cityTiles = world.geoAnchor == nil ? [] : BaseMapFiles.cityTiles.flatMap { [$0.tiles] + $0.parts }
         // Decision 239: and the real buildings round Kaohsiung and
         // Taichung Stations.
         let city = world.geoAnchor == nil ? nil : BaseMapFiles.city

@@ -66,8 +66,9 @@ final class KyushuShinkansenTests: XCTestCase {
         XCTAssertEqual(RealBranchLine.platformLength(cars: 8, of: .highSpeed, real: true), 200 * WorldCoordinate.unitsPerMetre, "eight 25 m cars")
     }
 
-    /// Bought alone from a new game's four tiles in the north-west: the
-    /// row in the list, the seven tiles along it bought with it, its
+    /// Bought alone from a new game's four tiles round central Fukuoka
+    /// (decision 991): the row in the list, the six tiles along it bought
+    /// with it, its
     /// seven stations up on the viaduct, 200 m platforms, the depot past
     /// Kumamoto, eight sets of eight high-speed cars on Shinkansen track,
     /// and a whole day with every train sent and none in a deadlock.
@@ -75,7 +76,7 @@ final class KyushuShinkansenTests: XCTestCase {
         let session = try FukuokaRailwaysTests.fukuoka()
         let listing = try XCTUnwrap(session.realLineListings.first { $0.bundle.lines.map(\.id) == [Self.id] }, "sold by itself")
         XCTAssertTrue(listing.isBuyable)
-        XCTAssertEqual(Double(listing.metres), 4_609, accuracy: 50, "Hakata, from the middle of the first land")
+        XCTAssertEqual(Double(listing.metres), 1_107, accuracy: 50, "Hakata, from the middle of the first land")
         XCTAssertEqual(session.world.mapExpansion?.owned.count, 4)
 
         let real = try XCTUnwrap(session.buyableRealLines.first { $0.id == Self.id })
@@ -87,13 +88,13 @@ final class KyushuShinkansenTests: XCTestCase {
         XCTAssertEqual(acquisition.trains.count, 8)
         XCTAssertEqual(acquisition.cars, 8)
         XCTAssertEqual(acquisition.trainType, .highSpeed)
-        XCTAssertEqual(acquisition.tiles?.count, 7, "the tiles under the line the company does not own yet")
+        XCTAssertEqual(acquisition.tiles?.count, 6, "the tiles under the line the company does not own yet")
         XCTAssertEqual(acquisition.depot?.name, "熊本車輛基地")
         XCTAssertEqual(acquisition.depot?.platforms.count, 8)
         XCTAssertTrue(session.acquireRealLine(offer), session.message?.text ?? "")
 
         let world = session.world
-        XCTAssertEqual(world.mapExpansion?.owned.count, 11)
+        XCTAssertEqual(world.mapExpansion?.owned.count, 10)
         let bought = try XCTUnwrap(world.acquisition(of: Self.id))
         let line = try XCTUnwrap(world.line(id: try XCTUnwrap(bought.line)))
         XCTAssertTrue(line.isHighSpeed, "high-speed fares and long trips (decision 168)")

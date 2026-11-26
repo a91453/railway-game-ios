@@ -87,7 +87,7 @@ STATIONS = [
 ]
 # The map after it grows to Kumamoto (decision 969, JAPAN-MAP-GROW's
 # handoff): the north and west edges are Fukuoka's.
-EXTENT = {"north": 33.72, "south": 32.69, "west": 130.29, "east": 130.90}
+EXTENT = {"north": 34.03, "south": 32.09, "west": 129.73, "east": 131.33}
 # The line's own distance from Hakata to Kumamoto, in km (the construction
 # length; the fare distance, 118.4 km, is the old main line's), and how far
 # the measured one may differ.

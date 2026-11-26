@@ -38,13 +38,22 @@ final class MapPackExtentsTests: XCTestCase {
         }
     }
 
-    /// Fukuoka's grew to Kumamoto (KUMAMOTO-GROUND); the others have not
-    /// grown.
-    func testOnlyFukuokasPackInTheAppHasGrown() throws {
+    /// No pack in the app has an `earlier` now: Fukuoka's grew to Kumamoto
+    /// (KUMAMOTO-GROUND), then was laid anew over three prefectures
+    /// (decision 991), how it grew kept in `older` (MapGrowthLayoutTests).
+    func testNoPackInTheAppHasAnEarlierExtent() throws {
         for city in OverseasMap.allCases {
             let pack = try XCTUnwrap(HongKongRailwaysTests.pack(city))
-            let fukuoka = MapPack.Extent(north: 33.72, south: 33.52, west: 130.29, east: 130.48)
-            XCTAssertEqual(try MapPack.extents(ofManifest: pack.file("pack", "json")).earlier, city == .fukuoka ? [fukuoka] : [], "\(city)")
+            XCTAssertEqual(try MapPack.extents(ofManifest: pack.file("pack", "json")).earlier, [], "\(city)")
         }
+    }
+
+    /// Decision 991: an older layout's extents are held to decision 969's
+    /// rule as the pack's own are.
+    func testAnOlderLayoutGrowsAsAMapDoes() {
+        let good = #"{"extent":{"north":34.0,"south":32.0,"west":129.7,"east":131.3},"older":[{"extent":\#(kumamoto),"earlier":[{"north":33.72,"south":33.52,"west":130.29,"east":130.48}]}]}"#
+        XCTAssertNotNil(MapPack.Layout(manifest: Data(good.utf8)))
+        let bad = #"{"extent":{"north":34.0,"south":32.0,"west":129.7,"east":131.3},"older":[{"extent":\#(kumamoto),"earlier":[{"north":33.70,"south":33.52,"west":130.29,"east":130.48}]}]}"#
+        XCTAssertNil(MapPack.Layout(manifest: Data(bad.utf8)))
     }
 }

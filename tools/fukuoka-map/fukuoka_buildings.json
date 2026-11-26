@@ -1,46 +1,46 @@
 {
  "decision": 854,
  "extract": {
-  "file": "kumamoto.pbf",
-  "sha256": "aa24ddd3ad7c2a42945a9e286187e48f53e26132b5d0fb924dcaafb0b7232785",
-  "from": "https://osmtoday.com/asia/japan/kyushu.pbf, cut with osmium extract -b 130.25,32.66,130.94,33.75 -s smart",
+  "file": "three.pbf",
+  "sha256": "6ee805b97ab4ceda882aea58b74f64fe5e2e7a814e62d43db13db019b0368493",
+  "from": "https://osmtoday.com/asia/japan/kyushu.pbf and chugoku.pbf (osmium merge), cut with osmium extract -b 129.69,32.05,131.37,34.07 -s smart",
   "licence": "ODbL 1.0, © OpenStreetMap contributors",
-  "newestBuildingEdit": "2026-11-21T14:19:07Z",
-  "buildingsRead": 1179924
+  "newestBuildingEdit": "2026-11-22T21:03:32Z",
+  "buildingsRead": 2127842
  },
- "buildings": 1079275,
+ "buildings": 1933015,
  "leftOut": {
-  "small": 100424
+  "small": 194597
  },
- "tiles": 10450,
+ "tiles": 27646,
  "storeysFrom": {
-  "guess": 758756,
-  "tags": 320744
+  "guess": 1553540,
+  "tags": 379705
  },
  "uses": {
-  "agricultural": 9338,
-  "civic": 10990,
-  "commercial": 23725,
-  "education": 2445,
-  "entertainment": 284,
-  "industrial": 6343,
-  "medical": 383,
-  "none": 741744,
-  "outbuilding": 421,
-  "religious": 312,
-  "residential": 283112,
-  "service": 129,
-  "transportation": 274
+  "agricultural": 20848,
+  "civic": 13667,
+  "commercial": 30888,
+  "education": 4187,
+  "entertainment": 443,
+  "industrial": 10611,
+  "medical": 669,
+  "none": 1490553,
+  "outbuilding": 4789,
+  "religious": 553,
+  "residential": 355171,
+  "service": 416,
+  "transportation": 450
  },
  "storeys": {
   "median": 2,
   "tallest": 48,
-  "of1": 360038,
-  "of2": 542136,
-  "of3to5": 162173,
-  "of6andMore": 15153
+  "of1": 755761,
+  "of2": 1011234,
+  "of3to5": 149868,
+  "of6andMore": 16382
  },
- "rawBytes": 20387406,
- "archiveBytes": 16530089,
- "sha256": "359331b43940211a0f9b0e309070cc6d426cff769cc5bb404f337879745bd15a"
+ "rawBytes": 36343825,
+ "archiveBytes": 29968635,
+ "sha256": "25022115fb7494d624f7c8128bc7ac3b4a43d344f8214d542abf3f1e011340ea"
 }
