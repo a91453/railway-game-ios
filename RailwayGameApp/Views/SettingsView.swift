@@ -63,8 +63,6 @@ struct SettingsView: View {
     @AppStorage(MapAmbienceSettings.undergroundKey) private var showsUnderground = false
     /// Decision 216: the lines' colours, on the device.
     @AppStorage(LinePalette.key) private var linePalette: LinePalette = .standard
-    /// Decision 338: the train pack, unlocked in a test build.
-    @AppStorage(TrainPack.testUnlockKey) private var trainPackTestUnlocked = false
     /// Decision 427: the pack's E1000 look for the push-pull Tze-Chiang.
     @AppStorage(TrainPack.pushPullE1000Key) private var trainPackPushPullE1000 = false
     /// Decision 351: the demo mode's hidden switch, in a test build, and
@@ -723,32 +721,22 @@ struct SettingsView: View {
         }
     }
 
-    /// Decision 338: the train pack's switch, only in Xcode's and
-    /// TestFlight's builds; before the App Store, the purchase takes its
-    /// place.
+    /// Decision 427's E1000 look, only in Xcode's and TestFlight's builds.
+    /// Decision 338's later note (2026-11-26): the train pack itself is
+    /// unlocked for every player, so its own switch is gone.
     private var testSection: some View {
         let language = DisplayLanguage.app
         return Section {
-            Toggle(isOn: $trainPackTestUnlocked) {
-                Label {
-                    Text(verbatim: language.text("Train Pack", "列車包"))
-                } icon: {
-                    Image(systemName: "tram.fill")
-                }
+            Toggle(isOn: $trainPackPushPullE1000) {
+                Text(verbatim: language.text("E1000 look for push-pull Tze-Chiang", "推拉式自強號用 E1000 外觀"))
             }
-            .accessibilityIdentifier("settings.trainPack")
-            if trainPackTestUnlocked {
-                Toggle(isOn: $trainPackPushPullE1000) {
-                    Text(verbatim: language.text("E1000 look for push-pull Tze-Chiang", "推拉式自強號用 E1000 外觀"))
-                }
-                .accessibilityIdentifier("settings.trainPack.pushPullE1000")
-            }
+            .accessibilityIdentifier("settings.trainPack.pushPullE1000")
         } header: {
             Text(verbatim: language.text("Testing", "測試"))
         } footer: {
             Text(verbatim: language.text(
-                "Shows the train pack's trains on the 3D map, such as three-car trains as the three-car urban EMU. Only in test builds.",
-                "在 3D 地圖上顯示列車包的車，例如三節的列車畫成三節都市電聯車。只在測試版出現。"
+                "Draws the push-pull Tze-Chiang as the E1000 on the 3D map. Only in test builds.",
+                "在 3D 地圖上把推拉式自強號畫成 E1000。只在測試版出現。"
             ))
         }
     }
@@ -1071,7 +1059,7 @@ enum MapAmbienceSettings {
 }
 
 /// Decision 338: whether this is a test build, Xcode's or TestFlight's,
-/// where the train pack's switch shows; the App Store's build is not.
+/// where the testing switches show; the App Store's build is not.
 enum TestBuild {
     static let isTest: Bool = {
         #if DEBUG
@@ -1085,8 +1073,8 @@ enum TestBuild {
 /// Decision 676: where the bundle's receipt is, asked through a protocol.
 /// `appStoreReceiptURL` is deprecated from iOS 18 for `AppTransaction`,
 /// which answers only asynchronously, and ``TestBuild/isTest`` is read
-/// while views are built. It still answers, so it stays until the test
-/// switch gives way to StoreKit (decision 338); asked directly, with a
+/// while views are built. It still answers, so it stays while the testing
+/// switches need it (decision 338); asked directly, with a
 /// minimum of iOS 26, the deprecation fails the Release build.
 private protocol ReceiptLocating {
     var receiptURL: URL? { get }
