@@ -13,8 +13,27 @@ runs:
       shell: bash
       env:
         XCODE_VERSION: "27.2"
+        SELF_HOSTED: ${{ runner.environment == 'self-hosted' }}
       run: |
         app="/Applications/Xcode_$XCODE_VERSION.app"
+        # The owner's Mac (pick-mac.yml): its Xcode may be Xcode.app, and the
+        # runner has no sudo, so the job takes DEVELOPER_DIR instead of
+        # xcode-select. Same version, or the job stops.
+        if [[ "$SELF_HOSTED" == true ]]; then
+          if [[ ! -d "$app" ]]; then
+            for candidate in /Applications/Xcode*.app; do
+              version="$(defaults read "$candidate/Contents/Info" CFBundleShortVersionString 2>/dev/null || true)"
+              if [[ "$version" == "$XCODE_VERSION" ]]; then app="$candidate"; break; fi
+            done
+          fi
+          if [[ ! -d "$app" ]]; then
+            echo "::error::This Mac has no Xcode $XCODE_VERSION in /Applications."
+            exit 1
+          fi
+          echo "DEVELOPER_DIR=$app/Contents/Developer" >>"$GITHUB_ENV"
+          DEVELOPER_DIR="$app/Contents/Developer" xcodebuild -version
+          exit 0
+        fi
         if [[ ! -d "$app" ]]; then
           echo "::error::This runner has no Xcode $XCODE_VERSION. It has: $(ls -d /Applications/Xcode_*.app 2>/dev/null | tr '\n' ' ')"
           exit 1

@@ -339,13 +339,28 @@ jobs:
           run="$(cat .ios-pr-passed/run 2>/dev/null || echo "an earlier run")"
           echo "This pull request's change to the app passed in $run; the macOS jobs are skipped (decision 187)." | tee -a "$GITHUB_STEP_SUMMARY"
 
+  # CIOPT-17: the owner's Mac (self-hosted, label chien-mac) takes a pull
+  # request's build job, or a run by hand's, when it is online and free;
+  # otherwise a hosted runner does, as before (pick-mac.yml says why and
+  # when). The full lane, the archive and TestFlight stay hosted.
+  pick:
+    name: Pick the Mac or a hosted runner
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.passed != 'true' }}
+    uses: ./.github/workflows/pick-mac.yml
+    with:
+      # A pull request, or only_testing by hand; never the full lane.
+      allow: ${{ github.event_name == 'pull_request' || inputs.only_testing != '' }}
+    secrets:
+      RUNNER_STATUS_TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+
   build:
     name: Xcode build (iOS Simulator)
     # Skipped only when this change passed before; if the changes job
-    # failed, it runs.
-    needs: changes
+    # failed, it runs. If the pick job did not answer, a hosted runner.
+    needs: [changes, pick]
     if: ${{ !cancelled() && needs.changes.outputs.passed != 'true' }}
-    runs-on: xcode-27
+    runs-on: ${{ fromJSON(needs.pick.outputs.runs-on || '"xcode-27"') }}
     # 20m37s on the #72 head; the same job takes up to about 1.8 times as long
     # on a slower runner, so the limit only catches a hang. Room too for a
     # first boot's data migration (up to 14 minutes), the warm-up launch and
@@ -967,6 +982,14 @@ jobs:
             ${{ runner.temp }}/ui-smoke-missing-button.log
           if-no-files-found: error
           retention-days: 7
+
+      # On the owner's Mac (pick-mac.yml) the Simulator outlives the job: a
+      # hosted runner is thrown away, the Mac goes back to the studio's work.
+      - name: Shut the Simulator down (the Mac)
+        if: always() && runner.environment == 'self-hosted' && env.SIMULATOR_UDID != ''
+        continue-on-error: true
+        timeout-minutes: 3
+        run: xcrun simctl shutdown "$SIMULATOR_UDID" || true
 
   # The full lane's other iPhone jobs: second (settings, HUD, the real
   # world) and lessons. The build job runs the remaining classes,
