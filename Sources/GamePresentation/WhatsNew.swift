@@ -36,6 +36,130 @@ public enum WhatsNew {
     /// The released builds' news, the newest first. The next build's lines
     /// wait in `WhatsNewNext/` until its release.
     public static let entries: [Entry] = [
+        // 148.
+        Entry(
+            id: "2026-11-26-148",
+            items: [
+                Line(
+                    english: "Fukuoka’s map now holds the whole of Fukuoka, Saga and Kumamoto Prefectures, with Kumamoto, Saga, Kitakyushu and Amakusa Airports; a new game begins in central Fukuoka and buys the rest.",
+                    chinese: "福岡地圖擴大到整個福岡、佐賀、熊本三縣，多了熊本、佐賀、北九州、天草機場；新局從福岡市中心開始，其餘用買的。"
+                ),
+                Line(
+                    english: "The Japan map now reaches the whole of Nagasaki Prefecture, with Nagasaki and Iki Airports and 21 more sights, from Dejima to Huis Ten Bosch.",
+                    chinese: "日本地圖收進整個長崎縣，多了長崎、壹岐機場與出島、豪斯登堡等 21 個景點。"
+                ),
+                Line(
+                    english: "A new game on the Japan map can start round Fukuoka, Saga, Kumamoto or Nagasaki.",
+                    chinese: "日本地圖的新局可以選從福岡、佐賀、熊本或長崎開始。"
+                ),
+                Line(
+                    english: "Kyushu Shinkansen stations are laid with their real platforms: six tracks at Hakata, four at Shin-Tosu and Kumamoto, three at Chikugo-Funagoya.",
+                    chinese: "九州新幹線各站照真實月台鋪：博多 6 股、新鳥栖與熊本 4 股、筑後船小屋 3 股。"
+                ),
+                Line(
+                    english: "On the Japan map you can now buy the Nishi-Kyushu Shinkansen from Takeo-Onsen to Nagasaki by itself: five stations, 42 trains a day of six-car N700S sets.",
+                    chinese: "日本地圖可以單獨買西九州新幹線（武雄溫泉—長崎）：5 站，6 節 N700S 一天 42 班。"
+                ),
+                Line(
+                    english: "The Japan map has 54 more sights across Fukuoka, Saga and Kumamoto, from Dazaifu and Mojiko to Kumamoto Castle and Mount Aso.",
+                    chinese: "日本地圖多了福岡、佐賀、熊本三縣 54 個景點，太宰府、門司港、熊本城、阿蘇山都在。"
+                ),
+                Line(
+                    english: "The garage has the Kyushu Shinkansen's 800 series too: white with a red roof and a thin red line, six cars.",
+                    chinese: "車庫也多了九州新幹線 800 系：白車身、紅車頂、窗下一條紅細線，六節。"
+                ),
+                Line(
+                    english: "The garage has the 700 Series in its own white and blue, sixteen cars.",
+                    chinese: "車庫多了原塗裝的 700 系：白色車身、窗下藍帶，十六節。"
+                ),
+                Line(
+                    english: "The high-speed 700T has a new model in the real train's white and orange, twelve cars.",
+                    chinese: "高鐵 700T 換新模型，塗成真車的白底橘帶，十二節。"
+                ),
+                Line(
+                    english: "Choose a paint for a line's trains on the line's page; the high-speed 700T now wears its real orange band.",
+                    chinese: "路線頁可以替這條線的列車選塗裝；高鐵 700T 改成真車的橘色帶。"
+                ),
+                Line(
+                    english: "The Train Pack's white high-speed train is now the N700S: white with two blue lines, twelve cars.",
+                    chinese: "列車包的白色高速列車換成 N700S：白色車身、窗下兩道藍線，十二節。"
+                ),
+                Line(
+                    english: "A new train to buy: the Keikyu New 1000, each car its real 18 m.",
+                    chinese: "新車款：京急新1000形，每節是真車的 18 公尺。"
+                ),
+                Line(
+                    english: "Photo Mode on the 3D map: the buttons step aside, one tap takes the camera to a train, a station or the skyline, and the shutter saves the picture to Photos.",
+                    chinese: "3D 地圖有拍照模式：按鈕收起來，一鍵把鏡頭帶到列車、車站或天際線，按快門就存到「照片」。"
+                ),
+                Line(
+                    english: "On maps of Taiwan and Kyushu each place has its own weather: it can rain in the north while the south is clear, and fewer riders set out only where it rains.",
+                    chinese: "台灣與九州地圖各地天氣不同：北部下雨時南部可能放晴，只有下雨的地方搭車的人變少。"
+                ),
+                Line(
+                    english: "On the Hong Kong map, people now live and work where the 2021 census puts them: offices in Central and Admiralty, homes in the new towns, and rush hours between them.",
+                    chinese: "香港地圖的住與上班人口改用 2021 年官方普查：中環、金鐘是上班的地方，新市鎮是住的地方，早晚有通勤人潮。"
+                ),
+                Line(
+                    english: "New games on Taiwan and Hong Kong start with about 33 by 33 km and buy the rest; Hong Kong and Japan can also open the whole map, which counts no achievements.",
+                    chinese: "台灣與香港新局一開始約 33 × 33 公里，其餘用買的；香港與日本也可選整張全開（不計成就）。"
+                ),
+                Line(
+                    english: "Lay two tracks of different gauges side by side and build an island between them: passengers change trains across the platform.",
+                    chinese: "兩股不同軌距的軌道並排蓋一座島式月台，乘客走過月台就能換車（像新幹線對面接在來線）。"
+                ),
+                Line(
+                    english: "In the 3D map, each track's rails are as far apart as its gauge: standard gauge is wider, 762 mm narrower.",
+                    chinese: "3D 地圖裡，每段軌道的鋼軌照它的軌距畫：標準軌比較寬，762 mm 比較窄。"
+                ),
+                Line(
+                    english: "The track card is simpler: track type, gauge, double track and Lay Track up front, the rest under More options.",
+                    chinese: "鋪軌卡片變簡單：軌道種類、軌距、複線和鋪設在前面，其他收進「更多選項」。"
+                ),
+                Line(
+                    english: "The Japan map has the buildings it was missing in Kitakyushu, Iizuka and Munakata, and real heights for Kumamoto, Kitakyushu, Kurume and Sasebo.",
+                    chinese: "日本地圖補上北九州、飯塚、宗像缺的建物，熊本、北九州、久留米、佐世保的大樓照實際高度。"
+                ),
+                Line(
+                    english: "Buildings on the Rovaniemi map now follow Finland's official survey: real outlines, and real heights in the town.",
+                    chinese: "羅瓦涅米地圖的建物改用芬蘭官方測量資料：外形照實際，市區的大樓照實際高度。"
+                ),
+                Line(
+                    english: "Buildings across Taiwan now take their storeys from official records (the usage permits of New Taipei, Taipei, Tainan and Hsinchu City, and the real-price registry of home sales), so towers stand at their real height.",
+                    chinese: "全台建物樓層改用官方紀錄（新北、臺北、臺南、新竹市的使用執照與內政部實價登錄），大樓照實際高度。"
+                ),
+                Line(
+                    english: "The Japan map packs are about 12 MB smaller to download, and the app itself takes less space.",
+                    chinese: "日本地圖包下載小了約 12 MB，App 本身也變小。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "The Danhai, Ankeng and Kaohsiung light rail trains are drawn at their real length, no longer stretched.",
+                    chinese: "淡海、安坑、高雄輕軌的列車照真車長度畫，不再被拉長。"
+                ),
+                Line(
+                    english: "The Kyushu Shinkansen, the Fukuoka City Subway, the MTR and the lines at Rovaniemi now run under overhead wires, as the real ones do.",
+                    chinese: "九州新幹線、福岡地鐵、港鐵和羅瓦涅米的線上方都有架空電車線了，和真的一樣。"
+                ),
+                Line(
+                    english: "A school's pitch, court and sandpit are no longer hidden under the ground, and its stair tower has windows.",
+                    chinese: "國小的操場、球場與沙坑不再被地面蓋住，校舍轉角的樓梯間也有窗了。"
+                ),
+                Line(
+                    english: "Hong Kong, Kyushu and Rovaniemi now rain and thunder as often as they really do each month, and Rovaniemi keeps Finland’s holidays with no typhoons.",
+                    chinese: "香港、九州、羅瓦涅米每月下雨打雷的天數照真實，羅瓦涅米改過芬蘭的假日，也不再有颱風。"
+                ),
+                Line(
+                    english: "Double track laid on from high-speed or metro track now lays its second track and crossovers at the same gauge, so its trains run on both.",
+                    chinese: "從高鐵或捷運軌道接出去鋪的複線，第二條和渡線也是同一種軌距，車兩條都能跑。"
+                ),
+                Line(
+                    english: "On the Japan map, the 3D view no longer fills fields with houses: each spot has as many homes as people live and work there.",
+                    chinese: "日本地圖的 3D 不再在田裡蓋滿房子，房子多少照當地住和上班的人數。"
+                ),
+            ]
+        ),
         // 147.
         Entry(
             id: "2026-11-25-147",

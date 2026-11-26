@@ -1,2 +1,0 @@
-en: Fukuoka’s map now holds the whole of Fukuoka, Saga and Kumamoto Prefectures, with Kumamoto, Saga, Kitakyushu and Amakusa Airports; a new game begins in central Fukuoka and buys the rest.
-zh: 福岡地圖擴大到整個福岡、佐賀、熊本三縣，多了熊本、佐賀、北九州、天草機場；新局從福岡市中心開始，其餘用買的。

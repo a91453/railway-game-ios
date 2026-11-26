@@ -1,2 +1,0 @@
-en: The Japan map has the buildings it was missing in Kitakyushu, Iizuka and Munakata, and real heights for Kumamoto, Kitakyushu, Kurume and Sasebo.
-zh: 日本地圖補上北九州、飯塚、宗像缺的建物，熊本、北九州、久留米、佐世保的大樓照實際高度。

@@ -1,2 +1,0 @@
-en: Buildings on the Rovaniemi map now follow Finland's official survey: real outlines, and real heights in the town.
-zh: 羅瓦涅米地圖的建物改用芬蘭官方測量資料：外形照實際，市區的大樓照實際高度。
