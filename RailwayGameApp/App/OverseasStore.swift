@@ -1,5 +1,6 @@
 import Foundation
 import GamePresentation
+import Security
 import StoreKit
 import SwiftUI
 
@@ -55,6 +56,11 @@ final class OverseasStore {
         self.opensWithoutStore = opensWithoutStore
         publish()
         guard !opensWithoutStore, updates == nil else { return }
+        // Decision 1010: the free map outlives a reinstall in the Keychain
+        // (and reaches the player's other devices with iCloud Keychain).
+        if let kept = FreeMapKeychain.read() { launcher.adoptFreeMap(kept) }
+        if let chosen = launcher.freeMap, FreeMapKeychain.read() == nil { FreeMapKeychain.write(chosen) }
+        launcher.onFreeMapChosen = { FreeMapKeychain.write($0) }
         updates = Task { [weak self] in
             for await update in Transaction.updates {
                 guard let self else { return }
@@ -197,6 +203,41 @@ final class OverseasStore {
     /// 712 opens them.
     private func publish() {
         launcher?.overseasUnlock = opensWithoutStore ? nil : state
+    }
+}
+
+/// Decision 1010: the free map kept in the Keychain, which a reinstall
+/// does not clear, synchronizable so iCloud Keychain carries it to the
+/// player's other devices. One generic password item; nothing secret.
+enum FreeMapKeychain {
+    private static let service = "overseasUnlock.freeMap"
+
+    private static var query: [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: service,
+            kSecAttrSynchronizable as String: kCFBooleanTrue as Any,
+        ]
+    }
+
+    static func read() -> String? {
+        var asked = query
+        asked[kSecReturnData as String] = true
+        asked[kSecMatchLimit as String] = kSecMatchLimitOne
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(asked as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func write(_ id: String) {
+        let data = Data(id.utf8)
+        let status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        guard status == errSecItemNotFound else { return }
+        var added = query
+        added[kSecValueData as String] = data
+        added[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        SecItemAdd(added as CFDictionary, nil)
     }
 }
 

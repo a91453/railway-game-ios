@@ -251,6 +251,9 @@ public final class GameLauncher {
     public var sellsAllMaps: Bool {
         overseasUnlock != nil && !allMapsOpen
     }
+    /// Decision 1010: told of the free map once it is chosen, so the app
+    /// keeps it where a reinstall does not reach (``adoptFreeMap(_:)``).
+    @ObservationIgnored public var onFreeMapChosen: (@MainActor (String) -> Void)?
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
     /// The world of the last autosave taken in turn, or of the game when
@@ -1078,11 +1081,39 @@ public final class GameLauncher {
     }
 
     /// Decision 1010: remembers `id` as the free map, when it is the
-    /// first.
+    /// first, and hands it to ``onFreeMapChosen``.
     func chooseFreeMap(_ id: String) {
         guard sellsAllMaps, preferences.freeMap == nil else { return }
         preferences.freeMap = id
         savePreferences()
+        onFreeMapChosen?(id)
+    }
+
+    /// Decision 1010: a free map the player chose before, kept where a
+    /// reinstall does not reach (the app's Keychain, which iCloud Keychain
+    /// also carries to the player's other devices): taken when this
+    /// device remembers none. A known map only.
+    public func adoptFreeMap(_ id: String) {
+        guard preferences.freeMap == nil, id == AirMap.taiwan.id || OverseasMap(rawValue: id) != nil else { return }
+        preferences.freeMap = id
+        savePreferences()
+    }
+
+    /// Decision 1010: when no free map is remembered, the player's oldest
+    /// saved game on a real map names it: a reinstall, or a new device,
+    /// with the saves back from iCloud does not choose again. Reads at most
+    /// three saves, oldest first; asked before a new game on a real map
+    /// and when the map picker opens.
+    public func settleFreeMap() {
+        guard sellsAllMaps, preferences.freeMap == nil, !isLoadingRealWorldData else { return }
+        let real = library.entries()
+            .filter { $0.problem == nil && $0.summary?.realWorld == true }
+            .sorted { ($0.savedAt ?? .distantFuture) < ($1.savedAt ?? .distantFuture) }
+        for entry in real.prefix(3) {
+            guard let world = try? library.load(entry), let map = paidMap(of: world) else { continue }
+            chooseFreeMap(map)
+            return
+        }
     }
 
     /// Remembers on the device that the flights to `cities` are open
@@ -1931,6 +1962,7 @@ public final class GameLauncher {
                     // a real map is a new game there: it is the free
                     // map's, or needs the unlock; looking at it does not.
                     if let map = paidMap(of: world) {
+                        settleFreeMap()
                         guard mayStartNewGame(on: map) else {
                             let refused = StatusMessage(kind: .failure, text: refusedText(map))
                             if let session { session.message = refused } else { message = refused }

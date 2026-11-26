@@ -225,6 +225,63 @@ final class OverseasUnlockTests: XCTestCase {
         XCTAssertEqual(launcher.freeMap, OverseasMap.hongKong.rawValue)
     }
 
+    /// A reinstall loses the device's preferences, but the saves come back
+    /// from iCloud: the oldest real-map save names the free map again, so
+    /// the player cannot choose a second one.
+    func testTheSavesNameTheFreeMapAfterAReinstall() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let library = SaveLibrary(directory: directory)
+        try library.save(GameWorld.newOverseasGame(try HongKongMapTests.ground()), as: .manual, at: Date(timeIntervalSince1970: 100))
+        try library.save(DemoWorld.make(in: .traditionalChinese), as: .manual, at: Date(timeIntervalSince1970: 200))
+
+        let launcher = await launcher(in: directory)
+        launcher.overseasUnlock = .locked
+        XCTAssertTrue(launcher.choosesFreeMap)
+        launcher.settleFreeMap()
+        XCTAssertEqual(launcher.freeMap, OverseasMap.hongKong.rawValue, "the oldest real-map save")
+        XCTAssertFalse(launcher.takeMap(AirMap.taiwan.id))
+        XCTAssertEqual(launcher.freeMap, OverseasMap.hongKong.rawValue)
+    }
+
+    /// Without an App Store, or once bought, the saves choose nothing.
+    func testTheSavesChooseNothingWhereNothingIsSold() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try SaveLibrary(directory: directory).save(GameWorld.newOverseasGame(try HongKongMapTests.ground()), as: .manual, at: Date(timeIntervalSince1970: 100))
+        let launcher = await launcher(in: directory)
+        launcher.settleFreeMap()
+        XCTAssertNil(launcher.freeMap)
+        launcher.overseasUnlock = OverseasUnlock.State(purchased: true)
+        launcher.settleFreeMap()
+        XCTAssertNil(launcher.freeMap)
+    }
+
+    /// The free map kept off the device (the app's keychain) is taken back
+    /// once, and only a map's name; it never replaces a chosen one.
+    func testAKeptFreeMapIsTakenBack() async throws {
+        let directory = folder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let launcher = await launcher(in: directory)
+        launcher.overseasUnlock = .locked
+        var told: [String] = []
+        launcher.onFreeMapChosen = { told.append($0) }
+        launcher.adoptFreeMap("nowhere")
+        XCTAssertNil(launcher.freeMap)
+        launcher.adoptFreeMap(AirMap.taiwan.id)
+        XCTAssertEqual(launcher.freeMap, AirMap.taiwan.id)
+        launcher.adoptFreeMap(OverseasMap.hongKong.rawValue)
+        XCTAssertEqual(launcher.freeMap, AirMap.taiwan.id)
+        XCTAssertTrue(told.isEmpty, "taken back, not chosen")
+        XCTAssertFalse(launcher.startOverseasMap(.hongKong))
+
+        let fresh = await self.launcher(in: folder())
+        fresh.overseasUnlock = .locked
+        fresh.onFreeMapChosen = { told.append($0) }
+        XCTAssertTrue(fresh.startOverseasMap(.hongKong), fresh.message?.text ?? "")
+        XCTAssertEqual(told, [OverseasMap.hongKong.rawValue], "a choice is told, to be kept")
+    }
+
     /// The gift opens the maps as the purchase does.
     func testTheGiftOpensTheMaps() async throws {
         let directory = folder()

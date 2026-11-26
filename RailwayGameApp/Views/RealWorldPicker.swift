@@ -447,6 +447,9 @@ struct RealWorldPicker: View {
                 // chosen); every map but the free one says to buy it.
                 if launcher.sellsAllMaps {
                     OverseasUnlockRow(store: .shared, language: language, freeMap: freeMapLine)
+                        // A free map a reinstall forgot, named again by
+                        // the oldest saved game on a real map.
+                        .onAppear { launcher.settleFreeMap() }
                 }
                 WholeMapRow(
                     id: "realWorld.wholeTaiwan", name: language.text("The whole of Taiwan", "全台灣"), symbol: "map.fill",

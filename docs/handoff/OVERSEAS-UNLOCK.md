@@ -2,8 +2,9 @@
 
 ## 進度
 
-- 做到哪：程式、測試、決策 1010、獨立審查（#2730 issuecomment-7181932192）與修正都完成；11-26 下午照作者改成「任選一區免費、其他區（含台灣）一次買齊」（決策 1010 開頭的改版），PR #2730 草稿。
-- 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`OverseasUnlockTests`（14）、`SharedNetworkTests`、`AirRoutesTests`、`OverseasStartLandTests`、`WhatsNewTests` 過；iOS 編譯由 `ios-build.yml` 過。UNVERIFIED：真的購買／恢復（要 Chien 在 ASC 建好 `overseas_maps`，TestFlight 沙盒測）。
+- 做到哪：程式、測試、決策 1010、獨立審查（#2730 issuecomment-7181932192）與修正都完成；11-26 下午照作者改成「任選一區免費、其他區（含台灣）一次買齊」（決策 1010 開頭的改版）、航線不再開地圖、刪掉重裝後免費地區從鑰匙圈與存檔拿回（決策 1010 §2），PR #2730 草稿。這串壓縮兩次已停手，下面由接手的串做。
+- **新規則還沒獨立審查**：合併前找另一串審 `67fe0bc` 之後的改動（免費地區、航線、重裝）。
+- 已驗證：Linux `swift build --build-tests -Xswiftc -warnings-as-errors` 乾淨；`OverseasUnlockTests`（18）、`SharedNetworkTests`、`AirRoutesTests`、`OverseasStartLandTests`、`WhatsNewTests` 過；iOS 編譯由 `ios-build.yml` 過。UNVERIFIED：真的購買／恢復（要 Chien 在 ASC 建好 `overseas_maps`，TestFlight 沙盒測）。
 - 下一步第一個指令：確認 0.7.0 已「審過」且不再出 0.7.x 修正後，`git fetch origin main && git merge --no-edit origin/main`，把 `Sources/GamePresentation/OverseasUnlock.swift` 的 `firstLockedBuild` 改成最後上傳的 TestFlight build 號 + 1。
 
 ## 派工
@@ -26,3 +27,5 @@
 - 匯入的存檔照玩；朋友傳來的海外路網「只看」照舊、「開新局」要解鎖。
 - 冬季活動不另外開羅瓦涅米。
 - 沒有 `.storekit` 檔；購買用 TestFlight 沙盒測。
+- 冬季活動：五週任務在任何地區都做得到（第 2 週市集含「市中心」、第 3 週載客、聖誕老人村只在羅瓦涅米才出現），活動文字沒有提到要解鎖的地圖。
+- 羅瓦涅米冬季限時試玩：**不做**（作者 11-26「都行」，改用上架特價；特價是 ASC 的價格排程，不用改程式，協調者在內購那版出時給作者步驟）。

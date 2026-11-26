@@ -410,6 +410,7 @@ extension GameLauncher {
     /// free map and the unlock is not bought (asked first, so a refused
     /// map is not taken as the first); the first is the free map.
     func takeMap(_ id: String) -> Bool {
+        settleFreeMap()
         guard mayStartNewGame(on: id) else {
             message = StatusMessage(kind: .failure, text: refusedText(id))
             return false
