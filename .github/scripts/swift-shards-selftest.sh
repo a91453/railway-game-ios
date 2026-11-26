@@ -225,14 +225,16 @@ JOB_STARTED=$(($(date +%s) - 1648)) SWIFT_TEST_WORKERS=2 FAKE_MODE=held-last FAK
 SHARD_LIMIT_MINUTES=45 JOB_STARTED=$(($(date +%s) - 1550)) says 'near its 45-minute limit::.*of its 45 minutes' \
   "the warning names SHARD_LIMIT_MINUTES, not a fixed number" "$script" run campaigns-2
 ci_yml="$(cd "$(dirname "$script")/../workflows" && pwd)/ci.yml"
-ci_timeout="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^    timeout-minutes:/ { print $2; exit }' "$ci_yml")"
+# The test step's own timeout-minutes (the job's is longer, for the
+# container image's pull; decision 582, later).
+ci_timeout="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^        timeout-minutes:/ { print $2; exit }' "$ci_yml")"
 ci_limit="$(awk '/^  swift-current:/ { on = 1; next } on && /^  [a-z]/ { on = 0 } on && /^ *SHARD_LIMIT_MINUTES:/ { print $2; exit }' "$ci_yml")"
 # shellcheck disable=SC2016 # the $ is the literal text sed matches
 script_limit="$(sed -n 's/^SHARD_LIMIT_MINUTES="\${SHARD_LIMIT_MINUTES:-\([0-9]*\)}"$/\1/p' "$script")"
 if [[ -n "$ci_timeout" && "$ci_timeout" == "$ci_limit" && "$ci_timeout" == "$script_limit" ]]; then
-  echo "ok   says  the shard job's timeout-minutes, ci.yml's SHARD_LIMIT_MINUTES and the script's default are all $ci_timeout"
+  echo "ok   says  the shard's test step's timeout-minutes, ci.yml's SHARD_LIMIT_MINUTES and the script's default are all $ci_timeout"
 else
-  echo "FAIL the shard job's timeout-minutes ('$ci_timeout'), ci.yml's SHARD_LIMIT_MINUTES ('$ci_limit') and the script's default ('$script_limit') must be the same number"
+  echo "FAIL the shard's test step's timeout-minutes ('$ci_timeout'), ci.yml's SHARD_LIMIT_MINUTES ('$ci_limit') and the script's default ('$script_limit') must be the same number"
   failures=$((failures + 1))
 fi
 
@@ -717,6 +719,130 @@ expect_decision true presentation 'GamePresentationTests' "a label that only loo
   LABELS="no-full-ci full-cid" -- "${pr414[@]}"
 expect_decision false none none "a pull request of docs skips" EVENT=pull_request LISTED=true -- docs/ROADMAP.md README.md
 expect_decision true full full "a pull request whose files could not be listed" EVENT=pull_request LISTED=false --
+
+# A pull request's narrowed tier (decision 1012, affected-tests.py): the
+# classes whose code names what a changed source file declares, the helpers
+# that do and their users, and the smoke classes (here GoldenScenarioTests,
+# ReplayFixtureTests and SavedGameTests of the tree above); the broad tier
+# when that cannot be followed or is not under half of it. A push to main
+# keeps the broad tier. Map3DFarViewTests (375 s) makes the broad tier
+# heavy enough to undercut.
+mkdir -p "$tree/Sources/GamePresentation"
+cat >"$tree/Sources/GamePresentation/TrainPack.swift" <<'SWIFT'
+/// The pack of extra trains.
+public struct TrainPack {
+    public var isUnlocked: Bool
+    private var cache = 0
+}
+
+extension Map3DScene {
+    func drawPackTrains() {}
+}
+SWIFT
+cat >"$tree/Sources/GamePresentation/MatchOperator.swift" <<'SWIFT'
+public func ~= (pattern: TrainKind, value: Int) -> Bool { false }
+SWIFT
+cat >"$tree/Sources/GamePresentation/Catalogue.swift" <<'SWIFT'
+enum Catalogue {
+    static let file = "Catalogue/stations.json"
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/TrainPackTests.swift" <<'SWIFT'
+@testable import GamePresentation
+import XCTest
+
+final class TrainPackTests: XCTestCase {
+    func testTheLock() { XCTAssertTrue(TrainPack(isUnlocked: true).isUnlocked) }
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/PackSupport.swift" <<'SWIFT'
+@testable import GamePresentation
+
+func packedSession() -> Int { _ = TrainPack(isUnlocked: false); return 0 }
+
+func unrelatedHelper() -> Int { 1 }
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/PackUserTests.swift" <<'SWIFT'
+import XCTest
+
+final class PackUserTests: XCTestCase {
+    func testThroughTheHelper() { XCTAssertEqual(packedSession(), 0) }
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/CatalogueTests.swift" <<'SWIFT'
+import XCTest
+
+final class CatalogueTests: XCTestCase {
+    private func load() -> String { Catalogue.file }
+    func testItLoads() { XCTAssertFalse(load().isEmpty) }
+}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/Map3DFarViewTests.swift" <<'SWIFT'
+import XCTest
+
+/// Calls unrelatedHelper only, and names a pack in a comment: TrainPack.
+final class Map3DFarViewTests: XCTestCase {
+    func testFar() { XCTAssertEqual(unrelatedHelper(), 1) }
+}
+SWIFT
+mkdir -p "$tree/Sources/GameCore"
+cat >"$tree/Sources/GameCore/Scan.swift" <<'SWIFT'
+public struct ScanThing {}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/SourceScanTests.swift" <<'SWIFT'
+import XCTest
+
+final class SourceScanTests: XCTestCase {
+    func testNoPrint() { _ = "Sources/GameCore" }
+}
+SWIFT
+cat >"$tree/Sources/GamePresentation/Ledger.swift" <<'SWIFT'
+public struct LedgerBook {}
+SWIFT
+cat >"$tree/Tests/GamePresentationTests/LedgerTests.swift" <<'SWIFT'
+import XCTest
+
+/// Checks two halves share; swift test lists them under the halves only.
+class LedgerChecks: XCTestCase {
+    func checkTheBook() { _ = LedgerBook() }
+}
+
+final class LedgerFirstHalfTests: LedgerChecks {
+    func testFirst() { checkTheBook() }
+}
+
+final class LedgerSecondHalfTests: LedgerChecks {
+    func testSecond() { checkTheBook() }
+}
+SWIFT
+smoke='GoldenScenarioTests ReplayFixtureTests SavedGameTests'
+expect_decision true affected "{\"include\":[{\"shard\":\"selected\",\"tests\":\"GoldenScenarioTests PackUserTests ReplayFixtureTests SavedGameTests TrainPackTests\",\"part\":\"1/1\"}]}" \
+  "a pull request of a source file runs the tests that name it, through a helper too" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/TrainPack.swift docs/ROADMAP.md
+expect_decision true affected "\"tests\":\"CatalogueTests $smoke TrainPackTests\"" \
+  "a pull request of a changed test file and bundled data a source file names" \
+  EVENT=pull_request LISTED=true -- Tests/GamePresentationTests/TrainPackTests.swift RailwayGameApp/Resources/Catalogue/stations.json
+expect_decision true affected "\"tests\":\"GoldenScenarioTests ReplayFixtureTests SavedGameTests SourceScanTests\"" \
+  "a test that reads a source folder by its path runs when a file in it changes" \
+  EVENT=pull_request LISTED=true -- Sources/GameCore/Scan.swift
+expect_decision true affected "\"tests\":\"GoldenScenarioTests LedgerFirstHalfTests LedgerSecondHalfTests ReplayFixtureTests SavedGameTests\"" \
+  "a base test class with no tests of its own runs as its subclasses" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/Ledger.swift
+expect_decision true affected "\"tests\":\"GoldenScenarioTests LedgerFirstHalfTests LedgerSecondHalfTests ReplayFixtureTests SavedGameTests\"" \
+  "a changed test file holding a base class selects its subclasses, not the base" \
+  EVENT=pull_request LISTED=true -- Tests/GamePresentationTests/LedgerTests.swift
+expect_decision true presentation '"shard":"selected-8"' "a push to main of the same file keeps the broad tier" \
+  EVENT=push LISTED=true -- Sources/GamePresentation/TrainPack.swift
+expect_decision true presentation '"shard":"selected-8"' "a top-level operator cannot be followed by name" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/TrainPack.swift Sources/GamePresentation/MatchOperator.swift
+expect_decision true presentation '"shard":"selected-8"' "bundled data no Swift file names" \
+  EVENT=pull_request LISTED=true -- RailwayGameApp/Resources/Unknown/thing.bin
+expect_decision true presentation '"shard":"selected-8"' "a deleted source file" \
+  EVENT=pull_request LISTED=true -- Sources/GamePresentation/Gone.swift
+expect_decision true full full "the package beside a source file" EVENT=pull_request LISTED=true -- \
+  Sources/GamePresentation/TrainPack.swift Package.swift
+expect_decision true full full "full-ci beside a source file" EVENT=pull_request LISTED=true LABELS="full-ci" -- \
+  Sources/GamePresentation/TrainPack.swift
 
 # decide's docs output (decision 830): the number check runs when a listed
 # file is one doc_numbers.py reads, and always when the files are not listed.

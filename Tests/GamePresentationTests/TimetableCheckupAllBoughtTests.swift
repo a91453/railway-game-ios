@@ -103,9 +103,9 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     }
 
     /// A game on Fukuoka's map, as the launcher starts it (FUKUOKA-OPEN).
-    static func fukuoka(rules: NewGameRules) throws -> GameSession {
+    static func fukuoka(rules: NewGameRules, start: Int = 0) throws -> GameSession {
         let ground = try FukuokaRailwaysTests.ground()
-        let session = try session(GameWorld.newOverseasGame(ground, balance: Money(1_000_000_000_000)), rules: rules)
+        let session = try session(GameWorld.newOverseasGame(ground, balance: Money(1_000_000_000_000), start: start), rules: rules)
         session.railways = try FukuokaRailwaysTests.railways()
         session.population = ground.population
         session.water = ground.water
@@ -169,8 +169,9 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         // 975): the Kyushu Shinkansen, another system, is sold alone and
         // shares no track with them (its Hakata platforms stand on its
         // viaduct over the subway's), so `testFukuokaShinkansen` plays it
-        // alone.
-        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS"])
+        // alone. Decision 998: so is the Nishi-Kyushu Shinkansen, a line of
+        // its system sharing no station with it, `testNishiKyushuShinkansen`.
+        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS", "kyushushinkansen:NK"])
     }
 
     /// The groups of lines sharing a station on each map, and the worlds
@@ -288,6 +289,20 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
             try check(name, {
                 let session = try Self.fukuoka(rules: rules)
                 try Self.buyTogether(["kyushushinkansen:KS"], in: session)
+                return session.world
+            }())
+        }
+    }
+
+    /// Decision 998: the Nishi-Kyushu Shinkansen bought alone, from a game
+    /// begun round Nagasaki.
+    func testNishiKyushuShinkansen() throws {
+        try full()
+        for (label, rules) in Self.rules {
+            let name = "fukuoka kyushushinkansen:NK \(label)"
+            try check(name, {
+                let session = try Self.fukuoka(rules: rules, start: 3)
+                try Self.buyTogether(["kyushushinkansen:NK"], in: session)
                 return session.world
             }())
         }

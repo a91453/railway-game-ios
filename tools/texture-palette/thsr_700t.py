@@ -30,7 +30,11 @@
   3.38/2.80、高 × 3.65/3.818）。**頭車 27 m**：車鼻、車門與中間車同一個比例
   （不單獨拉長車鼻），直線的車身多出 2 m，窗子照中間車的窗距排成 14 扇（舊
   版 12 扇），不把窗子拉寬。轉向架只平移不縮放（輪子中心距 1.50 m，就是
-  1,435 mm 軌距的鋼軌中心）。
+  1,435 mm 軌距的鋼軌中心），照真車放：中心離連結面 3.75 m、相距 17.5 m。
+- 輪罩開口跟著轉向架（作者 2026-11-26）：裙板下緣的每個開口整段平移到
+  它那台轉向架的正中（車鼻、窗、門不動）；頭車的前開口舊版又淺又窄，下緣
+  照後開口的寬重做、頂挖到離軌面 0.70 m，上面留一條車鼻的裙板
+  （`deepen_front_opening`、`move_openings`）。
 - 舊版沒有集電弓車：集電弓車是中間車加上寫出來的集電弓、絕緣子蓋與兩片
   導風板（真車第 4、9 節）。
 - 輸出的軸：+y 上、車沿 x、駕駛室在 +x、連結面在 ±半車長、軌面 y 0。集電弓
@@ -176,6 +180,34 @@ CREW_WINDOW = (-4.329, -4.07, 2.399, 2.819)
 # 往連結面拉一圈，離連結面留這麼多；裙板的高度以下是裙板的灰，以上是車體的
 # 白（色帶不接過去）。
 HOOD_GAP = 0.02           # `Map3DTHSR700T.hoodGap`
+
+# 轉向架與輪罩開口（作者 2026-11-26：輪子要在輪罩正中）。轉向架照真車放：中心離連結面
+# 3.75 m、兩台相距 17.5 m（舊版在 3.57 m，開口本來就在真車的位置附近，所以輪子偏在開口
+# 一頭）。車身下緣（舊版 y < SKIRT_LOW 的頂點）的每個開口整段平移到它那台轉向架正中，
+# 中間的床下箱跟著伸縮；車鼻、窗、門不動。舊版座標（原座標的 z），開口下緣兩端：
+BOGIE_FROM_END = 3.75
+BOGIE_CENTRES = 17.5
+SKIRT_LOW = 1.005         # 開口的頂板（舊版 y 1.0）與床下箱的底（y 0.464）
+MIDDLE_OPENINGS = ((-9.148, -5.571), (5.571, 9.148))
+MIDDLE_BOX = (-10.25, 10.25)  # 床下箱的頭尾（連結端）
+CAB_OPENINGS = ((-7.149, -4.114), (5.545, 9.122))
+CAB_BOX = (-8.285, 10.25)     # 頭車：車鼻底下（y 0.76）的那一點以前不動
+# 頭車的前開口舊版只挖到 y 0.676（後面的到 y 1.0）、下緣寬 3.04 m，比轉向架（3.26 m）
+# 還窄：下緣照後開口的寬（3.577）重做、正中是舊版前轉向架的中心，頂只挖到 FRONT_CEILING
+# （遊戲 0.70 m，輪子整個露出）：上面留一條車鼻的裙板，真車的車鼻裙板也往下蓋到轉向架
+# 上緣（九州 800 系：切到和後開口一樣高時車鼻底下像黏了一個黑盒子，作者「車頭前輪看起來
+# 有點怪」）。兩頭的斜邊照後開口的斜率。四個點：（舊的 z, 舊的 y）→（新的 z, 新的 y,
+# 新的 |x|）。
+FRONT_CEILING = 0.70 / (3.65 / 3.818)
+_RISE = (FRONT_CEILING - 0.464) / (1.0 - 0.464)
+CAB_FRONT_BOGIE_OLD = -5.75
+CAB_FRONT_OPENING = {
+    (-7.149, 0.465): (-5.75 - 1.7885, 0.465, None),
+    (-4.114, 0.464): (-5.75 + 1.7885, 0.464, None),
+    (-6.771, 0.676): (-5.75 - 1.7885 + 0.261 * _RISE, FRONT_CEILING, 1.254 + 0.094 * _RISE),
+    (-4.493, 0.676): (-5.75 + 1.7885 - 0.288 * _RISE, FRONT_CEILING, 1.254 + 0.094 * _RISE),
+}
+CAB_OPENING_NEW = (-5.75 - 1.7885, -5.75 + 1.7885)
 
 PANTOGRAPH_AT = 6.0       # 集電弓車：集電弓的位置（中間車的 +z 那一半）
 PLATE = 0.025             # 天線鰭的厚度
@@ -691,21 +723,27 @@ def build(path: Path, unit: str, train: str = "thsr"):
     gltf, blob, digest = cut.read_glb(path)
     pieces = cut.parts(gltf, blob)
     body = max(pieces, key=lambda p: np.ptp(p["world"][:, 2]))
+    pieces = [None if piece is body else piece for piece in pieces]
     paint = Paint("middle" if unit == "pantograph" else unit, train)
     section = same_section(body) if paint.cab else 0.0
     if section > SECTION:
         raise SystemExit(f"{path.name}: 加長的那一段不是等斷面（外形差 {section:.3f} m）")
+    if paint.cab:
+        body = deepen_front_opening(body)
     scaled, fin, stretched = cut_body(body, paint)
+    centres, numbers = bogie_centres(paint)
+    scaled = move_openings(scaled, paint, centres, numbers, path.name)
     for piece in pieces:
-        if piece is body:
+        if piece is body or piece is None:
             continue
         world = piece["world"]
         low, high = world.min(0), world.max(0)
         size = high - low
         if size[2] > 2.5:
-            # 轉向架：位置跟著車體，本身不縮放。
+            # 轉向架：本身不縮放，照真車的位置（離連結面 3.75 m、相距 17.5 m）。
             middle = (low[2] + high[2]) / 2
-            moved = world + np.array([0, 0, paint.z(middle) - middle])
+            target = centres[1] if middle > 0 else centres[0]
+            moved = world + np.array([0, 0, target - middle])
             scaled += [(moved[face], DARK, -1) for face in piece["faces"]]
         elif size[1] > 1.5:
             # 通道幌：照車體放大；兩個端面拿掉（一個在車體裡，一個在連結面上）。
@@ -752,7 +790,68 @@ def build(path: Path, unit: str, train: str = "thsr"):
         out += hoods(out, (-1,) if paint.cab else (-1, 1))
     return name_doors(out), digest, {"stretched": stretched, "windows": len(paint.windows),
                                      "window_pitch": round(paint.windows[1] - paint.windows[0], 4),
-                                     "section": round(section, 4), "crew_doors": paint.crew}
+                                     "section": round(section, 4), "crew_doors": paint.crew, **numbers}
+
+
+def deepen_front_opening(body):
+    """頭車的前開口照後開口的寬重做、頂挖到 `FRONT_CEILING`（`CAB_FRONT_OPENING`）：只移動那四個點（每個點在
+    兩側各一個，GLB 裡同一點可能有好幾個頂點）。回傳車體的一份副本。"""
+    world = body["world"].copy()
+    found = {key: 0 for key in CAB_FRONT_OPENING}
+    for i, (x, y, z) in enumerate(world):
+        for (z0, y0), (z1, y1, x1) in CAB_FRONT_OPENING.items():
+            if abs(z - z0) < 2e-3 and abs(y - y0) < 2e-3 and abs(abs(x) - 1.27) < 0.05:
+                world[i] = (x if x1 is None else np.sign(x) * x1, y1, z1)
+                found[(z0, y0)] += 1
+    if any(count < 2 for count in found.values()):
+        raise SystemExit(f"頭車前開口的四個點不是認得的位置：{found}")
+    return {**body, "world": world}
+
+
+def bogie_centres(paint):
+    """兩台轉向架的中心（放大後沿車身的位置，-z 那台在前）：照真車，離連結面
+    `BOGIE_FROM_END`、相距 `BOGIE_CENTRES`。"""
+    joint = paint.z(CAB_OLD[1]) if paint.cab else 12.5
+    rear = joint - BOGIE_FROM_END
+    return (rear - BOGIE_CENTRES, rear), {"bogie_centres": [round(rear - BOGIE_CENTRES, 3), round(rear, 3)]}
+
+
+def move_openings(triangles, paint, centres, numbers, name):
+    """車身下緣（放大後 y < `SKIRT_LOW` 的頂點）沿車身另外放：每個開口照原本放大後的
+    寬度、正中對到它那台轉向架的正中，伸縮放在開口之間的床下箱；床下箱的頭尾不動
+    （九州 800 系、N700 的同一做法）。"""
+    if paint.cab:
+        (front, _), rear = CAB_OPENINGS
+        openings, (first, last) = (CAB_OPENING_NEW, rear), CAB_BOX
+    else:
+        openings, (first, last) = MIDDLE_OPENINGS, MIDDLE_BOX
+    knots, moved = [paint.z(first)], [paint.z(first)]
+    for (low, high), centre in zip(openings, centres):
+        a, b = paint.z(low), paint.z(high)
+        knots += [a, b]
+        moved += [centre - (b - a) / 2, centre + (b - a) / 2]
+    knots.append(paint.z(last))
+    moved.append(paint.z(last))
+    if np.any(np.diff(knots) <= 0) or np.any(np.diff(moved) <= 0):
+        raise SystemExit(f"{name}: 開口的折點沒有照順序：{np.round(knots, 3).tolist()} → {np.round(moved, 3).tolist()}")
+    numbers["opening_shift_m"] = [round(m - k, 3) for k, m in zip(knots, moved)]
+    level = SKIRT_LOW * HEIGHT
+    out = []
+    for corners, kind, door in triangles:
+        low = (corners[:, 1] < level) & (corners[:, 2] >= knots[0] - 1e-6) & (corners[:, 2] <= knots[-1] + 1e-6)
+        if not low.any():
+            out.append((corners, kind, door))
+            continue
+        shifted = corners.copy()
+        shifted[low, 2] = np.interp(corners[low, 2], knots, moved)
+        if not low.all() and kind not in (SKIRT, WHITE, DARK):
+            raise SystemExit(f"{name}: 有顏色（{MATERIALS[kind]}）的面跨在車身下緣：{np.round(corners, 3).tolist()}")
+        before = np.cross(corners[1] - corners[0], corners[2] - corners[0])
+        after = np.cross(shifted[1] - shifted[0], shifted[2] - shifted[0])
+        if np.linalg.norm(before) > 1e-9 and np.dot(before, after) <= 0:
+            raise SystemExit(f"{name}: 移開口讓一個面翻了：{np.round(corners, 3).tolist()}")
+        out.append((shifted, kind, door))
+    return out
 
 
 def hoods(triangles, ends):

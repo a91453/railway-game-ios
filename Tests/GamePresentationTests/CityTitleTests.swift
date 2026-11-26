@@ -30,7 +30,9 @@ final class CityTitleTests: XCTestCase {
     func testTheKindIsTheSectorFarthestAboveItsUsualShare() {
         // The usual shares themselves: nothing stands out.
         let usual = Kind.usualShare.mapValues { $0 * 10 }
-        XCTAssertEqual(Kind.usualShare.values.reduce(0, +), 998)
+        // Thousandths rounded down, so a little under 1,000 (998 before
+        // decision 1002's census).
+        XCTAssertEqual(Kind.usualShare.values.reduce(0, +), 996)
         XCTAssertEqual(Set(Kind.usualShare.keys), Set(Kind.sectors))
         XCTAssertEqual(CityTitle.kind(residents: 10_000, jobs: usual), .mixed)
         // 8 points more offices at the shops' cost: offices lead.
@@ -38,7 +40,7 @@ final class CityTitleTests: XCTestCase {
         offices[.business, default: 0] += 800
         offices[.commercial, default: 0] -= 800
         XCTAssertEqual(CityTitle.kind(residents: 10_000, jobs: offices), .business)
-        offices[.business, default: 0] -= 20
+        offices[.business, default: 0] -= 30
         XCTAssertEqual(CityTitle.kind(residents: 10_000, jobs: offices), .mixed, "just under the margin")
         // Two sectors above the margin: the one farther above.
         XCTAssertEqual(CityTitle.kind(residents: 10_000, jobs: [.industrial: 5_000, .tourist: 5_000]), .tourist)

@@ -1,2 +1,0 @@
-en: Photo Mode on the 3D map: the buttons step aside, one tap takes the camera to a train, a station or the skyline, and the shutter saves the picture to Photos.
-zh: 3D 地圖有拍照模式：按鈕收起來，一鍵把鏡頭帶到列車、車站或天際線，按快門就存到「照片」。

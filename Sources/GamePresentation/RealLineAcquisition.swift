@@ -99,7 +99,7 @@ public struct RealBranchLine: Hashable, Sendable {
 
     /// Cars of its trains: the DR1000's three on the branch lines
     /// (decision 315's reference row), as the demo's on the light rails
-    /// and metros (``DemoRealLines/cars(ofSystem:)``).
+    /// and metros (``DemoRealLines/cars(ofLine:system:)``).
     /// Decision 535: the Wenhu Line's four, as its real trains have.
     var cars: Int {
         guard isUrban else { return RealLineAcquisition.carsPerTrain }
@@ -107,7 +107,7 @@ public struct RealBranchLine: Hashable, Sendable {
         // its 34 m trains as long as Danhai's, not the Kaohsiung metro's
         // three.
         if isRing { return 2 }
-        return isWenhu ? 4 : DemoRealLines.cars(ofSystem: system)
+        return isWenhu ? 4 : DemoRealLines.cars(ofLine: "\(system)|\(network)", system: system)
     }
 
     /// SHINKANSEN-SALE (decision 975): how long its platforms (and its
@@ -250,9 +250,29 @@ public struct RealBranchLine: Hashable, Sendable {
     /// two islands and four tracks (島式 2 面 4 線); Kurume, Shin-Ōmuta and
     /// Shin-Tamana two side platforms (相対式 2 面 2 線), as every line's
     /// station of two tracks is laid.
+    /// Decision 998: the Nishi-Kyushu Shinkansen's (Japanese Wikipedia's
+    /// 駅構造, checked 2026-11-26), its trains keeping left so the second
+    /// track is the one toward Nagasaki: Nagasaki two islands and four
+    /// tracks (島式 2 面 4 線, 11 to 14), laid as Kumamoto's; Takeo-Onsen's
+    /// two tracks (11 and 12, each beside a platform the Relay Kamome
+    /// stands across), Ureshino-Onsen, Shin-Ōmura and Isahaya two side
+    /// platforms (相対式 2 面 2 線), as every line's station of two tracks
+    /// is laid.
     static func realLoops(system: String, network: String, name: String, end: Bool) -> [(Double, Int, Bool)]? {
-        guard system == "kyushushinkansen", network == "KS" else { return nil }
+        guard system == "kyushushinkansen" else { return nil }
         let island = RealLineAcquisition.islandSpacing, between = HighSpeedDemo.trackOffset
+        if network == "NK" {
+            guard end else { return nil }
+            return switch name {
+            case "長崎": [(island, 1, false), (-between, 1, false), (-(between + island), 2, false)]
+            // Takeo-Onsen: the second track a track's spacing to the
+            // left, a side platform outside each (the Relay Kamome's
+            // across them not laid).
+            case "武雄溫泉": [(-between, 1, false)]
+            default: nil
+            }
+        }
+        guard network == "KS" else { return nil }
         if end {
             return switch name {
             // Hakata: the first track's island on its right, the second
@@ -290,8 +310,13 @@ public struct RealBranchLine: Hashable, Sendable {
     /// THSR-SALE (decision 993): the Taiwan High Speed Rail's four-track
     /// stations (``thsrFourTrackStations``).
     static func realTracks(of id: String) -> [String: Int] {
-        if id == taiwanHighSpeedRail { return Dictionary(uniqueKeysWithValues: thsrFourTrackStations.map { ($0, 4) }) }
-        return id == "kyushushinkansen:KS" ? ["博多": 6, "新鳥栖": 4, "筑後船小屋": 3, "熊本": 4] : [:]
+        switch id {
+        case taiwanHighSpeedRail: Dictionary(uniqueKeysWithValues: thsrFourTrackStations.map { ($0, 4) })
+        case "kyushushinkansen:KS": ["博多": 6, "新鳥栖": 4, "筑後船小屋": 3, "熊本": 4]
+        // Decision 998: Takeo-Onsen's two and Nagasaki's four.
+        case "kyushushinkansen:NK": ["武雄溫泉": 2, "長崎": 4]
+        default: [:]
+        }
     }
 
     /// How its stations' loops are laid: a TRA branch line's, a light

@@ -391,50 +391,99 @@ def main(n02_path, extract, out):
 
 
 # SHINKANSEN-SALE (decision 975): the staged files moved into the map pack.
-MERGED_NOTE = " Kyushu Shinkansen: "
-# The files copied as they are (their sources are in `build_fukuoka_rail.SOURCES`).
+# The system's own files (their sources are in `build_fukuoka_rail.SOURCES`).
 PACK_FILES = (f"{SYSTEM}.json", f"{SYSTEM}_times.json")
+
+
+# Decision 998: the lines of the system, in the order the pack lists them
+# (the Kyushu Shinkansen's, then the Nishi-Kyushu Shinkansen's, staged by
+# build_nishi_kyushu_shinkansen.py); and how each line's notes are told
+# apart in a file both share.
+LINE_ORDER = ("KS", "NK")
+LINE_NOTES = {"KS": " Kyushu Shinkansen: ", "NK": " Nishi-Kyushu Shinkansen: "}
 
 
 def merge(staged, pack):
     """The staged line into the map pack `pack`, beside the subway's
-    (decision 975): its own `kyushushinkansen.json` and `_times.json`
-    copied, its line, stations, names and structures added to the pack's
+    (decision 975): its line, trips, stations, names and structures added
+    to the pack's `kyushushinkansen.json`, `_times.json`,
     `track_lines.geojson`, `track_stations.geojson`, `station_names.json`
-    and `rail_structures.json` after the subway's, and `pack.json` written
+    and `rail_structures.json`, and the files' sizes in `pack.json` written
     again. Run again, it replaces what it added before; the subway's part
-    of each file is kept byte for byte. `depot.json` stays staged (the
-    game's depot is a `RealLineDepotSite`). `extract_fukuoka_runs.py`
-    then lays out `metro_runs.json` for both systems."""
+    of each file, and decision 998's: the other line's of the system, are
+    kept as they were. `depot.json` stays staged (the game's depot is a
+    `RealLineDepotSite`). `extract_fukuoka_runs.py` then lays out
+    `metro_runs.json` for every system."""
     def read(folder, name):
         with open(os.path.join(folder, name), encoding="utf-8") as f:
             return json.load(f)
 
-    def base(note):
-        return note.split(MERGED_NOTE)[0]
+    def order(line_id):
+        return LINE_ORDER.index(line_id) if line_id in LINE_ORDER else len(LINE_ORDER)
 
-    for name in PACK_FILES:
-        fk.write(pack, name, read(staged, name))
+    def notes(theirs, ours, line_ids, own=None):
+        """`theirs`, a note the lines share, with the notes of `line_ids`
+        replaced by `ours`, each line's after its own marker; in the
+        system's own files (`own`, the line an unmarked note is of), a
+        note of one line alone is that line's, unmarked."""
+        head, parts = theirs, {}
+        markers = sorted(((theirs.find(mark), line_id) for line_id, mark in LINE_NOTES.items() if mark in theirs))
+        if markers:
+            head = theirs[:markers[0][0]]
+            for (at, line_id), (after, _) in zip(markers, markers[1:] + [(len(theirs), None)]):
+                parts[line_id] = theirs[at + len(LINE_NOTES[line_id]):after]
+        elif own and theirs:
+            head, parts = "", {own: theirs}
+        for line_id in line_ids:
+            parts[line_id] = ours
+        if own and not head and len(parts) == 1:
+            return next(iter(parts.values()))
+        return head + "".join(LINE_NOTES[k] + parts[k] for k in sorted(parts, key=order))
+
+    system_file, times_file = PACK_FILES
+    ours = read(staged, system_file)
+    added_ids = [line["id"] for line in ours["lines"]]
+    if os.path.exists(os.path.join(pack, system_file)):
+        theirs, their_times = read(pack, system_file), read(pack, times_file)
+    else:
+        theirs = dict(ours, lines=[], source_notes="")
+        their_times = dict(read(staged, times_file), lines={}, source_notes="")
+    theirs["lines"] = sorted([line for line in theirs["lines"] if line["id"] not in added_ids] + ours["lines"],
+                             key=lambda line: order(line["id"]))
+    theirs["source_notes"] = notes(theirs["source_notes"], ours["source_notes"], added_ids, own=LINE_ID)
+    fk.write(pack, system_file, theirs)
+    our_times = read(staged, times_file)
+    lines = {k: v for k, v in their_times["lines"].items() if k not in added_ids}
+    lines.update(our_times["lines"])
+    their_times["lines"] = {k: lines[k] for k in sorted(lines, key=order)}
+    their_times["source_notes"] = notes(their_times["source_notes"], our_times["source_notes"], added_ids, own=LINE_ID)
+    fk.write(pack, times_file, their_times)
+
+    def ours_too(properties):
+        return properties["sys"] == SYSTEM and properties.get("id", properties.get("lineId")) in added_ids
+
     for name in ("track_lines.geojson", "track_stations.geojson"):
         ours, theirs = read(staged, name), read(pack, name)
-        kept = [f for f in theirs["features"] if f["properties"]["sys"] != SYSTEM]
+        kept = [f for f in theirs["features"] if not ours_too(f["properties"])]
         added = ours["features"]
         if name == "track_lines.geojson":
+            kept = [f for f in kept if f["properties"]["sys"] != SYSTEM] + sorted(
+                (f for f in kept if f["properties"]["sys"] == SYSTEM), key=lambda f: order(f["properties"]["id"]))
             added = [dict(f, properties=dict(f["properties"], sortKey=len(kept) + n)) for n, f in enumerate(added)]
-        theirs["source"] = base(theirs["source"]) + MERGED_NOTE + ours["source"]
+        theirs["source"] = notes(theirs["source"], ours["source"], added_ids)
         theirs["features"] = kept + added
         fk.write(pack, name, theirs)
     ours, theirs = read(staged, "station_names.json"), read(pack, "station_names.json")
-    theirs["source"] = base(theirs["source"]) + MERGED_NOTE + ours["source"]
+    theirs["source"] = notes(theirs["source"], ours["source"], added_ids)
     for key in ("systems", "routes"):
-        theirs[key] = {k: v for k, v in theirs[key].items() if k != SYSTEM}
-        theirs[key][SYSTEM] = ours[key][SYSTEM]
+        theirs[key][SYSTEM] = {**theirs[key].get(SYSTEM, {}), **ours[key][SYSTEM]}
     fk.write(pack, "station_names.json", theirs)
     ours, theirs = read(staged, "rail_structures.json"), read(pack, "rail_structures.json")
-    theirs["structures"] = [s for s in theirs["structures"] if s["system"] != SYSTEM] + ours["structures"]
+    theirs["structures"] = [s for s in theirs["structures"]
+                            if s["system"] != SYSTEM or s.get("line", "KS") not in added_ids] + ours["structures"]
     theirs["source"][SYSTEM] = ours["source"]["openStreetMap"]
     fk.write(pack, "rail_structures.json", theirs)
-    fk.write_manifest(pack)
+    fk.refresh_manifest(pack)
     print(f"{pack}: {len(read(pack, 'track_lines.geojson')['features'])} lines, "
           f"{len(read(pack, 'track_stations.geojson')['features'])} stations, "
           f"{len(theirs['structures'])} structures")

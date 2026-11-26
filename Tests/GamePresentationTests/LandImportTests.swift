@@ -41,13 +41,15 @@ final class LandImportTests: XCTestCase {
         let cells = try XCTUnwrap(LandImport.cells(population: grid, frame: Self.frame(anchor), bounds: GameWorld.newGameBounds))
         var world = GameWorld.newGame(anchor: anchor, land: cells)
         XCTAssertEqual(world.land.cells, cells, "the cells are valid land, in order")
-        XCTAssertTrue(cells.allSatisfy { $0.use == .residential && $0.jobs == 0 && $0.residents > 0 })
+        // Decision 1002: the census's grid brings its own jobs, so without
+        // places the land is homes and the census's workplaces.
+        XCTAssertTrue(cells.allSatisfy { $0.residents + $0.jobs > 0 && $0.use != .park })
+        XCTAssertTrue(cells.contains { $0.use == .residential } && cells.contains { $0.use == .office })
         // 16 km round Taipei Main Station: most of Taipei and the near
-        // side of New Taipei. The WorldPop cells whose middles lie in the
-        // square hold 4,777,604 (summed from the file on its own); the land
-        // keeps only the share inside of those cut by the edge.
+        // side of New Taipei, 4,693,161 people on the census's 7.5″ cells
+        // (WorldPop's 1 km cells put some 4.6 to 4.8 million there).
         let total = world.land.totals.residents
-        XCTAssertTrue((4_500_000 ... 4_777_604).contains(total), "\(total) people")
+        XCTAssertTrue((4_600_000 ... 4_800_000).contains(total), "\(total) people")
         XCTAssertLessThan(total, Int64(grid.total))
 
         // A station by Taipei Main Station has about the people the grid
@@ -168,8 +170,8 @@ final class LandImportTests: XCTestCase {
             XCTAssertEqual(building.kind, .city, "no cell is too full for D4")
             counts[building.use, default: [0, 0, 0, 0]][building.density.rawValue - 1] += 1
         }
-        // 64,829 cells by density, D1 to D4: no cell needs D4, as each is
-        // chosen by its main count only (residents of homes, jobs of the
+        // Before decision 1002, 64,829 cells by density, D1 to D4: no cell
+        // needed D4, as each is chosen by its main count only (residents of homes, jobs of the
         // rest). Decision 91 gives schools and sights cells of their own,
         // which were offices and shops before, and a cell they made offices
         // or shops without outnumbering its people is homes now. Decision 93
@@ -179,10 +181,16 @@ final class LandImportTests: XCTestCase {
         // cells, which are fuller (D2 shops, more D3 homes) than before
         // (residential [26,587, 32,485, 2,214, 0], commercial [206, 0, 0,
         // 0], office [0, 1,691, 195, 0], civic [195, 0, 0, 0]).
+        // Decision 1002: the census's 7.5″ cells are a zone cell each, so
+        // people live and work where they are counted, not spread over a
+        // WorldPop cell: 53,311 cells (the census leaves the empty hillsides
+        // and river banks empty), denser in the middle, with D4 offices,
+        // shops and homes; the factories hold the census's jobs, not 29 a
+        // cell, and the parks are the zone cells no one is counted in.
         XCTAssertEqual(counts, [
-            .residential: [20_532, 30_717, 3_313, 0], .commercial: [24, 173, 0, 0], .office: [0, 1_351, 183, 0],
-            .civic: [143, 0, 0, 0], .leisure: [1_256, 0, 0, 0],
-            .industrial: [2_244, 0, 0, 0], .park: [4_568, 0, 0, 0], .agricultural: [325, 0, 0, 0],
+            .residential: [13_796, 12_877, 10_772, 39], .commercial: [1_065, 470, 273, 25], .office: [2_324, 1_797, 1_303, 78],
+            .civic: [862, 70, 0, 0], .leisure: [1_104, 0, 0, 0],
+            .industrial: [1_883, 307, 45, 9], .park: [3_887, 0, 0, 0], .agricultural: [325, 0, 0, 0],
         ])
         for cell in world.land.cells {
             let capacity = try XCTUnwrap(world.buildingCapacity(row: cell.row, column: cell.column))

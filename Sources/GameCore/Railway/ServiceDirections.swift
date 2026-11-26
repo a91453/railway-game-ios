@@ -172,6 +172,26 @@ extension GameWorld {
         }
         /// Each train's last such search (see ``NoDetour``).
         var noDetours: [TrainID: NoDetour] = [:]
+        /// Decision 980: a departure kept from its way with no way round
+        /// (see ``NoDetour``), `candidate` as it was asked, bound for
+        /// `station`, with the track it needs (`envelope`, see
+        /// ``GameWorld/reserving(_:following:memo:)``), the traversals of
+        /// that (`ways`, see ``GameWorld/ways(of:)``), and one train in its
+        /// way that it cannot follow, the train at `witness` of the world's
+        /// trains: while that train holds track of the envelope still and
+        /// cannot be followed still, and there is no way round still, the
+        /// same candidate is kept from its way without asking again (see
+        /// ``GameWorld/stillHolder(of:memo:)``).
+        struct HeldDeparture {
+            let candidate: Train
+            let station: StationID
+            let envelope: TrackCover
+            let ways: Set<TrackTraversal>
+            let witness: Int
+            let witnessID: TrainID
+        }
+        /// Each train's last departure kept so (see ``HeldDeparture``).
+        var heldDepartures: [TrainID: HeldDeparture] = [:]
 
         /// Keeps `train` in ``released``.
         mutating func release(_ train: Train) {
@@ -245,6 +265,10 @@ extension GameWorld {
         var detoursNotSearched = 0
         /// How often it was searched for.
         var detoursSearched = 0
+        /// Decision 980: how often a departure was kept from its way
+        /// without asking again (see ``GameWorld/stillHolder(of:memo:)``),
+        /// each checked against asking.
+        var heldNotAsked = 0
     }
 
     @TaskLocal static var answerAudit: AnswerAudit?

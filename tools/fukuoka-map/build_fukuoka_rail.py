@@ -476,6 +476,12 @@ def write(folder, name, value):
 
 OSM, MLIT, OURS = "OpenStreetMap", "National Land Numerical Information (railway data N02, 2025), MLIT", "this project"
 ESTAT, GSI = "e-Stat (Statistics Bureau of Japan)", "GSI elevation tiles"
+OVERTURE, PLATEAU = "Overture Maps", "PLATEAU, MLIT"
+PLATEAU_CREDIT = ("「3D都市モデル（Project PLATEAU）」（国土交通省）を加工して作成 (https://www.mlit.go.jp/plateau/site-policy/, "
+                  "compatible with CC BY 4.0)")
+OVERTURE_CREDIT = ("Overture Maps Foundation (overturemaps.org), buildings, release 2026-11-18.0, ODbL 1.0; its outlines "
+                   "from Microsoft ML Building Footprints (ODbL 1.0) and Qian Shi et al., East Asian buildings, "
+                   "doi:10.5281/zenodo.8174931 (CC BY 4.0)")
 SOURCES = {
     # JAPAN-CENSUS-GRID (decision 1000): tools/census-grid/japan_census_grid.py.
     "population.json": {"runs (residents, 2020 Population Census, 500 m grid, spread over 7.5 arc-second cells)": ESTAT,
@@ -483,7 +489,10 @@ SOURCES = {
     "basemap.pmtiles": {"roads, water, land cover, parks, boundaries, place names (build_fukuoka_ground.py basemap)": OSM,
                         "the coast closed along the extract's edge": OURS},
     "buildings.pmtiles": {"outlines, uses, tagged storeys and heights (build_fukuoka_ground.py buildings)": OSM,
-                          "storeys where not tagged (from the tagged buildings and population.json)": OURS},
+                          "outlines, uses and measured heights OpenStreetMap does not have, and measured heights of the "
+                          "buildings it does not tag (tools/fukuoka-map/plateau_buildings.py, decision 1001)": PLATEAU,
+                          "outlines neither has (tools/overseas-map/overture_extra.py, decision 1001)": OVERTURE,
+                          "storeys neither tagged nor measured (from the tagged and measured buildings and population.json)": OURS},
     "airfields.json": {"runways, taxiways, aprons, stands, control tower (tools/airfields/build_airfields.py)": OSM},
     "no_build.json": {"the airport, military land, cemeteries, golf courses, railway land and the airport's buildings "
                       "(tools/no-build-land/build_no_build.py)": OSM},
@@ -517,6 +526,9 @@ def write_manifest(folder):
     if "population.json" in files:
         licences[ESTAT] = ("「令和2年国勢調査」「令和3年経済センサス‐活動調査」（総務省統計局）（政府統計の総合窓口（e-Stat））"
                            "を加工して作成 (e-Stat terms of use, Government of Japan Standard Terms of Use 2.0, compatible with CC BY 4.0)")
+    if "buildings.pmtiles" in files:
+        licences[OVERTURE] = OVERTURE_CREDIT
+        licences[PLATEAU] = PLATEAU_CREDIT
     if "heights.dat" in files:
         licences[GSI] = "国土地理院の標高タイルを加工して作成 (国土地理院コンテンツ利用規約, compatible with CC BY 4.0)"
     write(folder, "pack.json", {
@@ -533,6 +545,26 @@ def write_manifest(folder):
         "licences": licences,
         "files": files,
     })
+
+
+def refresh_manifest(folder):
+    """`pack.json` again once a tool has written files of the pack: whole
+    (``write_manifest``), or, for a pack already cut along the prefectures
+    (decision 991, `split_prefectures.py`), with only the sizes of the
+    files in this folder changed, its parts kept (decision 998)."""
+    path = os.path.join(folder, "pack.json")
+    with open(path, encoding="utf-8") as f:
+        manifest = json.load(f)
+    if not manifest.get("parts"):
+        write_manifest(folder)
+        return
+    for name, entry in manifest["files"].items():
+        if "/" not in name:
+            entry["bytes"] = os.path.getsize(os.path.join(folder, name))
+    manifest["bytes"] = sum(entry["bytes"] for entry in manifest["files"].values())
+    # As split_prefectures.py writes it.
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, separators=(",", ":"))
 
 
 def write_times(out, lines):

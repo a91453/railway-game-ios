@@ -1,0 +1,1607 @@
+{
+ "decision": 1002,
+ "totals": {
+  "people": 23715666,
+  "office": 6040193,
+  "shop": 2444011,
+  "civic": 1020603,
+  "leisure": 151026
+ },
+ "bytes": 2563845,
+ "report": {
+  "unmatchedAreas": 0,
+  "areas": 157933,
+  "areasWithPeople": 157933,
+  "townships": {
+   "南投縣/仁愛鄉": {
+    "registered": 15384,
+    "scale": 0.7185
+   },
+   "南投縣/國姓鄉": {
+    "registered": 16455,
+    "scale": 0.701
+   },
+   "南投縣/埔里鎮": {
+    "registered": 76325,
+    "scale": 0.8903
+   },
+   "南投縣/草屯鎮": {
+    "registered": 97162,
+    "scale": 0.9519
+   },
+   "南投縣/南投市": {
+    "registered": 97057,
+    "scale": 1.027
+   },
+   "南投縣/中寮鄉": {
+    "registered": 13202,
+    "scale": 0.676
+   },
+   "南投縣/魚池鄉": {
+    "registered": 14411,
+    "scale": 0.7405
+   },
+   "南投縣/名間鄉": {
+    "registered": 35010,
+    "scale": 0.8198
+   },
+   "南投縣/水里鄉": {
+    "registered": 15693,
+    "scale": 0.7479
+   },
+   "南投縣/鹿谷鄉": {
+    "registered": 15828,
+    "scale": 0.6897
+   },
+   "南投縣/信義鄉": {
+    "registered": 15248,
+    "scale": 0.7195
+   },
+   "南投縣/竹山鎮": {
+    "registered": 50368,
+    "scale": 0.8245
+   },
+   "南投縣/集集鎮": {
+    "registered": 9766,
+    "scale": 0.8827
+   },
+   "嘉義市/西區": {
+    "registered": 143243,
+    "scale": 0.9072
+   },
+   "嘉義市/東區": {
+    "registered": 118916,
+    "scale": 0.9967
+   },
+   "嘉義縣/大林鎮": {
+    "registered": 29606,
+    "scale": 1.2367
+   },
+   "嘉義縣/溪口鄉": {
+    "registered": 12951,
+    "scale": 0.8364
+   },
+   "嘉義縣/梅山鄉": {
+    "registered": 17506,
+    "scale": 0.8074
+   },
+   "嘉義縣/民雄鄉": {
+    "registered": 69923,
+    "scale": 1.1973
+   },
+   "嘉義縣/新港鄉": {
+    "registered": 29616,
+    "scale": 0.8154
+   },
+   "嘉義縣/六腳鄉": {
+    "registered": 20459,
+    "scale": 0.7532
+   },
+   "嘉義縣/阿里山鄉": {
+    "registered": 5208,
+    "scale": 0.7478
+   },
+   "嘉義縣/竹崎鄉": {
+    "registered": 32747,
+    "scale": 0.7178
+   },
+   "嘉義縣/太保市": {
+    "registered": 39339,
+    "scale": 0.9437
+   },
+   "嘉義縣/東石鄉": {
+    "registered": 22211,
+    "scale": 0.6298
+   },
+   "嘉義縣/朴子市": {
+    "registered": 40382,
+    "scale": 0.9856
+   },
+   "嘉義縣/番路鄉": {
+    "registered": 10646,
+    "scale": 0.8091
+   },
+   "嘉義縣/中埔鄉": {
+    "registered": 42074,
+    "scale": 0.9813
+   },
+   "嘉義縣/水上鄉": {
+    "registered": 47391,
+    "scale": 1.0612
+   },
+   "嘉義縣/鹿草鄉": {
+    "registered": 13892,
+    "scale": 0.9127
+   },
+   "嘉義縣/布袋鎮": {
+    "registered": 24013,
+    "scale": 0.7414
+   },
+   "嘉義縣/義竹鄉": {
+    "registered": 16144,
+    "scale": 0.689
+   },
+   "嘉義縣/大埔鄉": {
+    "registered": 4405,
+    "scale": 0.2943
+   },
+   "基隆市/信義區": {
+    "registered": 53348,
+    "scale": 0.9517
+   },
+   "基隆市/中正區": {
+    "registered": 50761,
+    "scale": 1.1025
+   },
+   "基隆市/安樂區": {
+    "registered": 80041,
+    "scale": 0.9827
+   },
+   "基隆市/七堵區": {
+    "registered": 52517,
+    "scale": 1.0955
+   },
+   "基隆市/中山區": {
+    "registered": 45865,
+    "scale": 0.9307
+   },
+   "基隆市/仁愛區": {
+    "registered": 40517,
+    "scale": 0.9102
+   },
+   "基隆市/暖暖區": {
+    "registered": 38340,
+    "scale": 1.0094
+   },
+   "宜蘭縣/頭城鎮": {
+    "registered": 27995,
+    "scale": 0.8806
+   },
+   "宜蘭縣/礁溪鄉": {
+    "registered": 35554,
+    "scale": 0.9559
+   },
+   "宜蘭縣/員山鄉": {
+    "registered": 31734,
+    "scale": 0.9678
+   },
+   "宜蘭縣/宜蘭市": {
+    "registered": 94986,
+    "scale": 1.0074
+   },
+   "宜蘭縣/壯圍鄉": {
+    "registered": 24404,
+    "scale": 0.91
+   },
+   "宜蘭縣/冬山鄉": {
+    "registered": 53303,
+    "scale": 0.9816
+   },
+   "宜蘭縣/五結鄉": {
+    "registered": 41657,
+    "scale": 0.9713
+   },
+   "宜蘭縣/羅東鎮": {
+    "registered": 69395,
+    "scale": 0.8512
+   },
+   "宜蘭縣/三星鄉": {
+    "registered": 21218,
+    "scale": 1.2475
+   },
+   "宜蘭縣/大同鄉": {
+    "registered": 5983,
+    "scale": 0.6516
+   },
+   "宜蘭縣/蘇澳鎮": {
+    "registered": 36871,
+    "scale": 0.9696
+   },
+   "宜蘭縣/南澳鄉": {
+    "registered": 6097,
+    "scale": 0.765
+   },
+   "屏東縣/高樹鄉": {
+    "registered": 22272,
+    "scale": 0.7264
+   },
+   "屏東縣/里港鄉": {
+    "registered": 25335,
+    "scale": 0.7877
+   },
+   "屏東縣/三地門鄉": {
+    "registered": 6809,
+    "scale": 0.7117
+   },
+   "屏東縣/霧臺鄉": {
+    "registered": 1858,
+    "scale": 0.45
+   },
+   "屏東縣/鹽埔鄉": {
+    "registered": 24082,
+    "scale": 0.9607
+   },
+   "屏東縣/九如鄉": {
+    "registered": 21560,
+    "scale": 0.8914
+   },
+   "屏東縣/長治鄉": {
+    "registered": 31453,
+    "scale": 0.9355
+   },
+   "屏東縣/屏東市": {
+    "registered": 192784,
+    "scale": 1.0392
+   },
+   "屏東縣/內埔鄉": {
+    "registered": 53883,
+    "scale": 1.1538
+   },
+   "屏東縣/瑪家鄉": {
+    "registered": 4776,
+    "scale": 0.8231
+   },
+   "屏東縣/麟洛鄉": {
+    "registered": 10437,
+    "scale": 0.8809
+   },
+   "屏東縣/泰武鄉": {
+    "registered": 4440,
+    "scale": 0.6404
+   },
+   "屏東縣/萬巒鄉": {
+    "registered": 19747,
+    "scale": 0.9568
+   },
+   "屏東縣/竹田鄉": {
+    "registered": 15568,
+    "scale": 1.1419
+   },
+   "屏東縣/萬丹鄉": {
+    "registered": 49012,
+    "scale": 0.9323
+   },
+   "屏東縣/潮州鎮": {
+    "registered": 53720,
+    "scale": 1.0235
+   },
+   "屏東縣/新園鄉": {
+    "registered": 32178,
+    "scale": 0.9129
+   },
+   "屏東縣/來義鄉": {
+    "registered": 6079,
+    "scale": 0.6986
+   },
+   "屏東縣/崁頂鄉": {
+    "registered": 14848,
+    "scale": 0.7016
+   },
+   "屏東縣/新埤鄉": {
+    "registered": 10597,
+    "scale": 0.8323
+   },
+   "屏東縣/南州鄉": {
+    "registered": 9693,
+    "scale": 0.8845
+   },
+   "屏東縣/東港鎮": {
+    "registered": 46039,
+    "scale": 0.9057
+   },
+   "屏東縣/林邊鄉": {
+    "registered": 16017,
+    "scale": 0.7948
+   },
+   "屏東縣/佳冬鄉": {
+    "registered": 17543,
+    "scale": 0.8326
+   },
+   "屏東縣/枋寮鄉": {
+    "registered": 23672,
+    "scale": 0.8992
+   },
+   "屏東縣/春日鄉": {
+    "registered": 3749,
+    "scale": 0.7043
+   },
+   "屏東縣/琉球鄉": {
+    "registered": 12117,
+    "scale": 0.6034
+   },
+   "屏東縣/車城鄉": {
+    "registered": 7827,
+    "scale": 0.7289
+   },
+   "屏東縣/恆春鎮": {
+    "registered": 29428,
+    "scale": 0.8702
+   },
+   "屏東縣/滿州鄉": {
+    "registered": 6913,
+    "scale": 0.5837
+   },
+   "屏東縣/牡丹鄉": {
+    "registered": 4812,
+    "scale": 0.5404
+   },
+   "屏東縣/枋山鄉": {
+    "registered": 4946,
+    "scale": 0.7765
+   },
+   "屏東縣/獅子鄉": {
+    "registered": 4923,
+    "scale": 0.5348
+   },
+   "彰化縣/伸港鄉": {
+    "registered": 38405,
+    "scale": 0.9589
+   },
+   "彰化縣/線西鄉": {
+    "registered": 16209,
+    "scale": 0.9696
+   },
+   "彰化縣/和美鎮": {
+    "registered": 87351,
+    "scale": 1.0341
+   },
+   "彰化縣/彰化市": {
+    "registered": 223698,
+    "scale": 0.9518
+   },
+   "彰化縣/鹿港鎮": {
+    "registered": 83430,
+    "scale": 1.0407
+   },
+   "彰化縣/福興鄉": {
+    "registered": 44771,
+    "scale": 0.9663
+   },
+   "彰化縣/秀水鄉": {
+    "registered": 37739,
+    "scale": 0.9602
+   },
+   "彰化縣/花壇鄉": {
+    "registered": 43535,
+    "scale": 1.0042
+   },
+   "彰化縣/芬園鄉": {
+    "registered": 21767,
+    "scale": 0.9195
+   },
+   "彰化縣/芳苑鄉": {
+    "registered": 30583,
+    "scale": 0.8283
+   },
+   "彰化縣/埔鹽鄉": {
+    "registered": 30524,
+    "scale": 0.8956
+   },
+   "彰化縣/大村鄉": {
+    "registered": 39457,
+    "scale": 1.1144
+   },
+   "彰化縣/溪湖鎮": {
+    "registered": 53385,
+    "scale": 0.8582
+   },
+   "彰化縣/員林市": {
+    "registered": 122592,
+    "scale": 0.9127
+   },
+   "彰化縣/二林鎮": {
+    "registered": 47019,
+    "scale": 0.8785
+   },
+   "彰化縣/埔心鄉": {
+    "registered": 33355,
+    "scale": 0.9463
+   },
+   "彰化縣/社頭鄉": {
+    "registered": 40823,
+    "scale": 0.8617
+   },
+   "彰化縣/田尾鄉": {
+    "registered": 25551,
+    "scale": 0.931
+   },
+   "彰化縣/埤頭鄉": {
+    "registered": 28470,
+    "scale": 0.9078
+   },
+   "彰化縣/永靖鄉": {
+    "registered": 34646,
+    "scale": 0.8639
+   },
+   "彰化縣/大城鄉": {
+    "registered": 14531,
+    "scale": 0.7027
+   },
+   "彰化縣/竹塘鄉": {
+    "registered": 14161,
+    "scale": 0.6944
+   },
+   "彰化縣/田中鎮": {
+    "registered": 38796,
+    "scale": 0.8572
+   },
+   "彰化縣/北斗鎮": {
+    "registered": 33252,
+    "scale": 0.9769
+   },
+   "彰化縣/溪州鄉": {
+    "registered": 27680,
+    "scale": 0.8839
+   },
+   "彰化縣/二水鄉": {
+    "registered": 13550,
+    "scale": 0.8159
+   },
+   "新北市/五股區": {
+    "registered": 93671,
+    "scale": 1.1756
+   },
+   "新北市/林口區": {
+    "registered": 135989,
+    "scale": 1.1256
+   },
+   "新北市/貢寮區": {
+    "registered": 10750,
+    "scale": 0.5918
+   },
+   "新北市/蘆洲區": {
+    "registered": 198655,
+    "scale": 1.102
+   },
+   "新北市/汐止區": {
+    "registered": 210901,
+    "scale": 1.1868
+   },
+   "新北市/三重區": {
+    "registered": 383150,
+    "scale": 1.0998
+   },
+   "新北市/雙溪區": {
+    "registered": 7618,
+    "scale": 0.5244
+   },
+   "新北市/瑞芳區": {
+    "registered": 35728,
+    "scale": 0.8769
+   },
+   "新北市/泰山區": {
+    "registered": 77697,
+    "scale": 1.1641
+   },
+   "新北市/平溪區": {
+    "registered": 4049,
+    "scale": 0.5486
+   },
+   "新北市/八里區": {
+    "registered": 41240,
+    "scale": 1.0715
+   },
+   "新北市/金山區": {
+    "registered": 20045,
+    "scale": 0.7337
+   },
+   "新北市/萬里區": {
+    "registered": 20556,
+    "scale": 0.7251
+   },
+   "新北市/淡水區": {
+    "registered": 200713,
+    "scale": 1.1675
+   },
+   "新北市/三芝區": {
+    "registered": 22103,
+    "scale": 1.0579
+   },
+   "新北市/石門區": {
+    "registered": 10362,
+    "scale": 0.4662
+   },
+   "新北市/新店區": {
+    "registered": 306381,
+    "scale": 1.0802
+   },
+   "新北市/樹林區": {
+    "registered": 180842,
+    "scale": 1.0893
+   },
+   "新北市/土城區": {
+    "registered": 241294,
+    "scale": 1.082
+   },
+   "新北市/中和區": {
+    "registered": 405953,
+    "scale": 1.1027
+   },
+   "新北市/鶯歌區": {
+    "registered": 89383,
+    "scale": 1.031
+   },
+   "新北市/坪林區": {
+    "registered": 6171,
+    "scale": 0.4298
+   },
+   "新北市/石碇區": {
+    "registered": 7076,
+    "scale": 0.646
+   },
+   "新北市/板橋區": {
+    "registered": 553551,
+    "scale": 1.0768
+   },
+   "新北市/永和區": {
+    "registered": 213582,
+    "scale": 1.053
+   },
+   "新北市/深坑區": {
+    "registered": 23916,
+    "scale": 1.4045
+   },
+   "新北市/新莊區": {
+    "registered": 423942,
+    "scale": 1.0706
+   },
+   "新北市/三峽區": {
+    "registered": 113768,
+    "scale": 1.0227
+   },
+   "新北市/烏來區": {
+    "registered": 6310,
+    "scale": 0.5243
+   },
+   "新竹市/北區": {
+    "registered": 153842,
+    "scale": 1.0053
+   },
+   "新竹市/香山區": {
+    "registered": 79344,
+    "scale": 1.2213
+   },
+   "新竹市/東區": {
+    "registered": 223988,
+    "scale": 1.1355
+   },
+   "新竹縣/湖口鄉": {
+    "registered": 83060,
+    "scale": 1.2634
+   },
+   "新竹縣/新豐鄉": {
+    "registered": 59202,
+    "scale": 1.146
+   },
+   "新竹縣/竹北市": {
+    "registered": 219261,
+    "scale": 1.1107
+   },
+   "新竹縣/新埔鎮": {
+    "registered": 33306,
+    "scale": 1.0926
+   },
+   "新竹縣/關西鎮": {
+    "registered": 26436,
+    "scale": 1.0691
+   },
+   "新竹縣/芎林鄉": {
+    "registered": 20360,
+    "scale": 1.1148
+   },
+   "新竹縣/竹東鎮": {
+    "registered": 97680,
+    "scale": 1.0946
+   },
+   "新竹縣/寶山鄉": {
+    "registered": 14538,
+    "scale": 1.3277
+   },
+   "新竹縣/橫山鄉": {
+    "registered": 11994,
+    "scale": 0.9472
+   },
+   "新竹縣/北埔鄉": {
+    "registered": 8391,
+    "scale": 0.8673
+   },
+   "新竹縣/尖石鄉": {
+    "registered": 9548,
+    "scale": 0.5304
+   },
+   "新竹縣/峨眉鄉": {
+    "registered": 5070,
+    "scale": 0.7611
+   },
+   "新竹縣/五峰鄉": {
+    "registered": 4402,
+    "scale": 0.4199
+   },
+   "桃園市/大園區": {
+    "registered": 87723,
+    "scale": 1.0429
+   },
+   "桃園市/蘆竹區": {
+    "registered": 170240,
+    "scale": 1.1054
+   },
+   "桃園市/觀音區": {
+    "registered": 75844,
+    "scale": 1.0996
+   },
+   "桃園市/龜山區": {
+    "registered": 183829,
+    "scale": 1.3464
+   },
+   "桃園市/桃園區": {
+    "registered": 476250,
+    "scale": 1.0029
+   },
+   "桃園市/中壢區": {
+    "registered": 434021,
+    "scale": 1.1093
+   },
+   "桃園市/新屋區": {
+    "registered": 49228,
+    "scale": 1.0788
+   },
+   "桃園市/八德區": {
+    "registered": 214503,
+    "scale": 1.0606
+   },
+   "桃園市/平鎮區": {
+    "registered": 229862,
+    "scale": 1.0087
+   },
+   "桃園市/楊梅區": {
+    "registered": 181630,
+    "scale": 1.0424
+   },
+   "桃園市/大溪區": {
+    "registered": 94406,
+    "scale": 1.0777
+   },
+   "桃園市/龍潭區": {
+    "registered": 127306,
+    "scale": 1.0954
+   },
+   "桃園市/復興區": {
+    "registered": 13238,
+    "scale": 0.5155
+   },
+   "澎湖縣/白沙鄉": {
+    "registered": 10135,
+    "scale": 0.5881
+   },
+   "澎湖縣/湖西鄉": {
+    "registered": 16147,
+    "scale": 0.7602
+   },
+   "澎湖縣/西嶼鄉": {
+    "registered": 8208,
+    "scale": 0.7364
+   },
+   "澎湖縣/馬公市": {
+    "registered": 63972,
+    "scale": 0.8694
+   },
+   "澎湖縣/望安鄉": {
+    "registered": 5423,
+    "scale": 0.3247
+   },
+   "澎湖縣/七美鄉": {
+    "registered": 3924,
+    "scale": 0.3828
+   },
+   "臺中市/外埔區": {
+    "registered": 30922,
+    "scale": 1.0131
+   },
+   "臺中市/和平區": {
+    "registered": 10606,
+    "scale": 0.6527
+   },
+   "臺中市/后里區": {
+    "registered": 53325,
+    "scale": 1.079
+   },
+   "臺中市/東勢區": {
+    "registered": 46979,
+    "scale": 0.8383
+   },
+   "臺中市/清水區": {
+    "registered": 90287,
+    "scale": 0.9793
+   },
+   "臺中市/神岡區": {
+    "registered": 63768,
+    "scale": 1.0875
+   },
+   "臺中市/大甲區": {
+    "registered": 74311,
+    "scale": 0.9739
+   },
+   "臺中市/大安區": {
+    "registered": 17682,
+    "scale": 0.9336
+   },
+   "臺中市/南屯區": {
+    "registered": 185356,
+    "scale": 1.11
+   },
+   "臺中市/南區": {
+    "registered": 127251,
+    "scale": 1.1573
+   },
+   "臺中市/東區": {
+    "registered": 77750,
+    "scale": 1.0979
+   },
+   "臺中市/北屯區": {
+    "registered": 312923,
+    "scale": 1.0247
+   },
+   "臺中市/北區": {
+    "registered": 144724,
+    "scale": 1.075
+   },
+   "臺中市/西屯區": {
+    "registered": 236652,
+    "scale": 1.2538
+   },
+   "臺中市/西區": {
+    "registered": 113677,
+    "scale": 1.0593
+   },
+   "臺中市/中區": {
+    "registered": 17969,
+    "scale": 1.0673
+   },
+   "臺中市/豐原區": {
+    "registered": 163059,
+    "scale": 0.8952
+   },
+   "臺中市/大雅區": {
+    "registered": 94873,
+    "scale": 1.1627
+   },
+   "臺中市/梧棲區": {
+    "registered": 62667,
+    "scale": 1.0501
+   },
+   "臺中市/沙鹿區": {
+    "registered": 99801,
+    "scale": 1.1359
+   },
+   "臺中市/潭子區": {
+    "registered": 109144,
+    "scale": 1.078
+   },
+   "臺中市/新社區": {
+    "registered": 22810,
+    "scale": 1.0807
+   },
+   "臺中市/龍井區": {
+    "registered": 79370,
+    "scale": 0.9795
+   },
+   "臺中市/石岡區": {
+    "registered": 13872,
+    "scale": 0.8766
+   },
+   "臺中市/霧峰區": {
+    "registered": 63274,
+    "scale": 1.2975
+   },
+   "臺中市/烏日區": {
+    "registered": 81228,
+    "scale": 1.207
+   },
+   "臺中市/太平區": {
+    "registered": 197407,
+    "scale": 1.0599
+   },
+   "臺中市/大里區": {
+    "registered": 212081,
+    "scale": 1.0858
+   },
+   "臺中市/大肚區": {
+    "registered": 55641,
+    "scale": 1.025
+   },
+   "臺北市/內湖區": {
+    "registered": 273710,
+    "scale": 1.002
+   },
+   "臺北市/士林區": {
+    "registered": 264154,
+    "scale": 1.0481
+   },
+   "臺北市/中山區": {
+    "registered": 215234,
+    "scale": 1.0562
+   },
+   "臺北市/大同區": {
+    "registered": 118978,
+    "scale": 0.9327
+   },
+   "臺北市/松山區": {
+    "registered": 191809,
+    "scale": 0.9233
+   },
+   "臺北市/南港區": {
+    "registered": 112648,
+    "scale": 1.0768
+   },
+   "臺北市/北投區": {
+    "registered": 240603,
+    "scale": 0.9917
+   },
+   "臺北市/大安區": {
+    "registered": 289912,
+    "scale": 0.9354
+   },
+   "臺北市/中正區": {
+    "registered": 148333,
+    "scale": 0.9665
+   },
+   "臺北市/信義區": {
+    "registered": 205040,
+    "scale": 1.0204
+   },
+   "臺北市/萬華區": {
+    "registered": 171908,
+    "scale": 0.9893
+   },
+   "臺北市/文山區": {
+    "registered": 258317,
+    "scale": 1.0171
+   },
+   "臺南市/東山區": {
+    "registered": 18813,
+    "scale": 0.7818
+   },
+   "臺南市/柳營區": {
+    "registered": 19964,
+    "scale": 1.0019
+   },
+   "臺南市/新營區": {
+    "registered": 74948,
+    "scale": 0.9714
+   },
+   "臺南市/鹽水區": {
+    "registered": 23978,
+    "scale": 0.8679
+   },
+   "臺南市/下營區": {
+    "registered": 22084,
+    "scale": 0.8085
+   },
+   "臺南市/六甲區": {
+    "registered": 21146,
+    "scale": 0.9137
+   },
+   "臺南市/學甲區": {
+    "registered": 24600,
+    "scale": 0.8155
+   },
+   "臺南市/北門區": {
+    "registered": 9639,
+    "scale": 0.7255
+   },
+   "臺南市/南化區": {
+    "registered": 7815,
+    "scale": 0.7048
+   },
+   "臺南市/將軍區": {
+    "registered": 18070,
+    "scale": 0.7811
+   },
+   "臺南市/官田區": {
+    "registered": 20770,
+    "scale": 1.2143
+   },
+   "臺南市/麻豆區": {
+    "registered": 43031,
+    "scale": 0.9224
+   },
+   "臺南市/楠西區": {
+    "registered": 8529,
+    "scale": 0.8229
+   },
+   "臺南市/佳里區": {
+    "registered": 57869,
+    "scale": 0.9014
+   },
+   "臺南市/大內區": {
+    "registered": 8541,
+    "scale": 0.9788
+   },
+   "臺南市/南區": {
+    "registered": 120325,
+    "scale": 0.9682
+   },
+   "臺南市/白河區": {
+    "registered": 25388,
+    "scale": 0.8131
+   },
+   "臺南市/後壁區": {
+    "registered": 21310,
+    "scale": 0.8505
+   },
+   "臺南市/東區": {
+    "registered": 181851,
+    "scale": 0.9206
+   },
+   "臺南市/安南區": {
+    "registered": 203820,
+    "scale": 1.0112
+   },
+   "臺南市/北區": {
+    "registered": 125833,
+    "scale": 0.9454
+   },
+   "臺南市/中西區": {
+    "registered": 76991,
+    "scale": 0.9189
+   },
+   "臺南市/安平區": {
+    "registered": 70473,
+    "scale": 0.9583
+   },
+   "臺南市/歸仁區": {
+    "registered": 69897,
+    "scale": 1.2416
+   },
+   "臺南市/關廟區": {
+    "registered": 33265,
+    "scale": 0.9476
+   },
+   "臺南市/仁德區": {
+    "registered": 77617,
+    "scale": 1.1542
+   },
+   "臺南市/龍崎區": {
+    "registered": 3067,
+    "scale": 0.4626
+   },
+   "臺南市/永康區": {
+    "registered": 235618,
+    "scale": 1.1666
+   },
+   "臺南市/左鎮區": {
+    "registered": 4149,
+    "scale": 0.6509
+   },
+   "臺南市/新市區": {
+    "registered": 37637,
+    "scale": 1.4206
+   },
+   "臺南市/山上區": {
+    "registered": 6812,
+    "scale": 1.0669
+   },
+   "臺南市/安定區": {
+    "registered": 29823,
+    "scale": 0.9649
+   },
+   "臺南市/玉井區": {
+    "registered": 12811,
+    "scale": 0.931
+   },
+   "臺南市/七股區": {
+    "registered": 20763,
+    "scale": 0.7451
+   },
+   "臺南市/新化區": {
+    "registered": 42206,
+    "scale": 1.0006
+   },
+   "臺南市/西港區": {
+    "registered": 24807,
+    "scale": 0.9909
+   },
+   "臺南市/善化區": {
+    "registered": 53552,
+    "scale": 1.1524
+   },
+   "臺東縣/關山鎮": {
+    "registered": 7756,
+    "scale": 0.8863
+   },
+   "臺東縣/池上鄉": {
+    "registered": 8091,
+    "scale": 0.752
+   },
+   "臺東縣/成功鎮": {
+    "registered": 12919,
+    "scale": 0.689
+   },
+   "臺東縣/東河鄉": {
+    "registered": 7835,
+    "scale": 0.8992
+   },
+   "臺東縣/鹿野鄉": {
+    "registered": 7069,
+    "scale": 0.9362
+   },
+   "臺東縣/海端鄉": {
+    "registered": 4066,
+    "scale": 0.5462
+   },
+   "臺東縣/延平鄉": {
+    "registered": 3556,
+    "scale": 0.4931
+   },
+   "臺東縣/長濱鄉": {
+    "registered": 6502,
+    "scale": 0.6773
+   },
+   "臺東縣/太麻里鄉": {
+    "registered": 10588,
+    "scale": 0.7891
+   },
+   "臺東縣/大武鄉": {
+    "registered": 5454,
+    "scale": 0.4969
+   },
+   "臺東縣/達仁鄉": {
+    "registered": 3401,
+    "scale": 0.4858
+   },
+   "臺東縣/蘭嶼鄉": {
+    "registered": 5273,
+    "scale": 0.4675
+   },
+   "臺東縣/金峰鄉": {
+    "registered": 3683,
+    "scale": 0.6164
+   },
+   "臺東縣/綠島鄉": {
+    "registered": 4363,
+    "scale": 0.4752
+   },
+   "臺東縣/臺東市": {
+    "registered": 102831,
+    "scale": 1.0194
+   },
+   "臺東縣/卑南鄉": {
+    "registered": 16427,
+    "scale": 0.9899
+   },
+   "花蓮縣/花蓮市": {
+    "registered": 98273,
+    "scale": 0.8603
+   },
+   "花蓮縣/吉安鄉": {
+    "registered": 83186,
+    "scale": 0.9849
+   },
+   "花蓮縣/壽豐鄉": {
+    "registered": 16729,
+    "scale": 1.4038
+   },
+   "花蓮縣/秀林鄉": {
+    "registered": 17077,
+    "scale": 0.8238
+   },
+   "花蓮縣/鳳林鎮": {
+    "registered": 10392,
+    "scale": 0.7951
+   },
+   "花蓮縣/萬榮鄉": {
+    "registered": 5960,
+    "scale": 0.5416
+   },
+   "花蓮縣/新城鄉": {
+    "registered": 20272,
+    "scale": 1.2582
+   },
+   "花蓮縣/玉里鎮": {
+    "registered": 21667,
+    "scale": 0.9647
+   },
+   "花蓮縣/卓溪鄉": {
+    "registered": 5915,
+    "scale": 0.5091
+   },
+   "花蓮縣/富里鄉": {
+    "registered": 9529,
+    "scale": 0.8009
+   },
+   "花蓮縣/豐濱鄉": {
+    "registered": 4167,
+    "scale": 0.4669
+   },
+   "花蓮縣/瑞穗鄉": {
+    "registered": 10603,
+    "scale": 0.7587
+   },
+   "花蓮縣/光復鄉": {
+    "registered": 11527,
+    "scale": 0.8467
+   },
+   "苗栗縣/苗栗市": {
+    "registered": 86009,
+    "scale": 1.0202
+   },
+   "苗栗縣/頭屋鄉": {
+    "registered": 9630,
+    "scale": 0.8764
+   },
+   "苗栗縣/後龍鎮": {
+    "registered": 33711,
+    "scale": 0.9618
+   },
+   "苗栗縣/西湖鄉": {
+    "registered": 6010,
+    "scale": 0.6848
+   },
+   "苗栗縣/獅潭鄉": {
+    "registered": 4007,
+    "scale": 0.639
+   },
+   "苗栗縣/通霄鎮": {
+    "registered": 30908,
+    "scale": 0.7839
+   },
+   "苗栗縣/公館鄉": {
+    "registered": 30873,
+    "scale": 0.8533
+   },
+   "苗栗縣/南庄鄉": {
+    "registered": 8686,
+    "scale": 0.7419
+   },
+   "苗栗縣/銅鑼鄉": {
+    "registered": 16234,
+    "scale": 0.9834
+   },
+   "苗栗縣/三灣鄉": {
+    "registered": 5832,
+    "scale": 0.7599
+   },
+   "苗栗縣/造橋鄉": {
+    "registered": 11571,
+    "scale": 1.0172
+   },
+   "苗栗縣/竹南鎮": {
+    "registered": 89880,
+    "scale": 1.1286
+   },
+   "苗栗縣/頭份市": {
+    "registered": 107405,
+    "scale": 1.0199
+   },
+   "苗栗縣/卓蘭鎮": {
+    "registered": 14875,
+    "scale": 0.8101
+   },
+   "苗栗縣/泰安鄉": {
+    "registered": 5424,
+    "scale": 0.4856
+   },
+   "苗栗縣/三義鄉": {
+    "registered": 14752,
+    "scale": 0.9138
+   },
+   "苗栗縣/大湖鄉": {
+    "registered": 12704,
+    "scale": 0.7961
+   },
+   "苗栗縣/苑裡鎮": {
+    "registered": 43231,
+    "scale": 0.9268
+   },
+   "連江縣/東引鄉": {
+    "registered": 1549,
+    "scale": 1.4892
+   },
+   "連江縣/北竿鄉": {
+    "registered": 3046,
+    "scale": 0.6842
+   },
+   "連江縣/南竿鄉": {
+    "registered": 7650,
+    "scale": 0.8947
+   },
+   "連江縣/莒光鄉": {
+    "registered": 1515,
+    "scale": 0.6602
+   },
+   "金門縣/金沙鎮": {
+    "registered": 20683,
+    "scale": 0.4277
+   },
+   "金門縣/金寧鄉": {
+    "registered": 35693,
+    "scale": 0.4985
+   },
+   "金門縣/金湖鎮": {
+    "registered": 31227,
+    "scale": 0.5937
+   },
+   "金門縣/烈嶼鄉": {
+    "registered": 12518,
+    "scale": 0.3038
+   },
+   "金門縣/金城鎮": {
+    "registered": 42668,
+    "scale": 0.4578
+   },
+   "金門縣/烏坵鄉": {
+    "registered": 646,
+    "scale": 0.3278
+   },
+   "雲林縣/臺西鄉": {
+    "registered": 21423,
+    "scale": 0.6651
+   },
+   "雲林縣/褒忠鄉": {
+    "registered": 11736,
+    "scale": 0.7763
+   },
+   "雲林縣/斗六市": {
+    "registered": 108910,
+    "scale": 1.0589
+   },
+   "雲林縣/虎尾鎮": {
+    "registered": 70847,
+    "scale": 1.0933
+   },
+   "雲林縣/東勢鄉": {
+    "registered": 13233,
+    "scale": 0.7505
+   },
+   "雲林縣/土庫鎮": {
+    "registered": 27382,
+    "scale": 0.9108
+   },
+   "雲林縣/古坑鄉": {
+    "registered": 29648,
+    "scale": 0.8493
+   },
+   "雲林縣/四湖鄉": {
+    "registered": 20676,
+    "scale": 0.612
+   },
+   "雲林縣/元長鄉": {
+    "registered": 23008,
+    "scale": 0.8004
+   },
+   "雲林縣/斗南鎮": {
+    "registered": 43557,
+    "scale": 0.9396
+   },
+   "雲林縣/大埤鄉": {
+    "registered": 17792,
+    "scale": 0.8292
+   },
+   "雲林縣/口湖鄉": {
+    "registered": 24615,
+    "scale": 0.6159
+   },
+   "雲林縣/莿桐鄉": {
+    "registered": 27444,
+    "scale": 0.883
+   },
+   "雲林縣/崙背鄉": {
+    "registered": 22475,
+    "scale": 0.7902
+   },
+   "雲林縣/西螺鎮": {
+    "registered": 44307,
+    "scale": 0.8178
+   },
+   "雲林縣/二崙鄉": {
+    "registered": 24611,
+    "scale": 0.8282
+   },
+   "雲林縣/麥寮鄉": {
+    "registered": 49983,
+    "scale": 0.7536
+   },
+   "雲林縣/林內鄉": {
+    "registered": 16629,
+    "scale": 0.8794
+   },
+   "雲林縣/水林鄉": {
+    "registered": 22424,
+    "scale": 0.7017
+   },
+   "雲林縣/北港鎮": {
+    "registered": 37509,
+    "scale": 0.8519
+   },
+   "高雄市/六龜區": {
+    "registered": 11537,
+    "scale": 0.6464
+   },
+   "高雄市/湖內區": {
+    "registered": 29396,
+    "scale": 1.1404
+   },
+   "高雄市/茄萣區": {
+    "registered": 28965,
+    "scale": 0.9062
+   },
+   "高雄市/美濃區": {
+    "registered": 36526,
+    "scale": 0.7266
+   },
+   "高雄市/內門區": {
+    "registered": 12864,
+    "scale": 0.957
+   },
+   "高雄市/旗山區": {
+    "registered": 33834,
+    "scale": 0.9359
+   },
+   "高雄市/田寮區": {
+    "registered": 6294,
+    "scale": 0.6586
+   },
+   "高雄市/阿蓮區": {
+    "registered": 27106,
+    "scale": 1.1081
+   },
+   "高雄市/路竹區": {
+    "registered": 49712,
+    "scale": 1.0966
+   },
+   "高雄市/杉林區": {
+    "registered": 10716,
+    "scale": 0.7506
+   },
+   "高雄市/茂林區": {
+    "registered": 1866,
+    "scale": 0.4564
+   },
+   "高雄市/前鎮區": {
+    "registered": 178508,
+    "scale": 0.9366
+   },
+   "高雄市/小港區": {
+    "registered": 154394,
+    "scale": 0.9523
+   },
+   "高雄市/旗津區": {
+    "registered": 25577,
+    "scale": 0.8917
+   },
+   "高雄市/桃源區": {
+    "registered": 4134,
+    "scale": 0.4724
+   },
+   "高雄市/甲仙區": {
+    "registered": 5394,
+    "scale": 0.6396
+   },
+   "高雄市/苓雅區": {
+    "registered": 163189,
+    "scale": 0.9342
+   },
+   "高雄市/那瑪夏區": {
+    "registered": 3147,
+    "scale": 0.511
+   },
+   "高雄市/三民區": {
+    "registered": 330514,
+    "scale": 0.9754
+   },
+   "高雄市/鼓山區": {
+    "registered": 141296,
+    "scale": 0.932
+   },
+   "高雄市/左營區": {
+    "registered": 197485,
+    "scale": 0.9954
+   },
+   "高雄市/新興區": {
+    "registered": 49579,
+    "scale": 0.8854
+   },
+   "高雄市/前金區": {
+    "registered": 27202,
+    "scale": 1.1058
+   },
+   "高雄市/鹽埕區": {
+    "registered": 22226,
+    "scale": 0.9604
+   },
+   "高雄市/楠梓區": {
+    "registered": 194435,
+    "scale": 1.0687
+   },
+   "高雄市/大寮區": {
+    "registered": 112215,
+    "scale": 1.0966
+   },
+   "高雄市/林園區": {
+    "registered": 67883,
+    "scale": 0.9164
+   },
+   "高雄市/鳳山區": {
+    "registered": 354880,
+    "scale": 0.9798
+   },
+   "高雄市/大樹區": {
+    "registered": 40148,
+    "scale": 1.1195
+   },
+   "高雄市/鳥松區": {
+    "registered": 43966,
+    "scale": 1.0589
+   },
+   "高雄市/仁武區": {
+    "registered": 99505,
+    "scale": 1.0863
+   },
+   "高雄市/彌陀區": {
+    "registered": 18051,
+    "scale": 0.9233
+   },
+   "高雄市/燕巢區": {
+    "registered": 28474,
+    "scale": 1.5556
+   },
+   "高雄市/岡山區": {
+    "registered": 95086,
+    "scale": 1.0488
+   },
+   "高雄市/橋頭區": {
+    "registered": 42440,
+    "scale": 0.987
+   },
+   "高雄市/梓官區": {
+    "registered": 35054,
+    "scale": 0.8904
+   },
+   "高雄市/大社區": {
+    "registered": 33712,
+    "scale": 1.1614
+   },
+   "高雄市/永安區": {
+    "registered": 13812,
+    "scale": 0.837
+   }
+  },
+  "jobsWithoutPlace": 142,
+  "townshipsWithoutJobs": [
+   "高雄市/那瑪夏區"
+  ]
+ },
+ "files": {
+  "boundaries/南投縣.zip": "64836c29239edfc213546a0732e33cb13377c50227986f4ec1c7e4e3c5da5768",
+  "boundaries/嘉義市.zip": "033a1f3b9c2f555ed68cdd10938e0482e0b37af18c1c3b5d2662ef69c49e2471",
+  "boundaries/嘉義縣.zip": "5d5dae202e8a0e2c7bba916b332a4e470b344205aa8760f9a7fd8c7c5f9e499f",
+  "boundaries/基隆市.zip": "b6906204c2c2a9eff9b34a4861e7b3c6caefe9e9c5bc9d261389e9a640fa0509",
+  "boundaries/宜蘭縣.zip": "8eadc3e0bfa8e92fac40cd49b1903c5ec040d6001a0947d479031d9daae36012",
+  "boundaries/屏東縣.zip": "9955eaa287570cda68c7d5c3339a2b5fc4a0f53e4e7acadf68430879481e6fa8",
+  "boundaries/彰化縣.zip": "860748b633cd873af0a0202d425b047de29a21644a6f6663138bbb1c5f8a5c69",
+  "boundaries/新北市.zip": "9a7feb3a3def1deff434d9d8484878cf138836b4bc1ee8a41c897a4095e31eb4",
+  "boundaries/新竹市.zip": "e28ed46256932e01d8d9bac1ebf7642f9e3967ebc260b41780214d7972210739",
+  "boundaries/新竹縣.zip": "a449ea186f6819deadb8b9c6369243151f4792faf2623d4196f64b0dc4a557d6",
+  "boundaries/桃園市.zip": "d2d2f97c52f802d6af65dea803a89482113a49a543a6e43e8ff6bbd50f0d2b8b",
+  "boundaries/澎湖縣.zip": "91dd18a5e222de9af946a448459c0cf4496f3a8d6ceb29f6b04c720587a7b5a6",
+  "boundaries/臺中市.zip": "b6f3f8ddfa03a036936e8110442233cc132f99caf6bb2393a9728313e5182526",
+  "boundaries/臺北市.zip": "0910fd68b902c76051ace5b1553524e6f52c5e868ecdf7effab3092cea438335",
+  "boundaries/臺南市.zip": "e255eca032898e8c9c4665f68739cef78a18a15aaad48d7e019124cf3a9b580d",
+  "boundaries/臺東縣.zip": "0883d07d44f4c7439a12baa95bd2116ffb0ad6092d20222e5b440a7725c0eabf",
+  "boundaries/花蓮縣.zip": "b18abd7ceded01e8e601244c6aaf3662e6fb0ec0969e74af91e611a1b127e318",
+  "boundaries/苗栗縣.zip": "a01f99b71df1e813fcb0ba032de18d48fc932c24d7c4100e1b30b782e90b79cc",
+  "boundaries/連江縣.zip": "326161f01ef336409195ae2405a33b09e371232e043011e4501bc3e176ff1be2",
+  "boundaries/金門縣.zip": "5a6003bc0e60c84746dfb47e75d8806a7c8c78b7f8999976d30ac7f81994dc8f",
+  "boundaries/雲林縣.zip": "33c9f08f556e88aaafe0c71b792ea6a4dad1fce9a17623503e062137d8dc424c",
+  "boundaries/高雄市.zip": "5d0b297f6500cdb4259a48ffc7f65de060a29ef57c6902ca0c0de7038a4d9535",
+  "business/南投縣.csv.gz": "3ef2edce0eb3b263ecadb9a2a4d33e7ced9fde29350ca239d04e92e3ce9412cc",
+  "business/嘉義市.csv.gz": "72a7ee428c9b58d82795f342702b3cc106e59745724eb3f02837f103aedbf41b",
+  "business/嘉義縣.csv.gz": "b00f930b5e34bf8a462b334052d04aa0361e27dbce667c0ecad8244100c2d3c1",
+  "business/基隆市.csv.gz": "7cb2eaedb8b9dbc06941c2f3d6c9403b73fe493b570970b344e251071ee4dc95",
+  "business/宜蘭縣.csv.gz": "e5f6fd82a45fd24a4a320a2c2e889dde372d05ffdaac4017addd10b528ec6466",
+  "business/屏東縣.csv.gz": "967a9536a44220af158e631d22868f16e075ffe68deccc32192b77ecfd4f4dac",
+  "business/彰化縣.csv.gz": "2277ee4b4756bfd1cddeb01cbd9979998df8b5b9145510593034060d75fde0dc",
+  "business/新北市.csv.gz": "3c86604020a0325aff7500da70b66134ab27bbaf33716193463b0200da61851a",
+  "business/新竹市.csv.gz": "fd8ef32239605ae63407eb555b5d67049e0df8f106a3ba46f98c0fbd31f78970",
+  "business/新竹縣.csv.gz": "6dccc0894c68d73ccfca4477c228d1c781f1bf2c0b82dc4dfe599da840206742",
+  "business/桃園市.csv.gz": "393d94c88e6ff0492ce67ff6662de4088bc9727ba72c0b7585580488d0e35c29",
+  "business/澎湖縣.csv.gz": "95f03b42bfcdcc4def91372bff9e37d156deb616c8457367e9d7dfc7a9ff6077",
+  "business/臺中市.csv.gz": "cb971e88bf1b3ea69a459469be5c621117afe543d2eb9d9ea1c642158fcaf8bf",
+  "business/臺北市.csv.gz": "324f80bfc401ee384fab439750f44a57f19d38e1340b5eecee90fe2615614dfa",
+  "business/臺南市.csv.gz": "a52484dc000798a344080a95f4f6a07c8119482e1a64e3fefc2ee45b7c1f91cd",
+  "business/臺東縣.csv.gz": "a6599fb711eba5e3e6e68e2a55f1b12f1412eddc1fd10cb8249da56c2c59f597",
+  "business/花蓮縣.csv.gz": "e9b397e12398a5e3ec497065b12e5529db3fae382c5998492e4e9de5ef2b1edf",
+  "business/苗栗縣.csv.gz": "958e3b237b8316ab1856d7dbe6ee64f4d865ff947a6390d410ebbe5470b8ed2c",
+  "business/連江縣.csv.gz": "9a26979504fb54d3430b661f761c37780decfd5f33b6f597f4dc9048460261c2",
+  "business/金門縣.csv.gz": "533c97e8f3f59ad62290ce6e84cada1935eeb957ac28705773daca8cb4fcf47d",
+  "business/雲林縣.csv.gz": "92585953358a3527d057cdc3b2a53a8a797c13208695adfad0e5fed6fec1a2cf",
+  "business/高雄市.csv.gz": "a9db0555671e34a55a1ec4a69564753bbb8d171deedb4f046174c4888d584099",
+  "jobs/南投縣.xml": "42da6f1e0ea70dff7a3ee147c7277048f479aeaf4a4ee579400ccb54468fdbdc",
+  "jobs/嘉義市.xml": "9b25406d8fb3992152766a5dbccce261f36682cb2d8a18264e246b18c3e15f17",
+  "jobs/嘉義縣.xml": "a3691a9cd0176f8a41fdbd66c87804ee536a3080ef25f4589ac7c56dc59e63af",
+  "jobs/基隆市.xml": "c12b99bd7a58775a3fbb9edda8d8944ff7ff153c957ccbc6cdecdd93a05212b6",
+  "jobs/宜蘭縣.xml": "fce70e179caa3c8123df3a37be665f3e573e3c5840266878f487361715549cb0",
+  "jobs/屏東縣.xml": "275924fdfe53ec32cb5e0a0df00c67162daaa50570257bbe0e8d1f6255e43446",
+  "jobs/彰化縣.xml": "b2701f8bced3ab57d2678ca93ccc1ef9eb604d8007f38fb2ec71b482dbb0e04f",
+  "jobs/新北市.xml": "5dcd420f59b198fb679bfeda4054322c678f32926f8712420bc76c06e2769f12",
+  "jobs/新竹市.xml": "453eb33b43fd799fed23caa2af5a0be9a863a65aedb05c871939ff85abff4b71",
+  "jobs/新竹縣.xml": "d27b6596b1130e87674595f1b0167aa002cfa8410ba2d38edf65bc4d610e8f7d",
+  "jobs/桃園市.xml": "e3d2675a85aeb2858a926b327042339f9ccad1b80505b8d8fa8ffa809e9ef396",
+  "jobs/澎湖縣.xml": "968a2b4351a21f3ec04e7f7e3d643e4833688080033addfe28c1c2a91c058fc8",
+  "jobs/臺中市.xml": "127c5261b6f83799cad05365dfdad1a83799e3d5691ebeea551be899833f33fe",
+  "jobs/臺北市.xml": "1daf6fded5292feefe56da9cfe7a79d83aa419b8faeb900ade4dc8b9795ad95d",
+  "jobs/臺南市.xml": "4e17b52640bacd9f9de49d8fbc324eb1a55a62ad6399c85722980b572cd4fdc4",
+  "jobs/臺東縣.xml": "25bce18d491a5472f1919ddc5ca3e4f26d6802e37e7490102484333aa05d1a89",
+  "jobs/花蓮縣.xml": "c70da2a3d08bf97adaffb685c659fc24d6fab0d020bb533d0bffb832ba8d1fed",
+  "jobs/苗栗縣.xml": "144c2fa1bf11c75e80cb177c62c39028125c39ceb68a6641f566e921e4bf5cd7",
+  "jobs/連江縣.xml": "7d4089643f03af4c47baacad43cc021e72616cb80b5e9bf5904b8c4080ea7bd7",
+  "jobs/金門縣.xml": "60611a1f4b33e3e3b08399151aa11d860062d651eba5bd525968c16f65f01854",
+  "jobs/雲林縣.xml": "a138514d28da764579a50c0c6c1ec34f62b139fe8dc3e48a1573ee097e9458d9",
+  "jobs/高雄市.xml": "058b3bab5ac697966a9b23b4e71589434a857874729000786ca57dffa6a9f9bc",
+  "register-10912.csv": "6f2b80bb2c367b14b083e3cfbccb318552a98345685919b85d6b8dc2e67626d2",
+  "residents/南投縣.xml": "03c975004e409a9780857da30060c929a7a8a9214019502003b88f1508645aa3",
+  "residents/嘉義市.xml": "f73cf110a104e737f9cd2fedb14f561e833fb0fe314bd3269828ed7f07f795fb",
+  "residents/嘉義縣.xml": "12b6e2f89318bd8c7cb1a32cd1991fa95af2ea1865603e97e8a06e0b14430f0b",
+  "residents/基隆市.xml": "123c12a010fd8ebe5edc0718c849dbaf34d2c43502be8b4831b2f822cdf76ca7",
+  "residents/宜蘭縣.xml": "429aee3bb29b93492fdf5a0859d46da193c822acf0a95f3920959f8aeb69d2df",
+  "residents/屏東縣.xml": "c7cc3210d9cde0c4159ba2bf78981773fa674c0fbd6d9bc77cefd5b8d0170cf3",
+  "residents/彰化縣.xml": "67bd285c00d06273aa268a9370c837b2adae44bd532cdce720206319f7c6700f",
+  "residents/新北市.xml": "4aa8f515ec4014f4e5520315fc409255f1b2a693ea9b217b8ad9a5e3dd1353a3",
+  "residents/新竹市.xml": "a9c5ce29895b88d78614a5bbf6fa19b64e5e8aa756df2114ed8a42132bed0b13",
+  "residents/新竹縣.xml": "2de79a43947aac92c07d04865a084957e8ceda0482405dac92f3f91ce2c24f0f",
+  "residents/桃園市.xml": "19a7127226f177e00d5eaa9a445f47bbb608d612b760eb19a75ff5b50c56a5cf",
+  "residents/澎湖縣.xml": "b1af322bf0aadb01221404d8fe038e3fe5d2af87f2ae6624ff3ee104a63be31b",
+  "residents/臺中市.xml": "c9ce73d3b40c5b8bb972403fa429bad251ba47ac30829dfb702bce8ab6b0dc7a",
+  "residents/臺北市.xml": "849b31de2ca764854aa316c0d77908edaaa4334f1056545081aa83c8d2a226eb",
+  "residents/臺南市.xml": "a86f2142ab76e47f3c3a3161f7a98d25772059120b4b7cb50feb59b490d0d6cb",
+  "residents/臺東縣.xml": "55f1a4c247c931423f2cd5a4bca8c18e25e550ffcbf072e65fb859866a4ed12c",
+  "residents/花蓮縣.xml": "b81030111aa3a8fd6c02a99c36a3eed7946702d1548520658acf8a3cb3d3b726",
+  "residents/苗栗縣.xml": "7a655a2c299031cb8ec93d96dcfba3a8682b2857508a9a3e537f498b7c406cfa",
+  "residents/連江縣.xml": "9fe5e4e86b5463dfc1b91f4f93d4e32fbf150147b442dd99359a3b4515039acc",
+  "residents/金門縣.xml": "3a9d820f3353360ca8602270a2caae8bb70782318ab67f6d64bbf06d3b77687d",
+  "residents/雲林縣.xml": "8ceac24462b04e7206fb56bd91e19f7fae771551f9506377b34a0a9d04cbc1df",
+  "residents/高雄市.xml": "4794b393d4ffa7969aafaabd29e9a2d56a1aa9c8fe1e8e99019e3ad996bc06bc",
+  "segis/南投縣.xml.gz": "e3fb852936df5efd5bc3419a2ea0f0f36860f025536126201aa48d94534e5704",
+  "segis/嘉義市.xml.gz": "3e27c8daa710ce382f378bf9210d312501fe106e22e2a146c9e5c695ff1ef3f1",
+  "segis/嘉義縣.xml.gz": "9fb8bdc802f629e9165633c4d0c5d5d152ad65e811a9624460923e36d17a1209",
+  "segis/基隆市.xml.gz": "25b89466d8c402515013c54a3ccbc8b78f775d4660c7058c9d2feb71619e966d",
+  "segis/宜蘭縣.xml.gz": "20824eed872bf5d24715208cbefac06bb2957c808dd653f26eb7602f83daf4d6",
+  "segis/屏東縣.xml.gz": "7cd073302ec664457f286f3db684b08066f93c561031d297522375684b04674a",
+  "segis/彰化縣.xml.gz": "e8b5211dbc4deaacf0770416a7affdcef1e203d67fc6abb4dea9fee700412b33",
+  "segis/新北市.xml.gz": "32c57c75d210002b53bd9e9ad4251463dcc91666a3a30226682885acc24fe40e",
+  "segis/新竹市.xml.gz": "86176c5902b498aed305a22f161cc9081ba9b4238abc9df4cf3df4310a700cf7",
+  "segis/新竹縣.xml.gz": "f68cf8b693b5b7e7cf861e9bc713f81f15c98ac97cf903ac3e8079fcb3d1f51a",
+  "segis/桃園市.xml.gz": "64f94b1da0c2754598b74a7f175ed5939c61bce5dcdcb25a6a685bc14bee8f1d",
+  "segis/澎湖縣.xml.gz": "efd0140ff1ddf4f4b6dbac3ad926bf84affe5786841de1b4b594fbefe2d59ab3",
+  "segis/臺中市.xml.gz": "41fbe148be55c7689a8634b5619237b8ed588edb468aef123de3ff6203cc1514",
+  "segis/臺北市.xml.gz": "1982c19b6319c70638ec58d9b91569d35c3e30d272b4a20292660493b0e7703e",
+  "segis/臺南市.xml.gz": "2d6431c8b72aa5562927e03f7814ea99b7c6a71a10dcf64d728c728e3aa95fb3",
+  "segis/臺東縣.xml.gz": "aaf1f1766f54d85d033cae01e0aef78c2df4915b99c342af6a22aa621d492210",
+  "segis/花蓮縣.xml.gz": "cf90cd74d0ee5b6812b5a8659ef8e5d5a2ae9c7c4b2807423f31e420ba481ff1",
+  "segis/苗栗縣.xml.gz": "93d4431e07df9da861f9016bfd7f377d75a27f5c3ebea4d35f3da49dad87024b",
+  "segis/連江縣.xml.gz": "c33565945f915f7208da39302d6fb419b209dc856af22b87d39dab5d9e31c799",
+  "segis/金門縣.xml.gz": "838046f7c24afbbbe72ff5627e5fdb4946e64f2e1d4f5356e2262fba63d95332",
+  "segis/雲林縣.xml.gz": "9e66a59b4b751e9b00b81e05f274d974890a714336064054f70e3d3e4a8bd683",
+  "segis/高雄市.xml.gz": "799aec9d2776669559b6a5272aa075d3885f2c68c5bc83978ee8e2b600abb401"
+ }
+}

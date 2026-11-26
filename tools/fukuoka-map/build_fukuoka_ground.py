@@ -254,26 +254,41 @@ def grids(tiles_folder, extract, folder):
           f'heights.dat {size} bytes')
 
 
-def buildings(extract, folder):
+def buildings(extract, folder, overture=None, release=None, plateau=None):
     """`buildings.pmtiles` by Rovaniemi's rule (`overseas_buildings.make`,
     decision 799), with the table of uses of Hong Kong's and Japan's
     `agricultural` and `roof` (a free-standing roof, a shelter). Nine in
     ten of Fukuoka's buildings in OpenStreetMap carry their storeys or
     height (the city's 3D model imported by its mappers), so few are
-    guessed."""
+    guessed.
+
+    With Overture's extract (`tools/overseas-map/overture_extra.py`) and
+    the release it read, the outlines OpenStreetMap has not drawn are added
+    (decision 1001): Kitakyushu, Chikuho, Munakata and Koga have a tenth of
+    the buildings per head of Fukuoka or Kumamoto in OpenStreetMap. With
+    `plateau_buildings.py fetch`'s folder, PLATEAU's official buildings
+    come before Overture's machine outlines, and their measured heights
+    give the storeys of the buildings OpenStreetMap does not tag
+    (Kitakyushu, Kumamoto, Kurume and 21 more towns)."""
     import build_hk_buildings as hk
     import overseas_buildings
+    import plateau_buildings
     use_of = dict(hk.USE_OF, agricultural='agricultural', roof='transportation')
     overseas_buildings.make(
         extract, folder, build_fukuoka_rail.EXTENT, title='Fukuoka building footprints', use_of=use_of,
         report_path=os.path.join(HERE, 'fukuoka_buildings.json'),
         extract_from='https://osmtoday.com/asia/japan/kyushu.pbf and chugoku.pbf (osmium merge), cut with osmium extract -b '
                      + ','.join(f'{v:g}' for v in BOX) + ' -s smart',
-        decision=854, write_manifest=build_fukuoka_rail.write_manifest)
+        decision=1001 if overture else 854, write_manifest=build_fukuoka_rail.write_manifest,
+        overture=overture, overture_release=release,
+        plateau=plateau_buildings.read(plateau) if plateau else None,
+        plateau_from='PLATEAU (国土交通省), the newest CityGML buildings of each town, read by '
+                     'tools/fukuoka-map/plateau_buildings.py' if plateau else None)
 
 
 if __name__ == '__main__':
     steps = {'basemap': (basemap, 2), 'grids': (grids, 3), 'buildings': (buildings, 2)}
-    if len(sys.argv) < 2 or sys.argv[1] not in steps or len(sys.argv) != 2 + steps[sys.argv[1]][1]:
+    extra = len(sys.argv) - 4 if len(sys.argv) > 1 and sys.argv[1] == 'buildings' and len(sys.argv) in (6, 7) else 0
+    if len(sys.argv) < 2 or sys.argv[1] not in steps or len(sys.argv) != 2 + steps[sys.argv[1]][1] + extra:
         sys.exit(__doc__)
     steps[sys.argv[1]][0](*sys.argv[2:])

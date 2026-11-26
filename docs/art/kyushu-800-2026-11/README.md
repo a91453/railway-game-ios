@@ -2,20 +2,20 @@
 
 ![總覽](overview.jpg)
 
-總覽（遊戲的匯出與模型光，`tools/train-models/run.sh`、`render.mjs`）：
+總覽（2026-11-26 輪罩開口對準轉向架後重拍；遊戲的匯出與模型光，`tools/train-models/run.sh`、`render.mjs`，改前是同一工具匯出 #2706 的網格）：
 
-1. 最上面兩排：車頭、中間車、車尾（車頭轉 180°）相接的斜看，上排白天、下排夜晚。
-2. 車頭的側面、中間車的側面。
-3. 車頭的俯視。
-4. 車頭的正面、中間車的端面、車頭的斜看。
-5. 六節相接的側面（`--assembly-spec`，車頭＋四節中間車＋車尾，連結面相接、零車距，共 154.7 m）。
-6. 遊戲大小（每公尺 4.86 像素，六節 752 像素）的俯視，與六節的斜看。
+1. 車頭的側面，改前與改後：改前前轉向架在床下箱底下、沒有開口，後轉向架偏在開口靠車端那邊；改後兩個開口的正中都在轉向架中心，前面那個只切到離軌面 0.70 m，上面留車鼻的白裙板。
+2. 中間車的側面，改前與改後：轉向架改照真車放（離連結面 3.75 m），開口跟著移到正中。
+3. 六節相接的側面（`--assembly-spec`，車頭＋四節中間車＋車尾，連結面相接、零車距，共 154.7 m）。
+4. 車頭的斜看，白天與夜晚。
+
+更早那一版的總覽（上下兩排斜看、俯視、正面、遊戲大小）在 git 歷史裡（#2706 的 `overview.jpg`）。
 
 白車身、整片紅車頂、窗下一條紅細線、灰裙板、深色轉向架、兩節之間一圈深色的全周幌；車頭是長鼻、黑色駕駛室窗罩、車鼻兩肩各一個直立燈罩（上兩顆白頭燈、最下面一顆紅尾燈）、鼻尖下一條黑線。色票平塗，不畫文字與標誌。
 
 - 來源：作者舊版 SwiftRailMac 的模型（作者自己的內容），舊版型錄的「800系『つばめ』」：車頭 `d7f7f5e4`、中間車 `652fb052`。不用加資料來源頁。原始 GLB 與貼圖不進這個公開庫。
 - 對照的真車照片：Wikimedia Commons 的七張（CC BY-SA，作者與授權記在私有素材庫 `game-art-previews/docs/art/kyushu-shinkansen-6car-2026-11/SOURCE.md`），只拿來比形狀與顏色，不當貼圖、不放進這個公開庫。尺寸照日文 Wikipedia「新幹線800系電車」的規格（2026-11-25 讀）。
-- 轉換：`tools/texture-palette/kyushu_800.py` 把貼圖切成色票面（車頭 2,314 面、中間車 1,868 面；每扇門在 GLB 裡自己一個 node），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DKyushu800Mesh.swift`。材質順序寫在 `Map3DKyushu800.swift`。
+- 轉換：`tools/texture-palette/kyushu_800.py` 把貼圖切成色票面（車頭 2,606 面、中間車 2,061 面；每扇門在 GLB 裡自己一個 node），再由 `tools/train-models/glb_to_swift.py` 寫成 `Sources/GamePresentation/Map3DKyushu800Mesh.swift`。材質順序寫在 `Map3DKyushu800.swift`。
 - 用在：九州新幹線（`kyushushinkansen`）車次是奇數的列車，六節（偶數的是決策 977 的 N700 系八節）；車庫在「日本」類。
 - 決策：`docs/decisions/978.md`。
 - 和舊版同一節並排的對照圖（舊版的縮圖帶原貼圖）只給作者與工作室看，不放進這個公開庫；這裡的總覽圖只有轉好的模型。

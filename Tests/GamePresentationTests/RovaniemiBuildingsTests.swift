@@ -3,10 +3,11 @@ import GameCore
 import XCTest
 @testable import GamePresentation
 
-/// Decision 799: Rovaniemi's buildings (`MapPacks/rovaniemi/buildings.pmtiles`,
+/// Decisions 799 and 1009: Rovaniemi's buildings (`MapPacks/rovaniemi/buildings.pmtiles`,
 /// made by `tools/rovaniemi-map/build_rovaniemi_buildings.py` in the format
-/// of Taiwan's and Hong Kong's): OpenStreetMap's outlines and uses, its
-/// storeys where tagged and a guess from the tagged ones elsewhere.
+/// of Taiwan's and Hong Kong's): the National Land Survey of Finland's
+/// outlines and measured heights, OpenStreetMap's uses and the buildings
+/// the survey has not drawn, and a guess from the measured ones elsewhere.
 final class RovaniemiBuildingsTests: XCTestCase {
     /// Taiwan's footprints with Rovaniemi's, as the app reads them.
     static func tiles() throws -> FootprintTiles {
@@ -40,7 +41,8 @@ final class RovaniemiBuildingsTests: XCTestCase {
         XCTAssertGreaterThan(found.filter { $0.drawnStoreys >= 3 }.count, 50)
         XCTAssertLessThanOrEqual(storeys.last ?? 0, 8)
         XCTAssertTrue(found.allSatisfy { $0.storeys >= 1 }, "every building has its storeys")
-        XCTAssertTrue(found.contains { $0.storeysFrom == .tags })
+        // Decision 1009: the laser scan of 2022 measured the town.
+        XCTAssertGreaterThan(found.filter { $0.storeysFrom == .mml }.count, found.count * 3 / 4)
     }
 
     /// The Santa Claus village on the Arctic Circle and Kemijärvi at the
@@ -85,7 +87,7 @@ final class RovaniemiBuildingsTests: XCTestCase {
         XCTAssertLessThan(size, 1_500_000)
         for language in [DisplayLanguage.english, .traditionalChinese] {
             let section = try XCTUnwrap(DataSourceCredits.sections(in: language, overseas: [.rovaniemi]).first { $0.id == "rovaniemiRailways" })
-            XCTAssertTrue(section.credits.contains { $0.id == "rovaniemiBuildings" && $0.notice.contains("ODbL") })
+            XCTAssertTrue(section.credits.contains { $0.id == "rovaniemiBuildings" && $0.notice.contains("ODbL") && $0.notice.contains("4.0") })
         }
     }
 }

@@ -339,13 +339,28 @@ jobs:
           run="$(cat .ios-pr-passed/run 2>/dev/null || echo "an earlier run")"
           echo "This pull request's change to the app passed in $run; the macOS jobs are skipped (decision 187)." | tee -a "$GITHUB_STEP_SUMMARY"
 
+  # CIOPT-17: the owner's Mac (self-hosted, label chien-mac) takes a pull
+  # request's build job, or a run by hand's, when it is online and free;
+  # otherwise a hosted runner does, as before (pick-mac.yml says why and
+  # when). The full lane, the archive and TestFlight stay hosted.
+  pick:
+    name: Pick the Mac or a hosted runner
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.passed != 'true' }}
+    uses: ./.github/workflows/pick-mac.yml
+    with:
+      # A pull request, or only_testing by hand; never the full lane.
+      allow: ${{ github.event_name == 'pull_request' || inputs.only_testing != '' }}
+    secrets:
+      RUNNER_STATUS_TOKEN: ${{ secrets.RUNNER_STATUS_TOKEN }}
+
   build:
     name: Xcode build (iOS Simulator)
     # Skipped only when this change passed before; if the changes job
-    # failed, it runs.
-    needs: changes
+    # failed, it runs. If the pick job did not answer, a hosted runner.
+    needs: [changes, pick]
     if: ${{ !cancelled() && needs.changes.outputs.passed != 'true' }}
-    runs-on: xcode-27
+    runs-on: ${{ fromJSON(needs.pick.outputs.runs-on || '"xcode-27"') }}
     # 20m37s on the #72 head; the same job takes up to about 1.8 times as long
     # on a slower runner, so the limit only catches a hang. Room too for a
     # first boot's data migration (up to 14 minutes), the warm-up launch and
@@ -762,6 +777,13 @@ jobs:
           fi
           echo "UI test lane: $lane"
           echo "- **UI test lane:** $lane" >> "$GITHUB_STEP_SUMMARY"
+          # Decision 582, later (2026-11-26): a failed test runs once more,
+          # and passes if the second try does; ui-retry-report.sh names each
+          # such test in a warning. Not by hand (only_testing), where the
+          # first result is the one asked for.
+          retry=(-retry-tests-on-failure -test-iterations 2)
+          [[ -z "$ONLY_TESTING" ]] || retry=()
+          status=0
           # What the build step built for testing; nothing is built here.
           xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
@@ -771,11 +793,14 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -resultBundlePath "$RUNNER_TEMP/ui-smoke.xcresult" \
             ${only[@]+"${only[@]}"} \
+            ${retry[@]+"${retry[@]}"} \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
             -maximum-test-execution-time-allowance 600 \
-            -disableAutomaticPackageResolution
+            -disableAutomaticPackageResolution 2>&1 | tee "$RUNNER_TEMP/ui-smoke.log" || status=$?
+          .github/scripts/ui-retry-report.sh "$RUNNER_TEMP/ui-smoke.log" "UI smoke tests"
+          exit "$status"
 
       - name: Upload failed UI test results
         if: always() && (steps.ui-smoke.outcome == 'failure' || steps.ui-smoke.outcome == 'cancelled')
@@ -958,6 +983,14 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      # On the owner's Mac (pick-mac.yml) the Simulator outlives the job: a
+      # hosted runner is thrown away, the Mac goes back to the studio's work.
+      - name: Shut the Simulator down (the Mac)
+        if: always() && runner.environment == 'self-hosted' && env.SIMULATOR_UDID != ''
+        continue-on-error: true
+        timeout-minutes: 3
+        run: xcrun simctl shutdown "$SIMULATOR_UDID" || true
+
   # The full lane's other iPhone jobs: second (settings, HUD, the real
   # world) and lessons. The build job runs the remaining classes,
   # MapInteractionTests among them again (decision 754). None runs for a
@@ -1101,6 +1134,9 @@ jobs:
           done
           echo "UI tests, $PARTITION: ${only[*]}"
           echo "- **UI tests, $PARTITION:** $classes" >> "$GITHUB_STEP_SUMMARY"
+          # Decision 582, later: a failed test runs once more (as the build
+          # job's UI step).
+          status=0
           xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
@@ -1109,11 +1145,14 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -resultBundlePath "$RUNNER_TEMP/ui-$PARTITION.xcresult" \
             "${only[@]}" \
+            -retry-tests-on-failure -test-iterations 2 \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
             -maximum-test-execution-time-allowance 600 \
-            -disableAutomaticPackageResolution
+            -disableAutomaticPackageResolution 2>&1 | tee "$RUNNER_TEMP/ui-$PARTITION.log" || status=$?
+          .github/scripts/ui-retry-report.sh "$RUNNER_TEMP/ui-$PARTITION.log" "UI tests, $PARTITION"
+          exit "$status"
 
       - name: Upload failed UI test results
         if: always() && (steps.ui-partition.outcome == 'failure' || steps.ui-partition.outcome == 'cancelled')
@@ -1265,8 +1304,9 @@ jobs:
         # The tests only, built above (decision 658): 8 to 9 minutes when
         # all pass, the whole tutorial's walk (TutorialJourneyUITests, not
         # on a pull request) among them; a failing test can take up to its
-        # 10-minute allowance.
-        timeout-minutes: 30
+        # 10-minute allowance. 40 since a failed test runs once more
+        # (decision 582, later): 20 minutes when all passed on 2026-11-26.
+        timeout-minutes: 40
         env:
           ONLY_TESTING: ${{ inputs.only_testing }}
         run: |
@@ -1295,6 +1335,10 @@ jobs:
             fi
           fi
           echo "iPad UI tests: ${only[*]}"
+          # Decision 582, later: a failed test runs once more, but by hand.
+          retry=(-retry-tests-on-failure -test-iterations 2)
+          [[ -z "$ONLY_TESTING" ]] || retry=()
+          status=0
           xcodebuild test-without-building \
             -project RailwayGameApp/RailwayGame.xcodeproj \
             -scheme RailwayGame \
@@ -1303,11 +1347,14 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             -resultBundlePath "$RUNNER_TEMP/ipad-tutorial.xcresult" \
             "${only[@]}" \
+            ${retry[@]+"${retry[@]}"} \
             -parallel-testing-enabled NO \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 480 \
             -maximum-test-execution-time-allowance 600 \
-            -disableAutomaticPackageResolution
+            -disableAutomaticPackageResolution 2>&1 | tee "$RUNNER_TEMP/ipad-tutorial.log" || status=$?
+          .github/scripts/ui-retry-report.sh "$RUNNER_TEMP/ipad-tutorial.log" "iPad tutorial tests"
+          exit "$status"
 
       - name: Upload failed iPad tutorial results
         if: always() && (steps.ipad-tutorial.outcome == 'failure' || steps.ipad-tutorial.outcome == 'cancelled')

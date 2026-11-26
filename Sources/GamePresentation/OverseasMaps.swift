@@ -759,6 +759,9 @@ extension RealRailways.System {
     public static let overseasOthers: [RealRailways.System] = [
         RealRailways.System(id: "kyushushinkansen", english: "JR Kyushu", chinese: "JR九州", lineColors: [
             "kyushushinkansen|KS": RealRailways.RGB(0xC8102E),
+            // Decision 998: the Nishi-Kyushu Shinkansen's, the Kamome's
+            // deeper red (`build_nishi_kyushu_shinkansen.py`'s `COLOUR`).
+            "kyushushinkansen|NK": RealRailways.RGB(0xA6192E),
         ]),
     ]
 
@@ -809,6 +812,11 @@ extension RealBranchLine {
         // Another system than the subway's, so sold on its own
         // (``RealLineBundle/groups(of:)``).
         ("kyushushinkansen", "KS", "Kyushu Shinkansen", "九州新幹線", nil, .metro, false),
+        // Decision 998 (NISHI-KYUSHU-SALE): the Nishi-Kyushu Shinkansen,
+        // Takeo-Onsen to Nagasaki, a line of the same system but with no
+        // station shared with the Kyushu Shinkansen's, so sold on its own
+        // (``RealLineBundle/groups(of:)``).
+        ("kyushushinkansen", "NK", "Nishi-Kyushu Shinkansen", "西九州新幹線", nil, .metro, false),
     ]
 
     /// Decision 753: the lines of the cities outside Taiwan drawn along
