@@ -557,15 +557,18 @@ public enum DataSourceCredits {
                         id: "fukuokaBuildings",
                         title: language.text("Fukuoka’s buildings", "福岡的建物"),
                         detail: language.text(
-                            "On Fukuoka’s map, the outlines and uses of the buildings on the 3D map, and their storeys where they are recorded.",
-                            "福岡地圖上，3D 地圖裡建物的外形與用途，有記錄的還有樓層數。"
+                            "On Fukuoka’s map, the outlines and uses of the buildings on the 3D map, and their storeys where they are recorded or measured.",
+                            "福岡地圖上，3D 地圖裡建物的外形與用途，有記錄或實測的還有樓層數。"
                         ),
                         notice: language.text(
-                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Storeys that are not recorded are this game’s estimate.",
-                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。沒有記錄的樓層數是本遊戲的估計。"
+                            "© OpenStreetMap contributors, under the Open Database License (ODbL) 1.0, data to November 2026. Where OpenStreetMap has no building: Overture Maps Foundation (overturemaps.org), buildings, release 2026-11-18.0 (ODbL 1.0), its outlines from Microsoft ML Building Footprints (ODbL 1.0) and Qian Shi et al., East Asian buildings, Zenodo, 2023 (CC BY 4.0). Heights measured by MLIT’s 3D city models: 「3D都市モデル（Project PLATEAU）」（国土交通省）を加工して作成. Storeys that are neither recorded nor measured are this game’s estimate.",
+                            "© OpenStreetMap 貢獻者，依開放資料庫授權（ODbL）1.0 使用，資料到 2026 年 11 月。OpenStreetMap 沒有的建物：Overture Maps Foundation（overturemaps.org）建物，2026-11-18.0 版（ODbL 1.0），外形來自 Microsoft ML Building Footprints（ODbL 1.0）與 Qian Shi 等人的東亞建物資料，Zenodo，2023（CC BY 4.0）。實測樓高：「3D都市モデル（Project PLATEAU）」（国土交通省）を加工して作成（以日本國土交通省 3D 都市模型加工製作）。沒有記錄也沒有實測的樓層數是本遊戲的估計。"
                         ),
                         links: [
                             DataSourceCredit.Link(title: language.text("OpenStreetMap copyright", "OpenStreetMap 版權"), url: "https://www.openstreetmap.org/copyright"),
+                            DataSourceCredit.Link(title: "Overture Maps", url: overtureURL),
+                            DataSourceCredit.Link(title: language.text("East Asian buildings", "東亞建物資料"), url: eastAsianBuildingsURL),
+                            DataSourceCredit.Link(title: "Project PLATEAU", url: "https://www.mlit.go.jp/plateau/site-policy/"),
                         ]
                     ),
                     DataSourceCredit(
