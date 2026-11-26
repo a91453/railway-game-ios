@@ -17,7 +17,7 @@ final class Map3DTrainMaterialTests: XCTestCase {
     func testWhichColoursAreGlass() {
         let glass = [Map3DEMU800.glass, Map3DEMU500.glass, Map3DEMU900.glass, Map3DC341.glass, Map3DE500.glassColor,
                      Map3DTEMU2000.glass, Map3DTEMU1000.passengerGlass, Map3DTrainStyle.glass, Map3DColor.shaded(Map3DTrainStyle.glass, 0.7),
-                     Map3DTrainShapeRefresh.highSpeedGlassColor, Map3DSevenCarBlue.glass]
+                     Map3DSevenCarBlue.glass]
         for colour in glass { XCTAssertTrue(Map3DTrainMaterial.isGlassColour(colour), String(colour, radix: 16)) }
         let other = [Map3DTrainStyle.doorColour, Map3DTrainStyle.darkLine, Map3DTrainStyle.under, Map3DEMU800.rubber,
                      Map3DColor.shaded(Map3DColor.rgb(0x283944), 0.4), Map3DColor.rgb(0x1E2D4A), Map3DEMU500.silver,

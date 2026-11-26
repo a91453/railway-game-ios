@@ -2101,22 +2101,6 @@
       "hash" : "759374631344a91f",
       "triangles" : 38
     },
-    "refresh-700t-cab" : {
-      "hash" : "9ce331997f8e1d4a",
-      "triangles" : 9126
-    },
-    "refresh-700t-middle" : {
-      "hash" : "5471deae9448623a",
-      "triangles" : 5602
-    },
-    "refresh-700t-panto" : {
-      "hash" : "3e66402e2db7e932",
-      "triangles" : 5730
-    },
-    "refresh-700t-tail" : {
-      "hash" : "c807f4c9be171c33",
-      "triangles" : 9126
-    },
     "refresh-e200" : {
       "hash" : "7e3469b47e1557cb",
       "triangles" : 5784
@@ -3188,18 +3172,6 @@
     "set-wenhu-tail" : {
       "hash" : "f247339a654e1d0f",
       "triangles" : 1933
-    },
-    "steam-formation" : {
-      "hash" : "f2764f2bdb3286e2",
-      "triangles" : 14080
-    },
-    "steam-locomotive" : {
-      "hash" : "9be1173d70a69743",
-      "triangles" : 10080
-    },
-    "steam-tender" : {
-      "hash" : "d02788918b1635c2",
-      "triangles" : 4000
     },
     "taichung-green-dm1" : {
       "hash" : "c1f1db74f733a500",

@@ -236,7 +236,6 @@ public struct Map3DModelPack: Sendable {
         groups.append { Map3DFourCarMetro.Unit.allCases.map { Map3DFourCarMetro.model($0) } + [Map3DFourCarMetro.formation()] }
         groups.append { Map3DSevenCarBlue.Unit.allCases.map { Map3DSevenCarBlue.model($0) } + [Map3DSevenCarBlue.formation()] }
         groups += Map3DTrainShapeRefresh.ids.map { id in { [Map3DTrainShapeRefresh.model(id)] } }
-        groups.append { Map3DSteamTender.Unit.allCases.map { Map3DSteamTender.model($0) } + [Map3DSteamTender.formation()] }
         // Decision 575 續 (CABLEMAP): the cable car's cabins, tower, halls
         // and rope, just before the route bus, which stays last.
         groups.append { Map3DCableCar.drawn }
