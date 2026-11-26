@@ -10,7 +10,11 @@ extension Map3DRealTrains {
     /// `nil` for a system of another place.
     static func taiwanFormation(system: String, id: String, name: String) -> Formation? {
         switch system {
-        case "thsr":
+        // REVIEW-151: and the High Speed Rail bought (decision 993), whose
+        // line is "thsr_sched:THSR" (``RealLineStock/setKey(ofRealLine:)``):
+        // without it its trains were drawn by their type, half of them
+        // N700S, not the 700Ts TAP-FREEZE-151 has them.
+        case "thsr", "thsr_sched":
             // The 700T: twelve cars.
             return Formation(key: "highSpeed", cars: 12)
         case "tra":
