@@ -990,8 +990,16 @@ final class MapInteractionTests: XCTestCase {
         // foot moves nothing (main 72f8b469's and 240daaf8's full lanes).
         // Before, the whole card scrolled there, and a drag anywhere on it
         // moved it.
-        let scrolled = app.scrollViews["details.scroll.foot"].firstMatch
-        XCTAssertTrue(app.dragUntilWhollyOnScreen(snap, in: scrolled.exists ? scrolled : card), "Snap to track never came into reach")
+        // NETWORK-PANEL-SIMPLE folded the switch away, below More options,
+        // and the card there pins its head and foot and scrolls only the
+        // options between (`details.scroll.middle`): with the whole card as
+        // the place to drag, every drag began on Build Track, which never
+        // moves (main 415a771b's and f1da01c's full lanes, runs 45737940783
+        // and 45805119006).
+        let scrolled = ["details.scroll.foot", "details.scroll.middle"].lazy
+            .map { app.scrollViews[$0].firstMatch }
+            .first { $0.exists }
+        XCTAssertTrue(app.dragUntilWhollyOnScreen(snap, in: scrolled ?? card), "Snap to track never came into reach")
         func isOn() -> Bool { snap.isSelected || (snap.value as? String) == "1" }
         XCTAssertTrue(isOn(), "Snapping starts on, and says so; value: \(String(describing: snap.value))")
         snap.tap()
