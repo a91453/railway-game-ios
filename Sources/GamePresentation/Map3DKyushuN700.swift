@@ -11,10 +11,17 @@ import Foundation
 /// with a thin gold line along each edge.
 ///
 /// The old game drew every car 21 m long and 2.80 m wide; here they are
-/// the real cars' size again: 25 m from coupling to coupling (the cab car
-/// 24.88 m), 3.36 m wide and 3.60 m high, on the 1,435 mm gauge. No
-/// company mark, lettering or number is drawn, and no pantograph (the old
-/// cars have none).
+/// the real cars' size again: 25 m from coupling to coupling, the cab car
+/// 27.35 m, 3.36 m wide and 3.60 m high, on the 1,435 mm gauge, at the
+/// real cars' proportions (decision 977, section 8, measured on
+/// photographs with the windows as the ruler, as the 800 series in
+/// decision 978): the windows 1.04 m apart as the seats are, the cab car
+/// fourteen windows a side (one more than the old car) and its nose the
+/// old one's shape, and the middle car's doors 0.3 m nearer its ends.
+/// Between two cars a full-width gangway hood in the real train's beige,
+/// its mouth a shallow V so two cars on a curve do not touch. No company
+/// mark, lettering or number is drawn, and no pantograph (the old cars
+/// have none).
 public enum Map3DKyushuN700 {
     /// The cars the game draws: the cab car and the middle car.
     public enum Unit: String, CaseIterable, Sendable {
@@ -22,7 +29,7 @@ public enum Map3DKyushuN700 {
         case middle = "kyushu-n700-middle"
 
         public var isCab: Bool { self == .cab }
-        public var pitch: Float { isCab ? 24.883 : 25 }
+        public var pitch: Float { isCab ? 27.35 : 25 }
     }
 
     /// The key of its set (``Map3DTrainSet``).
@@ -33,15 +40,17 @@ public enum Map3DKyushuN700 {
 
     /// The colours of the mesh's palette indices, in the order
     /// `glb_to_swift.py --materials` gave them: whiteBlue, navy, gold,
-    /// glass, dark, headlamp, taillamp, doorLine. The first three are the
-    /// real train's (``Map3DPalette/kyushuWhiteBlue``); then the trains'
-    /// glass, the dark bogies, gangways and floor, the lamps, and the
-    /// doors' seams in steel grey (the doors themselves are the body's
-    /// colour: without their seams the doors' small windows float on the
-    /// wall, the owner 2026-11-25).
+    /// glass, dark, headlamp, taillamp, doorLine, hood. The first three are
+    /// the real train's (``Map3DPalette/kyushuWhiteBlue``); then the trains'
+    /// glass, the dark bogies, couplers and floor, the lamps, the doors'
+    /// seams in steel grey (the doors themselves are the body's colour:
+    /// without their seams the doors' small windows float on the wall, the
+    /// owner 2026-11-25), and the gangway hoods in the real train's beige
+    /// (measured on a photograph of the real cars, #DFD8B8; the palette's
+    /// nearest, the MTR's cream).
     static let meshPalette: [UInt32] = [
         Map3DPalette.kyushuWhiteBlue, Map3DPalette.kyushuNavy, Map3DPalette.kyushuGold, Map3DTrainStyle.glass,
-        Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern, Map3DPalette.steel,
+        Map3DPalette.dark, Map3DTrainStyle.headlamp, Map3DPalette.lantern, Map3DPalette.steel, Map3DPalette.mtrCream,
     ]
 
     /// The palette index of the glass: its faces, and only they, are the
@@ -80,10 +89,10 @@ public enum Map3DKyushuN700 {
     public static func doors(_ unit: Unit) -> [Door] {
         switch unit {
         case .cab:
-            [Door(x: 3.756...4.393, z: 1.424...3.120, crew: true), Door(x: 2.610...3.553, z: 1.373...3.231, crew: false),
-             Door(x: -11.923 ... -10.970, z: 1.376...3.231, crew: false)]
+            [Door(x: 4.871...5.560, z: 1.424...3.120, crew: true), Door(x: 3.632...4.652, z: 1.373...3.231, crew: false),
+             Door(x: -13.114 ... -12.083, z: 1.376...3.231, crew: false)]
         case .middle:
-            [Door(x: 10.783...11.737, z: 1.375...3.232, crew: false), Door(x: -11.737 ... -10.783, z: 1.375...3.232, crew: false)]
+            [Door(x: 11.083...12.037, z: 1.375...3.232, crew: false), Door(x: -12.037 ... -11.083, z: 1.375...3.232, crew: false)]
         }
     }
 
@@ -109,7 +118,7 @@ extension Map3DPalette {
 
 extension Map3DKyushuN700 {
     /// Decision 782: its set, its showcase row (eight cars) and its cars'
-    /// triangles (1,726 the cab car, 1,420 the middle car: few enough to be
+    /// triangles (2,635 the cab car, 2,640 the middle car: few enough to be
     /// drawn at any distance a train's model is, so no far set) and
     /// lengths.
     static let registration = Map3DTrainRegistration(
@@ -119,7 +128,7 @@ extension Map3DKyushuN700 {
             Map3DShowcase.Entry(key, "Kyushu Shinkansen N700 series", "九州新幹線 N700 系", .japan, cars: cars, fixed: true,
                                 gauge: 1.435),
         ],
-        triangles: 1_300...1_800, length: 24.8...25.1)
+        triangles: 2_300...3_000, length: 24.9...27.4)
 }
 
 extension Map3DTrainSet {
