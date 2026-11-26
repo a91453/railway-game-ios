@@ -14,7 +14,7 @@ GitHub 上檢視與 fork 不受此限。
    tools/audio/mml-core/、.claude/skills/ 下的各技能、MapLibre、Noto Sans）。
 2. 第三方資料（OpenStreetMap、Overture Maps、政府開放資料、Copernicus DEM、
    WorldPop 等），依遊戲內「資料來源」頁
-   （Sources/GamePresentation/DataSourceCredits.swift）列出的出處與授權。由
+   （Sources/GamePresentation/DataSourceCredits*.swift）列出的出處與授權。由
    OpenStreetMap 或 Overture Maps 整理出的資料檔，依開放資料庫授權（ODbL）1.0
    提供。
 
@@ -35,6 +35,6 @@ Exceptions (each under its own licence):
    tools/audio/mml-core/, each skill under .claude/skills/, MapLibre, Noto Sans).
 2. Third-party data (OpenStreetMap, Overture Maps, government open data,
    Copernicus DEM, WorldPop and others), under the sources and licences the
-   game's Data Sources page lists (Sources/GamePresentation/DataSourceCredits.swift).
+   game's Data Sources page lists (Sources/GamePresentation/DataSourceCredits*.swift).
    Data files derived from OpenStreetMap or Overture Maps are offered under the
    Open Database License (ODbL) 1.0.
