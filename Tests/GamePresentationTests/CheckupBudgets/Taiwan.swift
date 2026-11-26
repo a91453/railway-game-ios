@@ -15,7 +15,17 @@ extension TimetableCheckupBudgets {
     /// is laid, not one stretch slower (TYMC-PEAK-CASCADE). Decision 954
     /// (TYMC-DAWN-TAIPEI): Taipei Main Station keeps the trains for its
     /// first runs overnight, realistic 1, 8, 3, +4 to 1, 5, 2, +4.
+    /// Decision 993 (THSR-SALE): the Taiwan High Speed Rail, measured
+    /// with its ends seven tracks: under the realistic rules none not
+    /// sent, 36 late (the worst 26.7 min; most at Zuoying southbound and
+    /// at Banqiao and Taipei northbound), 10 late out of a depot and a
+    /// peak gap of +12 min (31.7 against 20 at Zuoying at 19:26); with
+    /// Taipei to Tainan four tracks, the stopping trains at the side
+    /// platforms (THSR-SALE, 2026-11-26), none, 38 (the worst 26.7 min),
+    /// 9 and +11.7 min (31.7 against 20 at Zuoying at 19:26). Simple
+    /// rules have no line of it: it is not sold without block sections.
     static let taiwanFull: [String: TimetableCheckup.Budget] = [
+        "thsr_sched:THSR realistic": .init(notSent: 0, late: 38, lateOutOfDepot: 9, peakGapMinutes: 12),
         "ntalrt:K simple": .init(notSent: 0, late: 2, lateOutOfDepot: 0, peakGapMinutes: 0),
         "ntalrt:K realistic": .init(notSent: 0, late: 1, lateOutOfDepot: 0, peakGapMinutes: 0),
         "sanying:LB simple": .init(notSent: 0, late: 7, lateOutOfDepot: 0, peakGapMinutes: 5),

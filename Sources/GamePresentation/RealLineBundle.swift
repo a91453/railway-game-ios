@@ -157,6 +157,13 @@ public struct RealLineBundleOffer: Sendable {
         ]
     }
 
+    /// Decision 993: what the card says under the price of the lines that
+    /// pay a monthly fee once bought, one sentence each; `nil` for none.
+    public func monthlyFeeText(in language: DisplayLanguage) -> String? {
+        let texts = offers.compactMap { $0.monthlyFeeText(in: language) }
+        return texts.isEmpty ? nil : texts.joined(separator: language.text(" ", ""))
+    }
+
     /// What the card's foot says of lines sold together, above Buy: the
     /// price of them all, whose rows are further down the card than a
     /// phone on its side shows at once. `nil` for one line (its card is
@@ -185,6 +192,13 @@ extension RealBranchLine {
         in world: GameWorld, railways: RealRailways
     ) -> RealBranchLine? {
         let id = "\(dataSystem(of: rail.system)):\(rail.network)"
+        // THSR-SALE (decision 993): the High Speed Rail only where trains
+        // run in block sections (realistic rules). Without them a train
+        // sets off only when no train stands, or follows another, on its
+        // way to its next stop, and the expresses' way spans several
+        // stations: a whole day under simple rules left 44 of its 202
+        // runs not sent, under realistic none.
+        guard id != taiwanHighSpeedRail || world.blockSections else { return nil }
         let after = rail.shares.flatMap { isLaidAlong(sharedBy: id, system: rail.system, $0, in: world, railways: railways) ? $0 : nil }
         guard let runs = metroRuns(of: id, after: after, in: railways) else { return nil }
         return RealBranchLine(

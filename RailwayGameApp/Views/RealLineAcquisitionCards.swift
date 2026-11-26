@@ -92,6 +92,13 @@ struct RealLineOfferCard: View {
                         }
                     } header: {
                         Text(verbatim: language.text("Price", "價格"))
+                    } footer: {
+                        // Decision 993: the Taiwan High Speed Rail's monthly
+                        // upkeep, paid once it is bought.
+                        if let fee = offer.monthlyFeeText(in: language) {
+                            Text(verbatim: fee)
+                                .accessibilityIdentifier("acquire.monthlyFee")
+                        }
                     }
                 }
                 if !session.world.realTransfers {

@@ -395,4 +395,80 @@ final class LineAcquisitionTests: XCTestCase {
         XCTAssertEqual(try encoder.encode(SavedGame(world: loaded)), Data(newTaiwanDollars(ofSaveText: String(decoding: data, as: UTF8.self)
             .replacingOccurrences(of: #""saveVersion" : 66,"#, with: #""saveVersion" : \#(SavedGame.currentVersion),"#)).utf8))
     }
+
+    // MARK: - Monthly fee (decision 993)
+
+    /// A line bought with a monthly fee of $3,000 pays $100 as each day
+    /// ends, in its own ledger row, booked as upkeep; a line bought without
+    /// one pays nothing, and the fee is refused outside whole dollars from
+    /// zero to the most.
+    func testALineBoughtWithAMonthlyFeePaysAThirtiethADay() throws {
+        var plain = try world()
+        try plain.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 0)
+        try plain.advance(ticks: 24 * 60)
+        XCTAssertFalse(plain.accounts.entries.contains { $0.kind == .dailyLineFee })
+
+        var refused = try world()
+        for fee in [Money(-100), Money(150), LineAcquisition.maximumMonthlyFee + Money(100)] {
+            XCTAssertThrowsError(try refused.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 0, monthlyFee: fee)) {
+                XCTAssertEqual($0 as? GameError, .invalidAcquisition)
+            }
+        }
+        XCTAssertTrue(refused.acquisitions.isEmpty)
+
+        var world = try world()
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 0, monthlyFee: Money(300_000))
+        XCTAssertEqual(world.acquisition(of: pingxi)?.monthlyFee, Money(300_000))
+        XCTAssertEqual(world.acquisition(of: pingxi)?.dailyFee, Money(10_000))
+        let before = world.economy.balance
+        try world.advance(ticks: 24 * 60)
+        let fees = world.accounts.entries.filter { $0.kind == .dailyLineFee }
+        XCTAssertEqual(fees.map(\.amount), [Money(-10_000)])
+        XCTAssertEqual(fees.first?.breakdown, [LedgerLine(item: .lineFee, amount: Money(-10_000))])
+        XCTAssertLessThanOrEqual(world.economy.balance, before - Money(10_000))
+        XCTAssertGreaterThanOrEqual(world.accounts.report(.day, day: 0).current.maintenanceCost, Money(10_000))
+        if let tally = world.lineAccounts?.records(of: main)?.days.first(where: { $0.day == 0 })?.tally {
+            XCTAssertGreaterThanOrEqual(tally.maintenanceCost, Money(10_000))
+        }
+    }
+
+    /// A thirtieth of the fee, rounded half up to whole dollars.
+    func testTheDailyFeeIsAThirtiethRounded() {
+        func daily(_ dollars: Int64) -> Money {
+            LineAcquisition(realLine: pingxi, line: main, day: 0, value: .zero, monthlyFee: Money(dollars * 100)).dailyFee
+        }
+        XCTAssertEqual(daily(0), .zero)
+        XCTAssertEqual(daily(14), Money(0))
+        XCTAssertEqual(daily(15), Money(100))
+        XCTAssertEqual(daily(400_000_000), Money(1_333_333_300))
+    }
+
+    /// The fee is saved only when there is one, and a save with a bad one
+    /// is refused.
+    func testTheMonthlyFeeIsSavedAndChecked() throws {
+        var world = try world()
+        try world.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 0, monthlyFee: Money(300_000))
+        let data = try JSONEncoder().encode(world)
+        XCTAssertEqual(try JSONDecoder().decode(GameWorld.self, from: data), world)
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let bought = try XCTUnwrap((object["acquisitions"] as? [[String: Any]])?.first)
+        XCTAssertEqual(bought["monthlyFee"] as? Int, 300_000)
+        func decodes(_ fee: Any?) -> Bool {
+            var edited = object
+            var purchase = bought
+            purchase["monthlyFee"] = fee
+            edited["acquisitions"] = [purchase]
+            guard let data = try? JSONSerialization.data(withJSONObject: edited) else { return false }
+            return (try? JSONDecoder().decode(GameWorld.self, from: data)) != nil
+        }
+        XCTAssertTrue(decodes(nil))
+        XCTAssertTrue(decodes(0))
+        XCTAssertFalse(decodes(-100))
+        XCTAssertFalse(decodes(150))
+
+        var plain = try self.world()
+        try plain.recordLineAcquisition(line: main, realLine: pingxi, dailyRiders: 0)
+        let plainObject = try XCTUnwrap(try JSONSerialization.jsonObject(with: JSONEncoder().encode(plain)) as? [String: Any])
+        XCTAssertNil((plainObject["acquisitions"] as? [[String: Any]])?.first?["monthlyFee"])
+    }
 }
