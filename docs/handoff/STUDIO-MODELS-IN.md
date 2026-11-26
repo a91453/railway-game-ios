@@ -2,7 +2,7 @@
 
 ## 進度
 
-- 做到哪：上架前的三批（熊本城與水前寺、佛光山與野柳、香港三座廟）併成一張 PR，決策 1018。
+- 做到哪：上架前的三批（熊本城與水前寺、佛光山與野柳、香港三座廟）已合（#2768，決策 1018）；地標預算改成分區算、懸吊式單軌換 revision-3 是決策 1018 續。
 - 已驗證：見 PR 的「驗證」一節。
 - 下一步：0.6.1 的項目照下面的順序派單。
 
@@ -15,7 +15,7 @@
 3. `Map3DLandmarkRegistryList.swift` 加一行。
 4. `LANDMARK_LOCKS_WRITE=1 swift test --skip-build --filter Map3DLandmarkRegistryTests` 寫鎖檔 `tools/landmarks/locks/<id>.json`，再不帶變數跑一次。
 5. PR 說明寫經驗檔 `railway-assets-private-2` `docs/studio/lessons/<model>.md`（`lessons-link.yml`）。
-6. 每張地圖的近景合計 ≤ 60,000 三角形。**台灣現在 59,860**，再加台灣的地標要先做更輕的遠景或拿掉別的。
+6. 預算（決策 1018 續，`Map3DLandmarkRegistryTests.testTheBudgets`）：任一塊 32 km 見方裡的近景合計 ≤ 60,000 三角形（台灣最滿的一塊 23,602）；整張地圖所有地標近景加遠景 ≤ 20 MB（台灣 9.9 MB）。
 
 同一個模型擺好幾處（佛光山八塔、野柳蕈狀岩）照 `Map3DFukuokaTanks` 的 `model(_:as:)`（或 `Map3DFoGuangShanPagodas.model(as:)`）：同一份編碼，給每一處自己的 id。
 
