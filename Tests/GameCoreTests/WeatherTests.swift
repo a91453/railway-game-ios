@@ -112,6 +112,111 @@ final class WeatherTests: XCTestCase {
         XCTAssertNotEqual(year.map(taiwan.weather(onDay:)), year.map(finland.weather(onDay:)))
     }
 
+    /// Decision 1004: Taiwan's and Kyushu's weather stations, and the
+    /// island keeping the old table over all of them.
+    func testTheWeatherStationsShareOutTheirCountrysMonths() {
+        XCTAssertEqual(Set(Disruptions.weatherStations.keys), ["TW", "JP"])
+        for (country, stations) in Disruptions.weatherStations {
+            XCTAssertEqual(Set(stations.map(\.name)).count, stations.count, country)
+            for station in stations {
+                XCTAssertEqual(station.months.count, 12, station.name)
+                XCTAssertTrue(station.months.allSatisfy { $0.rain >= 0 && $0.storm >= 0 && $0.rain + $0.storm <= 1_000 }, station.name)
+            }
+        }
+        let taiwan = Disruptions.weatherStations["TW"]!
+        XCTAssertEqual(taiwan.count, 19)
+        for month in 0..<12 {
+            let rain = taiwan.map { $0.months[month].rain }.reduce(0, +) / Int64(taiwan.count)
+            let storm = taiwan.map { $0.months[month].storm }.reduce(0, +) / Int64(taiwan.count)
+            XCTAssertTrue(abs(rain - Disruptions.monthlyRain[month].rain) <= 1, "month \(month + 1): \(rain)")
+            XCTAssertTrue(abs(storm - Disruptions.monthlyRain[month].storm) <= 1, "month \(month + 1): \(storm)")
+        }
+        let fukuoka = Disruptions.weatherStations["JP"]!.first { $0.name == "福岡" }!
+        XCTAssertEqual(fukuoka.months.map(\.rain), Disruptions.countryRain["JP"]!.map(\.rain))
+        XCTAssertEqual(fukuoka.months.map(\.storm), Disruptions.countryRain["JP"]!.map(\.storm))
+        XCTAssertEqual(GameWorld.cosineThousandths(ofLatitude: 0), 1_000)
+        XCTAssertTrue((904...908).contains(GameWorld.cosineThousandths(ofLatitude: 250_330_000)))
+        XCTAssertTrue((397...401).contains(GameWorld.cosineThousandths(ofLatitude: 665_039_000)))
+    }
+
+    /// A world of `world(country:)` whose map is round `latitude` and
+    /// `longitude` (degrees).
+    private func world(country: String, latitude: Double, longitude: Double, day: Int64 = 0) throws -> GameWorld {
+        var world = try world(country: country, day: day)
+        world.setGeoAnchor(GeoAnchor(latitude: Int64((latitude * 10_000_000).rounded()), longitude: Int64((longitude * 10_000_000).rounded()))!)
+        return world
+    }
+
+    /// The point `north` and `east` metres from `world`'s anchor.
+    private func point(_ world: GameWorld, north: Int64, east: Int64) -> PlanPoint {
+        let middle = world.weatherAnchorPoint
+        return PlanPoint(x: middle.x + east * WorldCoordinate.unitsPerMetre, y: middle.y - north * WorldCoordinate.unitsPerMetre)
+    }
+
+    /// Decision 1004: a place takes the weather station nearest it; a map
+    /// with no anchor, or of a country with one climate, has the
+    /// country's weather everywhere.
+    func testAPlaceTakesTheNearestWeatherStation() throws {
+        let taipei = try world(country: "TW", latitude: 25.0377, longitude: 121.5149)
+        XCTAssertTrue(taipei.hasRegionalWeather)
+        XCTAssertEqual(taipei.weatherStation(at: taipei.weatherAnchorPoint)?.name, "臺北")
+        // Some 267 km south and 124 km west of Taipei: Kaohsiung.
+        XCTAssertEqual(taipei.weatherStation(at: point(taipei, north: -267_000, east: -124_000))?.name, "高雄")
+        // 25 km east: Keelung; 13 km north-west: Tamsui.
+        XCTAssertEqual(taipei.weatherStation(at: point(taipei, north: 10_000, east: 25_000))?.name, "基隆")
+        XCTAssertEqual(taipei.weatherStation(at: point(taipei, north: 13_000, east: -8_000))?.name, "淡水")
+        let saga = try world(country: "JP", latitude: 33.2490, longitude: 130.2988)
+        XCTAssertEqual(saga.weatherStation(at: saga.weatherAnchorPoint)?.name, "佐賀")
+        XCTAssertEqual(saga.weatherStation(at: point(saga, north: 37_000, east: 9_000))?.name, "福岡")
+        // One climate, or no place on the Earth: the country's months.
+        for world in [try world(country: "HK", latitude: 22.3, longitude: 114.17), try world(country: "TW")] {
+            XCTAssertFalse(world.hasRegionalWeather)
+            XCTAssertNil(world.weatherStation(at: world.weatherAnchorPoint))
+            let disruptions = world.disruptions!
+            for day in Int64(0)..<720 {
+                XCTAssertEqual(world.weather(onDay: day, at: PlanPoint(x: 0, y: 0)), disruptions.weather(onDay: day))
+                XCTAssertEqual(world.weather(onDay: day), disruptions.weather(onDay: day))
+            }
+        }
+        // A map's own weather is its anchor's.
+        for day in Int64(0)..<720 {
+            XCTAssertEqual(taipei.weather(onDay: day), taipei.weather(onDay: day, at: taipei.weatherAnchorPoint))
+        }
+    }
+
+    /// Decision 1004: one draw a day for the whole map, so the wetter
+    /// place is wet whenever the drier one is: Keelung's winter rains while
+    /// Kaohsiung stays dry, and the trips from a station follow its own
+    /// weather.
+    func testTheNorthRainsWhileTheSouthIsClear() throws {
+        let taipei = try world(country: "TW", latitude: 25.0377, longitude: 121.5149)
+        let keelung = point(taipei, north: 10_000, east: 25_000), kaohsiung = point(taipei, north: -267_000, east: -124_000)
+        var northOnly: Int64?
+        var wet = (keelung: 0, kaohsiung: 0)
+        for day in Int64(360)..<(360 + 40 * 360) where day % 360 < 30 {
+            let north = taipei.weather(onDay: day, at: keelung), south = taipei.weather(onDay: day, at: kaohsiung)
+            if south != .clear { XCTAssertNotEqual(north, .clear, "day \(day)") }
+            if north != .clear { wet.keelung += 1 }
+            if south != .clear { wet.kaohsiung += 1 }
+            if north == .rain, south == .clear, taipei.holiday(onDay: day) == nil, northOnly == nil { northOnly = day }
+        }
+        // January: Keelung's 484 per mille, Kaohsiung's 79, over 1,200 days.
+        XCTAssertTrue((520...640).contains(wet.keelung), "\(wet.keelung)")
+        XCTAssertTrue((60...140).contains(wet.kaohsiung), "\(wet.kaohsiung)")
+        let day = try XCTUnwrap(northOnly)
+        let calm = try world(seed: nil, day: day)
+        let north = try world(country: "TW", latitude: 25.1333, longitude: 121.7405, day: day)
+        let south = try world(country: "TW", latitude: 22.6273, longitude: 120.3014, day: day)
+        for id in ids {
+            XCTAssertEqual(north.weatherDrop(onDay: day, at: id), 100)
+            XCTAssertEqual(south.weatherDrop(onDay: day, at: id), 0)
+            XCTAssertEqual(trips(north, from: id), (trips(calm, from: id) * 900 + 500) / 1_000, "\(id)")
+            XCTAssertEqual(trips(south, from: id), trips(calm, from: id), "\(id)")
+        }
+        // A station that is not there has the map's.
+        XCTAssertEqual(north.weatherDrop(onDay: day, at: StationID(rawValue: 99)), north.weatherDrop(onDay: day))
+    }
+
     func testRainLowersTheWholeNetworksDemand() throws {
         let rain = firstDay(with: .rain), storm = firstDay(with: .thunderstorm)
         for (day, standard, light) in [(rain, Int64(900), Int64(950)), (storm, 800, 900)] {

@@ -127,21 +127,29 @@ extension Weather {
 extension GameWorld {
     /// Today's weather when it is not clear, and the typhoons announced or
     /// blowing over station `id`, in the station panel's words: "Rain today:
-    /// −10% demand on every line", "Typhoon: −80% demand here, comes in 2
-    /// days, lasts 2 days", or "Typhoon: −80% demand here, 1 more day".
+    /// −10% demand on every line" (decision 1004: "Rain here today: −10%
+    /// demand" where the weather differs from place to place), "Typhoon:
+    /// −80% demand here, comes in 2 days, lasts 2 days", or "Typhoon: −80%
+    /// demand here, 1 more day".
     public func weatherTexts(at id: StationID, in language: DisplayLanguage) -> [String] {
         guard disruptions != nil else { return [] }
         let today = clock.now.seconds / GameTime.secondsPerDay
         var lines: [String] = []
-        let weather = weather(onDay: today)
+        let point = station(id: id)?.point
+        // Decision 1004: where the weather differs from place to place,
+        // the station's own, and only its demand.
+        let weather = point.map { weather(onDay: today, at: $0) } ?? weather(onDay: today)
         if weather != .clear {
-            let percent = weatherDrop(onDay: today) / 10
-            lines.append(language.text(
+            let percent = weatherDrop(onDay: today, at: id) / 10
+            lines.append(hasRegionalWeather && point != nil ? language.text(
+                "\(weather.title(in: language)) here today: −\(percent)% demand",
+                "今天這裡\(weather.title(in: language))：這站需求 −\(percent)%"
+            ) : language.text(
                 "\(weather.title(in: language)) today: −\(percent)% demand on every line",
                 "今天\(weather.title(in: language))：全線需求 −\(percent)%"
             ))
         }
-        guard let point = station(id: id)?.point else { return lines }
+        guard let point else { return lines }
         for typhoon in typhoons(onDay: today) where typhoon.covers(point) {
             let percent = typhoon.drop / 10
             if typhoon.start > today {
@@ -214,8 +222,9 @@ extension GameWorld {
     public static let forecastDays = 7
 
     /// Today and the next `days - 1` days, or `[]` when the world has no
-    /// holidays or weather (``GameWorld/disruptions``).
-    public func forecast(days: Int = GameWorld.forecastDays) -> [ForecastDay] {
+    /// holidays or weather (``GameWorld/disruptions``). Decision 1004: the
+    /// weather at `point` when given, else the map's.
+    public func forecast(days: Int = GameWorld.forecastDays, at point: PlanPoint? = nil) -> [ForecastDay] {
         guard disruptions != nil else { return [] }
         let today = clock.now.seconds / GameTime.secondsPerDay
         // Only the typhoons announced by now are known.
@@ -223,7 +232,7 @@ extension GameWorld {
         return (0..<Int64(max(0, days))).map { offset in
             let day = today + offset
             return ForecastDay(
-                date: GameDate(day: day), weather: weather(onDay: day),
+                date: GameDate(day: day), weather: point.map { weather(onDay: day, at: $0) } ?? weather(onDay: day),
                 holiday: holiday(onDay: day)?.holiday.kind,
                 typhoonBlowing: known.contains { $0.isActive(onDay: day) },
                 typhoonArrives: known.contains { $0.start == day },
