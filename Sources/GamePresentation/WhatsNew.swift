@@ -49,8 +49,8 @@ public enum WhatsNew {
                     chinese: "日本地圖收進整個長崎縣，多了長崎、壹岐機場與出島、豪斯登堡等 21 個景點。"
                 ),
                 Line(
-                    english: "A new game on the Japan map can start round Fukuoka, Saga or Kumamoto.",
-                    chinese: "日本地圖的新局可以選從福岡、佐賀或熊本開始。"
+                    english: "A new game on the Japan map can start round Fukuoka, Saga, Kumamoto or Nagasaki.",
+                    chinese: "日本地圖的新局可以選從福岡、佐賀、熊本或長崎開始。"
                 ),
                 Line(
                     english: "Kyushu Shinkansen stations are laid with their real platforms: six tracks at Hakata, four at Shin-Tosu and Kumamoto, three at Chikugo-Funagoya.",
