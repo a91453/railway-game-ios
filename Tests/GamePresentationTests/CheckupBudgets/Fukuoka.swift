@@ -30,5 +30,8 @@ extension TimetableCheckupBudgets {
         "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 4),
         "fukuoka kyushushinkansen:KS simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 2),
         "fukuoka kyushushinkansen:KS realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 2),
+        // Decision 998: the Nishi-Kyushu Shinkansen bought alone from Nagasaki (2026-11-26: all 0).
+        "fukuoka kyushushinkansen:NK simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
+        "fukuoka kyushushinkansen:NK realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
     ]
 }
