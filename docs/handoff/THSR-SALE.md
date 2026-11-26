@@ -49,7 +49,15 @@ THSR_SALE_PROFIT=3 $B GamePresentationTests.ThsrSaleTests/testProfit   # 一天�
      DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=thsr DEPOT_RETURN_SIMPLE=1 DEPOT_RETURN_CONTROLLED=1 DEPOT_RETURN_EPISODES=1 DEPOT_RETURN_SAVE=<檔>.json DEPOT_RETURN_SAVE_AT=104400 DEPOT_RETURN_UNTIL=104460 $B GamePresentationTests.DepotReturnReportTests/testTheHighSpeedRail
      # 拿掉 SIMPLE、CONTROLLED 兩個變數就是擬實規則的對照
      ```
-     （這串最後起了這兩個，存在 scratchpad，串結束就沒了，要重跑；約 35 分。）照真實時刻表夜裡南港 10、左營 30 組（烏日 0）；若簡易規則的早上不是這個分佈，就是收班時送錯機廠。
+     **量過了（11-26，兩端 7 股）：第 1 天 05:00 每組車停在哪**（`DEPOT_RETURN_SAVE` 存的世界，照每列車所在的邊數）：
+
+     | | 南港留置線 | 烏日基地 | 左營機廠 | 站的月台上 |
+     | --- | ---: | ---: | ---: | --- |
+     | 真實時刻表（`overnight`） | 10（南港） | 0 | 30（左營） | — |
+     | 擬實規則 | 6 | 6 | 28 | 0 |
+     | 簡易規則＋行車控制 | **2** | 3 | 30 | 左營 3、**台南 2** |
+
+     簡易規則的早上北端只有 2 組車（擬實 6、真實 10），33 組擠在左營那頭，還有 2 組睡在台南的月台：所以第二天一早南港發的班沒車，左營那頭的車又出不去。**下一步是查第 0 天晚上為什麼車往南收**：簡易規則下哪幾班回送（`positioning`）沒開、或被決策 297／609 改送到最近的機廠。照 `DEPOT_RETURN_EPISODES=1` 的輸出看第 0 天 20:00 以後每次入庫是哪組車、進哪座機廠，對照 `metro_runs.json` 的回送班。這次的兩個報告（約 15 分、38 分）存在 scratchpad，串結束就沒了，要重跑；位置用的小程式就是讀存檔的 `world.trains[].position.onEdge.edge` 對 `network.platforms[].edge` 的站。
    - 簡易規則跑得比擬實快，車提早到端點，在「下一班的車」還沒輪到時就被當成多的車送走。
    - 修法候選：高鐵的端點不做「多的車回機廠」（只對高鐵或只對有 `endLevels` 3 的端），或讓入庫照時刻表的回送班，不照當下的多寡。
    - 修好後，用 `TIMETABLE_CHECKUP … THSR simple` 量，把預算寫進 `CheckupBudgets/Taiwan.swift`。
