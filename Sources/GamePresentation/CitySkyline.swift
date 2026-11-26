@@ -109,7 +109,10 @@ public struct CitySkyline: Sendable {
     /// 「我怕會影響精確度」. A map whose people move to an official census
     /// (Taiwan's, Hong Kong's, Finland's, in the same `population.json`
     /// with its `jobs`) adds its look here in the same pull request.
-    public static let censusLooks: [Map3DRegionLook.Buildings] = [.japan]
+    /// Finland's (`.nordic`, Rovaniemi) since decision 1007: Statistics
+    /// Finland's 1 km people and postal areas' jobs, spread over the map's
+    /// buildings on 7.5″ cells.
+    public static let censusLooks: [Map3DRegionLook.Buildings] = [.japan, .nordic]
 
     /// Decision 1006: whether a map drawn with `buildings` lays the game's
     /// houses by its cells' people (``censusLooks``).
