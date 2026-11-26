@@ -71,7 +71,7 @@ final class TrainPackTests: XCTestCase {
             XCTAssertEqual(far, "set-highSpeed-head", "train \(number) from 500 m out")
         }
         pack.locked = TrainPack.locked(unlocked: true)
-        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: pack.locked), "n700s")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: pack.locked), "n700st")
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 2, locked: pack.locked), "HSR")
         let head = pack.modelIndex(forType: "n700s", carIndex: 0, count: 12)!
         XCTAssertEqual(pack.models[head].name, "set-n700s-head")
@@ -112,7 +112,7 @@ final class TrainPackTests: XCTestCase {
                                "unlocked \(unlocked), switch \(switchOn), train \(number)")
             }
             // N700S: odd-numbered trains, only while the pack is unlocked.
-            XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: locked), unlocked ? "n700s" : "HSR")
+            XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: locked), unlocked ? "n700st" : "HSR")
             XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 2, locked: locked), "HSR")
             XCTAssertEqual(Map3DTrainSet.variant(of: "taroko", number: 1, locked: locked), "taroko", "other trains are not touched")
         }

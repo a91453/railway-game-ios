@@ -46,7 +46,7 @@ final class Map3DHighSpeedSetsTests: XCTestCase {
     /// types as they were. TAP-FREEZE-151: the Taiwan High Speed Rail's
     /// own trains (the 700T's key) are all 700Ts, odd-numbered too.
     func testWhichTrainsAreTheN700S() {
-        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700s")
+        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), "n700st")
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 2), "HSR")
         XCTAssertEqual(Map3DTrainSet.variant(of: "highSpeed", number: 7), "highSpeed")
         XCTAssertEqual(Map3DRealTrains.variantKey(system: "thsr", key: Map3DRealTrains.formation(system: "thsr", id: "THSR", name: "台灣高鐵").key, number: 7), Map3DTHSR700T.key)

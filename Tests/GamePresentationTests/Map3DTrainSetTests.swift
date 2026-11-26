@@ -177,7 +177,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     : ["STEAM", "STEAMFar"].contains(set.key) ? 3.38...4.7
                     // Decision 408: #1201's E200 and the 700T's pantographs (decision 422: far too;
                     // decision 989: the 700 series', the 700T's own).
-                    : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "n700s", Map3DSeries700.key, "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
+                    : ["E200CK", "E200CKFar", "MINGRI", "MINGRIFar", "highSpeed", "n700s", Map3DN700ST.key, Map3DSeries700.key, "emu3000", "emu3000Far"].contains(set.key) ? 3.4...4.9
                     // Decision 432: and the EMU800's and EMU500's pantographs, 5.2 and 5.0 m;
                     // decision 435: and the EMU900's, 5.18 m.
                     // Decision 554: and #1539's EP's, 5.0 m.

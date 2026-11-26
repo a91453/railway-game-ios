@@ -392,7 +392,9 @@ final class Map3DN700STests: XCTestCase {
             XCTAssertNotNil(Map3DModelPack.standard.layout(forType: former, count: 12), former)
         }
         XCTAssertTrue(TrainPack.sets.contains(Map3DN700S.key))
-        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), Map3DN700S.key)
+        // N700ST-PAINT: the high-speed type's odd-numbered trains wear the
+        // N700ST's paint on these cars (`Map3DN700STTests`).
+        XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1), Map3DN700ST.key)
         XCTAssertEqual(Map3DTrainSet.variant(of: "HSR", number: 1, locked: TrainPack.locked(unlocked: false)), "HSR")
         // No far set: a car is two to three thousand triangles, drawn as
         // far as any train's model.

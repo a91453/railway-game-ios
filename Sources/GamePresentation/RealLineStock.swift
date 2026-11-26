@@ -53,6 +53,7 @@ public enum RealLineStock {
         // TAP-FREEZE-151: the Kyushu and Nishi-Kyushu Shinkansen's
         // (decisions 977, 978 and 998).
         case Map3DN700S.key: language.text("N700S", "N700S")
+        case Map3DN700ST.key: language.text("N700ST", "N700ST")
         case Map3DKyushuN700.key: language.text("N700", "N700")
         case Map3DKyushu800.key: language.text("Series 800", "800 系")
         default: nil
