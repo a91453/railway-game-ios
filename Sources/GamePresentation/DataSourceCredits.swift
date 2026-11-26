@@ -1017,20 +1017,25 @@ public enum DataSourceCredits {
                         ]
                     ),
                     // Decision 1004: how often it rains in each part of
-                    // Taiwan, from the weather station nearest each place.
+                    // Taiwan, from the weather station nearest each place;
+                    // decision 1013: days of 1 mm and of thunder. CWA open
+                    // data is under the Open Government Data License 1.0
+                    // (attribution); NOAA's summaries are public domain.
                     DataSourceCredit(
                         id: "taiwanWeather",
                         title: language.text("Taiwan’s weather", "台灣的天氣"),
                         detail: language.text(
-                            "On a map of Taiwan, how often it rains in each month in each part of the island: the north’s wet winters, the south’s dry ones.",
-                            "台灣地圖上各地每個月多常下雨：北部冬天多雨、南部冬天少雨。"
+                            "On a map of Taiwan, how often it rains and thunders in each month in each part of the island: the north’s wet winters, the south’s dry ones and summer thunderstorms.",
+                            "台灣地圖上各地每個月多常下雨、打雷：北部冬天多雨、南部冬天少雨，夏天午後雷陣雨。"
                         ),
                         notice: language.text(
-                            "Central Weather Administration, climate statistics: days with 0.1 mm of precipitation or more in the monthly means of 1991–2020 at 19 stations (edited). Station positions: NOAA National Centers for Environmental Information.",
-                            "中央氣象署氣候統計：19 個氣象站 1991–2020 年月平均的降水量 0.1 毫米以上日數（經加工）。測站位置：美國國家海洋暨大氣總署國家環境資訊中心（NOAA NCEI）。"
+                            "Central Weather Administration open data: daily rainfall at 19 stations, 2017–2025, counted as days with 1 mm or more (edited; Open Government Data License, version 1.0). Thunder: airport weather reports of 2015–2024 from the Iowa Environmental Mesonet, Iowa State University, and the Global Summary of the Day of NOAA National Centers for Environmental Information (edited). Station positions: NOAA NCEI.",
+                            "中央氣象署氣象資料開放平臺：19 個氣象站 2017–2025 年的每日雨量，數成 1 毫米以上的日數（經加工；政府資料開放授權條款第 1 版）。雷暴：美國愛荷華州立大學 Iowa Environmental Mesonet 的 2015–2024 年機場天氣報告，與美國國家海洋暨大氣總署國家環境資訊中心（NOAA NCEI）的每日摘要（經加工）。測站位置：NOAA NCEI。"
                         ),
                         links: [
-                            DataSourceCredit.Link(title: language.text("Central Weather Administration: climate statistics", "中央氣象署：氣候統計"), url: "https://www.cwa.gov.tw/V8/C/C/Statistics/monthlymean.html"),
+                            DataSourceCredit.Link(title: language.text("Central Weather Administration: open data", "中央氣象署：氣象資料開放平臺"), url: "https://opendata.cwa.gov.tw/"),
+                            DataSourceCredit.Link(title: "Iowa Environmental Mesonet", url: "https://mesonet.agron.iastate.edu/request/download.phtml"),
+                            DataSourceCredit.Link(title: language.text("NOAA NCEI: Global Summary of the Day", "NOAA NCEI：每日摘要"), url: "https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00516"),
                         ]
                     ),
                     // Decision 147: how much of the ground real buildings
