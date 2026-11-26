@@ -7,7 +7,8 @@
 
 The owner (2026-11-26): 「依日本道縣分界拆分」 — Fukuoka's pack holds the
 whole of Fukuoka Prefecture, Kumamoto's the whole of Kumamoto Prefecture,
-and Saga, between them, a pack of its own. The map stays one map: the game
+and Saga, between them, a pack of its own; decision 997 added Nagasaki
+Prefecture, west of Saga, a fourth. The map stays one map: the game
 reads the three as one pack (`MapPack` lists a part's files in the city's
 `pack.json` by folder and name), and each is an asset pack of its own, so
 a change to Kumamoto's tiles uploads Kumamoto's pack alone.
@@ -16,14 +17,14 @@ What is cut is the two heavy files, `basemap.pmtiles` and
 `buildings.pmtiles` (nine tenths of the pack): every tile of every zoom
 goes to the one part whose prefecture holds the tile's middle, so no two
 parts have the same tile and a reader takes the first that has it. A tile
-whose middle no prefecture of the three holds (the sea, and the corners of
-Nagasaki, Oita, Yamaguchi, Kagoshima and Miyazaki the map's box reaches)
-goes to the nearest prefecture. Everything else (the railways, heights,
+whose middle no prefecture of the four holds (the sea, and the corners of
+Oita, Yamaguchi, Kagoshima and Miyazaki the map's box reaches) goes to the
+nearest prefecture. Everything else (the railways, heights,
 water, people, airfields, land no one builds on, hill shading) stays whole
 in Fukuoka's folder: it is small, and the game reads each as one grid.
 
 The borders are OpenStreetMap's (`boundary=administrative`,
-`admin_level=4`, 福岡県, 佐賀県, 熊本県) from the Kyushu extract's
+`admin_level=4`, 福岡県, 佐賀県, 熊本県, 長崎県) from the Kyushu extract's
 relations of that level, whole (`osmium extract` cuts a box's relations
 other than multipolygons, so the ground's extract has none), simplified to
 some 100 m, which only says which part a tile is kept in. The same
@@ -31,8 +32,8 @@ extract gives the same parts, byte for byte.
 
 Reads `MapPacks/fukuoka/basemap.pmtiles` and `buildings.pmtiles` as the
 ground tools wrote them (the whole map), writes Fukuoka's share in their
-place and the others' to `MapPacks/fukuoka-saga/` and
-`MapPacks/fukuoka-kumamoto/`, and lists the parts' files in `pack.json`.
+place and the others' to `MapPacks/fukuoka-saga/`,
+`MapPacks/fukuoka-kumamoto/` and `MapPacks/fukuoka-nagasaki/`, and lists the parts' files in `pack.json`.
 Run it once after `build_fukuoka_ground.py basemap` and `buildings`; run
 on parts already cut it stops (the whole map's file is no longer there).
 """
@@ -52,6 +53,9 @@ PARTS = (
     ('fukuoka', '福岡県'),
     ('fukuoka-saga', '佐賀県'),
     ('fukuoka-kumamoto', '熊本県'),
+    # Decision 997: Nagasaki Prefecture, the map's west edge moved to take
+    # it in.
+    ('fukuoka-nagasaki', '長崎県'),
 )
 FILES = ('basemap.pmtiles', 'buildings.pmtiles')
 # The cells the parts are looked up in, in degrees, and how far the

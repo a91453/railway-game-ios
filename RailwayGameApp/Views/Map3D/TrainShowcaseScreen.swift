@@ -33,7 +33,7 @@ struct TrainShowcaseScreen: View {
         // Decision 492: the pack's sets as the 3D map reads them
         // (``Map3DPreviewScreen``), when the garage opens.
         let defaults = UserDefaults.standard
-        let unlocked = TrainPack.isUnlocked(testBuild: TestBuild.isTest, switchOn: defaults.bool(forKey: TrainPack.testUnlockKey))
+        let unlocked = TrainPack.isUnlocked
         let locked = TrainPack.locked(unlocked: unlocked, pushPullE1000: defaults.bool(forKey: TrainPack.pushPullE1000Key))
         var keys = shown ?? Map3DShowcase.defaultKeys
         #if DEBUG

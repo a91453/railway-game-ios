@@ -343,7 +343,8 @@ public enum AttractionCatalog {
     ]
 
     /// Decision 894: Japan's sights, round Fukuoka; decision 994: and the
-    /// rest of Fukuoka, Saga and Kumamoto prefectures.
+    /// rest of Fukuoka, Saga and Kumamoto prefectures; decision 997: and
+    /// Nagasaki Prefecture's.
     public static let japanSpots: [Spot] = [
         // Way 772670439, the 3D map's tower (decision 854).
         Spot("jp01", "福岡塔", "Fukuoka Tower", .landmark, 400, 33.59333, 130.35151),
@@ -483,6 +484,49 @@ public enum AttractionCatalog {
         Spot("jp66", "山鹿溫泉", "Yamaga Onsen", .hotSpring, 250, 33.01439, 130.68899),
         // Way 1540939189.
         Spot("jp67", "萬田坑", "Manda Pit", .landmark, 250, 33.00305, 130.45039),
+        // Decision 997: Nagasaki Prefecture's, from here on.
+        // Node 5336401732.
+        Spot("jp68", "眼鏡橋", "Megane Bridge", .landmark, 300, 32.74729, 129.87999),
+        // Way 484294967, the Dutch trading post's site.
+        Spot("jp69", "出島", "Dejima", .museum, 350, 32.74365, 129.87275),
+        // Node 4813297521.
+        Spot("jp70", "新地中華街", "Shinchi Chinatown", .town, 300, 32.74213, 129.87446),
+        // Way 243003159.
+        Spot("jp71", "大浦天主堂", "Oura Church", .temple, 350, 32.73413, 129.87012),
+        // Way 552140518.
+        Spot("jp72", "哥拉巴園", "Glover Garden", .landmark, 350, 32.73328, 129.86924),
+        // Way 718120975.
+        Spot("jp73", "長崎原爆資料館", "Nagasaki Atomic Bomb Museum", .museum, 300, 32.77270, 129.86449),
+        // Node 1859550205.
+        Spot("jp74", "長崎平和公園", "Nagasaki Peace Park", .landmark, 300, 32.77297, 129.86261),
+        // Node 4641487651, the peak.
+        Spot("jp75", "稻佐山", "Mount Inasa", .mountain, 350, 32.75343, 129.84934),
+        // Way 716597818.
+        Spot("jp76", "崇福寺", "Sofukuji Temple", .temple, 250, 32.74257, 129.88349),
+        // Way 544258615.
+        Spot("jp77", "長崎諏訪神社", "Nagasaki Suwa Shrine", .temple, 250, 32.75416, 129.88172),
+        // Way 191502696, the island.
+        Spot("jp78", "軍艦島", "Gunkanjima", .landmark, 350, 32.62763, 129.73812),
+        // Way 552135649.
+        Spot("jp79", "豪斯登堡", "Huis Ten Bosch", .landmark, 350, 33.08737, 129.78905),
+        // Node 3023900936, where the islands' boats leave.
+        Spot("jp80", "九十九島", "Kujukushima Islands", .coast, 300, 33.16245, 129.67894),
+        // Node 1791894729.
+        Spot("jp81", "西海橋", "Saikai Bridge", .landmark, 250, 33.04913, 129.75952),
+        // Way 476451777, the spa's information office.
+        Spot("jp82", "雲仙溫泉", "Unzen Onsen", .hotSpring, 350, 32.73849, 130.26163),
+        // Node 1331880180.
+        Spot("jp83", "小濱溫泉", "Obama Onsen", .hotSpring, 250, 32.72969, 130.20693),
+        // Way 477197128, the keep.
+        Spot("jp84", "島原城", "Shimabara Castle", .landmark, 300, 32.78926, 130.36720),
+        // Way 476222575, the ropeway's lookout under Mount Fugen.
+        Spot("jp85", "仁田峠", "Nita Pass", .mountain, 250, 32.75047, 130.28552),
+        // Way 586353581.
+        Spot("jp86", "平戶城", "Hirado Castle", .landmark, 250, 33.36855, 129.55754),
+        // Way 787827963.
+        Spot("jp87", "平戶沙勿略紀念教會", "Hirado Xavier Memorial Church", .temple, 250, 33.36957, 129.54955),
+        // Node 1423820502.
+        Spot("jp88", "長崎企鵝水族館", "Nagasaki Penguin Aquarium", .museum, 250, 32.75818, 129.94676),
     ]
 
     /// Decision 894: every country's table, Taiwan's first.

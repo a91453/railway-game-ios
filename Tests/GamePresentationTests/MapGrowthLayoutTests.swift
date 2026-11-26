@@ -7,7 +7,8 @@ import XCTest
 /// that grew lies over the Earth, and a game on it as it was growing with
 /// it. The packs that have not grown must lie as they did, to the last
 /// digit; Fukuoka's grew to Kumamoto (KUMAMOTO-GROUND), then to the whole
-/// of three prefectures, laid anew (decision 991), and the packs it was
+/// of three prefectures, laid anew (decision 991), then of four (decision
+/// 997, Nagasaki's), laid anew again, and the packs it was
 /// before are made here from it, with the extents they had.
 @MainActor
 final class MapGrowthLayoutTests: XCTestCase {
@@ -17,7 +18,9 @@ final class MapGrowthLayoutTests: XCTestCase {
     /// corner Fukuoka's first.
     private let older = MapPack.Extent(north: 33.72, south: 32.09, west: 130.29, east: 131.33)
     /// Decision 991: the whole of Fukuoka, Saga and Kumamoto Prefectures.
-    private let prefectures = MapPack.Extent(north: 34.03, south: 32.09, west: 129.73, east: 131.33)
+    private let threePrefectures = MapPack.Extent(north: 34.03, south: 32.09, west: 129.73, east: 131.33)
+    /// Decision 997: and Nagasaki's, the west edge moved to Hirado.
+    private let prefectures = MapPack.Extent(north: 34.03, south: 32.09, west: 129.34, east: 131.33)
 
     // MARK: - The packs that never grew
 
@@ -54,11 +57,14 @@ final class MapGrowthLayoutTests: XCTestCase {
         XCTAssertEqual(ground.anchor, prefectures.anchor)
         XCTAssertEqual(ground.bounds, prefectures.bounds)
         XCTAssertNil(ground.layout.anchorBounds)
-        XCTAssertEqual(ground.layout.starts.map(\.name), ["福岡", "佐賀", "熊本"])
-        XCTAssertEqual(ground.layout.starts.map(\.englishName), ["Fukuoka", "Saga", "Kumamoto"])
+        XCTAssertEqual(ground.layout.starts.map(\.name), ["福岡", "佐賀", "熊本", "長崎"])
+        XCTAssertEqual(ground.layout.starts.map(\.englishName), ["Fukuoka", "Saga", "Kumamoto", "Nagasaki"])
         let old = try XCTUnwrap(ground.layout.older.first)
-        XCTAssertEqual(ground.layout.older.count, 1)
+        XCTAssertEqual(ground.layout.older.count, 2)
         XCTAssertEqual(old, MapPack.Layout(extent: older, earlier: [fukuoka, kumamoto]))
+        // Decision 997: the games laid over the three prefectures stay on
+        // them, round their own middle.
+        XCTAssertEqual(ground.layout.older.last, MapPack.Layout(extent: threePrefectures, earlier: []))
         XCTAssertEqual(old.anchor, GeoAnchor(latitude: 336_200_580, longitude: 1_303_850_000))
         XCTAssertEqual(old.earlier, [try WorldBounds(width: 1_127_218, height: 1_424_891), try WorldBounds(width: 3_618_962, height: 7_303_379)])
         // Its ground reaches as far as its map.
@@ -242,6 +248,20 @@ final class MapGrowthLayoutTests: XCTestCase {
         XCTAssertEqual(southEast.longitude, 131.33, accuracy: 1e-6)
     }
 
+    /// Decision 997: a game begun on the three prefectures' map (decision
+    /// 991) stays on it, round its own middle, as it was: the map's new
+    /// west does not move what it built.
+    func testAGameOfTheThreePrefecturesStaysAsItWas() throws {
+        let ground = try grownFukuoka()
+        let three = try XCTUnwrap(MapPack.Layout(extent: threePrefectures, earlier: []))
+        var world = GameWorld.newGame(anchor: three.anchor, bounds: three.bounds, land: [])
+        try world.enableMapExpansion(owning: [MapTile(row: 4, column: 4)], townSeed: nil, ridersStep: 1_000)
+        XCTAssertNotEqual(three.anchor, ground.anchor, "the map is laid anew")
+        XCTAssertTrue(ground.holds(world))
+        XCTAssertEqual(ground.layout.layout(holding: world), three)
+        XCTAssertNil(ground.grown(world), "it reaches as far as it did")
+    }
+
     /// Decision 991: a new game is laid over the whole of the three
     /// prefectures and owns the 2 × 2 tiles round the city picked, the
     /// rest bought.
@@ -249,6 +269,7 @@ final class MapGrowthLayoutTests: XCTestCase {
         let ground = try grownFukuoka()
         let stations: [(name: String, latitude: Double, longitude: Double)] = [
             ("Hakata", 33.5897, 130.4207), ("Saga", 33.2643, 130.2975), ("Kumamoto", 32.7898, 130.6886),
+            ("Nagasaki", 32.7528, 129.8691),
         ]
         var steps: [Int64] = []
         for (index, station) in stations.enumerated() {
