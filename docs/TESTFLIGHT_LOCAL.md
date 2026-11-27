@@ -20,6 +20,8 @@ tools/release/testflight-local.sh
 
 預設是「最新一次成功的 `testflight.yml` run 號」加 `.1`，例如 CI 最後是 152，本機就發 `152.1`。CI 的 build 號是 `N`（第一次）或 `N.2`～`N.99`（重跑），從來不用 `N.1`（`testflight-preflight.sh`），所以本機和 CI 永遠不會撞號，下一次 CI（153）也一定比本機的大。同一個 CI 版之後再發本機版，腳本自己接著用 `152.1.1`、`152.1.2`…（記在 `~/RailwayTestFlight/last-release.json`）。
 
+用 `--build N` 給整數號（例如 11-27 的 0.6.0 (153)）就不在上面的保證裡：那個號碼和 CI 下一個 run 號一樣時，下一次 `testflight.yml` 的上傳會因 build 號重複被拒。CI 讀不到 `last-release.json`，所以這之後要用 CI 發，先在 `testflight` 環境把 `BUILD_NUMBER_OFFSET` 設成讓 run 號加上去大過本機那一號（153 之後設 `1`）；或繼續本機發（REVIEW-L38 P3-4）。
+
 build 號只在封存時以 `CURRENT_PROJECT_VERSION` 傳進去，repo 裡的 `project.yml` 不用改，也不用開 PR。
 
 ## 和 CI 不同的地方
