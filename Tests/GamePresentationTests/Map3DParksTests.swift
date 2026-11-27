@@ -188,4 +188,62 @@ final class Map3DParksTests: XCTestCase {
             XCTAssertEqual(scenes.count, 1, "park \(park): \(scenes)")
         }
     }
+
+    /// Decision 331's seventh later note: a nature reserve or national
+    /// park gets no scene; a park gets none on the water its outline
+    /// takes in, only on its dry part.
+    func testNoSceneInAReserveNorOnWater() throws {
+        let world = GameWorld.newGame(anchor: anchor)
+        var reserve = builder(world)
+        var area = square(reserve, x: 0, z: 0, side: 200)
+        area.isReserve = true
+        reserve.addParks(Map3DBaseMap(areas: [area]), clearOf: [])
+        XCTAssertTrue(reserve.closeMeshes.isEmpty)
+
+        var wet = builder(world)
+        let park = square(wet, x: 0, z: 0, side: 200)
+        let outline = park.rings[0]
+        let low = outline.map(\.x).min()!, high = outline.map(\.x).max()!, top = outline.map(\.z).min()!, bottom = outline.map(\.z).max()!
+        // A river over all but the park's last 50 m (west to east).
+        let edge = high - 50
+        let river = Map3DBaseMap.Area(cover: .water, rings: [[.init(x: low - 100, z: top - 100), .init(x: edge, z: top - 100),
+                                                              .init(x: edge, z: bottom + 100), .init(x: low - 100, z: bottom + 100)]],
+                                      bounds: park.bounds)
+        wet.addParks(Map3DBaseMap(areas: [park, river]), clearOf: [])
+        let bounds = try XCTUnwrap(wet.closeMeshes.values.compactMap(\.bounds).first)
+        XCTAssertGreaterThan(Double(bounds.min.x), edge, "on the dry 50 m only")
+
+        var flooded = builder(world)
+        let sea = Map3DBaseMap.Area(cover: .water, rings: [[.init(x: low - 100, z: top - 100), .init(x: high + 100, z: top - 100),
+                                                            .init(x: high + 100, z: bottom + 100), .init(x: low - 100, z: bottom + 100)]],
+                                    bounds: park.bounds)
+        flooded.addParks(Map3DBaseMap(areas: [park, sea]), clearOf: [])
+        XCTAssertTrue(flooded.closeMeshes.isEmpty)
+    }
+
+    /// The owner's IMG_5676: by the Danjiang Bridge, the Tamsui River
+    /// Mouth reserve (淡水河口保護區, a nature reserve over the river) had
+    /// a sports ground on the water. Round the bridge now, no scene stands
+    /// on water.
+    func testNoSceneOnTheTamsuiMouth() throws {
+        let tiles = try Self.tiles.get()
+        let world = GameWorld.newGame(anchor: GeoAnchor(latitudeDegrees: 25.1745, longitudeDegrees: 121.4220)!)
+        var builder = builder(world)
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let map = Map3DBaseMap(tiles: tiles, frame: frame, region: builder.region, originX: builder.originX, originY: builder.originY)
+        XCTAssertTrue(map.areas.contains { $0.cover == .park && $0.isReserve }, "the river mouth's reserve")
+        builder.addParks(map, clearOf: [])
+        let water = map.areas.filter { $0.cover == .water }.map { area in
+            (bounds: area.bounds, rings: area.rings.map { $0.map { Map3DPoint(Float($0.x), 0, Float($0.z)) } })
+        }
+        var looked = 0
+        for mesh in builder.closeMeshes.values {
+            for index in stride(from: 0, to: mesh.vertices.count, by: 20) {
+                let point = Map3DPoint(mesh.vertices[index].x, 0, mesh.vertices[index].z)
+                looked += 1
+                XCTAssertFalse(water.contains { Map3DScene.Builder.within(point, $0.bounds) && Map3DScene.Builder.inside(point, $0.rings) }, "\(point)")
+            }
+        }
+        XCTAssertGreaterThan(looked, 100, "Tamsui's and Bali's parks keep their scenes")
+    }
 }
