@@ -22,6 +22,8 @@ SYSTEM = "fksubway"
 SHINKANSEN = "kyushushinkansen"
 # Decision 1028: JR Kyushu's conventional line, the Relay Kamome.
 CONVENTIONAL = "jrkyushu"
+# Decision 1029: JR West's Sanyo Shinkansen, Hakata to Kokura.
+SANYO = "sanyoshinkansen"
 
 
 def main(folder):
@@ -31,7 +33,7 @@ def main(folder):
     tool = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(tool)
     tool.LINES = []
-    for system in (SYSTEM, SHINKANSEN, CONVENTIONAL):
+    for system in (SYSTEM, SHINKANSEN, CONVENTIONAL, SANYO):
         # The Shinkansen's file is there once `build_kyushu_shinkansen.py
         # merge` has run.
         if not os.path.exists(os.path.join(folder, f"{system}.json")):
@@ -39,7 +41,7 @@ def main(folder):
         with open(os.path.join(folder, f"{system}.json"), encoding="utf-8") as f:
             network = json.load(f)
         tool.LINES += [(system, line["id"], None, None) for line in network["lines"]]
-    tool.METROS = {SYSTEM, SHINKANSEN, CONVENTIONAL}
+    tool.METROS = {SYSTEM, SHINKANSEN, CONVENTIONAL, SANYO}
     # Decision 712 (Hong Kong's, kept): a train standing overnight at a station between the
     # ends leaves before the morning's first train the same way reaches it.
     tool.OUT_BEFORE_FIRST = True
@@ -67,7 +69,7 @@ def main(folder):
     head, rest = text.split(',"lines":[', 1)
     head = json.dumps({
         "source": "Trips laid out from headways this project estimated and times between stations worked out from "
-                  "the distance, via fksubway_times.json, kyushushinkansen_times.json and jrkyushu_times.json; not the operator's timetable",
+                  "the distance, via fksubway_times.json, kyushushinkansen_times.json, jrkyushu_times.json and sanyoshinkansen_times.json; not the operator's timetable",
         "licence": "this project's estimate; stations: National Land Numerical Information N02 (MLIT), CC BY 4.0",
     }, ensure_ascii=False, separators=(",", ":"))[:-1]
     text = head + ',"lines":[' + rest

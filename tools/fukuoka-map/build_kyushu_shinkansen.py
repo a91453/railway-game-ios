@@ -399,12 +399,14 @@ PACK_FILES = (f"{SYSTEM}.json", f"{SYSTEM}_times.json")
 # (the Kyushu Shinkansen's, then the Nishi-Kyushu Shinkansen's, staged by
 # build_nishi_kyushu_shinkansen.py); and how each line's notes are told
 # apart in a file both share.
-LINE_ORDER = ("KS", "NK", "RK")
-LINE_NOTES = {"KS": " Kyushu Shinkansen: ", "NK": " Nishi-Kyushu Shinkansen: ", "RK": " Relay Kamome: "}
+LINE_ORDER = ("KS", "NK", "RK", "SY")
+LINE_NOTES = {"KS": " Kyushu Shinkansen: ", "NK": " Nishi-Kyushu Shinkansen: ", "RK": " Relay Kamome: ",
+              "SY": " Sanyo Shinkansen: "}
 # Decision 1028: the systems `merge` takes a staged line of, by the file
 # the staging folder holds: this one's, and the Relay Kamome's JR Kyushu
-# conventional line (`build_relay_kamome.py`).
-MERGED_SYSTEMS = (SYSTEM, "jrkyushu")
+# conventional line (`build_relay_kamome.py`); decision 1029, JR West's
+# Sanyo Shinkansen (`build_sanyo_shinkansen.py`).
+MERGED_SYSTEMS = (SYSTEM, "jrkyushu", "sanyoshinkansen")
 
 
 def merge(staged, pack):
