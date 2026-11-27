@@ -157,8 +157,17 @@ final class StationAlignmentReportTests: XCTestCase {
         var traEnds: String = ""
         var buildings: [String] = []
         var onTrack: [String] = []
+        /// STATION-ALIGN-APPLY (decision 1022): the real platforms' first
+        /// and last vertex along the game's platform, (latitude, longitude)
+        /// each, and the key ``RealPlatformEnds`` reads them by.
+        var osmEnds: [Double] = []
+        var key = ""
 
         var hasOSM: Bool { osmPlatforms > 0 }
+        /// STATION-ALIGN-APPLY (decision 1022): how much of the game's
+        /// platforms lies past the real ones' ends beyond what a game
+        /// platform longer than the real one must (its trains' length).
+        var alongPastReal: Double { max(0, outside - max(0, gameLength - osmLength)) }
         /// The larger of how far the game's platforms reach past the real
         /// ones and how far they stand beside them: the table's order. A
         /// game platform shorter than the real one but within it is 0 along.
@@ -236,7 +245,11 @@ final class StationAlignmentReportTests: XCTestCase {
         // OSM's platforms: those of this system's mode within 80 m across
         // reaching to within 100 m of the game's platforms, grouped round
         // the nearest.
-        struct Candidate { let item: OSMItem; let rings: [[P]]; let a0: Double; let a1: Double; let across: Double }
+        struct Candidate {
+            let item: OSMItem; let rings: [[P]]; let a0: Double; let a1: Double; let across: Double
+            /// Its vertices (latitude, longitude) at `a0` and `a1`.
+            let first: [Double]; let last: [Double]
+        }
         var candidates: [Candidate] = []
         // One the game's platform cannot be on: up a floor or more over an
         // underground one, or under the ground beneath a raised one.
@@ -250,11 +263,15 @@ final class StationAlignmentReportTests: XCTestCase {
             let a0 = projected.map(\.along).min()!, a1 = projected.map(\.along).max()!
             let across = projected.map(\.across).reduce(0, +) / Double(projected.count)
             guard abs(across) <= 80, a1 >= g0 - 100, a0 <= g1 + 100, a1 - a0 > 10 else { continue }
-            candidates.append(Candidate(item: item, rings: item.isArea ? rings : [], a0: a0, a1: a1, across: across))
+            let raw = item.shapes.flatMap { $0 }
+            let start = raw[projected.firstIndex { $0.along == a0 }!], last = raw[projected.firstIndex { $0.along == a1 }!]
+            candidates.append(Candidate(item: item, rings: item.isArea ? rings : [], a0: a0, a1: a1, across: across, first: start, last: last))
         }
         if let nearest = candidates.min(by: { abs($0.across - gameMiddle) < abs($1.across - gameMiddle) }) {
             let group = candidates.filter { abs($0.across - nearest.across) <= 30 }
             let a0 = group.map(\.a0).min()!, a1 = group.map(\.a1).max()!
+            let firstEnd = group.min { $0.a0 < $1.a0 }!.first, lastEnd = group.max { $0.a1 < $1.a1 }!.last
+            row.osmEnds = firstEnd + lastEnd
             row.osmPlatforms = group.count
             row.osmLength = a1 - a0
             row.startShift = g0 - a0
@@ -344,6 +361,7 @@ final class StationAlignmentReportTests: XCTestCase {
                 guard let real = suggestion.stations.first(where: { $0.system.id == system.id }), wanted(real),
                       done.insert(real.id).inserted else { continue }
                 var row = Row(map: map, how: "已做站房，收購單站", station: real.chinese, system: system.id)
+                row.key = RealPlatformEnds.key(system: system.id, station: real.chinese)
                 let offer = session.realStationOffer(for: suggestion, system: system.id)
                 guard let purchase = offer.purchase else {
                     row.problem = offer.problem ?? "not on sale"
@@ -393,6 +411,7 @@ final class StationAlignmentReportTests: XCTestCase {
                     ?? railways.stations.first { $0.chinese == station.name }
                 guard let real else { continue }
                 var row = Row(map: map, how: "收購路線 \(line.id)", station: station.name, system: real.system.id)
+                row.key = RealPlatformEnds.key(line: line.id, station: real.chinese)
                 // The platforms its bundle laid.
                 let bundle = laidBy.values.first { $0.split(separator: "+").contains(Substring(line.id)) }
                 let laid = Set(laidBy.filter { $0.value == bundle }.keys)
@@ -412,6 +431,106 @@ final class StationAlignmentReportTests: XCTestCase {
         }.sorted { $0.id < $1.id }
     }
 
+    /// The Taoyuan Airport MRT and the THSR reach past a 32 km world: on
+    /// the launcher's Taiwan map.
+    static let longLines = ["tymc:A", ThsrSaleTests.id]
+
+    /// Chien, 2026-11-27: only the stations of the lines on sale and
+    /// those not on one whose building the game draws (the exterior
+    /// studies and the two station landmarks), each bought by itself.
+    static func taiwanStationRows(started: Date = Date()) throws -> [Row] {
+        var rows: [Row] = []
+        let osm = try Self.osm("taiwan")
+        let railways = try BundledRealData.railways()
+        let heights = try HeightGrid(data: RealWorldDataLoadTests.file("taiwan_heights", "dat"))
+        var sites: [(name: String, latitude: Double, longitude: Double)] = Map3DExteriorStudy.allCases.map { ($0.rawValue, $0.origin.latitude, $0.origin.longitude) }
+        sites += Self.stationLandmarks.map { ("\($0)", $0.latitude, $0.longitude) }
+        var done: Set<String> = []
+        for site in sites {
+            let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: site.latitude, longitudeDegrees: site.longitude))
+            var world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 18, height: 1 << 18), balance: Money(100_000_000_000), rules: .simple)
+            try world.mapGround()
+            let session = GameSession(world: world, language: .traditionalChinese)
+            session.railways = railways
+            session.heights = heights
+            let frame = try XCTUnwrap(RealWorldFrame(world: world))
+            let centre = frame.worldPosition(latitude: site.latitude, longitude: site.longitude)
+            var siteRows: [Row] = []
+            Self.stationsBought(on: session, map: "台灣", osm: osm, done: &done, rows: &siteRows) { real in
+                let at = frame.worldPosition(latitude: real.coordinate.latitude, longitude: real.coordinate.longitude)
+                return hypot(at.x - centre.x, at.y - centre.y) / Self.metre < 400
+            }
+            rows += siteRows
+            print("STATION_ALIGN taiwan site \(site.name): \(siteRows.map { "\($0.station)/\($0.system)" }), \(Int(Date().timeIntervalSince(started))) s")
+        }
+        return rows
+    }
+
+    /// The Taiwan Railway's branch lines and the urban lines on sale that
+    /// fit a 32 km world, each bundle bought on a game of its own.
+    static func taiwanLineRows(started: Date = Date()) throws -> [Row] {
+        var rows: [Row] = []
+        let osm = try Self.osm("taiwan")
+        var networks = RealBranchLine.names.keys.sorted()
+        networks += RealBranchLine.urbanLines.filter { !longLines.contains("\(RealBranchLine.dataSystem(of: $0.system)):\($0.network)") }.map { "\(RealBranchLine.dataSystem(of: $0.system)):\($0.network)" }
+        var measured: Set<String> = []
+        for network in networks {
+            let session = try RealLineAcquisitionTests.game(round: network, side: 1 << 21, heights: true, rules: .simple)
+            let id = network.contains(":") ? network : "tra:\(network)"
+            guard !measured.contains(id) else { continue }
+            var lineRows: [Row] = []
+            Self.linesBought(on: session, map: "台灣", osm: osm, only: [id], rows: &lineRows)
+            measured.formUnion(session.world.acquisitions.map(\.realLine))
+            rows += lineRows
+            print("STATION_ALIGN taiwan line \(id): \(lineRows.count) rows, \(Int(Date().timeIntervalSince(started))) s")
+        }
+        return rows
+    }
+
+    // MARK: - The limit
+
+    /// STATION-ALIGN-APPLY (decision 1022): the stations kept off the 20 m
+    /// limit, each with why (`station/system`).
+    static let offTheRealPlatforms: [String: String] = [
+        // The one platform group OpenStreetMap has within reach is
+        // another line's (the THSR's and the TRA's side by side, the
+        // Bannan Line's), 21–23 m beside the game's: not kept in
+        // `real_platforms.json`, so laid as before.
+        "南港/tra_sched": "another line's platforms matched",
+        "南港/thsr_sched": "another line's platforms matched",
+        // Taipei's underground TRA platforms among the THSR's and the
+        // metro's: its match 15.6 m beside, past ``RealPlatformEnds/acrossTrusted``.
+        "臺北/tra_sched": "match not trusted (15.6 m across)",
+    ]
+
+    /// The station rules of 2026-11-27, (c) 2: a platform the player buys
+    /// in Taiwan (the TRA's branch lines, the urban lines on sale, every
+    /// station whose building the game draws, Tainan's among them) lies
+    /// along OpenStreetMap's: no more than 20 m past its ends beyond its
+    /// trains' greater length, no more than 20 m beside it. The THSR, the
+    /// Taoyuan Airport MRT and the cities abroad take five minutes and are
+    /// in the report (`STATION_ALIGN_REPORT`).
+    func testPlatformsLieAlongTheRealOnes() throws {
+        let rows = try Self.taiwanStationRows() + Self.taiwanLineRows()
+        var checked = 0, listed: Set<String> = []
+        for row in rows where row.hasOSM {
+            let key = "\(row.station)/\(row.system)"
+            if Self.offTheRealPlatforms[key] != nil {
+                listed.insert(key)
+                continue
+            }
+            checked += 1
+            XCTAssertLessThanOrEqual(row.alongPastReal, 20, "\(row.how) \(key): \(Int(row.alongPastReal)) m past the real platforms")
+            XCTAssertLessThanOrEqual(abs(row.across), 20, "\(row.how) \(key): \(Int(row.across)) m beside the real platforms")
+        }
+        XCTAssertGreaterThan(checked, 150)
+        XCTAssertEqual(listed, Set(Self.offTheRealPlatforms.keys), "a station listed but not measured")
+        // Tainan's, which Chien remembered far off (decision 1021).
+        let tainan = try XCTUnwrap(rows.first { $0.station == "臺南" && $0.system == "tra_sched" && $0.hasOSM })
+        XCTAssertLessThan(tainan.alongPastReal, 5)
+        XCTAssertLessThan(abs(tainan.across), 5)
+    }
+
     // MARK: - The report
 
     func testReport() throws {
@@ -420,55 +539,13 @@ final class StationAlignmentReportTests: XCTestCase {
         }
         var rows: [Row] = []
         let started = Date()
-        if Self.wanted("taiwan-stations") {
-            // Chien, 2026-11-27: only the stations of the lines on sale and
-            // those not on one whose building the game draws (the exterior
-            // studies and the two station landmarks), each bought by itself.
-            let osm = try Self.osm("taiwan")
-            let railways = try BundledRealData.railways()
-            let heights = try HeightGrid(data: RealWorldDataLoadTests.file("taiwan_heights", "dat"))
-            var sites: [(name: String, latitude: Double, longitude: Double)] = Map3DExteriorStudy.allCases.map { ($0.rawValue, $0.origin.latitude, $0.origin.longitude) }
-            sites += Self.stationLandmarks.map { ("\($0)", $0.latitude, $0.longitude) }
-            var done: Set<String> = []
-            for site in sites {
-                let anchor = try XCTUnwrap(GeoAnchor(latitudeDegrees: site.latitude, longitudeDegrees: site.longitude))
-                var world = GameWorld.newGame(anchor: anchor, bounds: try WorldBounds(width: 1 << 18, height: 1 << 18), balance: Money(100_000_000_000), rules: .simple)
-                try world.mapGround()
-                let session = GameSession(world: world, language: .traditionalChinese)
-                session.railways = railways
-                session.heights = heights
-                let frame = try XCTUnwrap(RealWorldFrame(world: world))
-                let centre = frame.worldPosition(latitude: site.latitude, longitude: site.longitude)
-                var siteRows: [Row] = []
-                Self.stationsBought(on: session, map: "台灣", osm: osm, done: &done, rows: &siteRows) { real in
-                    let at = frame.worldPosition(latitude: real.coordinate.latitude, longitude: real.coordinate.longitude)
-                    return hypot(at.x - centre.x, at.y - centre.y) / Self.metre < 400
-                }
-                rows += siteRows
-                print("STATION_ALIGN taiwan site \(site.name): \(siteRows.map { "\($0.station)/\($0.system)" }), \(Int(Date().timeIntervalSince(started))) s")
-            }
-        }
+        if Self.wanted("taiwan-stations") { rows += try Self.taiwanStationRows(started: started) }
         if Self.wanted("taiwan-lines") {
-            let osm = try Self.osm("taiwan")
-            var networks = RealBranchLine.names.keys.sorted()
-            // The Taoyuan Airport MRT and the THSR reach past a 32 km world:
-            // on the launcher's Taiwan map, below.
-            let long = ["tymc:A", ThsrSaleTests.id]
-            networks += RealBranchLine.urbanLines.filter { !long.contains("\(RealBranchLine.dataSystem(of: $0.system)):\($0.network)") }.map { "\(RealBranchLine.dataSystem(of: $0.system)):\($0.network)" }
-            var measured: Set<String> = []
-            for network in networks {
-                let session = try RealLineAcquisitionTests.game(round: network, side: 1 << 21, heights: true, rules: .simple)
-                let id = network.contains(":") ? network : "tra:\(network)"
-                guard !measured.contains(id) else { continue }
-                var lineRows: [Row] = []
-                Self.linesBought(on: session, map: "台灣", osm: osm, only: [id], rows: &lineRows)
-                measured.formUnion(session.world.acquisitions.map(\.realLine))
-                rows += lineRows
-                print("STATION_ALIGN taiwan line \(id): \(lineRows.count) rows, \(Int(Date().timeIntervalSince(started))) s")
-            }
+            rows += try Self.taiwanLineRows(started: started)
             // THSR-SALE (decision 993): the high-speed line, Nangang to
             // Zuoying, on the launcher's Taiwan map.
-            for id in long {
+            let osm = try Self.osm("taiwan")
+            for id in Self.longLines {
                 let session = try ThsrSaleTests.game(at: 25.047882, 121.517219)
                 Self.linesBought(on: session, map: "台灣", osm: osm, only: [id], rows: &rows)
             }
@@ -497,5 +574,41 @@ final class StationAlignmentReportTests: XCTestCase {
         let sorted = rows.sorted { $0.worst > $1.worst }
         try ([Row.header] + sorted.map(\.line)).joined(separator: "\n").appending("\n").write(toFile: path, atomically: true, encoding: .utf8)
         print("STATION_ALIGN \(rows.count) rows to \(path) in \(Int(Date().timeIntervalSince(started))) s")
+        if let ends = ProcessInfo.processInfo.environment["STATION_ALIGN_PLATFORMS"] {
+            try Self.writePlatformEnds(rows, to: ends)
+        }
+    }
+
+    /// STATION-ALIGN-APPLY (decision 1022): the real platforms' ends of
+    /// every measured station, for the app's `real_platforms.json`
+    /// (``RealPlatformEnds``). Not a station whose match is another
+    /// line's platforms, more than ``RealPlatformEnds/acrossTrusted``
+    /// metres beside the game's (Nangang's, Fukuoka's subway Hakata,
+    /// which found JR's); the game lays those as before.
+    static func writePlatformEnds(_ rows: [Row], to path: String) throws {
+        var ends: [String: [Double]] = [:]
+        for row in rows where row.hasOSM && !row.key.isEmpty && row.osmEnds.count == 4 && ends[row.key] == nil {
+            guard abs(row.across) <= RealPlatformEnds.acrossTrusted else {
+                print("STATION_ALIGN not kept \(row.key): \(String(format: "%.1f", row.across)) m across")
+                continue
+            }
+            ends[row.key] = row.osmEnds
+        }
+        let body = ends.keys.sorted().map { key in
+            let value = ends[key]!.map { String(format: "%.6f", $0) }.joined(separator: ",")
+            return "    \"\(key)\": [\(value)]"
+        }.joined(separator: ",\n")
+        let text = """
+        {
+          "source": "OpenStreetMap contributors, osmtoday.com extracts of 2026-11-27 (tools/station-alignment)",
+          "license": "ODbL 1.0 (https://www.openstreetmap.org/copyright)",
+          "platforms": {
+        \(body)
+          }
+        }
+
+        """
+        try text.write(toFile: path, atomically: true, encoding: .utf8)
+        print("STATION_ALIGN \(ends.count) stations' platform ends to \(path)")
     }
 }

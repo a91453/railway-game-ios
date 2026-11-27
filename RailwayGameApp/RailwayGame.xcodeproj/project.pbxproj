@@ -191,6 +191,7 @@
 		8F7D3D9A5618E26E83A6DA59 /* trtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 9E428A92A98C07A45636F5E3 /* trtc_times.json */; };
 		8FBF6253CD6BFB1226209F25 /* TodaySettlementsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */; };
 		901FBCAF3CF18040ABB7DCA1 /* MapLockMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362FE08DC4352F1A844AF86D /* MapLockMarks.swift */; };
+		9024FECC605F12A90EB047FD /* real_platforms.json in Resources */ = {isa = PBXBuildFile; fileRef = 721AD2B3FB8C3FB2EC7F2416 /* real_platforms.json */; };
 		90D833E8F70651BA68429E5D /* run-electric.caf in Resources */ = {isa = PBXBuildFile; fileRef = A0AD6227FA521E0662955DEC /* run-electric.caf */; };
 		91041868D52D54D5FC9E952C /* tpe-temple-tianhou.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 4C9276C63851EF52D3D6D16E /* tpe-temple-tianhou.m3dmodel */; };
 		9108B7149F1546CA165D177A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */; };
@@ -512,6 +513,7 @@
 		6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionLineView.swift; sourceTree = "<group>"; };
 		70170091E76358BF8886BB8E /* Map3DSurfaces.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSurfaces.png; sourceTree = "<group>"; };
 		71EB126E20DDE2A8668CD619 /* NextStepChipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepChipUITests.swift; sourceTree = "<group>"; };
+		721AD2B3FB8C3FB2EC7F2416 /* real_platforms.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_platforms.json; sourceTree = "<group>"; };
 		75E70549159C0EC6DAE1303D /* PromoMaterialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoMaterialTests.swift; sourceTree = "<group>"; };
 		76E2973BBBB24FACFFCBE7AD /* RailwayGame.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RailwayGame.entitlements; sourceTree = "<group>"; };
 		771361B568387359268A6B83 /* RollingStockCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollingStockCatalogView.swift; sourceTree = "<group>"; };
@@ -808,6 +810,7 @@
 				545BF3B8583FFA46FF41A442 /* rail_dispatch.json */,
 				4C1017DDE782DF1CF07D561E /* rail_structures.json */,
 				7E7435AD3984A55E9A5FF4F7 /* rail_tracks.json */,
+				721AD2B3FB8C3FB2EC7F2416 /* real_platforms.json */,
 				B7DE13B493FCE66BA5ED5DBB /* sanying_ridership.json */,
 				68B0C0FD89F59C53A9685C67 /* sanying_times.json */,
 				92FBF87A0B909AF9C100FC70 /* sanying.json */,
@@ -1417,6 +1420,7 @@
 				32C1BFF8BFF1C89EF38AAD5C /* real_buses_YunlinCounty.json in Resources */,
 				027E54A5C85E5929C11956A3 /* real_buses_index.json in Resources */,
 				D498AF823A53AB4DB4D8BB84 /* real_coaches.json in Resources */,
+				9024FECC605F12A90EB047FD /* real_platforms.json in Resources */,
 				4850EFE156B582D7BA6FD80E /* recycling-truck.m3dmodel in Resources */,
 				585C09A427696BD99073713D /* refused.wav in Resources */,
 				7D3131E179FBE863523685B0 /* run-diesel-coast.caf in Resources */,

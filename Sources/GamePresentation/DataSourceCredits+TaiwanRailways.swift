@@ -20,8 +20,8 @@ extension DataSourceCredits {
                         "台灣的實景地圖畫出下面各家鐵道的路線與車站，地圖樣式選單的「真實鐵道」可以調淡或隱藏。打開設定的「真實列車」，它們的列車會照時刻表在地圖上跑。"
                     ),
                     notice: language.text(
-                        "Every line’s track and station positions follow OpenStreetMap’s track (© OpenStreetMap contributors, ODbL 1.0); the few stretches where OpenStreetMap is out of date or has no track follow MOTC TDX. Where each line’s station order, names, colours and times come from is under its operator below.",
-                        "每條線的軌道走向與車站位置照 OpenStreetMap 的軌道畫（© OpenStreetMap 貢獻者，ODbL 1.0），少數 OpenStreetMap 過時或沒有軌道的路段照交通部 TDX。各線的站序、站名、路線色與時刻從哪裡來，寫在下面各營運機構。"
+                        "Every line’s track and station positions follow OpenStreetMap’s track, and the platforms of the stations you can buy its platforms (© OpenStreetMap contributors, ODbL 1.0); the few stretches where OpenStreetMap is out of date or has no track follow MOTC TDX. Where each line’s station order, names, colours and times come from is under its operator below.",
+                        "每條線的軌道走向與車站位置照 OpenStreetMap 的軌道畫，可以買的車站的月台照 OpenStreetMap 的月台（© OpenStreetMap 貢獻者，ODbL 1.0），少數 OpenStreetMap 過時或沒有軌道的路段照交通部 TDX。各線的站序、站名、路線色與時刻從哪裡來，寫在下面各營運機構。"
                     ),
                     links: []
                 ),

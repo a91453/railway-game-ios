@@ -58,3 +58,11 @@ STATION_ALIGN_ONLY=taiwan-stations ...   # 只量一部分：taiwan-stations（�
 - 單股岸式的站，遊戲月台畫在軌道旁，`across_m` 本來就會有 3～4 m。
 - 站房外觀（決策 625、665）本來就照真實軌道切開，`壓軌` 只說軌道進了站房的輪廓，不一定畫出來會撞；要對照 3D 看。
 - 福岡地鐵：OSM 幾乎沒畫地鐵月台（37 列缺資料）；博多那列配到的是 JR 的月台，不可信。香港九龍、青衣、將軍澳、康城也沒有。
+
+## 決策 1022：月台兩端檔與改後的表
+
+- `STATION_ALIGN_PLATFORMS=<檔>` 和報告一起給，另外寫出每站配到的真實月台兩端（App 的
+  `RailwayGameApp/Resources/RealRailways/real_platforms.json`，`RealPlatformEnds`）。中線橫向超過 15 m 的不寫（配到別條線的）。
+  App 裡那份是用決策 1022 **之前**的鋪法量的（230 站）；重量的方法與注意事項在 `docs/handoff/STATION-ALIGN-APPLY.md`。
+- `REPORT-2026-11-27-AFTER.tsv`：同一張表，月台照 OSM 對齊之後（決策 1022 §2 有改前改後的對照）。
+- 常駐測試 `testPlatformsLieAlongTheRealOnes` 用同一套量法量台灣（不含高鐵、機捷），上限 20 m。
