@@ -93,5 +93,9 @@ extension Map3DLandmarkRegistry {
         Map3DAoiAsoShrine.registration,
         Map3DTsujunBridge.registration,
         Map3DTenmonBridge.registration,
+        Map3DBitanBridge.registration,
+        Map3DYoshinogariSanctuary.registration,
+        Map3DYoshinogariWatchtower.registration,
+        Map3DMandaPit.registration,
     ]
 }
