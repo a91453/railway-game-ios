@@ -83,6 +83,9 @@ final class Map3DLandmarkRegistryTests: XCTestCase {
     /// and far, within 20 MB (Taiwan's 9.9 MB in 2026-11, its fullest
     /// square 23,602 triangles; a tenth of the 206 MB the Taipei scene's
     /// meshes keep, `Map3DMotionBudgetTests.testWhatTheMapKeepsInMemory`).
+    /// Decision 1018 (continued 5): 24 MB, an eighth of it, once decision
+    /// 1033's truss bridges (8.5 MB, each span a copy of its own) took
+    /// Taiwan's to 19.6 MB and 碧潭吊橋 to 20.2 MB.
     func testTheBudgets() {
         let square = 2 * 16_384.0
         var placed: [String: [(x: Double, y: Double, triangles: Int)]] = [:]
@@ -117,7 +120,7 @@ final class Map3DLandmarkRegistryTests: XCTestCase {
                 }
             }
             XCTAssertLessThanOrEqual(most, 60_000, "\(map): the near triangles of one 32 km square")
-            XCTAssertLessThanOrEqual(bytes[map] ?? 0, 20_000_000, "\(map): every landmark's meshes, near and far")
+            XCTAssertLessThanOrEqual(bytes[map] ?? 0, 24_000_000, "\(map): every landmark's meshes, near and far")
         }
     }
 

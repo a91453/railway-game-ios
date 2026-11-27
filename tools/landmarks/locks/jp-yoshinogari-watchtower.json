@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-yoshinogari-watchtower: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-yoshinogari-watchtower" : {
+      "hash" : "cdb3be1d67b844a3",
+      "triangles" : 1312
+    },
+    "jp-yoshinogari-watchtower-far" : {
+      "hash" : "f7ca0a4c427e9996",
+      "triangles" : 632
+    }
+  }
+}

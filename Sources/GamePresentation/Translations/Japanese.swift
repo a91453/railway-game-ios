@@ -1362,7 +1362,7 @@ JR Kyushu’s Relay Kamome from Hakata to Takeo-Onsen, with its six stations’ 
 Japan	日本
 Japan Meteorological Agency, normals of 1991–2020 at Fukuoka, Saga, Nagasaki and Kumamoto: days with 1.0 mm of precipitation or more and days with thunder (edited).	気象庁、福岡・佐賀・長崎・熊本の平年値（1991〜2020年）：日降水量1.0mm以上の日数と雷日数（加工して作成）。
 Japan Meteorological Agency: normals	気象庁：平年値
-Japan's Fukuoka, Saga and Kumamoto prefectures: you start with about 33 by 33 km round Fukuoka and buy the rest as your railway grows. You can buy the Fukuoka City Subway's three lines and the Kyushu Shinkansen.	日本の福岡・佐賀・熊本の3県：最初は福岡周辺の約33×33 kmで始まり、鉄道の成長に合わせて残りを購入します。福岡市地下鉄の3路線と九州新幹線を買収できます。
+Japan's Fukuoka, Saga, Nagasaki and Kumamoto prefectures: you start with about 33 by 33 km round Fukuoka and buy the rest as your railway grows. You can buy Fukuoka's three subway lines, the high-speed lines from Hakata to Kumamoto and Shin-Minamata and from Takeo-Onsen to Nagasaki, and the limited express from Hakata to Takeo-Onsen; with realistic rules, the high-speed line from Hakata to Kokura too.	日本の福岡・佐賀・長崎・熊本の4県：最初は福岡周辺の約33×33 kmで始まり、鉄道の成長に合わせて残りを購入します。福岡の地下鉄3路線、博多〜熊本〜新水俣と武雄温泉〜長崎の高速鉄道、博多〜武雄温泉の特急を買収できます。リアルルールでは博多〜小倉の高速鉄道も加わります。
 Jobs	雇用
 Join another town, or a busy place on the way.	別の町か、途中のにぎやかな場所につなぎましょう。
 Join your stations into a line	駅を結んで路線にする
@@ -3021,7 +3021,7 @@ The typhoon arrives today.	台風は今日到来します。
 The way ahead is taken: waits for it to clear	前方が使用中：空くのを待ちます
 The whole of Hong Kong, about 63 by 45 km, all open from the start with no land to buy. Achievements and rankings do not count it.	香港全域、約63 × 45 km。最初からすべて開放され、土地の購入は不要です。実績とランキングの対象外です。
 The whole of Taiwan	台湾全土
-The whole of the Japan map, the Fukuoka, Saga and Kumamoto prefectures, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.	日本の地図全体（福岡・佐賀・熊本の3県）。最初からすべて開放され、土地の購入は不要です。実績とランキングの対象外です。路線網が大きいと古い端末では重くなることがあります。
+The whole of the Japan map, the Fukuoka, Saga, Nagasaki and Kumamoto prefectures, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.	日本の地図全体（福岡・佐賀・長崎・熊本の4県）。最初からすべて開放され、土地の購入は不要です。実績とランキングの対象外です。路線網が大きいと古い端末では重くなることがあります。
 The yard is full: twelve types stand on its tracks. Later ones are kept in the hall.	展示線は満杯です：12種類が線路に並んでいます。以降は館内に収蔵します。
 Their book value	帳簿価額
 Their regulars along the lines	沿線の常連客

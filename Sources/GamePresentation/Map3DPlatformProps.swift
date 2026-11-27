@@ -361,7 +361,7 @@ extension Map3DScene.Builder {
         // Decision 936: the lines at each face, for the transfer signs.
         var transfers: [StationID: StationTransfers] = [:]
         let all = state.platforms.laidPlatforms + state.underground.laidUnderground
-        for (index, platform) in all.enumerated() where !depots.contains(platform.station) {
+        for (index, platform) in all.enumerated() where !depots.contains(platform.station) && !platform.tramStop {
             guard let path = Map3DStreetLife.Path(platform.line) else { continue }
             // Decision 936: nothing where a footbridge's tower or an
             // underpass's stairs stand on it.
