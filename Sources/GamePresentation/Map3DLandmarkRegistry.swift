@@ -60,11 +60,17 @@ public struct Map3DLandmarkRegistration: Sendable {
     /// Decision 1020: what makes it a station's building (Hakata,
     /// Kumamoto, Duoliang), `nil` for any other landmark.
     public let station: Map3DStationLandmark?
+    /// Decision 1033: the corners of the rectangle round its body,
+    /// metres east and north of its middle, in turn, that the track is
+    /// kept clear of: for a long building turned across the map, whose
+    /// box east and north would reach over the line beside it (Ōmura's
+    /// sheds). `nil` for that box.
+    let body: [(x: Float, y: Float)]?
 
     init(id: String, map: String, latitude: Double, longitude: Double, baseHeight: Float = 0, sink: Float = 0, deck: Float? = nil,
          palette: [UInt32],
          glass: Set<Int> = [], bandedGlass: Set<Int> = [], encoded: [String: String], station: Map3DStationLandmark? = nil,
-         size: (x: Float, y: Float, z: Float)) {
+         body: [(x: Float, y: Float)]? = nil, size: (x: Float, y: Float, z: Float)) {
         self.id = id
         self.map = map
         self.latitude = latitude
@@ -77,6 +83,7 @@ public struct Map3DLandmarkRegistration: Sendable {
         self.bandedGlass = bandedGlass
         self.encoded = encoded
         self.station = station
+        self.body = body
         self.size = size
     }
 

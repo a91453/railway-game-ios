@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark omura-depot-office: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "omura-depot-office" : {
+      "hash" : "2a8c39f2d7c7e1d2",
+      "triangles" : 1748
+    },
+    "omura-depot-office-far" : {
+      "hash" : "1a7208bdf59d0a5d",
+      "triangles" : 656
+    }
+  }
+}
