@@ -43,7 +43,7 @@ GitHub Actions → TestFlight → Run workflow，branch `main`：
 | archive_signing | `adhoc` | 預設，沒註冊裝置也能封存 |
 | testing_scope | `external` | 能送審 |
 | map_packs | `changed` | 只上傳有變的城市地圖包 |
-| carry_map_packs | `yes`，除非下面那步驗過 | 地圖包內建在 App 裡（DEBUG-150）。`MAP-PACK-COPY.md` 的下一步是先發一個 `no` 的 TestFlight 給作者看；看過三座城都「已下載」、開得起來，上架版才改用 `no`，送審時要附上六包地圖包的現行版本 |
+| carry_map_packs | `no`（預設） | 只帶 `pack.json`，地圖從 App Store Connect 下載。11-27 本機內測 152.1.1 不內建，作者確認下載、刪除後重新下載都正常（DEBUG-150）。送審時要附上六包地圖包的現行版本 |
 
 發版說明由 `.github/testflight-whats-new.md` 自動填。失敗時按 Re-run failed jobs，只會重跑失敗的那段（決策 1016）。
 

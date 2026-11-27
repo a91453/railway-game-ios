@@ -30,7 +30,7 @@ build 號只在封存時以 `CURRENT_PROJECT_VERSION` 傳進去，repo 裡的 `p
 | 封存簽章 | `adhoc` | `automatic`（API 金鑰自動開發簽章，第一次會在發版鑰匙圈裡新做一張 Apple Development 憑證）。這台 Mac 上 `adhoc` 會被拒：「has entitlements that require signing with a development certificate」，換成空的鑰匙圈也一樣 |
 | 匯出、上傳 | API 金鑰（雲端發佈憑證） | 同上，金鑰要 **Admin**：App Manager 的金鑰匯出時會被拒「You haven't been given access to cloud-managed distribution certificates」 |
 | 地圖包 | `testflight-map-packs.py` 判斷，`altool` 上傳 | 同一支腳本、同樣先傳地圖包再傳 build（DEBUG-138），但和「CI 上次」與「Mac 上次」（`last-release.json`）比較新的那次比（`tools/release/local_release.py`） |
-| App 內建地圖包 | `carry_map_packs`（預設 yes） | `--carry-map-packs yes|no`（預設 yes）；`no` 只帶 `pack.json`，地圖從 App Store Connect 下載 |
+| App 內建地圖包 | `carry_map_packs`（預設 no） | `--carry-map-packs yes|no`（預設 no，11-27 起，DEBUG-150）；`no` 只帶 `pack.json`，地圖從 App Store Connect 下載；`yes` 整包內建，App 約大 140 MB |
 | 品牌 | secret `GAME_BRAND_JSON` | `../railway-assets-private-2/branding/game-brand.json`（沒有就 `../railway-assets-private/`） |
 | Team ID、App ID、上次發版 | 環境變數 | `gh variable get … --env testflight`、`gh run list` |
 | What to Test、等處理完成 | Linux job | 同一支 `testflight-processing.py`，上傳完在本機等（最多 60 分鐘），What to Test 是上一次發版（CI 或 Mac，較新的那次）之後合的 PR |

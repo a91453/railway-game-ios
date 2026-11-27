@@ -6,7 +6,7 @@
 
 - 做到：#2771 合進 main（48e293b），TestFlight 152（run 45876417790，`carry_map_packs: yes`）11-27 03:20 上架；拆成三段的 testflight.yml 第一次真的跑，三段都成功。
 - 已驗證（作者 iPhone，iOS 27.3，從 150、151 升上來）：設定三列都「已下載」；回報「地圖包：」是 `mappack-hongkong used (copied out: 17 files, 17 new); mappack-rovaniemi used (copied out: 16 files, 16 new); mappack-fukuoka used (copied out: 24 files, 24 new)`。也就是 `url(for:)` 還是壞的，`descriptor(for:)` 讀得到，三座城 57 個檔全靠複製讀到；沒有走到「刪掉重抓」。
-- 下一步：從 main 發 `carry_map_packs: no` 的 TestFlight，作者看三列都「已下載」、三座城開得起來（從內建版升級）；有沒裝過的裝置就順便驗全新安裝。過了，上架版就用 `no` 發，送審時「素材包」附上六包現行版本（DEBUG-150）。
+- ~~下一步：從 main 發 `carry_map_packs: no` 的 TestFlight~~ 11-27 已做：本機內測 0.6.0 (152.1.1) 不內建（從內建的 152.1 升上來），作者確認下載正常、刪除後重新下載也正常。預設已改成不內建（`CARRY_MAP_PACKS` 預設 NO，`carry_map_packs` 預設 `no`）；送審時「素材包」附上六包現行版本（DEBUG-150）。全新安裝還沒在另一台裝置驗過（147 那次第一次下載是正常的）。
 
 ## 為什麼
 
@@ -31,7 +31,7 @@ Apple 論壇有一樣的情形（UNVERIFIED，是別人的回報，不是 Apple 
 3. 回報問題的「地圖包：」：
    - 讀到時，不是用原本方式讀到的會寫在括號裡：`mappack-hongkong used (copied out: 16 files, 16 new)`、`(fetched again)`、`(fetched again, copied out: …)`。
    - 讀不到時，括號裡多寫複製時系統回的錯：`copy said …`。
-4. `testflight.yml` 多一個選項 `carry_map_packs`（預設 `yes`）：選 `no` 就只帶 `pack.json`，App 約小 140 MB（`project.yml` 的 `CARRY_MAP_PACKS=NO`）。
+4. `testflight.yml` 多一個選項 `carry_map_packs`（當時預設 `yes`，11-27 起預設 `no`）：選 `no` 就只帶 `pack.json`，App 約小 140 MB（`project.yml` 的 `CARRY_MAP_PACKS`，11-27 起預設 NO）。
 
 ## 接下來（實機）
 

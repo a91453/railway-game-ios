@@ -67,11 +67,13 @@ targets:
     # app, which the Simulator, the UI tests and the screenshots run and
     # which cannot download, carries the packs whole.
     # DEBUG-150: 0.6.0 (150) found no file of any downloaded pack on the
-    # owner's iPhone, so the Release app carries the packs whole too, until
-    # the download is seen to work again (docs/handoff/DEBUG-150.md). Set
-    # CARRY_MAP_PACKS to NO to go back to pack.json only.
+    # owner's iPhone, so for a while the Release app carried the packs whole
+    # too. 0.6.0 (152.1.1), built with pack.json only, downloaded every pack
+    # on that iPhone, and removing and downloading again worked as well
+    # (2026-11-27, docs/handoff/DEBUG-150.md), so Release carries pack.json
+    # only again. Set CARRY_MAP_PACKS to YES to carry the packs whole.
     postBuildScripts:
-      - name: Copy the map packs (whole, or pack.json only in Release when CARRY_MAP_PACKS is NO)
+      - name: Copy the map packs (whole in Debug or when CARRY_MAP_PACKS is YES, else pack.json only)
         basedOnDependencyAnalysis: false
         script: |
           set -eu
@@ -79,7 +81,7 @@ targets:
           to="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/MapPacks"
           rm -rf "$to"
           mkdir -p "$to"
-          if [ "$CONFIGURATION" = "Debug" ] || [ "${CARRY_MAP_PACKS:-YES}" != "NO" ]; then
+          if [ "$CONFIGURATION" = "Debug" ] || [ "${CARRY_MAP_PACKS:-NO}" = "YES" ]; then
             cp -R "$from/." "$to/"
           else
             for manifest in "$from"/*/pack.json; do
