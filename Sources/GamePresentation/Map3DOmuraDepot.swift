@@ -54,6 +54,9 @@ enum Map3DOmuraDepotOffice {
         encoded: encoded,
         // Its own rectangle with the canopies, turned.
         body: [(-14.18, 22.85), (-3.94, -26.6), (14.47, -22.79), (4.23, 26.66)],
+        // LANDMARK-PLINTH: on level ground; the map's ground under it
+        // rises 1.7 m.
+        plinth: Map3DPalette.concrete,
         // 50.5 × 18.8 m with its canopies, 11.8 m to its plant room,
         // turned to east and north.
         size: (25.84, 52.68, 11.8))

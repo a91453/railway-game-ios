@@ -170,7 +170,7 @@ extension Map3DScene.Builder {
         for landmark in landmarks {
             let place = frame.worldPosition(latitude: landmark.latitude, longitude: landmark.longitude)
             guard contains(x: place.x, y: place.y) else { continue }
-            let models = [true: landmark.model(true), false: landmark.model(false)]
+            var models = [true: landmark.model(true), false: landmark.model(false)]
             let anchor = point(x: place.x, y: place.y, height: 0)
             var meshes: [Bool: Map3DMesh] = [:]
             if let station = landmark.registration, station.station != nil {
@@ -194,6 +194,17 @@ extension Map3DScene.Builder {
                 if let deck = landmark.deck, let ends = Self.deckEnds(of: models[true]!, deck: deck) {
                     let heights = ends.map { drawnGround(x: centre.x + $0.x, z: centre.z - $0.y) }
                     found = heights.reduce(0, +) / Float(heights.count) - deck
+                }
+                // LANDMARK-PLINTH: on the highest ground under its foot, on
+                // a base down to the lowest.
+                if let colour = landmark.registration?.plinth, landmark.sink == 0, landmark.deck == nil,
+                   let foot = models[true]!.footOutline() {
+                    let heights = LandmarkMesh.plinthSamples(foot.ring).map { drawnGround(x: centre.x + $0.x, z: centre.z - $0.y) }
+                    if let high = heights.max(), let low = heights.min() {
+                        found = high
+                        let bottom = foot.z - (high - low) - LandmarkMesh.plinthTuck
+                        for full in [true, false] { models[full]!.addPlinth(foot.ring, top: foot.z, bottom: bottom, colour: colour) }
+                    }
                 }
                 let ground = max(found, landmark.baseHeight) - landmark.sink
                 for full in [true, false] { meshes[full] = models[full]!.placed(origin: centre, ground: ground, rotation: 0) }

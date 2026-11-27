@@ -35,6 +35,9 @@ enum Map3DDazaifuHonden {
         // The precinct's outline, whose middle (the mean of its corners)
         // is in the courtyard, 1.8 m west and 21.3 m south of the hall's.
         replaces: [(east: -1.84, north: -21.28)],
+        // LANDMARK-PLINTH: the precinct is level; the map's ground under
+        // the hall rises 2.6 m to its south-east corner.
+        plinth: Map3DPalette.portal,
         size: (29.11, 25.13, 14.00))
 }
 
@@ -53,6 +56,9 @@ enum Map3DDazaifuRomon {
         latitude: 33.5209343, longitude: 130.5347796,
         palette: palette,
         encoded: encoded,
+        // LANDMARK-PLINTH: the map's ground under the gate rises 1.4 m to
+        // its south-east corner.
+        plinth: Map3DPalette.portal,
         size: (19.74, 11.80, 12.80))
 }
 

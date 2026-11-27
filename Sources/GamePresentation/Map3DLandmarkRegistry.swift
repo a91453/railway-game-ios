@@ -79,13 +79,23 @@ public struct Map3DLandmarkRegistration: Sendable {
     /// footprint's middle may be: an outline's corners as the map pack
     /// keeps them move its mean a little from OpenStreetMap's.
     static let replacedReach: Float = 6
+    /// LANDMARK-PLINTH: the colour of the stone (or concrete) base under a
+    /// building that stands on level ground where the map's 64 m ground
+    /// slopes under it (Dazaifu's hall: 2.6 m from its north-west corner
+    /// to its south-east one): it stands on the highest drawn ground under
+    /// its foot, and a base of this colour, the outline round its foot,
+    /// reaches down to the lowest, so no part of it is sunk into the
+    /// ground. `nil` to stand on the lowest ground under it, its uphill
+    /// side sunk, as a castle's wall rises from its moat.
+    let plinth: UInt32?
 
     init(id: String, map: String, latitude: Double, longitude: Double, baseHeight: Float = 0, sink: Float = 0, deck: Float? = nil,
          palette: [UInt32],
          glass: Set<Int> = [], bandedGlass: Set<Int> = [], encoded: [String: String], station: Map3DStationLandmark? = nil,
          replaces: [(east: Float, north: Float)] = [],
-         body: [(x: Float, y: Float)]? = nil, size: (x: Float, y: Float, z: Float)) {
+         body: [(x: Float, y: Float)]? = nil, plinth: UInt32? = nil, size: (x: Float, y: Float, z: Float)) {
         self.replaces = replaces
+        self.plinth = plinth
         self.id = id
         self.map = map
         self.latitude = latitude
