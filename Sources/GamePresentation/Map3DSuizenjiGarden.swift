@@ -6,8 +6,9 @@
 // `game-art-previews/docs/art/suizenji-garden-2026-11/revision-3`; lessons
 // in `docs/studio/lessons/suizenji-garden.md`), already turned as each
 // stands, and written here by `tools/landmarks/glb_to_swift.py --centre`
-// (``encoded``). The Noh stage and the two stone bridges the studio also
-// made have no far model yet and wait for one.
+// (``encoded``). The Noh stage and the two stone bridges came later, with
+// the far models the studio added in `revision-4` (decision 1018,
+// continued 3).
 //
 // Each stands where the studio's garden overview put it: metres east and
 // north of the mound's peak (OpenStreetMap node 6393522205, 32.7913322,
@@ -51,4 +52,49 @@ enum Map3DSuizenjiShrine {
         palette: [Map3DPalette.concrete, Map3DPalette.dark, Map3DPalette.cityRoofs[2].color, Map3DPalette.arcade, Map3DPalette.gold],
         encoded: encoded,
         size: (49.36, 46.44, 11.24))
+}
+
+/// The Noh stage (能楽殿) by the pond's south shore: the open square stage
+/// under its hipped-and-gabled grey tile roof, the bridgeway (橋掛り) and the
+/// mirror room (鏡の間) to its east, plain wood (way 1558522737).
+enum Map3DSuizenjiNohStage {
+    static let registration = Map3DLandmarkRegistration(
+        id: "suizenji-noh-stage", map: "fukuoka",
+        // 90.0 m west and 169.3 m south of the mound's peak: the stage's
+        // outline middle, the model's middle 5.52 m east of it, as the
+        // bridgeway and the mirror room reach east.
+        latitude: 32.7898054, longitude: 130.7345803,
+        // roofTile, wood, dark, stone.
+        palette: [Map3DPalette.arcade, Map3DPalette.timber, Map3DPalette.dark, Map3DPalette.concrete],
+        encoded: encoded,
+        size: (20.24, 6.30, 7.43))
+}
+
+/// The two low stone bridges across the pond's north-west arm, one model
+/// turned as each lies (the studio's garden overview, its west bridge 3°
+/// and its east one 170° anticlockwise), their feet at the water, 0.1 m
+/// below the garden's ground (`sink`). Each turn is written as a model of
+/// its own (``encoded`` of each enum) because the converter turns the mesh.
+enum Map3DSuizenjiWestBridge {
+    static let registration = Map3DLandmarkRegistration(
+        id: "suizenji-stone-bridge-west", map: "fukuoka",
+        // 143.0 m west and 4.0 m south of the mound's peak.
+        latitude: 32.7912961, longitude: 130.7340144,
+        sink: 0.1,
+        // stone.
+        palette: [Map3DPalette.concrete],
+        encoded: encoded,
+        size: (9.24, 2.92, 1.80))
+}
+
+enum Map3DSuizenjiEastBridge {
+    static let registration = Map3DLandmarkRegistration(
+        id: "suizenji-stone-bridge-east", map: "fukuoka",
+        // 130.5 m west and 8.0 m north of the mound's peak.
+        latitude: 32.7914043, longitude: 130.7341478,
+        sink: 0.1,
+        // stone.
+        palette: [Map3DPalette.concrete],
+        encoded: encoded,
+        size: (9.40, 3.98, 1.80))
 }

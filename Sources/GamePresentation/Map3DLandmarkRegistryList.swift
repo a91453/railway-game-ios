@@ -76,5 +76,11 @@ extension Map3DLandmarkRegistry {
         Map3DKumamotoStation.registration,
         Map3DKumamotoStationTower.registration,
         Map3DDuoliangStation.registration,
+        Map3DMojikoStation.registration,
+        Map3DMojikoCustoms.registration,
+        Map3DMojikoMitsuiClub.registration,
+        Map3DSuizenjiNohStage.registration,
+        Map3DSuizenjiWestBridge.registration,
+        Map3DSuizenjiEastBridge.registration,
     ]
 }

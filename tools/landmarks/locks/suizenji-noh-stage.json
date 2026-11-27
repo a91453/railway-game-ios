@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark suizenji-noh-stage: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "suizenji-noh-stage" : {
+      "hash" : "38b303939121dcc5",
+      "triangles" : 488
+    },
+    "suizenji-noh-stage-far" : {
+      "hash" : "76bb8e13c408ae36",
+      "triangles" : 212
+    }
+  }
+}
