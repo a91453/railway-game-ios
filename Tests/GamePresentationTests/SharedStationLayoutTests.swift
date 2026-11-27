@@ -429,6 +429,36 @@ final class SharedStationLayoutTests: XCTestCase {
         }
     }
 
+    /// Decision 1030: Kumamoto to Shin-Minamata, sold with Hakata–Kumamoto
+    /// and laid after it (a game that has Hakata–Kumamoto is sold it
+    /// alone, so this is the only order): its platforms at Kumamoto on the
+    /// Kyushu Shinkansen's floor, beside its four, none over another; with
+    /// every other line of the map bought before it too.
+    func testKumamotoToShinMinamataStandsBesideHakataKumamoto() throws {
+        let south = KyushuShinkansenSouthTests.id, shinkansen = KyushuShinkansenTests.id
+        let all = ["fksubway:K", "fksubway:H", "fksubway:N", shinkansen, RelayKamomeTests.id, NishiKyushuShinkansenTests.id, SanyoShinkansenTests.id, south]
+        for order in [[shinkansen, south], all] {
+            let session = try FukuokaRailwaysTests.fukuoka(balance: RelayKamomeTests.everyLine)
+            let laidBy = try Self.buy(order, on: session)
+            let world = session.world
+            let laid = Self.platforms(of: world, laidBy: laidBy)
+            // Only Shin-Tosu, where the Relay Kamome crosses under the
+            // Kyushu Shinkansen (`testTheRelayKamomeMeetsTheKamomeAcrossThePlatform`).
+            let stacked = Self.stacked(laid, in: world)
+            XCTAssertTrue(
+                stacked.allSatisfy { $0.hasPrefix("新鳥栖: ") && $0.contains(RelayKamomeTests.id) && $0.contains(shinkansen) },
+                "\(order): \(stacked)"
+            )
+            XCTAssertEqual(world.stations.filter { $0.name == "熊本" }.count, 1, "\(order): one Kumamoto")
+            let kumamoto = try XCTUnwrap(world.stations.first { $0.name == "熊本" }?.id)
+            let pair = try XCTUnwrap(Self.between(south, shinkansen, at: kumamoto, in: laid), "\(order)")
+            XCTAssertLessThanOrEqual(pair.height, 1, "\(order): one floor")
+            XCTAssertGreaterThanOrEqual(pair.distance, 4, "\(order): side by side")
+            XCTAssertLessThanOrEqual(pair.distance, 20, "\(order): side by side, one station")
+            XCTAssertEqual(world.network.platforms(of: kumamoto).count { laidBy[$0] == shinkansen }, 4, "\(order): Hakata–Kumamoto's four")
+        }
+    }
+
     // MARK: - Every map
 
     /// The maps this file buys every shared station of. A new
