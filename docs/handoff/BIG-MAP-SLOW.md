@@ -4,7 +4,7 @@
 
 - 做到哪：玩家回報的「屏東到台南就變慢、60 倍以下跑不滿、點擊延遲」量完，**根因在模擬（GameCore）的 tick，不在 2D 地圖**；程式沒改，只留量測工具與這份交接。當機沒有紀錄，根因不明。
 - 已驗證（雲端 Linux 4 核、Swift 6.4、`-c release`）：下面兩張表的數字，`SouthernMapCostReportTests` 兩個測試都跑過。
-- 下一步的第一個指令：在新串做 TICK-HOLDERS-BY-CLAIM（私有庫 `docs/priorities/TICK-ROUTING.md` 第 3 列），先照 `docs/handoff/TICK-REAL.md`「怎麼量」做六個全買世界：`BOUGHT_WORLDS=/tmp/worlds swift test --skip-build --filter BoughtWorldSaveTests`。
+- 下一步的第一個指令：TICK-HOLDERS-BY-CLAIM 已做（決策 1036，`docs/handoff/TICK-HOLDERS-BY-CLAIM.md`）；照那份交接「還留下什麼」接著做，最慢的是台灣全買・寫實的發車問路。
 
 ## 派工
 
