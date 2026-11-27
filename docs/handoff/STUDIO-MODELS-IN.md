@@ -35,8 +35,8 @@
 | 4 | `hk-ocean-park-landmarks-2026-11` | 摩天輪會轉、纜車要畫線 |
 | 5 | `estate-amusement-park`、`estate-department-store`、`estate-hotel-tower`（皆 `-2026-11`） | 換玩家蓋的建物外觀；遊樂園要慢轉 |
 | 6 | `pedestrians-2a`、`pedestrians-2b`、`scooter-old`（皆 `-2026-11`） | 路人款式池、分區權重、機車數量預算；先量效能 |
-| 7 | `meshy-temple-animals-2026-11` | 寫擺在廟前哪裡的規則 |
-| 8 | `viaduct-shops-2026-11` | 高架下開店的規則（另一張程式單） |
+| 7 | `meshy-temple-animals-2026-11` | **已接**（決策 1035：剪黏雙龍、龍柱、土地公用遠景版；狗和鴿子先拼進近處網格，實例化後再搬） |
+| 8 | `viaduct-shops-2026-11` | **已接**（決策 1035：只改畫面；收入「多一格」是另一張單） |
 | 9 | `kumamoto-tram-lowfloor-2026-11`、`hk-peak-tram-car-2026-11` | 遊戲還沒有熊本市電、山頂纜車的路線；有路線才接 |
 
 ## 車站地標的規則（Chien 2026-11-27 定）
