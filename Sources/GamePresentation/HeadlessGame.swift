@@ -345,6 +345,8 @@ public final class RealWorldFiles {
     private func bundledPlaces() throws -> PlaceGrid {
         var places = try PlaceGrid(data: data("taiwan_places.json"))
         places.noBuild = try? RealNoBuildLand(data: data("taiwan_no_build.json"))
+        // Decision 1031: the registry's houses go with the no-build land.
+        places.noBuild?.registryHouses = try? RegistryHouses(data: data("taiwan_registry_houses.dat"))
         return places
     }
 

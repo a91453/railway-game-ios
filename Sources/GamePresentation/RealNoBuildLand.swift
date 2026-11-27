@@ -43,6 +43,10 @@ public struct RealNoBuildLand: Sendable {
     /// Decision 699: its airports' airfields, when the app has their file:
     /// the 3D map lays them where it draws the airports' buildings.
     public var airfields: RealAirfields?
+    /// Decision 1031: the houses the real-price registry knows where the
+    /// bundled buildings have none, when the app has their file: the 3D
+    /// map's houses along the roads take their storeys and kinds.
+    public var registryHouses: RegistryHouses?
     /// The areas whose bounds reach each square of ``bucket`` degrees, by
     /// ``key(_:_:)``, so ``kind(atLatitude:longitude:)`` tries a few.
     private let index: [Int: [Int]]
@@ -75,6 +79,8 @@ public struct RealNoBuildLand: Sendable {
         case let (mine?, theirs?): land.airfields = mine.adding(theirs)
         case let (mine, theirs): land.airfields = mine ?? theirs
         }
+        // Decision 1031: only Taiwan's.
+        land.registryHouses = registryHouses ?? other.registryHouses
         return land
     }
 

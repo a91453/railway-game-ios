@@ -2670,6 +2670,8 @@ public struct RealWorldData: Sendable {
         var places = grid("taiwan_places", PlaceGrid.init(data:))
         // Decision 385 (續): the land no one lives on goes with the places.
         places?.noBuild = grid("taiwan_no_build", RealNoBuildLand.init(data:))
+        // Decision 1031: the registry's houses go with the no-build land.
+        places?.noBuild?.registryHouses = grid("taiwan_registry_houses", ext: "dat", RegistryHouses.init(data:))
         // Decision 733: and the open cities' own, so no one lives on Hong
         // Kong's airport either.
         for city in OverseasMap.allCases where overseas.contains(city) {
