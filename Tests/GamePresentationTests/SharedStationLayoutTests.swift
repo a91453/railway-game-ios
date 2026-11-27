@@ -385,16 +385,17 @@ final class SharedStationLayoutTests: XCTestCase {
     }
 
     /// Decision 1029: the Sanyo Shinkansen, JR West's, bought after every
-    /// other line of Japan's map and before them. It shares Hakata with
-    /// the Kyushu Shinkansen, the Relay Kamome and the subway's Kuko and
-    /// Nanakuma Lines: its platforms beside the Kyushu Shinkansen's, on
-    /// its viaduct 10 m up (decision 1023), at one height with them where
-    /// it is bought first (the real station's third floor, tracks 11 to
-    /// 16, which both lines use) and stood up some 5 m over them where it
-    /// is bought last (decision 809), none over another's.
-    func testTheSanyoShinkansenStandsBesideTheKyushuShinkansen() throws {
+    /// other line of Japan's map, and SANYO-HAKATA-SHARED (decision 1032)
+    /// right after the Kyushu Shinkansen, before the rest. It shares
+    /// Hakata with the Kyushu Shinkansen, the Relay Kamome and the
+    /// subway's Kuko and Nanakuma Lines: its trains run onto the Kyushu
+    /// Shinkansen's track and stand at its platforms there, on the
+    /// station's third floor (the real station's tracks 11 to 16, which
+    /// both lines use), with no platform of its own and none over
+    /// another's.
+    func testTheSanyoShinkansenStandsAtTheKyushuShinkansensPlatforms() throws {
         let sanyo = SanyoShinkansenTests.id, kamome = RelayKamomeTests.id, nishi = NishiKyushuShinkansenTests.id, shinkansen = KyushuShinkansenTests.id
-        for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen, kamome, nishi, sanyo], [sanyo, shinkansen, kamome, nishi, "fksubway:N", "fksubway:H", "fksubway:K"]] {
+        for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen, kamome, nishi, sanyo], [shinkansen, sanyo, kamome, nishi, "fksubway:N", "fksubway:H", "fksubway:K"]] {
             let session = try FukuokaRailwaysTests.fukuoka(balance: RelayKamomeTests.everyLine)
             let laidBy = try Self.buy(order, on: session)
             let world = session.world
@@ -407,20 +408,13 @@ final class SharedStationLayoutTests: XCTestCase {
                 let line = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: id)?.line)))
                 XCTAssertTrue(line.stops.contains(hakata), "\(order): \(id) stops at Hakata")
             }
-            let pair = try XCTUnwrap(Self.between(sanyo, shinkansen, at: hakata, in: laid), "\(order)")
-            if order.first == sanyo {
-                XCTAssertLessThanOrEqual(pair.height, 1, "\(order): the two Shinkansen lines on one floor")
-            } else {
-                // Bought last, its first laying meets the company's track
-                // at one level and its Hakata is stood up (decision 809),
-                // some 5 m over the Kyushu Shinkansen's (decision 1029 §6).
-                XCTAssertLessThanOrEqual(pair.height, 7, "\(order): stood up beside it, not over it")
-            }
-            XCTAssertGreaterThanOrEqual(pair.distance, 4, "\(order): side by side")
-            XCTAssertLessThanOrEqual(pair.distance, 20, "\(order): side by side, one station")
-            let sanyoPlatforms = world.network.platforms(of: hakata).filter { laidBy[$0] == sanyo }
-            XCTAssertFalse(sanyoPlatforms.isEmpty, "\(order)")
-            for platform in sanyoPlatforms {
+            XCTAssertEqual(world.network.platforms(of: hakata).filter { laidBy[$0] == sanyo }, [], "\(order): no platform of its own")
+            let line = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: sanyo)?.line)))
+            let kyushu = Set(try XCTUnwrap(world.acquisition(of: shinkansen)?.track))
+            let at = line.routePreferences.filter { line.stops[$0.to] == hakata }.flatMap { [$0.platform] + $0.alternates }
+            XCTAssertEqual(at.count, 4, "\(order)")
+            for platform in at {
+                XCTAssertTrue(kyushu.contains(platform.edge), "\(order): the Kyushu Shinkansen's")
                 let geometry = try XCTUnwrap(world.trackGeometry(of: platform.edge))
                 let middle = geometry.location(at: (platform.start + platform.end) / 2).position
                 let over = (Double(middle.z) - Double(world.groundHeight(at: middle.plan) ?? 0)) / Self.metre
@@ -583,9 +577,10 @@ final class SharedStationLayoutTests: XCTestCase {
             try buy("kamome", order) { try FukuokaRailwaysTests.fukuoka(balance: RelayKamomeTests.everyLine) }
         }
         // Decision 1029: the Sanyo Shinkansen after every other line of the
-        // map's and before them.
+        // map's; decision 1032, right after the Kyushu Shinkansen, whose
+        // track it runs onto.
         let sanyo = SanyoShinkansenTests.id
-        for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen, kamome, nishi, sanyo], [sanyo, shinkansen, kamome, nishi, "fksubway:N", "fksubway:H", "fksubway:K"]] {
+        for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen, kamome, nishi, sanyo], [shinkansen, sanyo, kamome, nishi, "fksubway:N", "fksubway:H", "fksubway:K"]] {
             try buy("sanyo", order) { try FukuokaRailwaysTests.fukuoka(balance: RelayKamomeTests.everyLine) }
         }
         try lines.joined(separator: "\n").appending("\n").write(toFile: path, atomically: true, encoding: .utf8)

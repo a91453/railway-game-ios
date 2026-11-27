@@ -115,6 +115,26 @@ extension RealLineLaying {
     /// at those before it, the platforms the other line's trains take
     /// between the same two stations.
     static func routesOnTrack(of joins: RealLineAcquisition.Joining, stations: [StationID], in world: GameWorld) throws(GameError) -> [LineRoutePreference] {
+        // SANYO-HAKATA-SHARED (decision 1032): at its first stop, the
+        // other line's platforms it takes there, both ways (its trains
+        // turn back on them).
+        if joins.stop == 0 {
+            guard let first = stations.first, stations.count > 1,
+                  let other = world.acquisition(of: joins.line)?.line else { throw .invalidTrackGeometry }
+            let platforms = platformsAtJoinedEnd(station: first, line: other, in: world)
+            guard let platform = platforms.first else { throw .invalidTrackGeometry }
+            let end = stations.count - 1
+            var routes = [LineRoutePreference(from: end - 1, to: end, platform: platform, alternates: Array(platforms.dropFirst()))]
+            // Leaving it, the way keeping left where its own two tracks
+            // start: the second a few metres longer on a curve, the
+            // shortest way (``GameWorld/preferredPath(from:preference:length:)``
+            // without a walk) took the trains of both ways along the
+            // first, head on. With the walk named, a train joins it on
+            // the lead (decision 228), and the plan's way under block
+            // sections keeps left too.
+            if let leaving = leavingWalk(from: joins.at, off: joins.line, to: stations[1], leg: (end, end - 1), in: world) { routes.append(leaving) }
+            return routes
+        }
         func platform(at node: WorldCoordinate) -> TrackPlatform? {
             world.network.platforms(of: stations[joins.stop]).first { platform in
                 world.network.edge(platform.edge).map { edge in
@@ -143,9 +163,124 @@ extension RealLineLaying {
         }
         return routes
     }
+
+    /// SANYO-HAKATA-SHARED (decision 1032): the leg `leg` of a line whose
+    /// own two tracks start at `node`, the end of line `realLine`'s track,
+    /// named by its walk: along that line's last edge out to there and on,
+    /// keeping left (decision 202), to the station `next`'s nearest
+    /// platform. `nil` where there is no such edge or way.
+    static func leavingWalk(from node: WorldCoordinate, off realLine: String, to next: StationID, leg: (from: Int, to: Int), in world: GameWorld) -> LineRoutePreference? {
+        let theirs = Set(world.acquisition(of: realLine)?.track ?? [])
+        guard let end = world.network.nodes.first(where: { $0.position == node }),
+              let edge = world.network.edges.first(where: { theirs.contains($0.id) && ($0.from == end.id || $0.to == end.id) })
+        else { return nil }
+        let first = TrackTraversal(edge: edge.id, direction: edge.to == end.id ? .forward : .backward)
+        guard let path = world.path(from: .onEdge(first, offset: 0), toStation: next),
+              let platform = world.network.platforms(of: next).first(where: { $0.edge == (path.traversals.last ?? first).edge })
+        else { return nil }
+        return LineRoutePreference(from: leg.from, to: leg.to, tracks: [first] + path.traversals, platform: platform)
+    }
 }
 
 extension RealLineLaying {
+    /// SANYO-HAKATA-SHARED (decision 1032): where a line whose first stop
+    /// is on another line's track joins it: the end of the track that
+    /// runs out of the company's station nearest `point` toward `next`,
+    /// past its platform tracks (the Kyushu Shinkansen's six at Hakata
+    /// come together on one track running 440 m on past the platforms'
+    /// north end, the run-on its end is laid with). Its station, the
+    /// node, and the way the track runs out there. `nil` where no end of
+    /// the company's track within ``continuingReach`` of the station runs
+    /// toward `next` and back to one of its platforms.
+    static func continuingNode(
+        at point: WorldVector, toward next: WorldVector, on track: Set<TrackEdgeID>? = nil, in world: GameWorld
+    ) -> (station: StationID, node: WorldCoordinate, way: WorldVector)? {
+        guard let station = world.stations
+            .filter({ !$0.isDepot && (WorldVector($0.location) - point).length <= RealLineAcquisition.junctionReach })
+            .min(by: { (WorldVector($0.location) - point).length < (WorldVector($1.location) - point).length })
+        else { return nil }
+        let centre = WorldVector(station.location)
+        // Only `track`'s where given (the line run onto's): Hakata's
+        // subway lines, bought before, end there too, the Nanakuma Line's
+        // tunnel pointing on toward Kokura.
+        let platformEdges = Set(world.network.platforms(of: station.id).map(\.edge).filter { track?.contains($0) ?? true })
+        guard !platformEdges.isEmpty else { return nil }
+        func near(_ id: TrackNodeID) -> Bool {
+            world.network.node(id).map { (WorldVector($0.position.plan) - centre).length <= continuingReach } ?? false
+        }
+        // Whether the track from node `from` reaches a platform track of
+        // the station without leaving its reach.
+        func reachesPlatform(from start: TrackNodeID) -> Bool {
+            var seen: Set<TrackNodeID> = [start], queue = [start]
+            while let id = queue.popLast() {
+                for edge in world.network.node(id)?.ends.map(\.edge) ?? [] {
+                    if platformEdges.contains(edge) { return true }
+                    guard let found = world.network.edge(edge) else { continue }
+                    let other = found.from == id ? found.to : found.from
+                    if near(other), seen.insert(other).inserted { queue.append(other) }
+                }
+            }
+            return false
+        }
+        var best: (node: WorldCoordinate, way: WorldVector, away: Double)?
+        for node in world.network.nodes where node.ends.count == 1 && near(node.id) {
+            guard let end = node.ends.first, let edge = world.network.edge(end.edge), !platformEdges.contains(edge.id), track?.contains(edge.id) ?? true,
+                  let geometry = world.trackGeometry(of: edge.id) else { continue }
+            let atEnd = edge.to == node.id
+            let direction = geometry.location(at: atEnd ? geometry.length : 0).direction
+            let along = WorldVector(x: Double(direction.dx), y: Double(direction.dy)).unit
+            let way = atEnd ? along : along.reversed
+            let position = WorldVector(node.position.plan), toward = next - position
+            // Out of the station toward the next stop.
+            guard toward.length > 0, way.dot(toward.unit) > 0.5, (position - centre).dot(toward.unit) > 0 else { continue }
+            let away = (position - centre).length
+            guard away < best?.away ?? .infinity, reachesPlatform(from: node.id) else { continue }
+            best = (node.position, way, away)
+        }
+        return best.map { (station.id, $0.node, $0.way) }
+    }
+
+    /// SANYO-HAKATA-SHARED: how far from its station's point the track
+    /// run out past its platforms may end, for
+    /// ``continuingNode(at:toward:in:)``: past a high-speed end's deepest
+    /// loops and its run-on (Hakata's ends 559 m out).
+    static let continuingReach = 800 * RealLineAcquisition.metre
+
+    /// SANYO-HAKATA-SHARED (decision 1032): the platforms of `station`
+    /// that the trains of a line joining line `line`'s track there take,
+    /// best first, at most as many as a leg may name: those on the side of
+    /// the station with more platforms that `line`'s trains do not stop at
+    /// by preference, from its platform out, the nearest first. Hakata:
+    /// the Kyushu Shinkansen's trains stop at its main track's platform on
+    /// the west island (as JR Kyushu's own end at 11 and 12), and the
+    /// Sanyo Shinkansen's at the four to the east, 13 first and 16 last
+    /// (the owner's research of 2026-11-27, from JR West's Hakata
+    /// timetable: its own trains leave north mostly from 13, also 12 and
+    /// 14; 16 sees three trains a day).
+    static func platformsAtJoinedEnd(station: StationID, line: LineID, in world: GameWorld) -> [TrackPlatform] {
+        guard let other = world.line(id: line) else { return [] }
+        // On that line's own track: at a station other lines stop at too
+        // (Hakata, with the Relay Kamome and the subway bought before it),
+        // not theirs.
+        let track = Set(world.acquisitions.first { $0.line == line }?.track ?? [])
+        let all = world.network.platforms(of: station).filter { track.contains($0.edge) }
+        let theirs = (other.routePreferences + other.patterns.flatMap(\.routePreferences))
+            .flatMap { [$0.platform] + $0.alternates }.filter { $0.station == station }
+        guard let reference = theirs.first, let geometry = world.trackGeometry(of: reference.edge) else { return [] }
+        let location = geometry.location(at: (reference.start + reference.end) / 2)
+        let origin = WorldVector(location.position.plan)
+        let normal = WorldVector(x: Double(location.direction.dx), y: Double(location.direction.dy)).unit.normal
+        let taken = Set(theirs.map(\.edge))
+        let sides = all.filter { !taken.contains($0.edge) }.compactMap { platform -> (platform: TrackPlatform, side: Double)? in
+            guard let geometry = world.trackGeometry(of: platform.edge) else { return nil }
+            let middle = WorldVector(geometry.location(at: (platform.start + platform.end) / 2).position.plan)
+            return (platform, (middle - origin).dot(normal))
+        }
+        let right = sides.filter { $0.side > 0 }, left = sides.filter { $0.side < 0 }
+        let chosen = right.count >= left.count ? right : left
+        return chosen.sorted { abs($0.side) < abs($1.side) }.prefix(LineRoutePreference.maximumAlternates + 1).map(\.platform)
+    }
+
     /// SHALUN-ONE-ISLAND: another line whose trains stop at a platform on
     /// the track bought with line `id` (the Blue Coast Line's at the Green
     /// Mountain Line's stations), if any.
