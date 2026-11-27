@@ -205,6 +205,9 @@ extension Map3DScene.Builder {
         /// Decision 263: the seeded streets kept and the level crossings.
         var streetEdges: [Map3DSeededStreets.Edge: Map3DBaseMap.RoadKind] = [:]
         var crossings: [Map3DLevelCrossing] = []
+        /// Decision 1037: Taipei City's outline in world units on a map of
+        /// Taiwan, for its lanes' share of scooters.
+        var taipeiOutline: [(x: Double, y: Double)]?
     }
 
     /// Decision 263: how high a level crossing lifts a street's traffic at

@@ -121,6 +121,10 @@ public enum Map3DStreetModel: String, CaseIterable, Sendable {
             mesh.makeGlowing(from: first)
         }
         let tinted = Map3DColor.rgb(0xFFFFFF) & 0x00FF_FFFF
+        // Decision 1037: the riding scooters near and far are the
+        // studio's; those built below stand in where its meshes cannot be
+        // read.
+        if let studio = Map3DScooterModels.model(self) { return studio }
         switch self {
         case .commuterStanding, .commuterWalking:
             // Decision 787: the commuter; the block figure, renamed, where
@@ -424,6 +428,9 @@ public struct Map3DStreetLife: Sendable {
         /// or the motorway), its traffic only along its way, where a city
         /// bus may still go.
         public var oneWayStreet = false
+        /// Decision 1037: whether its middle is in Taipei City, where
+        /// fewer of its vehicles are scooters (``Map3DStreetScooters``).
+        public var taipei = false
         /// Decision 596: where its traffic stops for the signals.
         public var stops: [Stop] = []
         /// Decision 596: its vehicles' trips each way it has stops,
@@ -529,6 +536,8 @@ public struct Map3DStreetLife: Sendable {
     public struct Activity: Sendable {
         public var platform: [StationID: Int] = [:]
         public var front: [StationID: Int] = [:]
+        /// Decision 1037: the game's hour and day, who is out by.
+        public var clock: Map3DPedestrian.Clock = .morning
 
         public init() {}
 
@@ -539,6 +548,8 @@ public struct Map3DStreetLife: Sendable {
             for platform in world.network.platforms { platforms[platform.station, default: 0] += 1 }
             let seconds = world.clock.now.seconds, day = GameTime.secondsPerDay
             let today = seconds >= 0 ? seconds / day : -((-seconds + day - 1) / day)
+            clock = Map3DPedestrian.Clock(minute: Int((seconds - today * day) / 60),
+                                          restDay: StationDemand.isWeekend(day: today) || world.holiday(onDay: today) != nil)
             for (station, count) in platforms {
                 let waiting = world.waitingPassengers(at: station).reduce(Int64(0)) { $0 + $1.count }
                 let yesterday = world.stationFlow(station, onDay: today - 1)?.people ?? 0
@@ -570,13 +581,29 @@ public struct Map3DStreetLife: Sendable {
     })
 
     /// Decision 918: the five more close-up people's places in
-    /// ``Map3DModelPack/standard``, by their names.
-    static let pedestrianModels: [String: Int] = Dictionary(uniqueKeysWithValues: Map3DPedestrian.Kind.allCases.flatMap { kind in
-        [false, true].compactMap { walking -> (String, Int)? in
-            let name = Map3DPedestrian.name(kind, walking: walking)
-            return Map3DModelCatalog.standard.index(of: name).map { (name, $0) }
-        }
+    /// ``Map3DModelPack/standard``, by their names; decision 1037: and the
+    /// second batch's nine.
+    static let pedestrianModels: [String: Int] = Dictionary(uniqueKeysWithValues: Map3DPedestrian.names.compactMap { name -> (String, Int)? in
+        Map3DModelCatalog.standard.index(of: name).map { (name, $0) }
     })
+
+    /// Decision 1037: the triangles of each close-up figure's model (the
+    /// commuter's and the other people's), by its place in the pack, so a
+    /// frame's close-up people cost no more than before
+    /// (``Map3DCommuterFigure/mostCloseUpTriangles(of:)``).
+    static let closeUpTriangles: [Int: Int] = {
+        var triangles: [Int: Int] = [:]
+        for model in Map3DCommuterFigure.models {
+            if let index = models[model] { triangles[index] = model.model().triangleCount }
+        }
+        for kind in Map3DPedestrian.Kind.allCases {
+            for walking in kind == .jogger ? [false] : [false, true] {
+                if let index = pedestrianModels[Map3DPedestrian.name(kind, walking: walking)],
+                   let model = Map3DPedestrian.model(kind, walking: walking) { triangles[index] = model.triangleCount }
+            }
+        }
+        return triangles
+    }()
 
     /// The figures' tops: bright and many, as a busy Taiwanese street's.
     public static let shirts: [UInt32] = [0xE8574A, 0x3B7DD8, 0x12A08F, 0xFFC86B, 0xF2F2EE, 0x8E6CC9, 0xF29BB0, 0x6FA85A, 0x2E3550, 0xF08A3C]
@@ -611,6 +638,8 @@ public struct Map3DStreetLife: Sendable {
         public var people = 0
         /// Decision 787: of the people, those drawn as the commuter.
         public var closeUps = 0
+        /// Decision 1037: the close-up people's triangles.
+        public var closeUpTriangles = 0
         public var vehicles = 0
         /// Of the vehicles, the buses.
         public var buses = 0
@@ -653,7 +682,8 @@ public struct Map3DStreetLife: Sendable {
             for (index, _) in near where frame.people < most.people {
                 addPeople(of: spots[index], to: &frame, target: target, reach: reach, time: clock, still: still, lights: lights,
                           budget: most.people, activity: activity, signals: signals, eye: distance,
-                          closeUps: Map3DCommuterFigure.mostCloseUp(of: most.people))
+                          closeUps: Map3DCommuterFigure.mostCloseUp(of: most.people),
+                          closeUpTriangles: Map3DCommuterFigure.mostCloseUpTriangles(of: most.people))
             }
         }
         if distance <= Self.vehiclesFrom {
@@ -678,7 +708,8 @@ public struct Map3DStreetLife: Sendable {
     }
 
     private func addPeople(of spot: Spot, to frame: inout Frame, target: Map3DPoint, reach: Float, time: Double, still: Bool, lights: Float,
-                           budget: Int, activity: Activity, signals: Double? = nil, eye: Float = 0, closeUps: Int = 0) {
+                           budget: Int, activity: Activity, signals: Double? = nil, eye: Float = 0, closeUps: Int = 0,
+                           closeUpTriangles: Int = 0) {
         var count: Int
         switch spot.kind {
         case .platform: count = spot.station.flatMap { activity.platform[$0] } ?? 0
@@ -735,18 +766,27 @@ public struct Map3DStreetLife: Sendable {
             let size = Self.fade(away, reach: reach)
             // Decision 787: the commuter within its reach of the eye, the
             // nearest first, as many as the frame allows; the block farther.
-            let close = frame.closeUps < closeUps && (eye * eye + away * away).squareRoot() < Map3DCommuterFigure.detailReach
-            let drawn = close ? model.closeUp : model
-            guard size > 0, var index = Self.models[drawn] else { continue }
-            // Decision 918: close up, one of six people, the same one
-            // every frame.
-            if close, drawn != model, let kind = Map3DPedestrian.kind(r(12)),
-               let other = Self.pedestrianModels[Map3DPedestrian.name(kind, walking: model == .walking)] {
-                index = other
+            guard size > 0, var index = Self.models[model] else { continue }
+            if frame.closeUps < closeUps, (eye * eye + away * away).squareRoot() < Map3DCommuterFigure.detailReach,
+               var near = Self.models[model.closeUp] {
+                // Decision 918: close up, one of the people, the same one
+                // every frame; decision 1037: by the place's table, the
+                // hour and the day, while the frame's close-up triangles
+                // stay within what the six cost (the block beyond them).
+                let slot = Int(min(max(r(12), 0), 0.999_999) * Float(Map3DPedestrian.slots))
+                if let kind = Map3DPedestrian.kind(slot: slot, at: spot.kind, clock: activity.clock, region: region),
+                   let other = Self.pedestrianModels[Map3DPedestrian.name(kind, walking: model == .walking)] {
+                    near = other
+                }
+                let triangles = Self.closeUpTriangles[near] ?? 0
+                if frame.closeUpTriangles + triangles <= closeUpTriangles {
+                    index = near
+                    frame.closeUps += 1
+                    frame.closeUpTriangles += triangles
+                }
             }
             frame.instances.append(.prop(index, at: foot, forward: facing, scale: scale * size, tint: tint))
             frame.people += 1
-            if drawn != model { frame.closeUps += 1 }
         }
     }
 
@@ -911,8 +951,16 @@ public struct Map3DStreetLife: Sendable {
         if bus {
             let variant = r(6)
             model = variant < 0.30 ? .shuttleBus : variant < 0.65 ? .lowFloorBus : variant < 0.85 ? .coachBus : variant < 0.95 ? .midiBus : .bus
+        } else if lane.scooters, region == .japan, kind < Map3DStreetScooters.drawnShare(.japan, taipei: false) {
+            // Decision 1037: Japan's few, the 125 cc step-through alone,
+            // none riding beside another or two up.
+            model = .stepScooter
         } else if lane.scooters, region.hasScooters {
-            model = kind < 0.5 ? .scooter : kind < 0.62 ? .scooterPair : Map3DTaiwanCars.streetModel((kind - 0.62) / 0.38)
+            // Decision 1037: Taipei City's share of scooters, or the rest
+            // of Taiwan's, two up in decision 446's share of them.
+            let scooters = Map3DStreetScooters.slotShare(drawn: Map3DStreetScooters.drawnShare(region, taipei: lane.taipei))
+            let lone = scooters * (1 - Map3DStreetScooters.pairShare)
+            model = kind < lone ? .scooter : kind < scooters ? .scooterPair : Map3DTaiwanCars.streetModel((kind - scooters) / (1 - scooters))
         } else {
             model = Map3DTaiwanCars.streetModel(kind)
         }
@@ -935,13 +983,13 @@ public struct Map3DStreetLife: Sendable {
 
     /// One vehicle of `model` at `foot`: shrinking away at the edge of
     /// `reach` and the road's `ends`, and beside the player's buses;
-    /// decision 446: a scooter in full within ``Map3DScooter/detailReach``
+    /// decision 446: a scooter in full within ``Map3DScooter/detailReach(in:)``
     /// of the eye (`eye` the camera's distance), its block one farther.
     private func add(_ model: Map3DStreetModel, at foot: Map3DPoint, forward: Map3DPoint, tint: UInt32, ends: Float, to frame: inout Frame,
                      target: Map3DPoint, reach: Float, eye: Float, clearOf buses: [(point: Map3DPoint, along: Map3DPoint)]) {
         let away = Map3DPoint(foot.x - target.x, 0, foot.z - target.z).length
         let size = Self.fade(away, reach: reach) * ends * Self.giveWay(at: foot, to: buses)
-        let drawn = (eye * eye + away * away).squareRoot() < Map3DScooter.detailReach ? model : model.far
+        let drawn = (eye * eye + away * away).squareRoot() < Map3DScooter.detailReach(in: region) ? model : model.far
         guard size > 0, let index = Self.models[drawn] else { return }
         frame.instances.append(.prop(index, at: foot, forward: forward, scale: size, tint: tint))
         frame.vehicles += 1
@@ -1114,6 +1162,10 @@ extension Map3DScene.Builder {
                     seed: lifeSeed(path.points[0], salt: 256), buses: !road.isRamp && Self.busRoutes.contains(kind))
                 lane.collects = !road.isRamp && Self.collectionRounds.contains(kind)
                 lane.oneWayStreet = road.oneway && !road.isRamp && kind != .motorway
+                if let outline = state.streets.taipeiOutline {
+                    let metre = Double(WorldCoordinate.unitsPerMetre)
+                    lane.taipei = Map3DStreetScooters.contains(outline, x: Double(middle.x) * metre + originX, y: Double(middle.z) * metre + originY)
+                }
                 if let markings {
                     lane.stops = Self.laneStops(path, stops: markings.stops)
                     lane.schedules = Map3DStreetLife.schedules(of: lane, region: streetLife.region)
