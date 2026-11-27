@@ -51,9 +51,13 @@ public struct Map3DLandmarkRegistration: Sendable {
     /// `Map3DLandmarkRegistryTests` checks its models against (half a
     /// metre either way): the real building's.
     let size: (x: Float, y: Float, z: Float)
+    /// Decision 1020: what makes it a station's building (Hakata,
+    /// Kumamoto, Duoliang), `nil` for any other landmark.
+    public let station: Map3DStationLandmark?
 
     init(id: String, map: String, latitude: Double, longitude: Double, baseHeight: Float = 0, sink: Float = 0, palette: [UInt32],
-         glass: Set<Int> = [], bandedGlass: Set<Int> = [], encoded: [String: String], size: (x: Float, y: Float, z: Float)) {
+         glass: Set<Int> = [], bandedGlass: Set<Int> = [], encoded: [String: String], station: Map3DStationLandmark? = nil,
+         size: (x: Float, y: Float, z: Float)) {
         self.id = id
         self.map = map
         self.latitude = latitude
@@ -64,6 +68,7 @@ public struct Map3DLandmarkRegistration: Sendable {
         self.glass = glass
         self.bandedGlass = bandedGlass
         self.encoded = encoded
+        self.station = station
         self.size = size
     }
 
@@ -74,6 +79,29 @@ public struct Map3DLandmarkRegistration: Sendable {
               let mesh = LandmarkMesh.decodedLandmark(Array(data), full: full, palette: palette, glass: glass, bandedGlass: bandedGlass)
         else { return LandmarkMesh(full: full) }
         return mesh
+    }
+}
+
+/// Decision 1020 (the owner, 2026-11-27: one rule for every station): a
+/// landmark that is a station's building. Unlike any other landmark it
+/// does not give way to the track: the player's track and platforms and
+/// the real lines' track may run through it, in the room it leaves for
+/// them (``Map3DScene/Builder/stationLandmarkStands(_:snapshot:frame:)``),
+/// so it stands before and after its line is bought, and the game's own
+/// building, entrances and canopies of a station whose platforms it
+/// stands over are left out (its platforms stay, laid by the game).
+public struct Map3DStationLandmark: Sendable {
+    /// How high over the model's foot the rails it was built round are
+    /// (Hakata's Shinkansen platforms' roofs clear a train on rails
+    /// 12.3 m up, Kumamoto's shed 10 m, Duoliang's platforms on their
+    /// retaining walls 2.5 m): those rails are then put on the drawn
+    /// rails under it, all of it under them stretched down to the
+    /// ground and all over them raised as much. `nil` to stand on the
+    /// ground as it was built.
+    public let railHeight: Float?
+
+    public init(railHeight: Float? = nil) {
+        self.railHeight = railHeight
     }
 }
 
