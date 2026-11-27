@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark duoliang-station: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "duoliang-station" : {
+      "hash" : "1f929dc3c503e753",
+      "triangles" : 2480
+    },
+    "duoliang-station-far" : {
+      "hash" : "28682872a3c5a41e",
+      "triangles" : 368
+    }
+  }
+}
