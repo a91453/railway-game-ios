@@ -106,6 +106,7 @@ final class TrackGaugeTests: XCTestCase {
         XCTAssertEqual(TrackGauge.ofRealLine("fksubway:K"), .cape, "the Kūkō Line")
         XCTAssertEqual(TrackGauge.ofRealLine("kyushushinkansen:KS"), .shinkansen, "the Kyushu Shinkansen (decision 975)")
         XCTAssertEqual(TrackGauge.ofRealLine("jrkyushu:RK"), .cape, "the Relay Kamome (decision 1028)")
+        XCTAssertEqual(TrackGauge.ofRealLine("sanyoshinkansen:SY"), .shinkansen, "the Sanyo Shinkansen (decision 1029)")
         XCTAssertNil(TrackGauge.ofRealLine("nowhere:X"))
     }
 

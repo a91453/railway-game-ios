@@ -36,5 +36,9 @@ extension TimetableCheckupBudgets {
         // Decision 1028: the Relay Kamome bought alone (2026-11-27: all 0).
         "fukuoka jrkyushu:RK simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
         "fukuoka jrkyushu:RK realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
+        // Decision 1029: the Sanyo Shinkansen bought alone, on sale under
+        // the realistic rules only (2026-11-27: all 0, the worst run 3.7
+        // minutes late).
+        "fukuoka sanyoshinkansen:SY realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
     ]
 }

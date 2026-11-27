@@ -106,10 +106,14 @@ extension RealLineLaying {
     /// up on a viaduct there (both its ends half a crossing's clearance
     /// over the ground or more) is not counted: a tunnel under a viaduct
     /// is in neither's way, as ``platformsAreUnderTheGround(of:)`` keeps a
-    /// viaduct's station over a tunnel's.
+    /// viaduct's station over a tunnel's. SANYO-SHINKANSEN-KOKURA
+    /// (decision 1029), the other way round: where `raised` says a stop
+    /// stands on its line's real viaduct, the company's track under the
+    /// ground there (both its ends half a crossing's clearance under it or
+    /// more) is not counted either.
     func sharedEnds(
         of path: WorldPath, points: [WorldVector], through: Bool = false, shared: (Int) -> StationID?, extent: (Int) -> ClosedRange<Double>,
-        sunk: (Int) -> Bool = { _ in false }
+        sunk: (Int) -> Bool = { _ in false }, raised: (Int) -> Bool = { _ in false }
     ) -> (path: WorldPath, moved: [Int])? {
         guard points.count >= 2 else { return nil }
         // The company's track near the way, sampled as the network tool
@@ -134,13 +138,16 @@ extension RealLineLaying {
             var across: [Double] = [], toward: [Double] = [], away: [Double] = []
             let box = RealLineAcquisition.runOn + RealLineAcquisition.junctionReach
             let stopPoint = points[stop]
-            let inATunnel = sunk(stop)
+            let inATunnel = sunk(stop), onAViaduct = !inATunnel && raised(stop)
             for edge in world.network.edges {
                 guard let from = world.network.node(edge.from), let to = world.network.node(edge.to) else { continue }
                 let a = WorldVector(from.position.plan), b = WorldVector(to.position.plan)
                 guard min((a - stopPoint).length, (b - stopPoint).length) < box + Double(edge.length) else { continue }
                 if inATunnel, [from, to].allSatisfy({ node in
                     world.groundHeight(at: node.position.plan).map { node.position.z - $0 >= TrackStructure.clearance / 2 } ?? false
+                }) { continue }
+                if onAViaduct, [from, to].allSatisfy({ node in
+                    world.groundHeight(at: node.position.plan).map { $0 - node.position.z >= TrackStructure.clearance / 2 } ?? false
                 }) { continue }
                 guard let geometry = TrackGeometry(from: from.position, to: to.position, curve: edge.curve) else { continue }
                 for plan in NetworkBuilding.surveyedPoints(of: geometry) + [from.position.plan, to.position.plan] {

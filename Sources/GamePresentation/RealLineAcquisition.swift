@@ -146,6 +146,17 @@ public struct RealBranchLine: Hashable, Sendable {
     /// data.
     static let taiwanHighSpeedRail = "thsr_sched:THSR"
 
+    /// The lines on sale only where trains run in block sections
+    /// (realistic rules): the High Speed Rail (THSR-SALE, decision 993);
+    /// SANYO-SHINKANSEN-KOKURA (decision 1029), the Sanyo Shinkansen, whose
+    /// trains run 55.9 km from Hakata to Kokura with no station between.
+    /// Without block sections a train sets off only when no train is on
+    /// its way, the other way, to the station it leaves (the way to the
+    /// next stop is taken whole, both stations' turnouts with it): a whole
+    /// day under simple rules sent each of its sets only once the train
+    /// coming the other way was in, 131 of 148 runs late and 8 not sent.
+    static let onSaleInBlockSectionsOnly: Set<String> = [taiwanHighSpeedRail, "sanyoshinkansen:SY"]
+
     /// Decision 993: what the Taiwan High Speed Rail pays a month for its
     /// upkeep once bought, NT$10,000,000. It is sold with realistic rules
     /// only, whose trains cost more to run: a day of a new Taiwan game
@@ -1883,6 +1894,17 @@ extension RealLineLaying {
                 at: own.at[index], before: index > 0 ? own.at[index - 1] : nil, after: index < own.at.count - 1 ? own.at[index + 1] : nil, carried: own.carried
             )
         }
+        // SANYO-SHINKANSEN-KOKURA (decision 1029): a station on its line's
+        // real viaduct is not moved beside the company's track under the
+        // ground there. The Sanyo Shinkansen, bought after the Kyushu
+        // Shinkansen, had its Hakata moved west over the Kuko Line, 47 m
+        // off the Kyushu Shinkansen's islands, which spread east.
+        func standsOnAViaduct(_ index: Int) -> Bool {
+            let own = carried()
+            return RealLineAcquisition.isRaised(
+                at: own.at[index], before: index > 0 ? own.at[index - 1] : nil, after: index < own.at.count - 1 ? own.at[index + 1] : nil, carried: own.carried
+            )
+        }
         let besideShared = whereItStood || joined != nil ? nil : sharedEnds(
             of: inItsLane, points: points, through: besideThrough, shared: { index in
                 let station = (index == 0 ? junctionStation?.id : nil) ?? sameName(index)
@@ -1897,7 +1919,7 @@ extension RealLineLaying {
                 let overtakes = line.isDoubleTrack && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
                 return Self.throughStationExtent(of: line, name: name, tracks: tracks, overtakes: overtakes, layout: layout)
             },
-            sunk: standsInATunnel
+            sunk: standsInATunnel, raised: standsOnAViaduct
         )
         if besideThrough, besideShared?.moved.contains(where: { $0 > 0 && $0 < runs.stops.count - 1 }) != true {
             return refused("No station between the line's ends is beside the company's track.", "這條線中間沒有和公司軌道並排的共用車站。")
