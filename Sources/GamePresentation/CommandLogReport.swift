@@ -48,6 +48,8 @@ public struct CommandLogReport: Codable, Sendable {
     public static let dataFiles = [
         "taiwan_population.json", "taiwan_places.json", "taiwan_water.json", "taiwan_heights.dat", "taiwan_coverage.dat",
         "taiwan_no_build.json",
+        // Decision 1025: how dear the land is goes with the coverage.
+        "taiwan_land_price.dat",
     ]
 
     /// A digest of a data file: its FNV-1a 64-bit hash, in hexadecimal. It

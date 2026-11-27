@@ -1,0 +1,86 @@
+{
+  "saveVersion" : 116,
+  "world" : {
+    "accounts" : {
+      "days" : [
+
+      ],
+      "entries" : [
+
+      ],
+      "mode" : "management",
+      "openedAt" : 0,
+      "pending" : {
+        "departures" : 0,
+        "fareRevenue" : 0,
+        "fareTrips" : 0,
+        "passengers" : 0,
+        "seats" : 0,
+        "trainDistance" : 0
+      }
+    },
+    "bounds" : {
+      "height" : 98304,
+      "width" : 131072
+    },
+    "clock" : {
+      "now" : 180,
+      "resumeSpeed" : "normal",
+      "speed" : "normal"
+    },
+    "economy" : {
+      "balance" : 1000000000,
+      "costs" : {
+        "station" : 1000,
+        "track" : 100,
+        "train" : 5000
+      }
+    },
+    "land" : [
+      {
+        "column" : 1,
+        "residents" : [
+          40
+        ],
+        "row" : 1,
+        "use" : "residential"
+      },
+      {
+        "column" : 6,
+        "jobs" : [
+          60
+        ],
+        "residents" : [
+          0
+        ],
+        "row" : 5,
+        "use" : "commercial"
+      }
+    ],
+    "landLocations" : [
+      {
+        "column" : 0,
+        "factors" : [
+          2500,
+          2100
+        ],
+        "row" : 0
+      },
+      {
+        "column" : 1,
+        "factors" : [
+          640
+        ],
+        "row" : 1
+      }
+    ],
+    "nextStationID" : 1,
+    "nextTrainID" : 1,
+    "stations" : [
+
+    ],
+    "trains" : [
+
+    ]
+  }
+}

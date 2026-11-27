@@ -18,6 +18,9 @@ import GameCore
 /// (decision 147).
 public struct CoverageGrid: Sendable {
     let grid: HeightGrid
+    /// Decision 1025: how dear each place's land is, read with the
+    /// coverage, as the land's other side; `nil` without the app's file.
+    public var landPrice: LandPriceGrid?
 
     /// Reads the app's coverage file. Throws for a file out of shape, as
     /// ``HeightGrid/init(data:)`` does.
