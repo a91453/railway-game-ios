@@ -1314,7 +1314,12 @@ extension RealLineLaying {
         // STATION-ALIGN-APPLY (decision 1022): refused with its platforms
         // along the real ones (a station moved onto a curve or a slope its
         // loops do not fit), laid round the stations' points as before.
-        guard laid.offer.acquisition == nil, alignsPlatforms, railways?.platformEnds != nil, !landCheckOnly else { return laid }
+        // Not where the same line, bought and removed, left its track:
+        // that is taken up first (decision 528, ``offer(for:)``), and laid
+        // round the points the line would miss it and stand beside it.
+        guard laid.offer.acquisition == nil, alignsPlatforms, railways?.platformEnds != nil, !landCheckOnly,
+              RealLineClearing.left(in: world, for: line) == nil
+        else { return laid }
         var plain = self
         plain.alignsPlatforms = false
         let again = plain.laidOfferAligned(for: line, whereItStood: whereItStood)
