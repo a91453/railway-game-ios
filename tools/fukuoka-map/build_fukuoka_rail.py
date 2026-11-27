@@ -516,6 +516,10 @@ SOURCES = {
     # `build_kyushu_shinkansen.py merge`.
     "jrkyushu.json": {"stations": MLIT, "shape": OSM, "segs.run, dwellSec (estimated from distance and 130 km/h)": OURS},
     "jrkyushu_times.json": {"sets (timed to the estimated Kamome at Takeo-Onsen)": OURS},
+    # SANYO-SHINKANSEN-KOKURA (decision 1029): `build_sanyo_shinkansen.py`,
+    # merged by `build_kyushu_shinkansen.py merge`.
+    "sanyoshinkansen.json": {"stations": MLIT, "shape": OSM, "segs.run, dwellSec (estimated from distance and 300 km/h)": OURS},
+    "sanyoshinkansen_times.json": {"sets (laid out from estimated headways)": OURS},
 }
 MLIT_CREDIT = ("「国土数値情報（鉄道データ）」（国土交通省）"
                "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html を加工して作成, CC BY 4.0")

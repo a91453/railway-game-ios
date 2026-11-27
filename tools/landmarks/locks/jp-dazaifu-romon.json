@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-dazaifu-romon: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-dazaifu-romon" : {
+      "hash" : "cec6f88ed97abb93",
+      "triangles" : 1876
+    },
+    "jp-dazaifu-romon-far" : {
+      "hash" : "b8dc3e7948727432",
+      "triangles" : 884
+    }
+  }
+}

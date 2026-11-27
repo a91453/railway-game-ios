@@ -22,6 +22,8 @@ SYSTEM = "fksubway"
 SHINKANSEN = "kyushushinkansen"
 # Decision 1028: JR Kyushu's conventional line, the Relay Kamome.
 CONVENTIONAL = "jrkyushu"
+# Decision 1029: JR West's Sanyo Shinkansen, Hakata to Kokura.
+SANYO = "sanyoshinkansen"
 
 
 def main(folder):
@@ -31,7 +33,7 @@ def main(folder):
     tool = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(tool)
     tool.LINES = []
-    for system in (SYSTEM, SHINKANSEN, CONVENTIONAL):
+    for system in (SYSTEM, SHINKANSEN, CONVENTIONAL, SANYO):
         # The Shinkansen's file is there once `build_kyushu_shinkansen.py
         # merge` has run.
         if not os.path.exists(os.path.join(folder, f"{system}.json")):
@@ -39,7 +41,7 @@ def main(folder):
         with open(os.path.join(folder, f"{system}.json"), encoding="utf-8") as f:
             network = json.load(f)
         tool.LINES += [(system, line["id"], None, None) for line in network["lines"]]
-    tool.METROS = {SYSTEM, SHINKANSEN, CONVENTIONAL}
+    tool.METROS = {SYSTEM, SHINKANSEN, CONVENTIONAL, SANYO}
     # Decision 712 (Hong Kong's, kept): a train standing overnight at a station between the
     # ends leaves before the morning's first train the same way reaches it.
     tool.OUT_BEFORE_FIRST = True
@@ -50,7 +52,10 @@ def main(folder):
     # Decision 975: the Kyushu Shinkansen is bought with a depot past
     # Kumamoto (`RealLineDepotSite.kumamoto`), where its day starts and
     # ends, with five minutes there to make a delay good.
-    tool.DEPOT_ENDS = dict(tool.DEPOT_ENDS, **{f"{SYSTEM}:N": ("橋本",), f"{SHINKANSEN}:KS": ("熊本",)})
+    # Decision 1030: Kumamoto to Shin-Minamata too, bought with the real
+    # depot at Tomiai 8 km south of Kumamoto (`RealLineDepotSite.tomiai`).
+    tool.DEPOT_ENDS = dict(tool.DEPOT_ENDS, **{f"{SYSTEM}:N": ("橋本",), f"{SHINKANSEN}:KS": ("熊本",),
+                                                f"{SHINKANSEN}:KS2": ("熊本",)})
     tool.COUNT_GAME_DWELL = True
     tool.RECOVERY = {"橋本": 180, "熊本": 300}
     # Decision 975: Hakata, where each train turns round in eight minutes
@@ -59,7 +64,12 @@ def main(folder):
     # traffic control the next one sets off from Shin-Tosu for its
     # platform before the one standing there has gone, and with one track
     # waited at Shin-Tosu (24 runs a day late).
-    tool.TRACKS_AT_LEAST = {f"{SHINKANSEN}:KS": {"博多": 2}}
+    # Decision 1030: Shin-Minamata, where the trains from Kumamoto turn
+    # round in eighteen minutes (`build_kyushu_shinkansen_south.FAR_TURN`),
+    # with the real station's three tracks (2面3線, 11-13: JR Kyushu's
+    # station plan via the Duet research of 2026-11-27), so a late train
+    # in does not hold the next one at Shin-Yatsushiro.
+    tool.TRACKS_AT_LEAST = {f"{SHINKANSEN}:KS": {"博多": 2}, f"{SHINKANSEN}:KS2": {"新水俁": 3}}
     out = os.path.join(folder, "metro_runs.json")
     tool.main(folder, out)
     with open(out, encoding="utf-8") as f:
@@ -67,7 +77,7 @@ def main(folder):
     head, rest = text.split(',"lines":[', 1)
     head = json.dumps({
         "source": "Trips laid out from headways this project estimated and times between stations worked out from "
-                  "the distance, via fksubway_times.json, kyushushinkansen_times.json and jrkyushu_times.json; not the operator's timetable",
+                  "the distance, via fksubway_times.json, kyushushinkansen_times.json, jrkyushu_times.json and sanyoshinkansen_times.json; not the operator's timetable",
         "licence": "this project's estimate; stations: National Land Numerical Information N02 (MLIT), CC BY 4.0",
     }, ensure_ascii=False, separators=(",", ":"))[:-1]
     text = head + ',"lines":[' + rest

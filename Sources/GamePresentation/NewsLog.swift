@@ -72,7 +72,7 @@ public struct NewsItem: Hashable, Codable, Sendable, Identifiable {
     /// The text in `language`, else in the other.
     public func text(in language: DisplayLanguage) -> String {
         switch language {
-        case .english: english ?? chinese ?? ""
+        case .english, .japanese: english ?? chinese ?? ""
         case .traditionalChinese: chinese ?? english ?? ""
         }
     }

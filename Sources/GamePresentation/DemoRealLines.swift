@@ -95,6 +95,9 @@ public struct DemoRealLines: Sendable {
         // Decision 1028: the Relay Kamome's six, the 885 series' (the 787's
         // run six to eight).
         case "jrkyushu": 6
+        // Decision 1029: the Sanyo Shinkansen's sixteen, the N700S's and
+        // the 700 series' (the Nozomi and Hikari sets).
+        case "sanyoshinkansen": 16
         case "tymc", "afr_sched": 4
         case "krtc", "sanying": 3
         default: 2
@@ -121,7 +124,7 @@ public struct DemoRealLines: Sendable {
     /// own, and on a system this does not name.
     static func trainType(ofLine key: String, system: String) -> TrainType? {
         switch system {
-        case "thsr_sched", "kyushushinkansen": .highSpeed
+        case "thsr_sched", "kyushushinkansen", "sanyoshinkansen": .highSpeed
         case "afr_sched": .alishan
         case "mrt": key == "mrt|BR" ? .apm : key == "mrt|Y" ? .b : .a
         case "krtc": key == "krtc|C" ? .c : .a

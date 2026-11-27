@@ -64,7 +64,7 @@ extension GameWorld {
         let stationCount = stations.count
         let edgeCount = network.edges.count
         switch language {
-        case .english:
+        case .english, .japanese:
             let stationText = stationCount == 1 ? "1 station" : "\(stationCount) stations"
             let edgeText = edgeCount == 1 ? "1 track section" : "\(edgeCount) track sections"
             return "\(stationText) · \(edgeText)"
@@ -197,7 +197,7 @@ extension Train {
             return language.text(", stopping \(along) along it", "，在其 \(along) 處停車")
         } ?? ""
         switch language {
-        case .english:
+        case .english, .japanese:
             return edges.count == 1
                 ? "Path: 1 more edge, \(edge)\(stop)"
                 : "Path: \(edges.count) more edges, ending on \(edge)\(stop)"

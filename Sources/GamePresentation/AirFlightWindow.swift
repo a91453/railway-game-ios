@@ -58,7 +58,7 @@ extension AirFlightWindow {
         guard let route = world.airRoute(id: leg.route), let home = world.airports.first(where: { $0.id == route.airport }) else { return nil }
         let far = route.farAirport.flatMap { id in world.airports.first { $0.id == id } }
         let english = home.destinations.first { $0.name == route.destination }?.englishName ?? route.destination
-        let farName = far.map { language.text($0.englishName, $0.name) } ?? language.text(english, route.destination)
+        let farName: String = far.map { language.text($0.englishName, $0.name) } ?? language.text(english, route.destination)
         let homeName = language.text(home.englishName, home.name)
         let (from, to) = leg.outbound ? (homeName, farName) : (farName, homeName)
         let now = Double(world.clock.now.seconds)

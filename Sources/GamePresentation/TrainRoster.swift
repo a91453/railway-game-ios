@@ -75,7 +75,7 @@ public struct TrainRoster: Equatable, Sendable {
         public func detailText(in language: DisplayLanguage) -> String {
             if isEmptyRun { return language.text("Empty run", "回送") }
             if state == .interrupted { return language.text("Stopped", "中斷") }
-            let number = number.map { language.text("No. \($0)", "第 \($0) 趟") } ?? ""
+            let number: String = number.map { language.text("No. \($0)", "第 \($0) 趟") } ?? ""
             if state == .planned { return number + " · " + language.text("Planned", "預定") }
             return number + " · " + TrainRoster.shortMoney(fare, in: language)
         }

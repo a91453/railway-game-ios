@@ -52,7 +52,7 @@ extension ServiceWindow {
 public func headwayText(minutes: Int64, in language: DisplayLanguage) -> String {
     let rest = minutes % 60
     switch language {
-    case .english:
+    case .english, .japanese:
         guard minutes >= 60 else { return "Every \(minutes) min" }
         return "Every \(minutes / 60) h" + (rest == 0 ? "" : " \(rest) min")
     case .traditionalChinese:

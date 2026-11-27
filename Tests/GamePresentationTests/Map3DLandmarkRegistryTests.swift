@@ -94,6 +94,17 @@ final class Map3DLandmarkRegistryTests: XCTestCase {
             bytes[landmark.map, default: 0] += (near.vertices.count + far.vertices.count) * MemoryLayout<Map3DVertex>.stride
                 + (near.indices.count + far.indices.count) * MemoryLayout<UInt32>.stride
         }
+        // Decision 1033: the truss bridges, laid span by span, count in
+        // Taiwan's, all at their middle.
+        for bridge in Map3DTrussBridge.allCases {
+            let line = bridge.line, metresEast = 111_320 * cos(line.latitude * .pi / 180)
+            placed["taiwan", default: []].append((line.longitude * metresEast, line.latitude * 110_574, bridge.nearTriangles))
+            for piece in bridge.pieces {
+                let near = bridge.model(piece.model, full: true), far = bridge.model(piece.model, full: false)
+                bytes["taiwan", default: 0] += (near.vertices.count + far.vertices.count) * MemoryLayout<Map3DVertex>.stride
+                    + (near.indices.count + far.indices.count) * MemoryLayout<UInt32>.stride
+            }
+        }
         for (map, landmarks) in placed {
             // The fullest square has a landmark on its west edge and one on
             // its south edge.

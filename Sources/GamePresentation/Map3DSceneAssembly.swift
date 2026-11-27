@@ -160,6 +160,8 @@ extension Map3DScene {
         // Decision 879: the earlier Sun Moon Lake's pier, boats, temple
         // and pavilion, where the real ones stand.
         if let worldFrame { builder.addSunMoonLandmarks(frame: worldFrame) }
+        // Decision 1033: 西螺大橋 and 大樹舊鐵橋, span by span.
+        if let worldFrame { builder.addTrussBridges(frame: worldFrame) }
         // Decision 869: the suspension bridges' towers and cables.
         builder.addSuspensionBridges()
         // Decision 625: the real stations' exterior studies, as landmarks,
