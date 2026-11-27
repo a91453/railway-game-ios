@@ -252,6 +252,11 @@ echo "Uploaded $version ($build) for internal TestFlight testing from $(git rev-
 # before this one is recorded.
 GITHUB_TOKEN="$(gh auth token)" GITHUB_REPOSITORY="$repo_slug" GITHUB_RUN_ID=0 \
   local_release whats-new >"$work/whats-new.txt" || true
+# Run from a docs/tools branch on origin/main: leave its own commits out.
+while IFS= read -r subject; do
+  grep -vxF -- "- $subject" "$work/whats-new.txt" >"$work/whats-new.tmp" || true
+  mv "$work/whats-new.tmp" "$work/whats-new.txt"
+done < <(git log --format=%s origin/main..HEAD)
 local_release record --build "$build" --commit "$(git rev-parse origin/main)"
 put_back
 saved_default=""
