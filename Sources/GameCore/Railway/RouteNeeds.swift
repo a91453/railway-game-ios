@@ -791,6 +791,53 @@ extension GameWorld {
         return cover
     }
 
+    /// What `train` claims of the track (see ``claimCover(of:_:whole:)``),
+    /// from its authority (see ``authority(of:memo:)``), as the track
+    /// holders keep it, by place (see ``workedOutHolders(memo:)``): `nil`
+    /// for a train that follows none, and with block sections, where a
+    /// following train claims nothing more than it holds (decision 212),
+    /// so its route envelope is not read. Decision 1036: kept in `memo` by
+    /// the train as it is (a few of its last values), as its authority is:
+    /// within one memo it reads nothing else but the network, the lines
+    /// and traffic control.
+    func claimCover(of train: Train, memo: inout DirectionMemo) -> TrackCover? {
+        guard !blockSections else { return nil }
+        if let known = memo.claimCovers[train.id]?.first(where: { $0.train == train }) { return known.cover }
+        let cover = authority(of: train, memo: &memo).flatMap { authority in
+            claimCover(of: train, authority) { followingCover(of: train, authority.envelopes, memo: &memo) }
+        }
+        var known = memo.claimCovers[train.id] ?? []
+        known.insert((train, cover), at: 0)
+        if known.count > 4 { known.removeLast() }
+        memo.claimCovers[train.id] = known
+        return cover
+    }
+
+    /// Decision 808: the track `train`, travelling to its timetable's last
+    /// call, comes to rest on there and fouls (see ``Claim/rest``).
+    /// Decision 1036: kept in `memo` by the train as it is: it reads
+    /// nothing else but the network.
+    func restingTrack(of train: Train, memo: inout DirectionMemo) -> [TrackResource] {
+        if let known = memo.restingTracks[train.id], known.train == train { return known.track }
+        let arrived = arrived(train)
+        let track = occupied(arrived) + foulingNodes(covering: bodyStretches(of: arrived))
+        memo.restingTracks[train.id] = (train, track)
+        return track
+    }
+
+    /// Decision 1036: ``envelopeCover(of:)`` kept in `memo` by the train as
+    /// it is (a few of its last values): it reads nothing else but the
+    /// network.
+    func envelopeCover(of train: Train, memo: inout DirectionMemo) -> TrackCover {
+        if let known = memo.envelopeCovers[train.id]?.first(where: { $0.train == train }) { return known.cover }
+        let cover = envelopeCover(of: train)
+        var known = memo.envelopeCovers[train.id] ?? []
+        known.insert((train, cover), at: 0)
+        if known.count > 4 { known.removeLast() }
+        memo.envelopeCovers[train.id] = known
+        return cover
+    }
+
     /// ``heldTrack(_:)`` kept in `memo`, by the train as it is: it depends
     /// on nothing else but the network (see ``authority(of:memo:)``).
     func heldTrack(_ train: Train, memo: inout DirectionMemo) -> HeldTrack {
@@ -926,7 +973,7 @@ extension GameWorld {
         /// at all), the other trains what they
         /// did. Only what that train held and holds is touched, and every
         /// list stays as working all of it out again would leave it. The
-        /// claims are not: see ``GameWorld/settleClaims(_:covers:)``.
+        /// claims are not: see ``GameWorld/settleClaims(_:covers:memo:)``.
         mutating func replace(_ place: Int, with track: HeldTrack, placed: Bool, in network: RailwayNetwork) {
             if let old = tracks[place] { remove(old, at: place) }
             held[ids[place]] = track
@@ -1286,26 +1333,37 @@ extension GameWorld {
     /// for as long as the trains stay as they are. Within one memo the
     /// network and traffic control do not change (a memo lives for one
     /// ``advance(ticks:)`` or one question), and a train's holding depends
-    /// on nothing else. When a few trains are not the same, the last
+    /// on nothing else. When some trains are not the same, the last
     /// holders are changed for those trains alone (see
-    /// ``trackHolders(changedAt:memo:)``); when many are, they are worked
-    /// out again from every train, and the last two sets of trains asked
-    /// about are kept.
+    /// ``trackHolders(changedAt:many:memo:)``), and of those only for the
+    /// ones whose holding or claim changed; the last two sets of trains
+    /// asked about are kept.
     func trackHolders(memo: inout DirectionMemo) -> TrackHolders {
         // TICK-L1 (`docs/research/TICK_L1_2026-11-13.md`): when a few
         // trains are not as the last holders had them (one set off, one
         // was given more of its route), only what
         // those hold is worked out again.
         if !memo.holders.isEmpty, memo.holders[0].trains.count == trains.count {
-            let limit = max(1, trains.count / 4)
-            var changed: [Int] = []
+            var differing: [Int] = []
+            var sameTrains = true
             for place in trains.indices where memo.holders[0].trains[place] != trains[place] {
-                changed.append(place)
-                if changed.count > limit { break }
+                guard memo.holders[0].trains[place].id == trains[place].id else {
+                    sameTrains = false
+                    break
+                }
+                differing.append(place)
             }
-            if changed.isEmpty { return keptHolders(memo: &memo) }
-            if changed.count <= limit, changed.allSatisfy({ memo.holders[0].trains[$0].id == trains[$0].id }) {
-                return trackHolders(changedAt: changed, memo: &memo)
+            if sameTrains {
+                if differing.isEmpty { return keptHolders(memo: &memo) }
+                // Decision 1036 (TICK-HOLDERS-BY-CLAIM): many trains moved
+                // on (each second of a step moves every train) are still
+                // changed from the last holders, unless the set before
+                // those is these trains: the steps of an advance try the
+                // trains moved on from the same start.
+                let many = differing.count > max(1, trains.count / 4)
+                if !many || !memo.holders.dropFirst().contains(where: { $0.trains == trains }) {
+                    return trackHolders(changedAt: differing, many: many, memo: &memo)
+                }
             }
         }
         if let index = memo.holders.indices.dropFirst().first(where: { memo.holders[$0].trains == trains }) {
@@ -1341,7 +1399,7 @@ extension GameWorld {
         }
         var entry = memo.holders.removeFirst()
         let before = Self.holderAudit == nil ? nil : entry.holders.released
-        settleClaims(&entry.holders, covers: entry.covers)
+        settleClaims(&entry.holders, covers: entry.covers, memo: &memo)
         entry.at = clock.now
         memo.holders.insert(entry, at: 0)
         memo.holderChanges += 1
@@ -1356,52 +1414,77 @@ extension GameWorld {
     /// part kept in `memo` by the train as it is, with the route envelope
     /// of every train that follows another, by place.
     func workedOutHolders(memo: inout DirectionMemo) -> (covers: [TrackCover?], holders: TrackHolders) {
-        var authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?] = []
         var tracks: [HeldTrack] = []
         var covers: [TrackCover?] = []
         for train in trains {
-            let authority = authority(of: train, memo: &memo)
-            authorities.append(authority)
             tracks.append(heldTrack(train, memo: &memo))
-            // With block sections a following train claims nothing more
-            // than it holds (decision 212), so its route envelope is not
-            // read.
-            covers.append(blockSections ? nil : authority.flatMap { authority in
-                claimCover(of: train, authority) { followingCover(of: train, authority.envelopes, memo: &memo) }
-            })
+            covers.append(claimCover(of: train, memo: &memo))
         }
         if memo.foulingByEdge == nil { memo.foulingByEdge = network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge() }
-        return (covers, trackHolders(authorities: authorities, tracks: tracks, covers: covers, foulingByEdge: memo.foulingByEdge!))
+        return (covers, trackHolders(tracks: tracks, covers: covers, foulingByEdge: memo.foulingByEdge!, memo: &memo))
     }
 
     /// ``trackHolders(memo:)`` from the last holders in `memo`, whose
-    /// trains are the world's but for those at `changed` (TICK-L1,
+    /// trains are the world's but for those at `differing` (TICK-L1,
     /// `docs/research/TICK_L1_2026-11-13.md`):
     /// what those held is taken out and what they hold now put in, and the
-    /// claims, which depend on every train, worked out again. The last
-    /// holders are changed in place and not kept as they were: what is
-    /// kept changes no answer, only how long one takes.
-    func trackHolders(changedAt changed: [Int], memo: inout DirectionMemo) -> TrackHolders {
-        var entry = memo.holders.removeFirst()
-        for place in changed {
+    /// claims, which depend on every train, worked out again. Decision 1036
+    /// (TICK-HOLDERS-BY-CLAIM): a train whose track held (what it stands on
+    /// and its reservation) and claim (see ``claimCover(of:_:whole:)``) are
+    /// what the last holders have is left in them as it is: standing at a
+    /// call, or moving on within the spans it stood on, it holds the same.
+    /// When few trains are not the same (not `many`), the last holders are
+    /// changed in place and not kept as they were: what is kept changes no
+    /// answer, only how long one takes. When many are, the new holders are
+    /// kept beside the last ones, and when more than half of the trains'
+    /// holding changed, they are put together again from every train's
+    /// part, the parts of the trains that are the same as they were.
+    func trackHolders(changedAt differing: [Int], many: Bool, memo: inout DirectionMemo) -> TrackHolders {
+        var entry = many ? memo.holders[0] : memo.holders.removeFirst()
+        var changed: [(place: Int, track: HeldTrack, cover: TrackCover?)] = []
+        for place in differing {
             let train = trains[place]
-            let authority = authority(of: train, memo: &memo)
             let track = heldTrack(train, memo: &memo)
-            entry.covers[place] = blockSections ? nil : authority.flatMap { authority in
-                claimCover(of: train, authority) { followingCover(of: train, authority.envelopes, memo: &memo) }
-            }
-            entry.holders.replace(place, with: track, placed: train.position != nil, in: network)
+            let cover = claimCover(of: train, memo: &memo)
             entry.trains[place] = train
+            if (entry.holders.tracks[place] != nil) == (train.position != nil), let old = entry.holders.held[train.id],
+               old.body == track.body, old.reservation == track.reservation, Self.sameCover(entry.covers[place], cover) {
+                Self.holderAudit?.unchanged += 1
+                continue
+            }
+            changed.append((place, track, cover))
         }
-        if !blockSections { settleClaims(&entry.holders, covers: entry.covers) }
+        if many, changed.count > trains.count / 2 {
+            var tracks = entry.holders.ids.map { entry.holders.held[$0]! }
+            for part in changed {
+                tracks[part.place] = part.track
+                entry.covers[part.place] = part.cover
+            }
+            entry.holders = trackHolders(tracks: tracks, covers: entry.covers, foulingByEdge: entry.holders.foulingByEdge, memo: &memo)
+            Self.holderAudit?.rebuilds += 1
+        } else {
+            for part in changed {
+                entry.covers[part.place] = part.cover
+                entry.holders.replace(part.place, with: part.track, placed: trains[part.place].position != nil, in: network)
+            }
+            if !blockSections { settleClaims(&entry.holders, covers: entry.covers, memo: &memo) }
+            Self.holderAudit?.updates += 1
+        }
         entry.at = clock.now
         memo.holders.insert(entry, at: 0)
+        if memo.holders.count > 2 { memo.holders.removeLast() }
         memo.holderChanges += 1
-        if let audit = Self.holderAudit {
-            audit.updates += 1
-            precondition(audit.countsOnly || entry.holders.matches(workedOutHolders(memo: &memo).holders), "the holders changed in place are not the holders worked out again")
+        if let audit = Self.holderAudit, !audit.countsOnly {
+            precondition(entry.holders.matches(workedOutHolders(memo: &memo).holders), "the holders changed in place are not the holders worked out again")
         }
         return entry.holders
+    }
+
+    /// Decision 1036: whether two claims of one train (see
+    /// ``claimCover(of:_:whole:)``) are the same.
+    static func sameCover(_ a: TrackCover?, _ b: TrackCover?) -> Bool {
+        guard let a, let b else { return a == nil && b == nil }
+        return a.matches(b)
     }
 
     /// Tests only (TICK-L1, `docs/research/TICK_L1_2026-11-13.md`): counts
@@ -1411,6 +1494,9 @@ extension GameWorld {
     final class HolderAudit: @unchecked Sendable {
         var updates = 0
         var rebuilds = 0
+        /// Decision 1036: trains not as the last holders had them whose
+        /// holding and claim were, left in them as they were.
+        var unchanged = 0
         /// Decision 877: how often holders kept for the same trains were
         /// settled again for another time (see ``keptHolders(memo:)``),
         /// and the times at which that changed whom a claim binds.
@@ -1440,19 +1526,20 @@ extension GameWorld {
     /// ``trackHolders()`` knowing ``authority(of:)`` of every train, in
     /// order.
     func trackHolders(authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?]) -> TrackHolders {
-        trackHolders(authorities: authorities, tracks: trains.map(heldTrack),
+        var memo = DirectionMemo()
+        return trackHolders(tracks: trains.map(heldTrack),
                      covers: zip(trains, authorities).map { train, authority in
                          authority.flatMap { authority in claimCover(of: train, authority) { cover(of: bodyStretches(of: train) + authority.envelopes.stretches) } }
                      },
-                     foulingByEdge: network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge())
+                     foulingByEdge: network.foulingSpans.isEmpty ? [:] : foulingSpansByEdge(), memo: &memo)
     }
 
     /// ``trackHolders(authorities:)`` knowing ``heldTrack(_:)`` of every
     /// train, in order, the route envelope of every train that follows
     /// another (see ``followingCover(of:_:memo:)``), and
     /// ``foulingSpansByEdge()``.
-    func trackHolders(authorities: [(left: Int64, envelopes: AuthorityEnvelopes)?], tracks heldTracks: [HeldTrack],
-                              covers: [TrackCover?], foulingByEdge: [TrackEdgeID: [TrackSpan]]) -> TrackHolders {
+    func trackHolders(tracks heldTracks: [HeldTrack], covers: [TrackCover?], foulingByEdge: [TrackEdgeID: [TrackSpan]],
+                      memo: inout DirectionMemo) -> TrackHolders {
         // Room for every body's track at once: growing them was much of
         // the time.
         let standing = heldTracks.reduce(0) { $0 + $1.body.count }
@@ -1478,14 +1565,15 @@ extension GameWorld {
         }
         // With block sections (decision 212) a following train holds only
         // what it has taken, and waits for nothing more.
-        if !blockSections { settleClaims(&holders, covers: covers) }
+        if !blockSections { settleClaims(&holders, covers: covers, memo: &memo) }
         return holders
     }
 
     /// Works out the claims of `holders` again, and whom each does not
     /// bind, from what the trains hold in it and the route envelope of
-    /// every train that follows another, `covers`, by place.
-    func settleClaims(_ holders: inout TrackHolders, covers: [TrackCover?]) {
+    /// every train that follows another, `covers`, by place. The paths
+    /// searched for, and the trains' route envelopes, are kept in `memo`.
+    func settleClaims(_ holders: inout TrackHolders, covers: [TrackCover?], memo: inout DirectionMemo) {
         holders.claims = [:]
         holders.released = [:]
         // Decision 877: whether any of what follows asked the time.
@@ -1498,8 +1586,7 @@ extension GameWorld {
             guard let route else { continue }
             var claim = Claim(train: train.id, cover: route)
             if case .travellingToStop(let stop, let cycle)? = train.execution, train.call(after: stop, cycle: cycle) == nil {
-                let arrived = arrived(train)
-                claim.rest = occupied(arrived) + foulingNodes(covering: bodyStretches(of: arrived))
+                claim.rest = restingTrack(of: train, memo: &memo)
             }
             if !network.foulingSpans.isEmpty {
                 for edge in claim.cover.edges {
@@ -1512,7 +1599,10 @@ extension GameWorld {
         }
         holders.claims = claims
         var released: [TrainID: Set<TrainID>] = [:]
-        var paths = PathMemo()
+        // Decision 1036: what a train ahead blocks, and how it would leave,
+        // asked once for every train that follows it.
+        var blockedByLeader: [Int: [Bool]] = [:]
+        var leavingOfLeader: [Int: [Bool]?] = [:]
         for (place, train) in trains.enumerated() {
             guard let claim = claims[train.id] else { continue }
             // TYMC-REBUILT-DEADLOCK: nor a train holding track that fouls
@@ -1539,8 +1629,15 @@ extension GameWorld {
             }
             for (ahead, isAhead) in holders.holding(claim.cover, except: train.id, fouling: false, in: network).enumerated() where isAhead {
                 let leader = trains[ahead]
-                let cover = claims[leader.id]?.cover ?? envelopeCover(of: leader)
-                for (other, blocks) in holders.holding(cover, except: leader.id, fouling: true, in: network).enumerated() where blocks && other != place {
+                let blocking: [Bool]
+                if let known = blockedByLeader[ahead] {
+                    blocking = known
+                } else {
+                    let cover = claims[leader.id]?.cover ?? envelopeCover(of: leader, memo: &memo)
+                    blocking = holders.holding(cover, except: leader.id, fouling: true, in: network)
+                    blockedByLeader[ahead] = blocking
+                }
+                for (other, blocks) in blocking.enumerated() where blocks && other != place {
                     released[train.id, default: []].insert(trains[other].id)
                 }
                 // Decision 836: an empty run's claim does not bind a train
@@ -1555,8 +1652,15 @@ extension GameWorld {
                 // no service, or an empty run, it still binds.
                 guard claims[leader.id] == nil else { continue }
                 readsTheTime = true
-                if let leaving = leavingCover(of: leader, memo: &paths) {
-                    for (other, blocks) in holders.holding(leaving, except: leader.id, fouling: true, in: network).enumerated() where blocks && other != place {
+                let leavingBlocking: [Bool]?
+                if let known = leavingOfLeader[ahead] {
+                    leavingBlocking = known
+                } else {
+                    leavingBlocking = leavingCover(of: leader, memo: &memo.paths).map { holders.holding($0, except: leader.id, fouling: true, in: network) }
+                    leavingOfLeader[ahead] = .some(leavingBlocking)
+                }
+                if let leavingBlocking {
+                    for (other, blocks) in leavingBlocking.enumerated() where blocks && other != place {
                         let standing = trains[other]
                         let freed = train.isDeadheading
                             ? standing.execution == nil || isDueToLeave(standing)
@@ -1572,7 +1676,7 @@ extension GameWorld {
 
     /// Decision 836: the track `train`, a service standing at a call whose
     /// departure is due, would cover leaving it along its default way (see
-    /// ``leaving(_:stop:cycle:memo:)``), as ``settleClaims(_:covers:)``
+    /// ``leaving(_:stop:cycle:memo:)``), as ``settleClaims(_:covers:memo:)``
     /// reads the route of a train any other follows (decision 886); `nil` for any other
     /// train, or with no way on. A train standing in the way of that
     /// departure (the leader waits for it) without a service of its own is
@@ -1626,7 +1730,7 @@ extension GameWorld {
     /// Decision 850: whether `train`, a service or an empty run, stands at
     /// a call with its departure due. An empty run's claim does not bind
     /// one standing where the service the empty run follows is due to go
-    /// (see ``settleClaims(_:covers:)``): on Hong Kong's Tung Chung Line
+    /// (see ``settleClaims(_:covers:memo:)``): on Hong Kong's Tung Chung Line
     /// under the simple rules with traffic control an empty run from Hong
     /// Kong to Siu Ho Wan claimed the crossover into the depot from 25 km
     /// away; the train at Tung Chung, due for Hong Kong (or itself for the
