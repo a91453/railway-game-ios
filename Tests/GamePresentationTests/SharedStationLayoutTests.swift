@@ -309,6 +309,9 @@ final class SharedStationLayoutTests: XCTestCase {
                 let over = (Double(middle.z) - Double(world.groundHeight(at: middle.plan) ?? 0)) / Self.metre
                 if laidBy[platform] == shinkansen {
                     XCTAssertGreaterThan(over, 8, "\(order): the Shinkansen's platform on its viaduct")
+                    // Decision 1023: at a real viaduct's height (Hakata's
+                    // rails 12.3 m up), not the 16 m of a station stood up.
+                    XCTAssertLessThan(over, 12, "\(order): the Shinkansen's platform at a real viaduct's height")
                 } else {
                     XCTAssertLessThan(over, -4, "\(order): the subway's platform under the ground")
                 }

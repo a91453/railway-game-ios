@@ -263,6 +263,10 @@ extension Map3DScene.Builder {
         /// Decision 874: the stations under a shell of their own
         /// (decision 827), with no kit canopy a sign could hang from.
         var shellRoofed: Set<StationID> = []
+        /// Decision 1020: the stations a station landmark stands over
+        /// (``stationsUnderLandmarks(_:frame:anchors:)``), with no
+        /// building, entrances or canopies of their own.
+        var underStationLandmarks: Set<StationID> = []
         /// Decision 936: the stations a real building stands for
         /// (decision 625).
         var studiedStations: Set<StationID> = []
@@ -359,8 +363,24 @@ extension Map3DScene.Builder {
                 if let shell = taipeiMRTShell(platforms: platformLines, frame: frame) { shells[id] = shell }
             }
         }
-        addCanopies(skipping: Set(shells.keys))
-        state.stations.shellRoofed = Set(shells.keys)
+        // Decision 625: each station's middle from all its platforms, not
+        // only those in the scene, so every block of chunks agrees.
+        var longestOf: [StationID: Map3DStreetLife.Path] = [:]
+        for platform in snapshot.platforms where platform.points.count > 1 {
+            guard let path = Map3DStreetLife.Path(platform.points.map { point($0) }) else { continue }
+            let id = platform.platform.station
+            if let held = longestOf[id], held.length >= path.length { continue }
+            longestOf[id] = path
+        }
+        let anchors = longestOf.mapValues { $0.at($0.length / 2).point }
+        // Decision 1020: the stations a station landmark stands over, which
+        // draw no building, entrances or canopies of their own.
+        let underLandmarks = stationsUnderLandmarks(snapshot, frame: frame, anchors: anchors)
+        state.stations.underStationLandmarks = underLandmarks
+        addCanopies(skipping: Set(shells.keys).union(underLandmarks))
+        // Decision 1020: a station landmark roofs its platforms as a shell
+        // does: no kit canopy's columns or hung signs, no footbridge.
+        state.stations.shellRoofed = Set(shells.keys).union(underLandmarks)
         let tunnels = snapshot.platforms.filter { platform in
             platform.structure == .tunnel && platform.points.count > 1
                 && platform.points.contains { contains(x: Double($0.x), y: Double($0.y)) }
@@ -399,16 +419,6 @@ extension Map3DScene.Builder {
                 }
             }
         }
-        // Decision 625: each station's middle from all its platforms, not
-        // only those in the scene, so every block of chunks agrees.
-        var longestOf: [StationID: Map3DStreetLife.Path] = [:]
-        for platform in snapshot.platforms where platform.points.count > 1 {
-            guard let path = Map3DStreetLife.Path(platform.points.map { point($0) }) else { continue }
-            let id = platform.platform.station
-            if let held = longestOf[id], held.length >= path.length { continue }
-            longestOf[id] = path
-        }
-        let anchors = longestOf.mapValues { $0.at($0.length / 2).point }
         // Decision 625: a station a real exterior study stands for (one of
         // its recipes, or its platforms within the study's outlines) draws
         // no building of its own, but an expanded one's wings beside it.
@@ -440,7 +450,7 @@ extension Map3DScene.Builder {
                 // Decision 441: a depot's maintenance shed, not a station's
                 // building; none by sidings under ground.
                 if !open.isEmpty { outlined.formUnion(outlining { $0.addDepotShed(id, platforms: open, path: longest, middle: middle) }) }
-            } else if drawnElsewhere.contains(station.profile) {
+            } else if drawnElsewhere.contains(station.profile) || underLandmarks.contains(id) {
                 continue
             } else if let shell = shells[id] {
                 outlined.formUnion(outlining { $0.addTaipeiMRTShell(shell.station, at: shell.placement) })

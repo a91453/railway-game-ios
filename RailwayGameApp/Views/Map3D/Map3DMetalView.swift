@@ -66,6 +66,12 @@ final class Map3DMetalView: MTKView {
         var modelMegabytes: Double = 0
         var modelsMade: Int = 0
         var models: Int = 0
+        /// WURI-FPS (decision 1027): the still scene's chunks held, their
+        /// buffers' MB, and the longest the main thread spent handing
+        /// chunks to the view (shown, placed, let go) in the half second.
+        var sceneChunks: Int = 0
+        var sceneMegabytes: Double = 0
+        var placingLongestMilliseconds: Double = 0
     }
 
     var camera = Map3DCamera()
@@ -253,7 +259,9 @@ final class Map3DMetalView: MTKView {
     /// at (``Map3DFarDetail/level(distance:was:)``).
     private var farLevel = 0
 
-    private struct Chunk {
+    /// WURI-FPS (decision 1027): internal, so a streamed block's chunks
+    /// are made on the thread that built them (``Map3DReadyChunks``).
+    struct Chunk {
         let vertices: MTLBuffer
         let indices: MTLBuffer
         let indexCount: Int
@@ -391,6 +399,16 @@ final class Map3DMetalView: MTKView {
     /// Decision 485: the main run loop's busy stretches, from waking to
     /// waiting again, over the last half second.
     private var mainBusy = (total: 0.0, longest: 0.0)
+    /// WURI-FPS (decision 1027): the longest handing over of chunks since
+    /// the last stats (``Stats/placingLongestMilliseconds``).
+    private var placingLongest = 0.0
+
+    /// Runs `body`, the chunks handed over, and notes how long it took.
+    private func placing(_ body: () -> Void) {
+        let start = CACurrentMediaTime()
+        body()
+        placingLongest = max(placingLongest, CACurrentMediaTime() - start)
+    }
     private var mainAwake: CFTimeInterval?
     private var mainObservers: [CFRunLoopObserver] = []
 
@@ -1139,9 +1157,11 @@ final class Map3DMetalView: MTKView {
     func show(_ scene: Map3DScene, keeping kept: Set<Map3DStreaming.Key> = []) {
         sunSceneChanged = true
         openings = scene.trackCover.openings
-        let old = chunks.filter { kept.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
-        let held = Set(old.map { Map3DStreaming.Key(column: $0.column, row: $0.row) })
-        chunks = scene.chunks.filter { !held.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }.compactMap(makeChunk) + old
+        placing {
+            let old = chunks.filter { kept.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+            let held = Set(old.map { Map3DStreaming.Key(column: $0.column, row: $0.row) })
+            chunks = scene.chunks.filter { !held.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }.compactMap(makeChunk) + old
+        }
     }
 
     /// Decision 517 續 (PR 3b): draws `scene`'s chunks at `keys` in place
@@ -1157,48 +1177,75 @@ final class Map3DMetalView: MTKView {
     /// a key with no chunk is empty ground).
     func place(_ built: [Map3DScene.Chunk], at keys: [Map3DStreaming.Key]) {
         sunSceneChanged = true
-        let replaced = Set(keys)
-        chunks.removeAll { replaced.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
-        chunks += built.compactMap(makeChunk)
+        placing {
+            let replaced = Set(keys)
+            chunks.removeAll { replaced.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+            chunks += built.compactMap(makeChunk)
+        }
     }
+
+    /// WURI-FPS (decision 1027): the same with `ready`'s chunks, made
+    /// ready to draw off the main thread; the main thread only swaps them in.
+    func place(_ ready: Map3DReadyChunks, at keys: [Map3DStreaming.Key]) {
+        sunSceneChanged = true
+        placing {
+            let replaced = Set(keys)
+            chunks.removeAll { replaced.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+            chunks += ready.chunks
+        }
+    }
+
+    /// WURI-FPS (decision 1027): what makes a streamed block's chunks off
+    /// the main thread: this view's device (Metal makes buffers on any thread).
+    var chunkMaker: Map3DChunkMaker? { device.map(Map3DChunkMaker.init(device:)) }
 
     /// Decision 358: lets go of the chunks at `keys`.
     func remove(_ keys: [Map3DStreaming.Key]) {
         let gone = Set(keys)
-        chunks.removeAll { gone.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) }
+        placing { chunks.removeAll { gone.contains(Map3DStreaming.Key(column: $0.column, row: $0.row)) } }
         sunSceneChanged = true
     }
 
     private func makeChunk(_ chunk: Map3DScene.Chunk) -> Chunk? {
-        guard !chunk.mesh.isEmpty, let vertices = makeBuffer(chunk.mesh.vertices), let indices = makeBuffer(chunk.mesh.indices)
+        device.flatMap { Self.makeChunk(chunk, device: $0) }
+    }
+
+    /// `chunk` made ready to draw on `device`: its props sorted into runs,
+    /// every instance's floats, and its buffers. WURI-FPS (decision 1027):
+    /// off the main thread for a streamed block (``Map3DReadyChunks``):
+    /// a block of a city's chunks round a station took the main thread
+    /// some 250–520 ms at a time, the frames waiting on it.
+    nonisolated static func makeChunk(_ chunk: Map3DScene.Chunk, device: MTLDevice) -> Chunk? {
+        func buffer<Element>(_ array: [Element]) -> MTLBuffer? { Map3DMetalView.makeBuffer(array, device: device) }
+        guard !chunk.mesh.isEmpty, let vertices = buffer(chunk.mesh.vertices), let indices = buffer(chunk.mesh.indices)
         else { return nil }
         var shadows: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
-        if let shadowVertices = makeBuffer(chunk.shadows.vertices), let shadowIndices = makeBuffer(chunk.shadows.indices) {
+        if let shadowVertices = buffer(chunk.shadows.vertices), let shadowIndices = buffer(chunk.shadows.indices) {
             shadows = (shadowVertices, shadowIndices, chunk.shadows.indices.count)
         }
         var far: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
-        if let farVertices = makeBuffer(chunk.far.vertices), let farIndices = makeBuffer(chunk.far.indices) {
+        if let farVertices = buffer(chunk.far.vertices), let farIndices = buffer(chunk.far.indices) {
             far = (farVertices, farIndices, chunk.far.indices.count)
         }
         // Decision 455: its boxes as they are, 88 bytes each, for the
         // shader to make into vertices.
-        let farBoxes = makeBuffer(chunk.farBoxes).map {
+        let farBoxes = buffer(chunk.farBoxes).map {
             (instances: $0, count: chunk.farBoxes.count, triangles: chunk.farBoxes.reduce(0) { $0 + $1.triangleCount })
         }
         var close: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
-        if let closeVertices = makeBuffer(chunk.close.vertices), let closeIndices = makeBuffer(chunk.close.indices) {
+        if let closeVertices = buffer(chunk.close.vertices), let closeIndices = buffer(chunk.close.indices) {
             close = (closeVertices, closeIndices, chunk.close.indices.count)
         }
         var standIn: (vertices: MTLBuffer, indices: MTLBuffer, indexCount: Int)?
-        if let standInVertices = makeBuffer(chunk.standIn.vertices), let standInIndices = makeBuffer(chunk.standIn.indices) {
+        if let standInVertices = buffer(chunk.standIn.vertices), let standInIndices = buffer(chunk.standIn.indices) {
             standIn = (standInVertices, standInIndices, chunk.standIn.indices.count)
         }
         var props: (instances: MTLBuffer, runs: [Map3DPropRuns.Run], shapes: [Map3DPropRuns.Run])?
         let sorted = Map3DPropRuns(chunk.props)
-        if let instances = makeBuffer(sorted.instances.flatMap(\.floats)) {
+        if let instances = buffer(sorted.instances.flatMap(\.floats)) {
             props = (instances, sorted.runs, sorted.shapes)
         }
-        let signs = makeBuffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
+        let signs = buffer(chunk.signs.flatMap(\.floats)).map { (instances: $0, count: chunk.signs.count) }
         var made = Chunk(vertices: vertices, indices: indices, indexCount: chunk.mesh.indices.count, baseIndexCount: chunk.baseIndexCount,
                      far: far, farBoxes: farBoxes, farLevels: chunk.farLevels, close: close, standIn: standIn, shadows: shadows, props: props, signs: signs, minimum: chunk.minimum, maximum: chunk.maximum,
                      column: chunk.column, row: chunk.row, cityTops: chunk.cityTops, coarse: chunk.coarse, facadeMesh: chunk.facade)
@@ -1234,7 +1281,12 @@ final class Map3DMetalView: MTKView {
     }
 
     private func makeBuffer<Element>(_ array: [Element]) -> MTLBuffer? {
-        guard !array.isEmpty, let device else { return nil }
+        device.flatMap { Self.makeBuffer(array, device: $0) }
+    }
+
+    /// `array`'s bytes in a new buffer on `device`, `nil` when empty.
+    nonisolated static func makeBuffer<Element>(_ array: [Element], device: MTLDevice) -> MTLBuffer? {
+        guard !array.isEmpty else { return nil }
         return array.withUnsafeBytes { bytes in
             bytes.baseAddress.flatMap { device.makeBuffer(bytes: $0, length: bytes.count, options: .storageModeShared) }
         }
@@ -1972,7 +2024,10 @@ final class Map3DMetalView: MTKView {
             drawnLights: shown.lights,
             modelMegabytes: Double(models?.buffers.bytes ?? 0) / 1_048_576,
             modelsMade: models?.buffers.made ?? 0,
-            models: models?.buffers.count ?? 0
+            models: models?.buffers.count ?? 0,
+            sceneChunks: chunks.count,
+            sceneMegabytes: Double(heldBytes) / 1_048_576,
+            placingLongestMilliseconds: placingLongest * 1_000
         )
         // Decision 417: a step down while the device cannot keep up, a
         // step up once it has for a while.
@@ -1995,6 +2050,7 @@ final class Map3DMetalView: MTKView {
         cpuTimes.removeAll()
         waitTimes.removeAll()
         mainBusy = (0, 0)
+        placingLongest = 0
         lastStats = now
         onStats?(stats)
     }
@@ -2093,3 +2149,25 @@ private struct Map3DGlassPipeline {
     }
 }
 // END NATIVE GLASS PIPELINE
+
+/// WURI-FPS (decision 1027): makes a streamed block's chunks ready to draw
+/// on the thread that built them. A device's buffers are made from any
+/// thread (Metal's resource creation is thread-safe), as
+/// ``Map3DModelBuffers`` makes the models'.
+final class Map3DChunkMaker: @unchecked Sendable {
+    private let device: MTLDevice
+
+    init(device: MTLDevice) {
+        self.device = device
+    }
+
+    func make(_ chunks: [Map3DScene.Chunk]) -> Map3DReadyChunks {
+        Map3DReadyChunks(chunks: chunks.compactMap { Map3DMetalView.makeChunk($0, device: self.device) })
+    }
+}
+
+/// WURI-FPS (decision 1027): a block's chunks made ready to draw, handed
+/// to the main thread once; nothing touches them on the way.
+struct Map3DReadyChunks: @unchecked Sendable {
+    let chunks: [Map3DMetalView.Chunk]
+}
