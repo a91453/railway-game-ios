@@ -5,11 +5,17 @@
 # .github/workflows/testflight.yml; see docs/TESTFLIGHT_LOCAL.md for why each
 # one differs and what the owner has to press.
 #
-#   tools/release/testflight-local.sh [--build N] [--archive PATH] [--no-upload]
+#   tools/release/testflight-local.sh [--build N] [--carry-map-packs yes|no]
+#                                     [--archive PATH] [--no-upload] [--skip-packs]
 #
 #   --build N        CFBundleVersion; default: <newest successful
-#                    testflight.yml run number>.1 (CI makes N or N.2 to N.99
-#                    and never N.1, so the two never meet)
+#                    testflight.yml run number>.1, then .1.1, .1.2 for more
+#                    Mac releases before the next CI one (CI makes N or N.2
+#                    to N.99 and never N.1, so the two never meet)
+#   --carry-map-packs yes|no
+#                    yes (default): the app carries every map pack whole, as
+#                    CI's default; no: pack.json only, so the packs come from
+#                    App Store Connect (testflight.yml's carry_map_packs)
 #   --archive PATH   reuse an archive this script already made for --build
 #   --no-upload      stop after the IPA check (nothing is sent to Apple)
 #   --skip-packs     do not upload map packs (an earlier run already did)
@@ -43,18 +49,26 @@ build=""
 archive=""
 upload=true
 packs=true
+carry=yes
 while (($#)); do
   case "$1" in
     --build) build="${2:?--build needs a number}"; shift 2 ;;
     --archive) archive="${2:?--archive needs a path}"; shift 2 ;;
     --no-upload) upload=false; shift ;;
     --skip-packs) packs=false; shift ;;
-    *) echo "usage: $0 [--build N] [--archive PATH] [--no-upload] [--skip-packs]" >&2; exit 64 ;;
+    --carry-map-packs) carry="${2:?--carry-map-packs needs yes or no}"; shift 2 ;;
+    *) echo "usage: $0 [--build N] [--carry-map-packs yes|no] [--archive PATH] [--no-upload] [--skip-packs]" >&2; exit 64 ;;
   esac
 done
 
 step() { printf '\n== %s\n' "$1"; }
 die() { echo "error: $1" >&2; exit 1; }
+
+[[ "$carry" == yes || "$carry" == no ]] || die "--carry-map-packs takes yes or no, not $carry."
+# The Mac's last release ({"build", "commit"}): map packs and What to Test
+# compare with it when it is newer than CI's (tools/release/local_release.py).
+record="$HOME/RailwayTestFlight/last-release.json"
+local_release() { python3 -I tools/release/local_release.py "$@" --record "$record"; }
 
 step "Checks"
 git fetch -q origin main
@@ -73,10 +87,12 @@ repo_slug="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
 if [[ -z "$build" ]]; then
   last="$(gh run list --workflow testflight.yml --branch main --status success -L 1 --json number -q '.[0].number')"
   [[ -n "$last" ]] || die "no successful testflight.yml run found; pass --build."
-  build="$last.1"
+  build="$(local_release next-build --ci-build "$last")"
 fi
 [[ "$build" =~ ^[1-9][0-9]{0,3}(\.[0-9]{1,2}){0,2}$ ]] || die "build number $build is not N, N.M or N.M.K."
-echo "Commit $(git rev-parse --short HEAD), build $build, Xcode $(xcodebuild -version | head -1)."
+echo "Commit $(git rev-parse --short HEAD), build $build, map packs carried: $carry, Xcode $(xcodebuild -version | head -1)."
+carry_args=()
+[[ "$carry" == yes ]] || carry_args=(CARRY_MAP_PACKS=NO)
 
 work="$HOME/RailwayTestFlight/$build"
 mkdir -p "$work"
@@ -151,7 +167,7 @@ if [[ ! -d "$archive" ]]; then
     -configuration Release -destination "generic/platform=iOS" \
     -archivePath "$archive" -derivedDataPath "$work/DerivedData" \
     -disableAutomaticPackageResolution -quiet "${auth[@]}" \
-    CODE_SIGN_STYLE=Automatic "DEVELOPMENT_TEAM=$team" \
+    CODE_SIGN_STYLE=Automatic "DEVELOPMENT_TEAM=$team" ${carry_args[@]+"${carry_args[@]}"} \
     "CURRENT_PROJECT_VERSION=$build" >"$work/archive.log" 2>&1 || {
     grep -E 'error:|errSec' "$work/archive.log" | sort -u | head -20 >&2
     die "the archive failed (log: $work/archive.log)."
@@ -208,11 +224,11 @@ if [[ "$upload" != true ]]; then
   exit 0
 fi
 
-step "Map packs that changed since the last CI release"
+step "Map packs that changed since the last release (CI's or this Mac's)"
 changed=""
 [[ "$packs" == true ]] || echo "Skipped (--skip-packs)."
 [[ "$packs" != true ]] || changed="$(GITHUB_TOKEN="$(gh auth token)" GITHUB_REPOSITORY="$repo_slug" GITHUB_RUN_ID=0 \
-  python3 -I .github/scripts/testflight-map-packs.py)"
+  local_release packs)"
 if [[ -n "$changed" ]]; then
   # shellcheck disable=SC2086 # one ID a word
   tools/asset-packs/package.sh "$work/asset-packs" $changed
@@ -232,14 +248,22 @@ rm -rf "$work/upload"
   -exportOptionsPlist "$work/UploadOptions.plist" "${auth[@]}"
 
 echo "Uploaded $version ($build) for internal TestFlight testing from $(git rev-parse --short HEAD)."
+# What to Test compares with the release before this one, so it is written
+# before this one is recorded.
+GITHUB_TOKEN="$(gh auth token)" GITHUB_REPOSITORY="$repo_slug" GITHUB_RUN_ID=0 \
+  local_release whats-new >"$work/whats-new.txt" || true
+# Run from a docs/tools branch on origin/main: leave its own commits out.
+while IFS= read -r subject; do
+  grep -vxF -- "- $subject" "$work/whats-new.txt" >"$work/whats-new.tmp" || true
+  mv "$work/whats-new.tmp" "$work/whats-new.txt"
+done < <(git log --format=%s origin/main..HEAD)
+local_release record --build "$build" --commit "$(git rev-parse origin/main)"
 put_back
 saved_default=""
 
 # testflight.yml's processing job: wait for App Store Connect, then fill What
 # to Test with the pull requests merged since the last CI release.
 step "Wait for App Store Connect processing, fill What to Test"
-GITHUB_TOKEN="$(gh auth token)" GITHUB_REPOSITORY="$repo_slug" GITHUB_RUN_ID=0 \
-  python3 -I .github/scripts/testflight-changes.py >"$work/whats-new.txt" || true
 ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ASC_PRIVATE_KEY="$(cat "$key")" \
   ASC_APP_ID="$app_id" BUILD_NUMBER="$build" APP_VERSION="$version" \
   GITHUB_STEP_SUMMARY="$work/processing-summary.md" \
