@@ -238,8 +238,8 @@ final class LinesPanelNavigationTests: XCTestCase {
     /// only the network's row and Advanced when opened, no line; its
     /// lines now come before the rows that are not a line.
     func testAShortPanelShowsTheLinesBeforeTheOtherRows() {
-        XCTAssertEqual(LinesListControls.inline.parts, [.controls, .lines, .entries, .newLine])
-        XCTAssertEqual(LinesListControls.pinned.parts, [.entries, .newLine, .lines])
+        XCTAssertEqual(LinesListControls.inline.parts, [.controls, .lines, .entries])
+        XCTAssertEqual(LinesListControls.pinned.parts, [.entries, .lines])
         // The panel's own title already says "Lines": on a short panel the
         // list's heading would only push the first line down.
         XCTAssertFalse(LinesListControls.inline.showsLinesHeading)

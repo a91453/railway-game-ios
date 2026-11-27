@@ -210,6 +210,9 @@ extension GameSession {
     /// nothing. The end then becomes the start of the next stretch, so taps
     /// lay a line piece by piece, each continuing the last.
     public func buildNetworkTrack() {
+        // Decision 1024: track built can join two stations just built.
+        let edges = world.network.edges.count
+        defer { if world.network.edges.count != edges { refreshLineFromBuiltTrack() } }
         if scissorsPlan() != nil {
             buildNetworkScissors()
             return
@@ -869,6 +872,8 @@ extension GameSession {
             stationName = automaticStationName
             suggestStationName(at: middle)
             platformStationID = built
+            // Decision 1024: the build card offers a line once two are joined.
+            noteStationBuiltWithTrackTools(built)
         }
     }
 
