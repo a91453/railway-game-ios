@@ -92,7 +92,7 @@ extension GameSession {
     func noteMessageInNews() {
         guard let message, !isMessageKeptOutOfNews, !message.text.isEmpty else { return }
         let kind: NewsCategory = message.kind == .success ? .success : .failure
-        let isEnglish = language == .english
+        let isEnglish = language.base == .english
         // The same words again and again (a failed tap repeated) are one item.
         if news.items.prefix(5).contains(where: { $0.text(in: language) == message.text }) { return }
         news.add(
@@ -220,7 +220,7 @@ extension GameSession {
                 news.add(day: today, .debt) { language in
                     let base = language.text("Cash is below zero.", "現金低於零。")
                     guard let countdown else { return base }
-                    return base + " " + insolvencyCountdownText(countdown, in: language) + (language == .english ? "." : "。")
+                    return base + " " + insolvencyCountdownText(countdown, in: language) + (language.base == .english ? "." : "。")
                 }
                 wantPause("Cash is below zero", "現金低於零")
             }

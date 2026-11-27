@@ -23,11 +23,13 @@ public enum OpenStreetMapBase {
     /// expression: one name in the player's language, not OpenFreeMap's
     /// Latin name over the local one (`Ci/`'s `osmLabelLang`). In Chinese
     /// the Traditional name, else the Chinese, else the local one (Taiwan's
-    /// own); in English the English name, else the Latin, else the local.
+    /// own); in English the English name, else the Latin, else the local; in
+    /// Japanese the Japanese name, else as in English.
     public static func labelText(in language: DisplayLanguage) -> [Any] {
         let keys = switch language {
         case .english: ["name:en", "name_en", "name:latin", "name"]
         case .traditionalChinese: ["name:zh-Hant", "name:zh", "name"]
+        case .japanese: ["name:ja", "name:en", "name_en", "name:latin", "name"]
         }
         return ["coalesce"] + keys.map { ["get", $0] as [Any] }
     }

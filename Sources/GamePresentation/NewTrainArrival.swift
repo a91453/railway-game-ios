@@ -56,7 +56,7 @@ public struct NewTrainArrival: Hashable, Sendable, Identifiable {
                              "August", "September", "October", "November", "December"]
         let month = englishMonths[landing.month - 1]
         switch language {
-        case .english:
+        case .english, .japanese:
             let date = landing.day.map { "on \($0) \(month) \(landing.year)" } ?? "in \(month) \(landing.year)"
             return "The first one came ashore at \(landing.englishPort) \(date)."
         case .traditionalChinese:

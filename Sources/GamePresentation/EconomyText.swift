@@ -33,7 +33,7 @@ extension Money {
     /// Only shown: every amount the player enters stays in NT$. The space
     /// after "≈" does not break, so a wrapped line keeps the two together.
     public func usDollarReferenceText(in language: DisplayLanguage) -> String? {
-        guard language == .english, amount.magnitude >= Self.usDollarReferenceMinimum.amount.magnitude else { return nil }
+        guard language.base == .english, amount.magnitude >= Self.usDollarReferenceMinimum.amount.magnitude else { return nil }
         let centsPerDollar = Self.usDollarReferenceRate * 100
         let remainder = amount % centsPerDollar + centsPerDollar / 2
         let dollars = amount / centsPerDollar + (remainder >= centsPerDollar ? 1 : remainder < 0 ? -1 : 0)
@@ -90,7 +90,7 @@ extension Money {
     /// What the English interface says once about the currency, beside
     /// the balance; `nil` in Chinese (decision 523).
     public static func currencyNoteText(in language: DisplayLanguage) -> String? {
-        language == .english ? "Prices are in New Taiwan dollars (NT$); the US$ figures are a rough guide." : nil
+        language.base == .english ? "Prices are in New Taiwan dollars (NT$); the US$ figures are a rough guide." : nil
     }
 
     /// The amount in whole dollars, as the reference shows money
@@ -384,7 +384,7 @@ extension GameWorld {
             return LineDirection.allCases.compactMap { direction in
                 guard let count = counts[lineID]?[direction] else { return nil }
                 let end = direction == .outbound ? line?.stops.last : line?.stops.first
-                let towards = end.flatMap { station(id: $0)?.name }.map { language.text(" to \($0)", " 往 \($0)") } ?? ""
+                let towards: String = end.flatMap { station(id: $0)?.name }.map { language.text(" to \($0)", " 往 \($0)") } ?? ""
                 let name = line?.name ?? language.text("Line #\(lineID.rawValue)", "路線 #\(lineID.rawValue)")
                 return "\(name)\(towards) · \(count)"
             }
