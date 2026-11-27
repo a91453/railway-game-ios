@@ -848,6 +848,9 @@ extension XCUIApplication {
         // Clear of the holder's edges, where a navigation or home bar can
         // lie over it.
         var band = area.insetBy(dx: 0, dy: 24)
+        // Where the small drags that bring a row seen into the band are
+        // made.
+        var pullArea = area
         // And clear of a search field in the navigation bar's drawer: the
         // rows scroll under the glass bar, and a touch on a row lying there
         // opens the search instead (main 550e1377's full lane, run
@@ -859,6 +862,12 @@ extension XCUIApplication {
             let top = max(band.minY, search.frame.maxY + 8)
             if top < band.maxY - 44 {
                 band = CGRect(x: band.minX, y: top, width: band.width, height: band.maxY - top)
+                // A drag that starts on the bar does not move the list
+                // (this branch's run 46037972531: 50 drags from y 141,
+                // on the field, left Taipei above it), so they are made
+                // in the rows below, each 0.3 of the band, too short to
+                // step over it.
+                pullArea = band
             }
         }
         func shown() -> Bool {
@@ -871,9 +880,9 @@ extension XCUIApplication {
             if !button.exists {
                 drag(in: area, at: area.midX, from: 0.85, to: 0.15)
             } else if button.frame.midY < band.minY {
-                drag(in: area, at: area.midX, from: 0.35, to: 0.65)
+                drag(in: pullArea, at: area.midX, from: 0.35, to: 0.65)
             } else {
-                drag(in: area, at: area.midX, from: 0.65, to: 0.35)
+                drag(in: pullArea, at: area.midX, from: 0.65, to: 0.35)
             }
         }
         return shown()

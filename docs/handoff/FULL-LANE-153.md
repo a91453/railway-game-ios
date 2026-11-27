@@ -11,6 +11,7 @@
 - `testThePlatformConfirmStaysAboveTheDockUnderATallBanner`、`testTheUpgradePillStaysBesideTheTrackCard`（AccessibilityXL）：台北那列停在 y 179，正好在搜尋欄底下（iOS 26 的玻璃導覽列，清單捲到它下面）。點台北點到搜尋欄，鍵盤出來、Build Here 收起來，`realWorld.start` 找不到。失敗錄影 135～143 秒看得到。好的那晚台北停在 y 282。
 - `testTheRealWorldMapIsReachedWithTheLargestText`（AccessibilityXXXL）：40 次拖曳都沒捲到台北，錄影最後還在「整張地圖」的說明裡。好的那晚用了 38 次（只差 2 次）；#2824 把福岡地圖的說明加長（四縣、新幹線、特急），最大字時多好幾行，就不夠了。
 - 改：`scrollUntilShown` 的「看得到」範圍避開搜尋欄（搜尋欄和清單重疊時，列的中點要在搜尋欄下緣 8 pt 以下）；`startARealWorldGameFromTaipei` 捲地點清單最多 90 次。
+- 第一版在分支上手動跑（run 46037972531）：最大字那支過（284 秒）；兩支大字的卡 8 分鐘，因為把台北往下拉的拖曳從 y 141 開始，正好在搜尋欄上，清單不動，拉了 50 次台北還在欄下。改成往回拉、往前推的小拖曳都在搜尋欄下面的範圍裡做（每次範圍的 0.3，跨不過去）。
 
 ## lessons job：Feature284To286UITests 四項（環境，暖機時限改 8 分）
 
