@@ -73,5 +73,11 @@ extension Map3DLandmarkRegistry {
         Map3DCheKungTemple.registration,
         Map3DKokuraCastle.registration,
         Map3DKaratsuCastle.registration,
+        Map3DMojikoStation.registration,
+        Map3DMojikoCustoms.registration,
+        Map3DMojikoMitsuiClub.registration,
+        Map3DSuizenjiNohStage.registration,
+        Map3DSuizenjiWestBridge.registration,
+        Map3DSuizenjiEastBridge.registration,
     ]
 }

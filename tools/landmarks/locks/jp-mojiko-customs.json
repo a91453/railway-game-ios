@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-mojiko-customs: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-mojiko-customs" : {
+      "hash" : "8fab2a3e6fb8beeb",
+      "triangles" : 4966
+    },
+    "jp-mojiko-customs-far" : {
+      "hash" : "d9e9afeb0e330c58",
+      "triangles" : 2278
+    }
+  }
+}
