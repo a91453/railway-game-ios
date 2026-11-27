@@ -112,11 +112,17 @@ extension GameWorld {
         let standing = occupied(candidate)
         let path = cover(of: routeStretches(of: candidate).stretches)
         var arrived: Train?
+        // Decision 1038: where the candidate stops, worked out the first
+        // time it is asked, not again for every other train (it was two
+        // fifths of this, and a tenth of a tick of Taiwan bought whole
+        // with block sections).
+        var stops: Stopping?
         for other in trains where other.id != candidate.id && other.position != nil {
             guard let (_, envelopes) = authority(of: other, memo: &memo) else { continue }
             let route = followingCover(of: other, envelopes, memo: &memo)
-            guard !standing.contains(where: route.contains), !occupied(other).contains(where: path.contains),
-                  stopsOn(route, candidate) else { continue }
+            guard !standing.contains(where: route.contains), !occupied(other).contains(where: path.contains) else { continue }
+            if stops == nil { stops = stopping(candidate) }
+            guard stops!.isOn(route) else { continue }
             guard let next else { return other.id }
             if arrived == nil {
                 var train = candidate

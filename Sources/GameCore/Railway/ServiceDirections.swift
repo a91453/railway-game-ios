@@ -58,6 +58,9 @@ extension GameWorld {
         /// keeps for all its decisions.
         var traffic: (key: TrafficPlanKey, plan: TrafficPlan)?
         var stepTraffic: TrafficPlan?
+        /// Decision 1039: the last plan's meets and overtakes, with what
+        /// they read of the trains (see ``TrafficCore``).
+        var trafficCore: TrafficCore?
         /// What working out a traffic plan reads that changes only by a
         /// command, kept from one plan to the next.
         var trafficParts = TrafficParts()
@@ -279,6 +282,11 @@ extension GameWorld {
         /// without asking again (see ``GameWorld/stillHolder(of:memo:)``),
         /// each checked against asking.
         var heldNotAsked = 0
+        /// Decision 1039: how often a traffic plan's meets and overtakes
+        /// were those the last plan worked out (see
+        /// ``GameWorld/trafficPlan(parts:paths:headwayOvertakes:core:)``),
+        /// each checked against working them out again.
+        var trafficCoresKept = 0
     }
 
     @TaskLocal static var answerAudit: AnswerAudit?
@@ -584,7 +592,7 @@ extension GameWorld {
         // Decision 703: the train's line looked up once.
         let line = assignedLine(of: train.id, memo: &memo)
         let routes = line.map { line in
-            hasRoutePreferences(train, on: line) ? train.timetable.indices.map { routePreference(for: train, on: line, from: $0, to: ($0 + 1) % train.timetable.count) } : []
+            hasRoutePreferences(train, on: line) ? legRoutePreferences(for: train, on: line) : []
         } ?? []
         let plan = DirectionMemo.Plan(calls: train.timetable.map { DirectionMemo.Call(station: $0.station, reverses: $0.reverses) },
                                       length: train.length, repeats: train.timetablePeriod != nil, routes: routes)
@@ -672,14 +680,18 @@ extension GameWorld {
     private func workedOutOpposingParts(for candidate: Train, memo: inout DirectionMemo) -> OpposingParts {
         var directions: [Set<TrackTraversal>] = []
         var departures: [Int: (station: StationID, traversals: Set<TrackTraversal>)] = [:]
+        // Decision 1038: each placed train's length, looked up by its ID
+        // rather than by going through the trains for each (IDs are unique).
+        var placed: [TrainID: Int64] = [:]
         for train in trains where train.id != candidate.id && train.position != nil {
             directions.append(serviceDirections(of: train, memo: &memo))
+            placed[train.id] = train.length
         }
         for line in lines {
             for service in 0..<line.serviceCount {
                 // Another placed train will run the plan: the candidate
                 // itself is never protected from its own line.
-                let lengths = Set(line.trains(ofService: service).filter { $0 != candidate.id }.compactMap { train(id: $0) }.filter { $0.position != nil }.map(\.length))
+                let lengths = Set(line.trains(ofService: service).compactMap { placed[$0] })
                 guard !lengths.isEmpty else { continue }
                 // Decision 878: each length's plans kept by the line, in
                 // the order they were gone through before: every plan,

@@ -348,6 +348,28 @@ extension GameWorld {
         return line.routes(ofService: stream.service).first { $0.from == order[from] && $0.to == order[to] }
     }
 
+    /// Decision 1038: ``routePreference(for:on:from:to:)`` of each leg of
+    /// `train`'s timetable, from each call to the next (the last to the
+    /// first), its calls' order in `line` worked out once rather than once
+    /// a leg: neither order reads the leg.
+    func legRoutePreferences(for train: Train, on line: ServiceLine) -> [LineRoutePreference?] {
+        let count = train.timetable.count
+        let legs = train.timetable.indices.map { ($0, ($0 + 1) % count) }
+        if line.hasRuns {
+            guard let order = runOrder(of: train, on: line) else { return legs.map { _ in nil } }
+            return legs.map { from, to in
+                order.indices.contains(from) && order.indices.contains(to)
+                    ? line.routePreferences.first { $0.from == order[from] && $0.to == order[to] } : nil
+            }
+        }
+        guard let stream = line.dispatchStream(of: train.id), !line.routes(ofService: stream.service).isEmpty,
+              let order = routeOrder(of: train, on: line, stream: stream) else { return legs.map { _ in nil } }
+        let routes = line.routes(ofService: stream.service)
+        return legs.map { from, to in
+            order.indices.contains(from) && order.indices.contains(to) ? routes.first { $0.from == order[from] && $0.to == order[to] } : nil
+        }
+    }
+
     /// The indices, in `line`'s stops, of the calls of `train`'s timetable
     /// when it is a trip of `stream` as the line runs it now: the round
     /// trip from the service's first call, or with ``flexDispatch``

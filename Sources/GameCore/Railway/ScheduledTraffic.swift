@@ -204,6 +204,9 @@ extension GameWorld {
         /// which its run decides (its points are the run's, kept in
         /// ``points``), so a plan of the same runs counts the same.
         var opposite: (runs: [Run], counts: [TrackTraversal: Int])?
+        /// Decision 1039: the edges with a platform of each station asked
+        /// about (see ``GameWorld/trafficPlatformEdges(of:parts:)``).
+        var platformEdges: [StationID: Set<TrackEdgeID>] = [:]
 
         /// Keeps what `plan`, of services of `runs` (when known), worked
         /// out that a later plan reads.
@@ -277,7 +280,7 @@ extension GameWorld {
         if let step = memo.stepTraffic { return step }
         let key = trafficPlanKey()
         if let kept = memo.traffic, kept.key == key { return kept.plan }
-        let plan = trafficPlan(parts: &memo.trafficParts, paths: &memo.paths)
+        let plan = trafficPlan(parts: &memo.trafficParts, paths: &memo.paths, core: &memo.trafficCore)
         memo.traffic = (key, plan)
         return plan
     }
@@ -291,6 +294,71 @@ extension GameWorld {
     /// `parts`, and kept there; the paths its services' points search for
     /// kept in `paths` (decision 620).
     func trafficPlan(parts: inout TrafficParts, paths: inout PathMemo, headwayOvertakes: Bool = true) -> TrafficPlan {
+        var core: TrafficCore?
+        return trafficPlan(parts: &parts, paths: &paths, headwayOvertakes: headwayOvertakes, core: &core)
+    }
+
+    /// Decision 1039 (TICK-PLAN-KEEP): what working out a plan's meets and
+    /// overtakes (decisions 59, 294; everything but decision 366's
+    /// overtakes of lines at a headway) reads of its services' trains,
+    /// besides what each service's run decides (``TrafficParts/Run``:
+    /// its train, cycle, timetable, period, length and performance):
+    /// whether it runs, whether it is at or bound for its first call, and,
+    /// while it is on a track with a platform of its first call's station,
+    /// where it is and how it moves (a train standing at its first call
+    /// keeps the berth it stands on, and its body there; see
+    /// ``trafficHasSiding(at:train:known:)``, ``trafficMoves(_:service:at:)``,
+    /// ``keptTrafficTrack(_:service:at:berth:)``). Never its times, its
+    /// visits, or where it is anywhere else: those only decision 366 reads
+    /// (``progress(of:)``), and its overtakes are worked out every time.
+    struct TrafficCoreKey: Equatable {
+        struct Near: Equatable {
+            var position: TrainPosition?
+            var trail: [TrackEdgeID]
+            var movement: TrainMovement
+        }
+        struct Entry: Equatable {
+            var run: TrafficParts.Run
+            var runs: Bool
+            var first: Bool
+            var near: Near?
+        }
+        var entries: [Entry]
+    }
+
+    /// Decision 1039: the last plan's services' key (see
+    /// ``TrafficCoreKey``) and the plan as its meets and overtakes left
+    /// it, before decision 366's overtakes and the sort.
+    struct TrafficCore {
+        var key: TrafficCoreKey
+        var plan: TrafficPlan
+    }
+
+    /// Decision 1039: the edges with a platform of `station`, kept in
+    /// `parts` (they read the network alone).
+    func trafficPlatformEdges(of station: StationID, parts: inout TrafficParts) -> Set<TrackEdgeID> {
+        if let known = parts.platformEdges[station] { return known }
+        let edges = Set(network.platforms(of: station).map(\.edge))
+        parts.platformEdges[station] = edges
+        return edges
+    }
+
+    /// ``trafficPlan(parts:paths:headwayOvertakes:)``, the meets and
+    /// overtakes taken from `core` when the services read the same of
+    /// their trains as the plan kept there (decision 1039, see
+    /// ``TrafficCoreKey``), and kept there otherwise.
+    ///
+    /// A plan is worked out again whenever a train sets off, arrives or
+    /// makes a visit (``TrafficPlanKey``): with 190 trains of Taiwan
+    /// bought whole, nearly every second. Its meets and overtakes read
+    /// the services' points (their runs') and of their trains only what
+    /// ``TrafficCoreKey`` has, so while that is the same they come out
+    /// the same: the same waits, the same points anchored, and the same
+    /// things kept along the way (each a pure answer of what it is kept
+    /// by). The services are given the trains as they are now, as working
+    /// it out again would give them, before decision 366's overtakes,
+    /// which read where each train is and how late, are worked out on it.
+    func trafficPlan(parts: inout TrafficParts, paths: inout PathMemo, headwayOvertakes: Bool = true, core: inout TrafficCore?) -> TrafficPlan {
         guard isTrafficControlEnabled else { return TrafficPlan() }
         var plan = TrafficPlan()
         var runs: [TrafficParts.Run] = []
@@ -316,29 +384,60 @@ extension GameWorld {
             }
         }
         guard plan.services.count >= 2 else { return plan }
-        plan.tracks = parts.tracks
-        plan.hasSiding = parts.hasSiding
-        plan.nominal = parts.nominal
-        for service in plan.services { plan.kept[service.train.id] = parts.kept[service.train.id]?.first }
-        if let known = parts.opposite, known.runs == runs { plan.opposite = known.counts }
-        defer { parts.keep(plan, runs: runs) }
-        inferTrafficMeets(&plan)
-        // resolveTraTraffic: one meet pass, up to eight overtaking passes;
-        // each accepted overtake rebuilds that train's meets immediately.
-        for _ in 0..<8 {
-            if !planTrafficOvertakes(&plan, lines: &paths.trainLines) { break }
+        // Decision 1039: what the meets and overtakes read of the trains.
+        let key = TrafficCoreKey(entries: zip(plan.services, runs).map { service, run in
+            let train = service.train
+            var near: TrafficCoreKey.Near?
+            if case .onEdge(let traversal, _)? = train.position,
+               trafficPlatformEdges(of: train.timetable[0].station, parts: &parts).contains(traversal.edge) {
+                near = .init(position: train.position, trail: train.trailEdges, movement: train.movement)
+            }
+            return .init(run: run, runs: train.execution != nil, first: train.execution?.stop == 0, near: near)
+        })
+        if let kept = core, kept.key == key {
+            let services = plan.services
+            plan = kept.plan
+            for index in plan.services.indices { plan.services[index].train = services[index].train }
+            if let audit = Self.answerAudit {
+                audit.trafficCoresKept += 1
+                var fresh: TrafficCore?
+                var freshParts = TrafficParts(), freshPaths = PathMemo()
+                let worked = trafficPlan(parts: &freshParts, paths: &freshPaths, headwayOvertakes: false, core: &fresh)
+                precondition(worked.services.map(\.points) == plan.services.map(\.points)
+                             && worked.services.map(\.train) == plan.services.map(\.train)
+                             && worked.waits.sorted(by: Self.trafficWaitOrder) == plan.waits.sorted(by: Self.trafficWaitOrder),
+                             "a traffic plan's meets and overtakes kept were not those worked out again")
+            }
+        } else {
+            plan.tracks = parts.tracks
+            plan.hasSiding = parts.hasSiding
+            plan.nominal = parts.nominal
+            for service in plan.services { plan.kept[service.train.id] = parts.kept[service.train.id]?.first }
+            if let known = parts.opposite, known.runs == runs { plan.opposite = known.counts }
+            inferTrafficMeets(&plan)
+            // resolveTraTraffic: one meet pass, up to eight overtaking passes;
+            // each accepted overtake rebuilds that train's meets immediately.
+            for _ in 0..<8 {
+                if !planTrafficOvertakes(&plan, lines: &paths.trainLines) { break }
+            }
+            core = TrafficCore(key: key, plan: plan)
         }
+        defer { parts.keep(plan, runs: runs) }
         // Decision 366: trips of lines that run at a headway.
         // Decision 637: left out only by the report that times it.
         if headwayOvertakes { planHeadwayOvertakes(&plan) }
-        plan.waits.sort {
-            if $0.train != $1.train { return $0.train < $1.train }
-            if $0.cycle != $1.cycle { return $0.cycle < $1.cycle }
-            if $0.stop != $1.stop { return $0.stop < $1.stop }
-            if $0.station != $1.station { return $0.station < $1.station }
-            return $0.other < $1.other
-        }
+        plan.waits.sort(by: Self.trafficWaitOrder)
         return plan
+    }
+
+    /// The order of a plan's waits: by train, cycle, stop, station and the
+    /// train waited for.
+    static func trafficWaitOrder(_ a: ScheduledTrafficWait, _ b: ScheduledTrafficWait) -> Bool {
+        if a.train != b.train { return a.train < b.train }
+        if a.cycle != b.cycle { return a.cycle < b.cycle }
+        if a.stop != b.stop { return a.stop < b.stop }
+        if a.station != b.station { return a.station < b.station }
+        return a.other < b.other
     }
 
     /// Complete nominal directional runs. Virtual pass times come from
@@ -752,6 +851,9 @@ extension GameWorld {
         }
         let partners = Self.trafficPartners(first)
         let directed = prefers.contains(true) ? plan.services.map(Self.trafficRuns) : []
+        // Decision 1039: asked once of each service, not of each pair
+        // (the services' trains and the lines stay as they are meanwhile).
+        let real = blockSections ? plan.services.map { followsRealTimetable($0.train) } : []
         for ia in plan.services.indices {
             for ib in partners[ia] {
                 let a = plan.services[ia], b = plan.services[ib]
@@ -766,7 +868,7 @@ extension GameWorld {
                     }
                     runs = [common]
                 }
-                let timetabled = blockSections && followsRealTimetable(a.train) && followsRealTimetable(b.train)
+                let timetabled = blockSections && real[ia] && real[ib]
                 for common in runs {
                     guard common.count >= 2, zip(common, common.dropFirst()).allSatisfy({ $0.ai < $1.ai }) else { continue }
                     for n in 0..<(common.count - 1) {

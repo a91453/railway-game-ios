@@ -413,9 +413,26 @@ extension GameWorld {
     /// another (decision 212), where it stops for its call, not where its
     /// authority ends.
     func stopsOn(_ route: TrackCover, _ train: Train, fouling: Bool = true) -> Bool {
+        stopping(train, fouling: fouling).isOn(route)
+    }
+
+    /// Decision 1038: the track `train` stands on, and if `fouling` the
+    /// junctions it fouls, where the route it travels ends (see
+    /// ``arrived(_:)``): what ``stopsOn(_:_:fouling:)`` asks of every
+    /// route, worked out once for a train asked about many.
+    struct Stopping {
+        let occupied: [TrackResource]
+        let fouling: [TrackResource]
+
+        /// ``GameWorld/stopsOn(_:_:fouling:)`` of `route`.
+        func isOn(_ route: TrackCover) -> Bool {
+            occupied.contains(where: route.contains) || fouling.contains(where: route.contains)
+        }
+    }
+
+    func stopping(_ train: Train, fouling: Bool = true) -> Stopping {
         let arrived = arrived(train)
-        return occupied(arrived).contains(where: route.contains)
-            || fouling && foulingNodes(covering: bodyStretches(of: arrived)).contains(where: route.contains)
+        return Stopping(occupied: occupied(arrived), fouling: fouling ? foulingNodes(covering: bodyStretches(of: arrived)) : [])
     }
 
     /// `train` where the route it travels ends, holding nothing.

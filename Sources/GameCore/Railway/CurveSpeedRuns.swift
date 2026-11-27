@@ -41,7 +41,12 @@ extension GameWorld {
 
     /// Whether `train` serves a line of real runs (decision 133), whose
     /// timetable the curve limits never make it late for.
+    ///
+    /// Decision 1038: each line read in place rather than copied whole
+    /// into a closure (the copies were a twentieth of a tick of Taiwan
+    /// bought whole); the same lines asked the same thing.
     func followsRealTimetable(_ train: Train) -> Bool {
-        lines.contains { !$0.runs.isEmpty && $0.trains.contains(train.id) }
+        for index in lines.indices where !lines[index].runs.isEmpty && lines[index].trains.contains(train.id) { return true }
+        return false
     }
 }
