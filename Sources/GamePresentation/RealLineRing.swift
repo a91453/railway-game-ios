@@ -32,7 +32,8 @@ extension RealLineLaying {
     /// over the ground at least: one level, the least clearance over a
     /// crossing (8 m), where the real light rail's Love River bridge at
     /// Zhen'ai Pier is about 7 m (`rail_tracks.json`); not a metro
-    /// viaduct's 16 m (``RealLineAcquisition/raisedStation``).
+    /// viaduct's 10 m (``RealLineAcquisition/viaductStation``, 16 m before
+    /// decision 1023).
     static let ringRaisedStation = Double(TrackStructure.clearance)
 
     /// The main track's nodes of a ring's depot (as

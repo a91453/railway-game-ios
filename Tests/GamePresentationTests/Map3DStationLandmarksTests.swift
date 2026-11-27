@@ -70,7 +70,14 @@ final class Map3DStationLandmarksTests: XCTestCase {
             XCTAssertTrue(built.contains(landmark.id), "\(landmark.id) with the Shinkansen bought")
             // Its rails on the viaduct's, and nothing of it left in the
             // trains' room once cut.
-            XCTAssertNotNil(place.rails, "\(landmark.id): its rails on the viaduct's")
+            // Decision 1023: stretched up to them where they are higher
+            // (Kumamoto's), stood down onto them where they are lower
+            // (Hakata's 12.3 m over the viaduct's 10 m).
+            let model = try XCTUnwrap(landmark.station?.railHeight)
+            let half = Map3DHongKongLandmark.body(of: landmark.model(full: true))
+            let drawn = try XCTUnwrap(place.room.railHeight(near: place.centre, within: max(half.x, half.y)), "\(landmark.id): the viaduct's rails under it")
+            XCTAssertEqual(place.ground + (place.rails?.drawn ?? model), drawn, accuracy: 0.01,
+                           "\(landmark.id): its rails on the viaduct's")
             XCTAssertLessThan(place.room.intrusion(of: place.mesh(landmark.model(full: true))), 0.01, "\(landmark.id) cut clear")
             XCTAssertTrue(builder.state.stations.underStationLandmarks.contains(stop), "\(name) stands under \(landmark.id)")
             XCTAssertTrue(builder.state.stations.shellRoofed.contains(stop), "\(name): no kit canopy")
