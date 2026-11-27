@@ -3552,7 +3552,7 @@ public final class GameSession {
         perform(.setLineTargets(line.id, changed, pattern: pattern)) { _, _, _ in
             let levelName = level.title(in: language)
             switch language {
-            case .english:
+            case .english, .japanese:
                 let what = minutes.map { headwayText(minutes: $0, in: language).lowercased() } ?? "the train count"
                 return "\(line.name) at \(levelName.lowercased()): \(what)."
             case .traditionalChinese:
@@ -4426,7 +4426,7 @@ public final class GameSession {
         }
         // A bus stop's name has no English: in English the choice is not
         // listed, rather than naming the station in Chinese.
-        if let realBuses, language != .english {
+        if let realBuses, language.base != .english {
             let stops = realBuses.stops(around: location, frame: naming.frame, within: busStopChoiceDistanceMetres).stops
             func distance(_ stop: RealBusStops.Stop) -> Int64 {
                 let dx = stop.point.x - location.x, dy = stop.point.y - location.y

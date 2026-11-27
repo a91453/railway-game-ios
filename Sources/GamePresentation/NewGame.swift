@@ -414,7 +414,7 @@ public enum DemoWorld {
         let innerRing = try circle(radius: ringRadius)
         let outerRing = try circle(radius: ringRadius + 1)
 
-        let names = language == .english
+        let names = language.base == .english
             ? ["West", "Central", "East", "North", "South"]
             : ["西站", "中央", "東站", "北站", "南站"]
         // Each station stands at the middle of its first platform on Line 1
@@ -444,8 +444,8 @@ public enum DemoWorld {
             }
         }
 
-        let lines = language == .english ? ["Line 1", "Line 2", "Ring Line"] : ["1 號線", "2 號線", "環狀線"]
-        let trains = language == .english
+        let lines = language.base == .english ? ["Line 1", "Line 2", "Ring Line"] : ["1 號線", "2 號線", "環狀線"]
+        let trains = language.base == .english
             ? ["Train 1", "Train 2", "Ring Train 1", "Ring Train 2"]
             : ["列車 1", "列車 2", "環狀線列車 1", "環狀線列車 2"]
         // Where a train waits at its line's first platform: on `edge` going
@@ -754,7 +754,7 @@ public struct NewGameOptions: Hashable, Codable, Sendable {
                 ? language.text("Outside connections and map purchase are on.", "外部連接與地圖購買都開啟。")
                 : language.text("Building materials, outside connections and map purchase are on.", "建材、外部連接與地圖購買都開啟。"))
             : language.text("Changed: \(rules.joined(separator: ", ")).", "已更改：\(rules.joined(separator: "、"))。")
-        let seedText = seed.map { language.text("Seed \($0).", "種子 \($0)。") } ?? language.text("A random map each game.", "每局隨機地圖。")
+        let seedText: String = seed.map { language.text("Seed \($0).", "種子 \($0)。") } ?? language.text("A random map each game.", "每局隨機地圖。")
         return language.text("Starts with \(cash). ", "起始資金 \(cash)。") + self.rules.explanation(in: language) + " "
             + disruptions + " " + rule + " " + seedText
     }
