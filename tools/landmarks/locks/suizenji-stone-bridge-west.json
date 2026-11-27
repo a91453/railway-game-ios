@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark suizenji-stone-bridge-west: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "suizenji-stone-bridge-west" : {
+      "hash" : "59132f81e7c98d87",
+      "triangles" : 260
+    },
+    "suizenji-stone-bridge-west-far" : {
+      "hash" : "3b2e991894fb6159",
+      "triangles" : 108
+    }
+  }
+}

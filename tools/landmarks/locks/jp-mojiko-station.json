@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-mojiko-station: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-mojiko-station" : {
+      "hash" : "f153d629acca365e",
+      "triangles" : 4368
+    },
+    "jp-mojiko-station-far" : {
+      "hash" : "0ecce051eb044b31",
+      "triangles" : 992
+    }
+  }
+}

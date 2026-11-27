@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-mojiko-mitsui-club: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-mojiko-mitsui-club" : {
+      "hash" : "5f9d14989e400259",
+      "triangles" : 4178
+    },
+    "jp-mojiko-mitsui-club-far" : {
+      "hash" : "d17f312ebe995c11",
+      "triangles" : 2030
+    }
+  }
+}
