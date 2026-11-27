@@ -85,7 +85,7 @@ final class Map3DLandmarkRegistryTests: XCTestCase {
     /// meshes keep, `Map3DMotionBudgetTests.testWhatTheMapKeepsInMemory`).
     /// Decision 1018 (continued 5): 24 MB, an eighth of it, once decision
     /// 1033's truss bridges (8.5 MB, each span a copy of its own) took
-    /// Taiwan's to 19.6 MB and 碧潭吊橋 and 鵬灣跨海大橋 to 20.5 MB.
+    /// Taiwan's to 19.6 MB and 碧潭吊橋 to 20.2 MB.
     func testTheBudgets() {
         let square = 2 * 16_384.0
         var placed: [String: [(x: Double, y: Double, triangles: Int)]] = [:]

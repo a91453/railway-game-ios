@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-manda-pit: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-manda-pit" : {
+      "hash" : "948e18ce4ff93642",
+      "triangles" : 5608
+    },
+    "jp-manda-pit-far" : {
+      "hash" : "de2dbd3c373dfc80",
+      "triangles" : 2760
+    }
+  }
+}

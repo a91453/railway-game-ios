@@ -7,13 +7,15 @@ import XCTest
 /// Tenmangu's hall, gate and bridges, the Munakata, Yutoku Inari and Aoi
 /// Aso shrines and the Tsujun and Tenmon bridges stand on Fukuoka's map,
 /// Dazaifu's precinct outline is not drawn over its hall, and the Tenmon
-/// Bridge takes the place of the map's own bridge.
+/// Bridge takes the place of the map's own bridge. Decision 1018
+/// (continued 5): Yoshinogari's main hall and watchtower and the Manda Pit
+/// stand there too.
 final class Map3DKyushuLandmarksTests: XCTestCase {
     static let landmarks = [Map3DChikugoLiftBridge.registration, Map3DDazaifuHonden.registration, Map3DDazaifuRomon.registration,
                             Map3DDazaifuTaikoBridge.registration, Map3DMunakataTaisha.registration, Map3DYutokuInari.registration,
                             Map3DAoiAsoShrine.registration, Map3DTsujunBridge.registration, Map3DTenmonBridge.registration,
                             // Decision 1018 (continued 5).
-                            Map3DYoshinogariSanctuary.registration, Map3DYoshinogariWatchtower.registration]
+                            Map3DYoshinogariSanctuary.registration, Map3DYoshinogariWatchtower.registration, Map3DMandaPit.registration]
 
     func scene(round landmark: Map3DLandmarkRegistration, half: Double = 400)
         throws -> (builder: Map3DScene.Builder, frame: RealWorldFrame, region: WorldRegion, ground: OverseasGround) {
