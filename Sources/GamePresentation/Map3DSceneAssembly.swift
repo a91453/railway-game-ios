@@ -151,7 +151,9 @@ extension Map3DScene {
         // takes.
         let landmarks = worldFrame.map { builder.addTaipeiLandmarks(frame: $0) } ?? [:]
         // Decision 791: Hong Kong's landmark towers, clear of the track.
-        if let worldFrame { builder.addHongKongLandmarks(frame: worldFrame) }
+        // Decision 1020: the station landmarks over the track that runs
+        // through them.
+        if let worldFrame { builder.addHongKongLandmarks(frame: worldFrame, snapshot: snapshot) }
         // Decision 879: the earlier Sun Moon Lake's pier, boats, temple
         // and pavilion, where the real ones stand.
         if let worldFrame { builder.addSunMoonLandmarks(frame: worldFrame) }

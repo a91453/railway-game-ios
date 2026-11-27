@@ -31,6 +31,9 @@ enum Map3DMojikoStation {
         latitude: 33.9451280, longitude: 130.9614742,
         palette: palette,
         encoded: encoded,
+        // Decision 1020: a station's building, under the one rule of the
+        // station landmarks.
+        station: Map3DStationLandmark(),
         size: (71.26, 66.90, 16.60))
 }
 
