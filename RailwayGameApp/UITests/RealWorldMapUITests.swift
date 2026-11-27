@@ -400,6 +400,11 @@ final class RealWorldMapUITests: XCTestCase {
     /// only). Full lane only (not in the pull request gate).
     func testTheRealWorldMapIsReachedWithTheLargestText() {
         continueAfterFailure = false
+        // Some 45 drags through the place list at this size: 284 s on a
+        // hosted runner, past the default 8 minutes on the Mac (this
+        // branch's run 46049155329) and after a 4-minute stall of the
+        // Simulator (run 46044890788). The most xcodebuild allows.
+        executionTimeAllowance = 600
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = [

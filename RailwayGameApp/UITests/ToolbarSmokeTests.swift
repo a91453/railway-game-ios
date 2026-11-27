@@ -870,22 +870,32 @@ extension XCUIApplication {
                 pullArea = band
             }
         }
-        func shown() -> Bool {
-            button.exists && band.minY <= button.frame.midY && button.frame.midY <= band.maxY
+        // The middle of the button, or nil while the list holds no such
+        // row, asked once a drag: each query of a long list with the
+        // largest text took some 2.7 s on the Mac, and asking twice a
+        // drag held 44 drags over the 8 minutes (this branch's run
+        // 46049155329).
+        func middle() -> CGFloat? {
+            button.exists ? button.frame.midY : nil
         }
-        // A `where !shown()` keeps querying for every remaining iteration
+        func inBand(_ y: CGFloat?) -> Bool {
+            guard let y else { return false }
+            return band.minY <= y && y <= band.maxY
+        }
+        // A `where !inBand(middle())` keeps querying for every remaining iteration
         // after the row is visible (about 63 s in run 38996792440).
         for _ in 0..<drags {
-            if shown() { return true }
-            if !button.exists {
-                drag(in: area, at: area.midX, from: 0.85, to: 0.15)
-            } else if button.frame.midY < band.minY {
-                drag(in: pullArea, at: area.midX, from: 0.35, to: 0.65)
+            let y = middle()
+            if inBand(y) { return true }
+            if let y {
+                // Above the band: bring it down; below: push it up.
+                let down = y < band.minY
+                drag(in: pullArea, at: area.midX, from: down ? 0.35 : 0.65, to: down ? 0.65 : 0.35)
             } else {
-                drag(in: pullArea, at: area.midX, from: 0.65, to: 0.35)
+                drag(in: area, at: area.midX, from: 0.85, to: 0.15)
             }
         }
-        return shown()
+        return inBand(middle())
     }
 
     /// Touches the middle of `element`'s frame, once it is enabled.
