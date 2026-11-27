@@ -433,6 +433,11 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
 - Which kind of test a change needs (command line, iOS Simulator, the
   iPhone itself, the app on the Mac) and when to clean the Mac's Simulator
   data: `docs/TESTING_SOP.md` (owner, 2026-11-14).
+- Which environment a coding ticket uses (cloud with GitHub's or the
+  owner's Mac CI, or fully local with Xcode and the Simulator on the Mac),
+  which model, when a ticket's value justifies the costly local one, and
+  how to fall back to the cloud when the Mac is busy:
+  `docs/CODING_ENVIRONMENTS.md` (owner, 2026-11-27).
 - Never claim a check passed unless it actually ran. Report results as
   **VERIFIED** (ran, with where) or **UNVERIFIED** (e.g. "UNVERIFIED LOCALLY —
   requires macOS/Xcode CI"). Static inspection is not runtime verification.
