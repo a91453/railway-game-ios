@@ -96,21 +96,18 @@ extension RealWorldPlace {
     }()
 
     /// The places whose English or Chinese name holds `query`, ignoring
-    /// case, accents, spaces and 臺/台; those whose name starts with it
-    /// first, each part in the list's order. Empty for an empty query.
+    /// case, accents, spaces and 臺/台; those named it first (2026-11-27),
+    /// then those whose name starts with it, then the rest, each part in
+    /// the list's order. Empty for an empty query.
     public static func matching(_ query: String) -> [RealWorldPlace] {
         let query = searchKey(query)
         guard !query.isEmpty else { return [] }
-        var first: [RealWorldPlace] = [], then: [RealWorldPlace] = []
+        var tiers: [[RealWorldPlace]] = [[], [], []]
         for place in groups.flatMap(\.places) {
-            let names = [place.english, place.chinese].map(searchKey)
-            if names.contains(where: { $0.hasPrefix(query) }) {
-                first.append(place)
-            } else if names.contains(where: { $0.contains(query) }) {
-                then.append(place)
-            }
+            let rank = [place.english, place.chinese].map { PlaceSearchOrder.rank(searchKey($0), query) }.min() ?? 3
+            if rank < 3 { tiers[rank].append(place) }
         }
-        return first + then
+        return tiers.flatMap(\.self)
     }
 
     static func searchKey(_ text: String) -> String {

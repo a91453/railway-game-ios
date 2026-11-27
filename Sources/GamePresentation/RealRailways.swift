@@ -320,13 +320,14 @@ public struct RealRailways: Sendable {
 
         /// Whether `query`, already ``RealRailways/normalized(_:)``, is in
         /// its name, and at the start of it.
-        func match(_ query: String) -> (found: Bool, atStart: Bool) {
-            var found = false
+        func match(_ query: String) -> (found: Bool, atStart: Bool, exact: Bool) {
+            var found = false, atStart = false
             for name in [chinese, english].compactMap({ $0 }).map(RealRailways.normalized) {
-                if name.hasPrefix(query) { return (true, true) }
+                if name == query { return (true, true, true) }
+                atStart = atStart || name.hasPrefix(query)
                 found = found || name.contains(query)
             }
-            return (found, false)
+            return (found, atStart, false)
         }
     }
 
@@ -485,21 +486,23 @@ public struct RealRailways: Sendable {
     }
 
     /// The stations whose name, in Chinese or English, has `query` in it:
-    /// those it starts first, each in the site's order. Nothing for an
-    /// empty query.
+    /// those named it first (2026-11-27), then those it starts, then the
+    /// rest, each in the site's order. Nothing for an empty query.
     public func stations(matching query: String) -> [Station] {
         let query = Self.normalized(query)
         guard !query.isEmpty else { return [] }
-        var first: [Station] = [], then: [Station] = []
+        var named: [Station] = [], first: [Station] = [], then: [Station] = []
         for station in stations {
             let match = station.match(query)
-            if match.atStart {
+            if match.exact {
+                named.append(station)
+            } else if match.atStart {
                 first.append(station)
             } else if match.found {
                 then.append(station)
             }
         }
-        return first + then
+        return named + first + then
     }
 
     /// What makes two names one station's, in any language and any
