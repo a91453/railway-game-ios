@@ -775,11 +775,16 @@ set -euo pipefail
 # the 147 run (Map3DTrackKindsTests 25, AirportLineWholeIslandTests 24 and
 # so on). rest keeps some 1,165 s; dealt by the new weights the two runs
 # come to 616/554 and 540/549 s.
+# 2026-11-27 (CIOPT-18, after 153): the nightly 45920779013 (main
+# 1ed26fd) had rest-2 at 725 s of tests (job 13.9 minutes, the longest)
+# and rest-1 at 608, against campaigns-3 at 359, the lightest. rest-2's
+# two heaviest, TrainPortraitTests (40 s) and Map3DCoachesTests (36),
+# go to -3 (about 435 s), and take that run's times as their weights.
 classes_of() {
   case "$1" in
     campaigns-1) echo "Map3DSceneMemoryTests KernelDifferentialTests ScheduledOvertakeTrackLastPropertyTests BusReadAheadTests RoadDrawRealMapTests NightSkipTests RoadsTurnOnTests CityRequestsTests TraceDragCostTests BusRouteTests HongKongMapTests RovaniemiRailwaysTests HongKongBuildingsTests HongKongRailwaysTests HongKongBoughtAgainTests HongKongHarbourFerryTests" ;;
     campaigns-2) echo "SaveMutationSecondHalfTests Map3DBuildingsTests Map3DSurfaceTests Map3DRealBuildingsTests ScheduledOvertakeTrackMiddlePropertyTests VerticalRailwayPropertyTests OnboardingTests Map3DChuKuangPassengerTests Map3DPPIntegrationTests Map3DStationsTests SingleTrackCapacityPropertyTests PolicyTests PingxiChallengeTests RealLineRebuildTests Map3DStationExteriorsTests" ;;
-    campaigns-3) echo "DemoRealLinesTrackTests ScheduledTrafficSecondHalfPropertyTests Map3DBoxInstanceTests EconomySecondHalfPropertyTests Map3DPropsTests RealWorldDataLoadTests FlexDispatchPropertyTests Map3DC341Tests LessonGuideTests RealRoadCellsTests RealWorldExpansionTests Map3DTEMU2000Tests CityGrowthTests WenhuLineTests Map3DSceneRebuildTests" ;;
+    campaigns-3) echo "DemoRealLinesTrackTests ScheduledTrafficSecondHalfPropertyTests Map3DBoxInstanceTests EconomySecondHalfPropertyTests Map3DPropsTests RealWorldDataLoadTests FlexDispatchPropertyTests Map3DC341Tests LessonGuideTests RealRoadCellsTests RealWorldExpansionTests Map3DTEMU2000Tests CityGrowthTests WenhuLineTests Map3DSceneRebuildTests TrainPortraitTests Map3DCoachesTests" ;;
     campaigns-4) echo "NetworkServicePropertyTests TrafficFollowingPropertyTests Map3DRealTracksTests Map3DC341IntegrationTests TRADemoTests Map3DSignTests RealBusesTests NetworkSectionPropertyTests Map3DEMU500Tests RealWorldDemoRoadsTests Map3DRoadBridgeTests CoverageGridTests Map3DLandmarksTests Map3DModelPackLockTests RealLineBoughtAgainTests UndergroundStationsTests" ;;
     campaigns-5) echo "GoldenScenarioTests Map3DDetailTests SeededStreetPlanTests DeadlockPropertyTests Map3DBreezyBlueIntegrationTests Map3DTaichungGreenTests Map3DTaipeiLandmarksTests PassengerRouteSearchTests SanyingLineFreezeTests RealLineOfferPreparingTests Map3DEstateKitTests RealLineStockTests HongKongTungChungDayTests RealLineDepotAdditionTests LandCoverGridTests SharedStationLayoutTests" ;;
     campaigns-6) echo "RealLineAcquisitionTests Map3DTests DanhaiBlueThenGreenSimpleDayTests Map3DStreetsTests EconomyPropertyTests DanhaiGreenLineDayTests NewGameSavePropertyTests MetroStructuresTests FrameTimeBenchTests Map3DTrainLabelsTests TurnbackTests WeeklyPunctualityTests Map3DLotGroundTests Map3DEMU800Tests Map3DBusLayerTests RealLineBundleTests" ;;
@@ -954,7 +959,7 @@ CLASS_WEIGHTS="HongKongSharedTrackBuyOrderTests:320
   RealLineBundleTests:101 HongKongBoughtAgainTests:91
   PlatformNameBoardStylesTests:55
   UndergroundStationsTests:51 Map3DHSRStudioStationTests:53
-  Map3DStreamingPaceTests:33 TrainPortraitTests:38
+  Map3DStreamingPaceTests:33 TrainPortraitTests:40
   Map3DCableNightLightsTests:22 Map3DHKWestKowloonTests:37
   RailwayMuseumGuideTests:16 Map3DSuspensionBridgeTests:14
   FukuokaRailwaysTests:82 RealUndergroundTests:114
@@ -973,7 +978,7 @@ CLASS_WEIGHTS="HongKongSharedTrackBuyOrderTests:320
   Map3DCablewaysTests:15 Map3DNearestTrackTests:23
   SingleLineThreeTrainsTests:13 CollectionShowcaseTests:20
   TrainPackTests:20 AirCollectionTests:16 DemoRealLinesTrainTypeTests:4
-  Map3DCoachesTests:28 AirRoutesTests:32 TrafficPlanKeptTests:7
+  Map3DCoachesTests:36 AirRoutesTests:32 TrafficPlanKeptTests:7
   Map3DStationExteriorBatch2MapTests:7 Map3DAircraftLayerTests:7
   Map3DAirfieldsTests:35 Map3DLowRiseTests:7 Map3DRoadTunnelTests:68
   Map3DFarSightTests:6 NewTrainArrivalTests:4
