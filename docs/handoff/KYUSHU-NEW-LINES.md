@@ -40,4 +40,5 @@
 
 - 885 系、787 系的模型（RELAY-KAMOME-TRAINS）要等作者同意；現在暫代成太魯閣（8 節，買到的是 6 節）。
 - 海鷗接力號沒有機廠（南福岡車輛區），晚上停在兩端。
+- 先買九州新幹線再買海鷗接力號時，博多與新鳥栖的在來線被抬到新幹線上面（決策 1028 §3、§6）；測試現在照這個釘住（`SharedStationLayoutTests.testTheRelayKamomeMeetsTheKamomeAcrossThePlatform`），修好時改那個斷言。
 - iPhone 上沒看過（UNVERIFIED：要 macOS／實機）。
