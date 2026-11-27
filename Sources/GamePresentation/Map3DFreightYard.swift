@@ -40,17 +40,31 @@ public enum Map3DFreightYard {
         (world.freight?.facilities ?? []).map { $0.station.rawValue * 2 + ($0.product == .materials ? 1 : 0) }
     }
 
-    /// The yard sending `product`, built with +x its front (away from the
-    /// track), +y up and +z along the line, its middle on the ground at the
-    /// origin.
-    public static func mesh(_ product: CargoKind) -> Map3DMesh {
-        product == .materials ? stoneYard : containerYard
+    /// Decision 1033: whether `station`'s building materials yard is a
+    /// cement silo yard (``Map3DCementSilo``) rather than a stone yard:
+    /// every other station's, by its number, so a map has both and a
+    /// yard keeps its look.
+    public static func isCement(_ station: StationID) -> Bool {
+        station.rawValue % 2 == 0
     }
 
-    /// The same from far off: the paving and a box for each part.
-    public static func farMesh(_ product: CargoKind) -> Map3DMesh {
-        product == .materials ? stoneYardFar : containerYardFar
+    /// The yard sending `product` at `station`, built with +x its front
+    /// (away from the track), +y up and +z along the line, its middle on
+    /// the ground at the origin.
+    public static func mesh(_ product: CargoKind, at station: StationID? = nil) -> Map3DMesh {
+        guard product == .materials else { return containerYard }
+        return station.map(isCement) == true ? cementYard : stoneYard
     }
+
+    /// The same from far off: the paving and a box for each part (the
+    /// silo yard's own far model).
+    public static func farMesh(_ product: CargoKind, at station: StationID? = nil) -> Map3DMesh {
+        guard product == .materials else { return containerYardFar }
+        return station.map(isCement) == true ? cementYardFar : stoneYardFar
+    }
+
+    static let cementYard = Map3DCementSilo.yard(full: true)
+    static let cementYardFar = Map3DCementSilo.yard(full: false)
 
     /// A works kit part as the builder makes it, +x its front.
     static func part(_ part: Map3DWorksKit.Part) -> Map3DMesh {
@@ -213,9 +227,9 @@ extension Map3DScene.Builder {
             let saved = target
             defer { target = saved }
             target = .near
-            mesh(at: foot) { $0.append(Yard.mesh(product), at: foot, forward: out) }
+            mesh(at: foot) { $0.append(Yard.mesh(product, at: station), at: foot, forward: out) }
             target = .far
-            mesh(at: foot) { $0.append(Yard.farMesh(product), at: foot, forward: out) }
+            mesh(at: foot) { $0.append(Yard.farMesh(product, at: station), at: foot, forward: out) }
             state.stations.houseFootprints.append(corners)
             state.freight.freightYardPlaces.append(Map3DFreightYard.Place(station: station, product: product, centre: foot, forward: out))
             return cells(under: corners)

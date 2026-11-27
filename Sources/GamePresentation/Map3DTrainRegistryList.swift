@@ -32,5 +32,7 @@ extension Map3DTrainRegistry {
         Map3DKyushu800.registration,
         Map3DN700ST.registration,
         Map3DN700SKamome.registration,
+        Map3DKyushu885.registration,
+        Map3DKyushu787.registration,
     ]
 }

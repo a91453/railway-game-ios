@@ -319,6 +319,9 @@ extension Map3DScene.Builder {
         /// Decision 882: an underground island's half, whether its line
         /// runs as its box's furniture modules do (decision 860).
         var modulesForward: Bool?
+        /// Decision 1033: a street tram's stop, the studio's model, with
+        /// no canopy, props or footbridge of the game's.
+        var tramStop = false
     }
 
     /// REVIEW-L27 P3-2 (ELEVATED-SHELL-CHUNK): the lines (at the rails'
@@ -579,7 +582,7 @@ extension Map3DScene.Builder {
     /// (decision 506, later: ``Map3DStationKit/canopyShare(_:)``), in
     /// pieces of at most 8 m along its line; far off the flat canopy.
     private mutating func addCanopies(skipping roofed: Set<StationID> = []) {
-        for platform in state.platforms.laidPlatforms where !roofed.contains(platform.station) {
+        for platform in state.platforms.laidPlatforms where !roofed.contains(platform.station) && !platform.tramStop {
             let share = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
             let middle = Self.middle(of: platform.line, share: share)
             guard let path = Map3DStreetLife.Path(middle) else { continue }
