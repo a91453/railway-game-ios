@@ -140,10 +140,28 @@ extension RealLineLaying {
         let mainLength = ring.length - Self.ringSeam
         let path = WorldPath(ring.points(from: 0, to: mainLength))
         let seamPath = WorldPath(ring.points(from: mainLength, to: ring.length))
-        let stationsAt = points.map { path.nearest($0) }
-        guard stationsAt.allSatisfy({ $0.away <= RealLineAcquisition.stationReach }), zip(stationsAt, stationsAt.dropFirst()).allSatisfy({ $0.along < $1.along }) else {
+        let pointsAt = points.map { path.nearest($0) }
+        guard pointsAt.allSatisfy({ $0.away <= RealLineAcquisition.stationReach }), zip(pointsAt, pointsAt.dropFirst()).allSatisfy({ $0.along < $1.along }) else {
             return refused("The real line's stations are not along its track here.", "真實車站不在這段鐵路上。")
         }
+        // STATION-ALIGN-APPLY (decision 1022): each station's platforms
+        // along the real ones where OpenStreetMap has them, as a line's
+        // (``RealLineAcquisition/alignedStations(_:realEnds:half:length:endReach:gap:)``);
+        // round the seam no loop, so an end needs only its platform's room.
+        let ringHalf = Double(Int64(line.cars + 1) * Train.carLength) / 2
+        let stationsAt = RealLineAcquisition.alignedStations(
+            pointsAt,
+            realEnds: runs.stops.map { stop in
+                guard alignsPlatforms, let ends = railways.platformEnds?.ends(line: line.id, station: stop) else { return nil }
+                let first = path.nearest(WorldVector(frame.worldPosition(latitude: ends.first.latitude, longitude: ends.first.longitude)))
+                let last = path.nearest(WorldVector(frame.worldPosition(latitude: ends.last.latitude, longitude: ends.last.longitude)))
+                guard max(first.away, last.away) <= RealLineAcquisition.realPlatformReach else { return nil }
+                return (min(first.along, last.along), max(first.along, last.along))
+            },
+            half: ringHalf, length: path.length,
+            endReach: ringHalf + RealWorldDemo.platformMargin + RealWorldDemo.shortestEdge + metre,
+            gap: 2 * (ringHalf + RealWorldDemo.platformMargin)
+        )
 
         // The ground under the way and the depot's, read in on a copy;
         // decision 401, the tiles under it bought with it.

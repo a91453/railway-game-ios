@@ -349,6 +349,11 @@ public struct RealRailways: Sendable {
     public let stops: [String: [(chinese: String, coordinate: Coordinate)]]
     /// Real station operational metadata (classes, IDs, addresses, platforms, TRTC codes, track sections).
     public let stationData: RealStationData?
+    /// STATION-ALIGN-APPLY (decision 1022): where OpenStreetMap has the
+    /// platforms of each station on sale (`real_platforms.json`), every
+    /// map's; `nil` where the file is not there, the platforms laid round
+    /// the stations' points as before.
+    public var platformEnds: RealPlatformEnds?
     /// Real system and line operational parameters (headways, dwell times, station sequences, timetables).
     public let operations: RealRailwayOperations?
     /// The transfers between the railways (`station_transfers.json`).
@@ -858,9 +863,14 @@ extension RealRailways {
         let ridership = tables.allSatisfy { $0 == nil }
             ? nil : RealRidership(tra: tra, thsr: thsr, trtc: trtc, krtc: krtc, tmrt: tmrt, tymc: tymc, ntdlrt: ntdlrt, ntalrt: ntalrt, circular: circular, sanying: sanying)
 
+        // STATION-ALIGN-APPLY (decision 1022): optional, read after the
+        // others so one that cannot be read is listed with them.
+        let platformEnds = read("real_platforms", "json").flatMap { data in
+            parse("real_platforms.json") { try RealPlatformEnds(data: data) }
+        }
         guard let lines, let stations, let names else { return Loaded(railways: nil, issues: issues + operations.loadIssues) }
         do {
-            let railways = try RealRailways(
+            var railways = try RealRailways(
                 lines: lines,
                 stations: stations,
                 names: names,
@@ -876,6 +886,7 @@ extension RealRailways {
                 loadIssues: issues,
                 overseas: overseasFiles
             )
+            railways.platformEnds = platformEnds
             return Loaded(railways: railways, issues: railways.loadIssues)
         } catch {
             issues.append(RealDataLoadIssue(file: "track_lines.geojson, track_stations.geojson, station_names.json", error: error))
