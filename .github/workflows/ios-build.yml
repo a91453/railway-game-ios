@@ -671,9 +671,16 @@ jobs:
       # The iPad job, which never had this step, took 4.1 and 5.2 minutes
       # from boot to its first test (45650404544, 45532485041), and its
       # first launch through XCTest took 11 s. The full lane keeps the step.
+      # 8 minutes, not 5 (2026-11-27): in main 550e1377's full lane (run
+      # 46018530736) the step ran out of its 5 minutes in the second and
+      # lessons jobs (the second's install and launch took 4 min 12 s), and the
+      # lessons job's first four tests then could not launch the app
+      # through XCTest ("does not have a process ID"). A step stopped half
+      # way left the app running in 82e1886's too (the comment above
+      # "Warm up XCTest's first launch" in ui-full-lane).
       - name: Warm up the app's first launch
         if: ${{ github.event_name != 'pull_request' }}
-        timeout-minutes: 5
+        timeout-minutes: 8
         continue-on-error: true
         run: |
           app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"
@@ -1124,9 +1131,10 @@ jobs:
         timeout-minutes: 14
         run: xcrun simctl bootstatus "$SIMULATOR_UDID" -b
 
-      # As the build job's: the first launch on a fresh device is the slow one.
+      # As the build job's: the first launch on a fresh device is the slow
+      # one, and 8 minutes for it, as there.
       - name: Warm up the app's first launch
-        timeout-minutes: 5
+        timeout-minutes: 8
         continue-on-error: true
         run: |
           app="$RUNNER_TEMP/DerivedData/Build/Products/Debug-iphonesimulator/RailwayGame.app"

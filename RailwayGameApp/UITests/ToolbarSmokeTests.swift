@@ -860,23 +860,55 @@ extension XCUIApplication {
         let area = onScreen.isEmpty ? holder.frame : onScreen
         // Clear of the holder's edges, where a navigation or home bar can
         // lie over it.
-        let band = area.insetBy(dx: 0, dy: 24)
-        func shown() -> Bool {
-            button.exists && band.minY <= button.frame.midY && button.frame.midY <= band.maxY
-        }
-        // A `where !shown()` keeps querying for every remaining iteration
-        // after the row is visible (about 63 s in run 38996792440).
-        for _ in 0..<drags {
-            if shown() { return true }
-            if !button.exists {
-                drag(in: area, at: area.midX, from: 0.85, to: 0.15)
-            } else if button.frame.midY < band.minY {
-                drag(in: area, at: area.midX, from: 0.35, to: 0.65)
-            } else {
-                drag(in: area, at: area.midX, from: 0.65, to: 0.35)
+        var band = area.insetBy(dx: 0, dy: 24)
+        // Where the small drags that bring a row seen into the band are
+        // made.
+        var pullArea = area
+        // And clear of a search field in the navigation bar's drawer: the
+        // rows scroll under the glass bar, and a touch on a row lying there
+        // opens the search instead (main 550e1377's full lane, run
+        // 46018530736: the real-world picker's Taipei row stopped at y 179
+        // under its field, larger text, a phone on its side; the touch
+        // opened the keyboard and Build Here went).
+        let search = searchFields.firstMatch
+        if search.exists, search.frame.intersects(area) {
+            let top = max(band.minY, search.frame.maxY + 8)
+            if top < band.maxY - 44 {
+                band = CGRect(x: band.minX, y: top, width: band.width, height: band.maxY - top)
+                // A drag that starts on the bar does not move the list
+                // (this branch's run 46037972531: 50 drags from y 141,
+                // on the field, left Taipei above it), so they are made
+                // in the rows below, each 0.3 of the band, too short to
+                // step over it.
+                pullArea = band
             }
         }
-        return shown()
+        // The middle of the button, or nil while the list holds no such
+        // row, asked once a drag: each query of a long list with the
+        // largest text took some 2.7 s on the Mac, and asking twice a
+        // drag held 44 drags over the 8 minutes (this branch's run
+        // 46049155329).
+        func middle() -> CGFloat? {
+            button.exists ? button.frame.midY : nil
+        }
+        func inBand(_ y: CGFloat?) -> Bool {
+            guard let y else { return false }
+            return band.minY <= y && y <= band.maxY
+        }
+        // A `where !inBand(middle())` keeps querying for every remaining iteration
+        // after the row is visible (about 63 s in run 38996792440).
+        for _ in 0..<drags {
+            let y = middle()
+            if inBand(y) { return true }
+            if let y {
+                // Above the band: bring it down; below: push it up.
+                let down = y < band.minY
+                drag(in: pullArea, at: area.midX, from: down ? 0.35 : 0.65, to: down ? 0.65 : 0.35)
+            } else {
+                drag(in: area, at: area.midX, from: 0.85, to: 0.15)
+            }
+        }
+        return inBand(middle())
     }
 
     /// Touches the middle of `element`'s frame, once it is enabled.

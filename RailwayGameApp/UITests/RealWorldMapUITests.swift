@@ -400,6 +400,11 @@ final class RealWorldMapUITests: XCTestCase {
     /// only). Full lane only (not in the pull request gate).
     func testTheRealWorldMapIsReachedWithTheLargestText() {
         continueAfterFailure = false
+        // Some 45 drags through the place list at this size: 284 s on a
+        // hosted runner, past the default 8 minutes on the Mac (this
+        // branch's run 46049155329) and after a 4-minute stall of the
+        // Simulator (run 46044890788). The most xcodebuild allows.
+        executionTimeAllowance = 600
         XCUIDevice.shared.orientation = .landscapeLeft
         let app = XCUIApplication()
         app.launchArguments = [
@@ -785,8 +790,13 @@ final class RealWorldMapUITests: XCTestCase {
                 button.tap()
                 continue
             }
+            // With the largest text the whole maps' long summaries come
+            // before Taiwan's places: Taipei's row took 38 of the 40 drags
+            // in main d5572844's full lane (run 45924059254) and was not
+            // reached in 550e1377's (run 46018530736), once Fukuoka's map
+            // named its new lines (#2824).
             XCTAssertTrue(
-                app.scrollUntilShown(button, in: holder),
+                app.scrollUntilShown(button, in: holder, drags: holder == nil ? 40 : 90),
                 "\(identifier) cannot be scrolled to: \(button.exists ? "\(button.frame)" : "missing"), app \(app.frame)"
             )
             app.tapMiddle(of: button)
