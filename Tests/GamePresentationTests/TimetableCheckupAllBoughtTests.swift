@@ -177,7 +177,9 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         // viaduct over the subway's), so `testFukuokaShinkansen` plays it
         // alone. Decision 998: so is the Nishi-Kyushu Shinkansen, a line of
         // its system sharing no station with it, `testNishiKyushuShinkansen`.
-        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS", "kyushushinkansen:NK"])
+        // Decision 1028: and the Relay Kamome, JR Kyushu's conventional
+        // line, another system again, `testRelayKamome`.
+        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS", "kyushushinkansen:NK", "jrkyushu:RK"])
     }
 
     /// The groups of lines sharing a station on each map, and the worlds
@@ -309,6 +311,20 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
             try check(name, {
                 let session = try Self.fukuoka(rules: rules, start: 3)
                 try Self.buyTogether(["kyushushinkansen:NK"], in: session)
+                return session.world
+            }())
+        }
+    }
+
+    /// Decision 1028: the Relay Kamome bought alone, from a new game's
+    /// land in the north-west.
+    func testRelayKamome() throws {
+        try full()
+        for (label, rules) in Self.rules {
+            let name = "fukuoka jrkyushu:RK \(label)"
+            try check(name, {
+                let session = try Self.fukuoka(rules: rules)
+                try Self.buyTogether(["jrkyushu:RK"], in: session)
                 return session.world
             }())
         }

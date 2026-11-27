@@ -47,6 +47,25 @@ extension DataSourceCredits {
                         openStreetMapCopyright(in: language),
                     ]
                 ),
+                // Decision 1028: the Relay Kamome, Hakata to Takeo-Onsen
+                // (`MapPacks/fukuoka/jrkyushu.json`).
+                DataSourceCredit(
+                    id: "relayKamome",
+                    title: language.text("Relay Kamome", "海鷗接力號"),
+                    detail: language.text(
+                        "JR Kyushu’s Relay Kamome from Hakata to Takeo-Onsen, with its six stations’ names in Chinese, English and Japanese. Its trains meet the Nishi-Kyushu Shinkansen across the platform at Takeo-Onsen, at estimated times.",
+                        "JR九州海鷗接力號博多到武雄溫泉，六個車站有中文、英文與日文站名。列車在武雄溫泉和西九州新幹線對面接續，照估計的時刻行駛。"
+                    ),
+                    notice: language.text(
+                        "Stations and their Japanese names: made by processing “National Land Numerical Information (Railway Data)” (Ministry of Land, Infrastructure, Transport and Tourism), CC BY 4.0 (「国土数値情報（鉄道データ）」（国土交通省）を加工して作成). Track, viaducts and the line colour: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with Kyushu Railway Company or the Government of Japan.",
+                        "車站與日文站名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成，CC BY 4.0。軌道、高架與路線色：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與九州旅客鐵道、日本政府沒有任何關係。"
+                    ),
+                    links: [
+                        landNumericalRailwayData(in: language),
+                        ccByLicense,
+                        openStreetMapCopyright(in: language),
+                    ]
+                ),
                 // FUKUOKA-GROUND: the pack's base map, buildings, heights and people.
                 DataSourceCredit(
                     id: "fukuokaMap",

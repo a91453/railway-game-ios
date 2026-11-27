@@ -38,11 +38,12 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     /// SHINKANSEN-SALE (decision 975): every system whose lines are on its
     /// map, ``system`` first: Japan's map has the Fukuoka City Subway's and
     /// the Kyushu Shinkansen's (`kyushushinkansen.json`), another
-    /// company's, on another gauge.
+    /// company's, on another gauge, and (decision 1028) JR Kyushu's
+    /// conventional lines' (`jrkyushu.json`, the Relay Kamome's).
     public var systems: [String] {
         switch self {
         case .hongKong, .rovaniemi: [system]
-        case .fukuoka: [system, "kyushushinkansen"]
+        case .fukuoka: [system, "kyushushinkansen", "jrkyushu"]
         }
     }
 
@@ -763,6 +764,14 @@ extension RealRailways.System {
             // deeper red (`build_nishi_kyushu_shinkansen.py`'s `COLOUR`).
             "kyushushinkansen|NK": RealRailways.RGB(0xA6192E),
         ]),
+        // Decision 1028: JR Kyushu's conventional lines, a system of their
+        // own so the Relay Kamome is sold apart from the Shinkansen it
+        // shares Hakata, Shin-Tosu and Takeo-Onsen with. The colour is
+        // OpenStreetMap's for the Nagasaki Main Line (`build_relay_kamome.py`'s
+        // `COLOUR`).
+        RealRailways.System(id: "jrkyushu", english: "JR Kyushu conventional lines", chinese: "JR九州在來線", lineColors: [
+            "jrkyushu|RK": RealRailways.RGB(0xFAAF18),
+        ]),
     ]
 
     /// Every system of the cities outside Taiwan.
@@ -817,6 +826,14 @@ extension RealBranchLine {
         // station shared with the Kyushu Shinkansen's, so sold on its own
         // (``RealLineBundle/groups(of:)``).
         ("kyushushinkansen", "NK", "Nishi-Kyushu Shinkansen", "西九州新幹線", nil, .metro, false),
+        // Decision 1028 (RELAY-KAMOME-LINE): the Relay Kamome, Hakata to
+        // Takeo-Onsen on the Kagoshima, Nagasaki and Sasebo Lines, each
+        // train meeting a Kamome across the platform at Takeo-Onsen
+        // (`build_relay_kamome.py`). JR Kyushu's conventional lines are a
+        // system of their own, so it is sold on its own
+        // (``RealLineBundle/groups(of:)``), bought as a branch line is (a
+        // limited express an hour or half an hour apart, as Rovaniemi's).
+        ("jrkyushu", "RK", "Relay Kamome", "海鷗接力號", nil, .branch, false),
     ]
 
     /// Decision 753: the lines of the cities outside Taiwan drawn along

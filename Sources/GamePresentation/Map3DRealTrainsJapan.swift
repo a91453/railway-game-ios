@@ -1,6 +1,6 @@
 // SPLIT-HOTSPOTS-2 (REAL-TRAINS-PER-REGION): which of the game's train
-// sets Japan's real lines run (the Fukuoka City Subway and the Kyushu and
-// Nishi-Kyushu Shinkansen), split from Map3DRealTrains.swift's ``Map3DRealTrains/formation(system:id:name:)``
+// sets Japan's real lines run (the Fukuoka City Subway, the Kyushu and
+// Nishi-Kyushu Shinkansen and the Relay Kamome), split from Map3DRealTrains.swift's ``Map3DRealTrains/formation(system:id:name:)``
 // so that a pull request adding one place's trains changes only its file.
 
 extension Map3DRealTrains {
@@ -27,6 +27,11 @@ extension Map3DRealTrains {
             // its own livery.
             if id == "NK" { return Formation(key: Map3DN700SKamome.key, cars: Map3DN700SKamome.cars) }
             return Formation(key: Map3DKyushuN700.key, cars: Map3DKyushuN700.cars, alternate: Map3DKyushu800.key)
+        case "jrkyushu":
+            // Decision 1028: the Relay Kamome's 885 series drawn, until it
+            // has its own (RELAY-KAMOME-TRAINS), as the TEMU1000, the
+            // Taroko, Hitachi's train built from the 885.
+            return Formation(key: "taroko", cars: 8)
         default:
             return nil
         }

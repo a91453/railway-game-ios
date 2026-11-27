@@ -323,6 +323,52 @@ final class SharedStationLayoutTests: XCTestCase {
         }
     }
 
+    /// Decision 1028: the Relay Kamome, JR Kyushu's conventional line,
+    /// bought after the subway's lines and both Shinkansen lines and
+    /// before them. It shares Hakata with all but the Hakozaki Line,
+    /// Shin-Tosu with the Kyushu Shinkansen and Takeo-Onsen with the
+    /// Nishi-Kyushu Shinkansen, each one station, no platform over
+    /// another. At Takeo-Onsen the two stand at one height across one
+    /// island (its track 10, the Kamome's 11), a minute's change across
+    /// the platform (decision 912), as the real one's. Hakata is on two
+    /// levels as before (the subway under the ground, JR's two lines on
+    /// their viaducts, the Relay Kamome's 8 or 16 m up beside the
+    /// Shinkansen's 16 m as it is bought before or after them: the real
+    /// station's second and third floors), and Shin-Tosu too, whose two
+    /// lines cross square to each other (83°) 170 m apart, the
+    /// Shinkansen's platforms up on its viaduct and the conventional
+    /// line's on the ground or a level up: no two lines that cross can
+    /// stand beside each other.
+    func testTheRelayKamomeMeetsTheKamomeAcrossThePlatform() throws {
+        let kamome = RelayKamomeTests.id, nishi = NishiKyushuShinkansenTests.id, shinkansen = KyushuShinkansenTests.id
+        for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen, kamome, nishi], [kamome, nishi, shinkansen, "fksubway:N", "fksubway:H", "fksubway:K"]] {
+            let session = try FukuokaRailwaysTests.fukuoka(balance: RelayKamomeTests.everyLine)
+            let laidBy = try Self.buy(order, on: session)
+            let world = session.world
+            let laid = Self.platforms(of: world, laidBy: laidBy)
+            XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            XCTAssertEqual(Self.uneven(laid, in: world), ["博多", "新鳥栖"], "\(order): every other station level")
+            for (name, ids) in [("博多", [kamome, shinkansen, "fksubway:K", "fksubway:N"]), ("新鳥栖", [kamome, shinkansen]), ("武雄溫泉", [kamome, nishi])] {
+                let stations = world.stations.filter { $0.name == name }
+                XCTAssertEqual(stations.count, 1, "\(order): one \(name)")
+                let station = try XCTUnwrap(stations.first?.id)
+                for id in ids {
+                    let line = try XCTUnwrap(world.line(id: try XCTUnwrap(world.acquisition(of: id)?.line)))
+                    XCTAssertTrue(line.stops.contains(station), "\(order): \(id) stops at \(name)")
+                }
+            }
+            let takeo = try XCTUnwrap(world.stations.first { $0.name == "武雄溫泉" }?.id)
+            let pair = try XCTUnwrap(Self.between(kamome, nishi, at: takeo, in: laid), "\(order)")
+            XCTAssertLessThanOrEqual(pair.height, 0.5, "\(order): Takeo-Onsen's two lines at one height")
+            let platforms = world.network.platforms(of: takeo)
+            let relay = platforms.filter { laidBy[$0] == kamome }, shinkansenPlatforms = platforms.filter { laidBy[$0] == nishi }
+            XCTAssertEqual(relay.count, 1, "\(order): the Relay Kamome's one track")
+            XCTAssertEqual(shinkansenPlatforms.count, 2, "\(order): the Kamome's two")
+            let across = try relay.flatMap { a in try shinkansenPlatforms.map { b in try XCTUnwrap(world.platformChange(from: a, to: b)).kind } }
+            XCTAssertTrue(across.contains(.acrossPlatform), "\(order): across the platform to a Kamome's track, \(across)")
+        }
+    }
+
     // MARK: - Every map
 
     /// The maps this file buys every shared station of. A new
@@ -372,7 +418,7 @@ final class SharedStationLayoutTests: XCTestCase {
     /// lines are sold together and the other way, written to the file
     /// `SHARED_STATION_REPORT` names; skipped without it.
     /// `SHARED_STATION_ONLY=zhuzhong` (or `hongkong`, `danhai`,
-    /// `rovaniemi`, `fukuoka`) for one map's.
+    /// `rovaniemi`, `fukuoka`, `kamome`) for one map's.
     func testReport() throws {
         guard let path = ProcessInfo.processInfo.environment["SHARED_STATION_REPORT"] else {
             throw XCTSkip("SHARED_STATION_REPORT=<file to write> prints every shared station's platforms")
@@ -438,6 +484,13 @@ final class SharedStationLayoutTests: XCTestCase {
         let shinkansen = KyushuShinkansenTests.id
         for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen], [shinkansen, "fksubway:N", "fksubway:H", "fksubway:K"]] {
             try buy("fukuoka", order) { try FukuokaRailwaysTests.fukuoka() }
+        }
+        // Decision 1028: the Relay Kamome after the subway's lines and the
+        // Kyushu Shinkansen, and before them
+        // (the Nishi-Kyushu Shinkansen after it, whose land it reaches).
+        let kamome = RelayKamomeTests.id, nishi = NishiKyushuShinkansenTests.id
+        for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen, kamome, nishi], [kamome, nishi, shinkansen, "fksubway:N", "fksubway:H", "fksubway:K"]] {
+            try buy("kamome", order) { try FukuokaRailwaysTests.fukuoka(balance: RelayKamomeTests.everyLine) }
         }
         try lines.joined(separator: "\n").appending("\n").write(toFile: path, atomically: true, encoding: .utf8)
     }

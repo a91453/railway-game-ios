@@ -512,6 +512,10 @@ SOURCES = {
     # SHINKANSEN-SALE (decision 975): `build_kyushu_shinkansen.py merge`.
     "kyushushinkansen.json": {"stations": MLIT, "shape": OSM, "segs.run, dwellSec (estimated from distance and 260 km/h)": OURS},
     "kyushushinkansen_times.json": {"sets (laid out from estimated headways)": OURS},
+    # RELAY-KAMOME-LINE (decision 1028): `build_relay_kamome.py`, merged by
+    # `build_kyushu_shinkansen.py merge`.
+    "jrkyushu.json": {"stations": MLIT, "shape": OSM, "segs.run, dwellSec (estimated from distance and 130 km/h)": OURS},
+    "jrkyushu_times.json": {"sets (timed to the estimated Kamome at Takeo-Onsen)": OURS},
 }
 MLIT_CREDIT = ("「国土数値情報（鉄道データ）」（国土交通省）"
                "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html を加工して作成, CC BY 4.0")
@@ -561,10 +565,17 @@ def refresh_manifest(folder):
     for name, entry in manifest["files"].items():
         if "/" not in name:
             entry["bytes"] = os.path.getsize(os.path.join(folder, name))
+    # Decision 1028: a file a tool adds to the pack after it was cut (the
+    # Relay Kamome's `jrkyushu.json`), listed with its sources.
+    for name in sorted(set(SOURCES) - set(manifest["files"])):
+        if os.path.exists(os.path.join(folder, name)):
+            manifest["files"][name] = {"bytes": os.path.getsize(os.path.join(folder, name)), "sources": SOURCES[name]}
+    manifest["files"] = dict(sorted(manifest["files"].items()))
     manifest["bytes"] = sum(entry["bytes"] for entry in manifest["files"].values())
     # As split_prefectures.py writes it.
     with open(path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, separators=(",", ":"))
+        f.write("\n")
 
 
 def write_times(out, lines):

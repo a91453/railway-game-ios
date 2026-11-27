@@ -33,7 +33,7 @@ final class KyushuShinkansenTests: XCTestCase {
     /// at Shin-Tosu, three at Chikugo-Funagoya, four at Kumamoto (its
     /// depot holds the sets its platforms do not), two at the others.
     func testThePackHasTheLine() throws {
-        XCTAssertEqual(OverseasMap.fukuoka.systems, ["fksubway", "kyushushinkansen"])
+        XCTAssertEqual(OverseasMap.fukuoka.systems, ["fksubway", "kyushushinkansen", "jrkyushu"], "the Relay Kamome's own system since decision 1028")
         XCTAssertEqual(OverseasMap.map(ofSystem: "kyushushinkansen"), .fukuoka)
         XCTAssertEqual(OverseasMap.map(ofSystem: "fksubway"), .fukuoka)
         XCTAssertNil(OverseasMap.map(ofSystem: "thsr_sched"), "Taiwan's are on no overseas map")

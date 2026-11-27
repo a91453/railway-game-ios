@@ -144,13 +144,14 @@ public struct TrackGauge: Hashable, Sendable {
     /// railway's 762; standard gauge for Taiwan's metros and light rails
     /// and Hong Kong's MTR (1,432 mm, 3 mm under standard gauge; the game
     /// lays it at 1,435); Finland's 1,524; the Fukuoka City Subway's
-    /// Kūkō and Hakozaki Lines 1,067 and its Nanakuma Line 1,435. `nil`
-    /// for a name of a system the game does not know.
+    /// Kūkō and Hakozaki Lines 1,067 and its Nanakuma Line 1,435; JR
+    /// Kyushu's conventional lines (the Relay Kamome's, decision 1028)
+    /// 1,067. `nil` for a name of a system the game does not know.
     public static func ofRealLine(_ name: String) -> TrackGauge? {
         let parts = name.split(separator: ":", maxSplits: 1).map(String.init)
         guard let system = parts.first else { return nil }
         switch system {
-        case "tra", "tra_sched": return .cape
+        case "tra", "tra_sched", "jrkyushu": return .cape
         case "thsr", "thsr_sched", "kyushushinkansen": return .shinkansen
         case "afr", "afr_sched": return .forest
         case "trtc", "mrt", "tmrt", "krtc", "tymc", "ntdlrt", "ntalrt", "sanying", "hkmtr": return .standard

@@ -33,5 +33,8 @@ extension TimetableCheckupBudgets {
         // Decision 998: the Nishi-Kyushu Shinkansen bought alone from Nagasaki (2026-11-26: all 0).
         "fukuoka kyushushinkansen:NK simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
         "fukuoka kyushushinkansen:NK realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
+        // Decision 1028: the Relay Kamome bought alone (2026-11-27: all 0).
+        "fukuoka jrkyushu:RK simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
+        "fukuoka jrkyushu:RK realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
     ]
 }

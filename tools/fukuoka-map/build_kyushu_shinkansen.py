@@ -399,8 +399,12 @@ PACK_FILES = (f"{SYSTEM}.json", f"{SYSTEM}_times.json")
 # (the Kyushu Shinkansen's, then the Nishi-Kyushu Shinkansen's, staged by
 # build_nishi_kyushu_shinkansen.py); and how each line's notes are told
 # apart in a file both share.
-LINE_ORDER = ("KS", "NK")
-LINE_NOTES = {"KS": " Kyushu Shinkansen: ", "NK": " Nishi-Kyushu Shinkansen: "}
+LINE_ORDER = ("KS", "NK", "RK")
+LINE_NOTES = {"KS": " Kyushu Shinkansen: ", "NK": " Nishi-Kyushu Shinkansen: ", "RK": " Relay Kamome: "}
+# Decision 1028: the systems `merge` takes a staged line of, by the file
+# the staging folder holds: this one's, and the Relay Kamome's JR Kyushu
+# conventional line (`build_relay_kamome.py`).
+MERGED_SYSTEMS = (SYSTEM, "jrkyushu")
 
 
 def merge(staged, pack):
@@ -413,7 +417,13 @@ def merge(staged, pack):
     of each file, and decision 998's: the other line's of the system, are
     kept as they were. `depot.json` stays staged (the game's depot is a
     `RealLineDepotSite`). `extract_fukuoka_runs.py` then lays out
-    `metro_runs.json` for every system."""
+    `metro_runs.json` for every system.
+
+    Decision 1028: the staged folder may hold another system's line
+    (`MERGED_SYSTEMS`: the Relay Kamome's `jrkyushu.json`), merged the
+    same way into that system's files, the other systems' parts of the
+    shared files kept as they were."""
+    system = next(s for s in MERGED_SYSTEMS if os.path.exists(os.path.join(staged, f"{s}.json")))
     def read(folder, name):
         with open(os.path.join(folder, name), encoding="utf-8") as f:
             return json.load(f)
@@ -440,9 +450,10 @@ def merge(staged, pack):
             return next(iter(parts.values()))
         return head + "".join(LINE_NOTES[k] + parts[k] for k in sorted(parts, key=order))
 
-    system_file, times_file = PACK_FILES
+    system_file, times_file = f"{system}.json", f"{system}_times.json"
     ours = read(staged, system_file)
     added_ids = [line["id"] for line in ours["lines"]]
+    own = LINE_ID if system == SYSTEM else added_ids[0]
     if os.path.exists(os.path.join(pack, system_file)):
         theirs, their_times = read(pack, system_file), read(pack, times_file)
     else:
@@ -450,25 +461,25 @@ def merge(staged, pack):
         their_times = dict(read(staged, times_file), lines={}, source_notes="")
     theirs["lines"] = sorted([line for line in theirs["lines"] if line["id"] not in added_ids] + ours["lines"],
                              key=lambda line: order(line["id"]))
-    theirs["source_notes"] = notes(theirs["source_notes"], ours["source_notes"], added_ids, own=LINE_ID)
+    theirs["source_notes"] = notes(theirs["source_notes"], ours["source_notes"], added_ids, own=own)
     fk.write(pack, system_file, theirs)
     our_times = read(staged, times_file)
     lines = {k: v for k, v in their_times["lines"].items() if k not in added_ids}
     lines.update(our_times["lines"])
     their_times["lines"] = {k: lines[k] for k in sorted(lines, key=order)}
-    their_times["source_notes"] = notes(their_times["source_notes"], our_times["source_notes"], added_ids, own=LINE_ID)
+    their_times["source_notes"] = notes(their_times["source_notes"], our_times["source_notes"], added_ids, own=own)
     fk.write(pack, times_file, their_times)
 
     def ours_too(properties):
-        return properties["sys"] == SYSTEM and properties.get("id", properties.get("lineId")) in added_ids
+        return properties["sys"] == system and properties.get("id", properties.get("lineId")) in added_ids
 
     for name in ("track_lines.geojson", "track_stations.geojson"):
         ours, theirs = read(staged, name), read(pack, name)
         kept = [f for f in theirs["features"] if not ours_too(f["properties"])]
         added = ours["features"]
         if name == "track_lines.geojson":
-            kept = [f for f in kept if f["properties"]["sys"] != SYSTEM] + sorted(
-                (f for f in kept if f["properties"]["sys"] == SYSTEM), key=lambda f: order(f["properties"]["id"]))
+            kept = [f for f in kept if f["properties"]["sys"] != system] + sorted(
+                (f for f in kept if f["properties"]["sys"] == system), key=lambda f: order(f["properties"]["id"]))
             added = [dict(f, properties=dict(f["properties"], sortKey=len(kept) + n)) for n, f in enumerate(added)]
         theirs["source"] = notes(theirs["source"], ours["source"], added_ids)
         theirs["features"] = kept + added
@@ -476,12 +487,12 @@ def merge(staged, pack):
     ours, theirs = read(staged, "station_names.json"), read(pack, "station_names.json")
     theirs["source"] = notes(theirs["source"], ours["source"], added_ids)
     for key in ("systems", "routes"):
-        theirs[key][SYSTEM] = {**theirs[key].get(SYSTEM, {}), **ours[key][SYSTEM]}
+        theirs[key][system] = {**theirs[key].get(system, {}), **ours[key][system]}
     fk.write(pack, "station_names.json", theirs)
     ours, theirs = read(staged, "rail_structures.json"), read(pack, "rail_structures.json")
     theirs["structures"] = [s for s in theirs["structures"]
-                            if s["system"] != SYSTEM or s.get("line", "KS") not in added_ids] + ours["structures"]
-    theirs["source"][SYSTEM] = ours["source"]["openStreetMap"]
+                            if s["system"] != system or s.get("line", "KS") not in added_ids] + ours["structures"]
+    theirs["source"][system] = ours["source"]["openStreetMap"]
     fk.write(pack, "rail_structures.json", theirs)
     fk.refresh_manifest(pack)
     print(f"{pack}: {len(read(pack, 'track_lines.geojson')['features'])} lines, "

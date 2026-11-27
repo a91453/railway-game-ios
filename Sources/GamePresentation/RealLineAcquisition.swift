@@ -258,10 +258,15 @@ public struct RealBranchLine: Hashable, Sendable {
             guard end else { return nil }
             return switch name {
             case "長崎": [(island, 1, false), (-between, 1, false), (-(between + island), 2, false)]
-            // Takeo-Onsen: the second track a track's spacing to the
-            // left, a side platform outside each (the Relay Kamome's
-            // across them not laid).
-            case "武雄溫泉": [(-between, 1, false)]
+            // Takeo-Onsen: the line comes in on track 12, the second
+            // track (11) a track's spacing to its right, north-west, a
+            // side platform outside each. Decision 1028: track 11's the
+            // island's other side when the Relay Kamome is bought, whose
+            // track 10 stands 12 m further north-west (OpenStreetMap's
+            // ways 1258185405, 1258185406 and 458032623); decision 998
+            // laid it on the left, 17 m from track 10, too far for one
+            // island between them.
+            case "武雄溫泉": [(between, 1, false)]
             default: nil
             }
         }
