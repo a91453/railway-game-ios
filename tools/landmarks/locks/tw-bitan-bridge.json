@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark tw-bitan-bridge: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "tw-bitan-bridge" : {
+      "hash" : "0a5e64bdb62bcd8d",
+      "triangles" : 7816
+    },
+    "tw-bitan-bridge-far" : {
+      "hash" : "37d235db2485bacd",
+      "triangles" : 3128
+    }
+  }
+}
