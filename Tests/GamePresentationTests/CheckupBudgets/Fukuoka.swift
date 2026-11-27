@@ -28,8 +28,11 @@ extension TimetableCheckupBudgets {
     static let fukuokaAllBought: [String: TimetableCheckup.Budget] = [
         "fukuoka fksubway:K+fksubway:H+fksubway:N simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 4),
         "fukuoka fksubway:K+fksubway:H+fksubway:N realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 4),
-        "fukuoka kyushushinkansen:KS simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 2),
-        "fukuoka kyushushinkansen:KS realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 2),
+        // Decision 1030: with Kumamoto to Shin-Minamata, sold with it
+        // (2026-11-27: its own 42 runs all 0 under both rules; the 2
+        // minutes are Hakata–Kumamoto's, as before).
+        "fukuoka kyushushinkansen:KS+KS2 simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 2),
+        "fukuoka kyushushinkansen:KS+KS2 realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 2),
         // Decision 998: the Nishi-Kyushu Shinkansen bought alone from Nagasaki (2026-11-26: all 0).
         "fukuoka kyushushinkansen:NK simple": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),
         "fukuoka kyushushinkansen:NK realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 0),

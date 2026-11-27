@@ -44,7 +44,11 @@ final class KyushuShinkansenTests: XCTestCase {
         XCTAssertEqual(FukuokaRailwaysTests.open.issues, [])
         let railways = try FukuokaRailwaysTests.railways()
         // Decision 998: and the Nishi-Kyushu Shinkansen's, its second line.
-        XCTAssertEqual(railways.lines.filter { $0.system.id == "kyushushinkansen" }.map(\.lineKey).sorted(), ["kyushushinkansen|KS", "kyushushinkansen|NK"])
+        // Decision 1030: and Kumamoto to Shin-Minamata, a line of its own.
+        XCTAssertEqual(
+            Set(railways.lines.filter { $0.system.id == "kyushushinkansen" }.map(\.lineKey)),
+            ["kyushushinkansen|KS", "kyushushinkansen|NK", "kyushushinkansen|KS2"]
+        )
         let stations = railways.stations.filter { $0.system.id == "kyushushinkansen" && Self.stops.contains($0.chinese) }
         XCTAssertEqual(stations.map(\.chinese).sorted(), Self.stops.sorted())
         XCTAssertEqual(stations.first { $0.chinese == "博多" }?.english, "Hakata")
@@ -87,7 +91,10 @@ final class KyushuShinkansenTests: XCTestCase {
     /// real one's stand (``Self/real``).
     func testTheLineIsBoughtAloneAndRunsItsDay() throws {
         let session = try FukuokaRailwaysTests.fukuoka()
-        let listing = try XCTUnwrap(session.realLineListings.first { $0.bundle.lines.map(\.id) == [Self.id] }, "sold by itself")
+        // Decision 1030: listed with Kumamoto to Shin-Minamata, which
+        // shares its Kumamoto; bought here by itself, as it was sold before.
+        let listing = try XCTUnwrap(session.realLineListings.first { $0.bundle.lines.contains { $0.id == Self.id } })
+        XCTAssertEqual(listing.bundle.lines.map(\.id), [Self.id, KyushuShinkansenSouthTests.id])
         XCTAssertTrue(listing.isBuyable)
         // Decision 997: the tiles laid again from the four prefectures'
         // middle, so Fukuoka's first four lie some 1.5 km further off.
