@@ -140,6 +140,17 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     /// done, and a touch on its leading end fell on the map (main
     /// 947c23a's full lane, run 40093122899). `nil`: placed afresh.
     public var previous: Frame?
+    /// What the card covered where it stands (``previous``) when it was put
+    /// there (``cost(ofCardAt:in:)``): it stays while it covers no more,
+    /// even where another place would now cover less. Weighing only what
+    /// it covers now, it hopped to and fro: at the last step on a phone on
+    /// its side it stood over the map layers button, and whenever the
+    /// details card beside it grew shorter, as its waiting passengers
+    /// changed, the middle of the screen over the details card covered
+    /// less, and Finish moved twice a game hour, under the finger (main
+    /// d557284's full lane, run 45924059254). `nil`: placed by what it
+    /// covers alone.
+    public var previousCost: Double?
 
     /// The card's distance from the screen's edges: the map's other
     /// floating controls' (``HUDMargins/edge``; decision 388, 16 before).
@@ -290,6 +301,33 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         return (bands.max() ?? 0) >= minimumFreeMap
     }
 
+    /// What a card at `frame` covers, as the placement weighs it: `frame`
+    /// as the card's frame is kept (``previous``), in the coordinates
+    /// `bounds` is laid out in. The app keeps it with the card's place
+    /// (``previousCost``).
+    public func cost(ofCardAt frame: Frame, in bounds: Frame) -> Double {
+        costs(in: bounds)(frame.offsetBy(dx: bounds.minX, dy: bounds.minY))
+    }
+
+    /// What a card at a frame in `bounds`' coordinates covers: the step's
+    /// own controls, the places to tap and the panels most, then the other
+    /// controls, the details card least, and the map when no band of it
+    /// is left free.
+    private func costs(in bounds: Frame) -> (Frame) -> Double {
+        let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+        let required = (self.required + sites + panels).map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+        let backdrops = self.backdrops.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
+        let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
+        func covered(_ rects: [Frame], by frame: Frame) -> Double {
+            rects.reduce(0) { $0 + $1.overlap(with: frame) }
+        }
+        return { frame in
+            covered(required, by: frame) * 1_000 + covered(obstacles, by: frame)
+                + covered(backdrops, by: frame) * Self.backdropWeight
+                + (Self.leavesMapFree(frame, map: map) ? 0 : Self.mapCoveredCost)
+        }
+    }
+
     /// A top-leading corner.
     private struct Point {
         let x: Double
@@ -309,10 +347,16 @@ public struct TutorialCardPlacement: Equatable, Sendable {
             }
             return (centred, 0)
         }
-        let obstacles = controls.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
-        let required = (self.required + sites + panels).map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
-        let backdrops = self.backdrops.map { $0.offsetBy(dx: bounds.minX, dy: bounds.minY) }
         let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
+        let cost = costs(in: bounds)
+        // Where it stands covers no more than when it was put there: it
+        // stays (``previousCost``).
+        if let stay, let previousCost {
+            let frame = Frame(x: stay.x, y: stay.y, width: size.width, height: size.height)
+            if available.contains(frame), cost(frame) <= previousCost {
+                return (stay, cost(frame))
+            }
+        }
         let gap = Self.gap
         let x = max(available.minX, min(target.midX - size.width / 2, available.maxX - size.width))
         let y = max(available.minY, min(target.midY - size.height / 2, available.maxY - size.height))
@@ -369,14 +413,6 @@ public struct TutorialCardPlacement: Equatable, Sendable {
             Point(x: available.minX, y: available.maxY - size.height),
             Point(x: available.maxX - size.width, y: available.maxY - size.height),
         ]
-        func covered(_ rects: [Frame], by frame: Frame) -> Double {
-            rects.reduce(0) { $0 + $1.overlap(with: frame) }
-        }
-        func cost(_ frame: Frame) -> Double {
-            covered(required, by: frame) * 1_000 + covered(obstacles, by: frame)
-                + covered(backdrops, by: frame) * Self.backdropWeight
-                + (Self.leavesMapFree(frame, map: map) ? 0 : Self.mapCoveredCost)
-        }
         // `min` keeps the first of equals, so the first placement that
         // covers nothing wins, as the order above intends.
         let cheapest = candidates

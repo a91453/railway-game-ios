@@ -515,9 +515,15 @@ final class TutorialUITests: XCTestCase {
         }
         app.launchEnvironment["OS_ACTIVITY_DT_MODE"] = "NO"
         app.launch()
+        // Turned back while the app still shows, then ended: turned after
+        // it, the iPad's home screen turned, XCTest's wait for its
+        // animations ran out at 60 seconds, and touches in the tests after
+        // it waited as long (main f1da01c's full lane, run 45805119006: 17
+        // such waits, three tests 8 to 10 times slower than the night
+        // before).
         defer {
-            app.terminate()
             XCUIDevice.shared.orientation = .landscapeLeft
+            app.terminate()
         }
 
         startFirstLesson(app, label: lessonsLabel)

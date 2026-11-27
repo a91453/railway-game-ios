@@ -752,4 +752,56 @@ final class TutorialCardPlacementTests: XCTestCase {
         let open = placement.frame(in: screen, measure: lineStepCard)
         return placement.leavesStepFree(open) ? open : placement.frame(in: screen, measure: foldedCard)
     }
+
+    /// The last step, "Wait for your first fares", on a phone on its side
+    /// (main d557284's full lane, run 45924059254): every place covers
+    /// something, and the card stood over part of the details card. As
+    /// that card's waiting passengers changed, its rows moved, the middle
+    /// of the screen came to cover less, and a card weighed by what it
+    /// covers alone hopped there and back, Finish under the finger. One
+    /// that remembers what it covered where it stands
+    /// (``TutorialCardPlacement/previousCost``) stays while it covers no
+    /// more, and moves when something comes under it. The frames are of
+    /// that screen, in the same coordinates as the others here.
+    func testTheCardStaysWhileItCoversNoMoreThanWhenPlaced() {
+        let card = { (proposal: Size) in Size(width: min(318, proposal.width), height: min(184, proposal.height)) }
+        let cash = Frame(x: 28, y: 21, width: 144, height: 28)
+        let speed = Frame(x: 463, y: 21, width: 118, height: 28)
+        let controls = [
+            cash, speed, Frame(x: 672, y: 19, width: 32, height: 32), Frame(x: 688, y: 154, width: 47, height: 47),
+            Frame(x: 688, y: 216, width: 50, height: 44), Frame(x: 688, y: 268, width: 50, height: 44),
+            Frame(x: 688, y: 320, width: 50, height: 44), Frame(x: 600, y: 335, width: 80, height: 40),
+            Frame(x: 11, y: 328, width: 44, height: 44), Frame(x: 11, y: 59, width: 190, height: 150),
+        ]
+        let detailsCard = Frame(x: 413, y: 74, width: 262, height: 261)
+        /// A row of the details card, as its waiting passengers move it.
+        func row(_ y: Double) -> Frame { Frame(x: 437, y: y, width: 90, height: 34) }
+        func step(_ rows: [Frame]) -> TutorialCardPlacement {
+            TutorialCardPlacement(
+                target: cash, controls: controls + rows, backdrops: [detailsCard], required: [cash, speed],
+                map: Frame(x: 0, y: 59, width: 680, height: 322), maxWidth: 320, maxHeight: 184
+            )
+        }
+        let first = step([row(275)])
+        let placed = first.frame(in: Self.screen, measure: card)
+        let covered = first.cost(ofCardAt: placed, in: Self.screen)
+        XCTAssertGreaterThan(covered, 0, "card \(placed)")
+
+        // The row moves down: the middle of the screen covers less now.
+        var moved = step([row(290)])
+        let afresh = moved.frame(in: Self.screen, measure: card)
+        XCTAssertNotEqual(afresh, placed, "placed afresh, the card hops")
+        moved.previous = placed
+        XCTAssertEqual(moved.frame(in: Self.screen, measure: card), afresh, "weighed by what it covers alone, it hops from where it stands")
+        moved.previousCost = covered
+        XCTAssertEqual(moved.frame(in: Self.screen, measure: card), placed, "covering no more, it stays")
+
+        // A row comes under the card: it moves off it.
+        let under = Frame(x: placed.maxX - 100, y: placed.minY + 10, width: 90, height: 34)
+        var covering = step([row(290), under])
+        covering.previous = placed
+        covering.previousCost = covered
+        let after = covering.frame(in: Self.screen, measure: card)
+        XCTAssertFalse(after.intersects(under), "card \(after) covers the row \(under)")
+    }
 }

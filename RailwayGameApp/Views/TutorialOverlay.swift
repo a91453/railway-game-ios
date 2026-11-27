@@ -287,7 +287,10 @@ private struct TutorialCardSlot: View {
     /// coordinates: it stays there while that place does as well as any
     /// (``TutorialCardPlacement/previous``). Opening or folding it places
     /// it afresh.
-    @State private var placed: (folded: Bool, frame: CGRect)?
+    /// What it covered there when it was put there
+    /// (``TutorialCardPlacement/previousCost``): it stays while it covers
+    /// no more.
+    @State private var placed: (folded: Bool, frame: CGRect, cost: Double)?
     /// How tall the folded card shows. Measured it can be a line shorter
     /// than it is laid out: on the iOS 27.2 Simulator, a phone on its side,
     /// step 7, it measured 321.7 × 44 and showed 287 × 59, its title on
@@ -357,6 +360,7 @@ private struct TutorialCardSlot: View {
         placement.maxHeight = compact ? lines.compactMaxHeight : .infinity
         if let placed, placed.folded == isFolded {
             placement.previous = TutorialCardPlacement.Frame(placed.frame)
+            placement.previousCost = placed.cost
         }
         return placement
     }
@@ -399,7 +403,8 @@ private struct TutorialCardSlot: View {
                 SpringKeyframe(1.0, duration: settle.seconds, spring: settle.spring)
             }
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { frame in
-                placed = (isFolded, frame)
+                let cost = placement.cost(ofCardAt: TutorialCardPlacement.Frame(frame), in: TutorialCardPlacement.Frame(bounds))
+                placed = (isFolded, frame, cost)
             }
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(tutorialOverlaySpace)) } action: { bounds = $0 }
