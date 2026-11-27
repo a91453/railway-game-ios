@@ -271,7 +271,7 @@ extension Map3DScene.Builder {
             partial.insert(platform.platform.station)
         }
         var byStation: [StationID: [Int]] = [:]
-        for (index, platform) in state.platforms.laidPlatforms.enumerated() where platform.structure == .surface {
+        for (index, platform) in state.platforms.laidPlatforms.enumerated() where platform.structure == .surface && !platform.tramStop {
             byStation[platform.station, default: []].append(index)
         }
         let tracks = state.track.trackLines.filter { $0.kind != .tunnel }.compactMap { Map3DStreetLife.Path($0.points) }

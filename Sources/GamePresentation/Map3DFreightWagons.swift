@@ -9,15 +9,26 @@ public enum Map3DFreightLoad: String, CaseIterable, Sendable {
     case empty
     case goods
     case materials
+    /// Decision 1033: building materials loaded mostly at cement silo
+    /// yards (``Map3DFreightYard/isCement(_:)``).
+    case cement
 
     /// The load of a train carrying `cargo`: the kind it carries most tons
-    /// of (goods on a tie), nothing when it carries none.
+    /// of (goods on a tie), nothing when it carries none; building
+    /// materials as cement when more of their tons came from silo yards
+    /// than from stone yards.
     public static func of(_ cargo: TrainCargo?) -> Map3DFreightLoad {
         guard let cargo, cargo.tons > 0 else { return .empty }
-        var tons: [CargoKind: Int64] = [:]
-        for group in cargo.groups { tons[group.kind, default: 0] += group.tons }
-        let goods = tons[.goods] ?? 0, materials = tons[.materials] ?? 0
-        return materials > goods ? .materials : .goods
+        var goods: Int64 = 0, stone: Int64 = 0, cement: Int64 = 0
+        for group in cargo.groups {
+            switch group.kind {
+            case .goods: goods += group.tons
+            case .materials:
+                if Map3DFreightYard.isCement(group.origin) { cement += group.tons } else { stone += group.tons }
+            }
+        }
+        guard stone + cement > goods else { return .goods }
+        return cement > stone ? .cement : .materials
     }
 
     /// The load of each train with cargo in `world` (none without freight).
@@ -33,6 +44,7 @@ public enum Map3DFreightLoad: String, CaseIterable, Sendable {
         case .empty: Map3DFreightWagons.emptyKey
         case .goods: Map3DTrainSet.freightKey
         case .materials: Map3DFreightWagons.bulkKey
+        case .cement: Map3DFreightWagons.cementKey
         }
     }
 }
@@ -54,6 +66,8 @@ public enum Map3DFreightWagons {
     /// building materials (``Map3DFreightLoad/setKey``).
     public static let emptyKey = "FREIGHTEMPTY"
     public static let bulkKey = "FREIGHTBULK"
+    /// Decision 1033: one carrying cement (``Map3DCementWagon``).
+    public static let cementKey = "FREIGHTCEMENT"
 
     public enum Wagon: String, CaseIterable, Sendable {
         /// The bare flat wagon.
@@ -115,12 +129,15 @@ public enum Map3DFreightWagons {
     /// decision 539's set (``Map3DTrainSet/headOf``) and its wagons.
     static let registration = Map3DTrainRegistration(
         id: "freightWagons",
-        sets: [Map3DTrainSet.freightEmpty(), .freightEmpty(far: true), .freightBulk(), .freightBulk(far: true)],
+        sets: [Map3DTrainSet.freightEmpty(), .freightEmpty(far: true), .freightBulk(), .freightBulk(far: true),
+               .freightCement(), .freightCement(far: true)],
         showcase: [
             .init(emptyKey, "Empty freight, R200 diesel", "空車貨物列車（R200 柴電機車）", .taiwanRailway, cars: 8, most: 12),
             .init(bulkKey, "Stone freight, R200 diesel", "砂石列車（R200 柴電機車）", .taiwanRailway, cars: 8, most: 12),
+            .init(cementKey, "Cement freight, R200 diesel", "水泥列車（R200 柴電機車）", .taiwanRailway, cars: 8, most: 12),
         ],
-        triangles: 300...4_100, length: 11.9...14.3)
+        // Decision 1033: from the cement wagon's 11.6 m.
+        triangles: 300...4_100, length: 11.5...14.3)
 }
 
 /// The local studio's hopper wagon of Taiwan Railway's stone trains

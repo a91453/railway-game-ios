@@ -856,7 +856,10 @@ extension RealBranchLine {
         // Decision 1029 (SANYO-SHINKANSEN-KOKURA): the Sanyo Shinkansen,
         // Hakata to Kokura, JR West's, sold on its own (another system,
         // ``RealLineBundle/groups(of:)``) as the Kyushu Shinkansen is.
-        ("sanyoshinkansen", "SY", "Sanyo Shinkansen", "山陽新幹線", nil, .metro, false),
+        // SANYO-HAKATA-SHARED (decision 1032): its trains run onto the
+        // Kyushu Shinkansen's track at Hakata and stand at its platforms
+        // there (``leavesAt``), so it is sold once that line is bought.
+        ("sanyoshinkansen", "SY", "Sanyo Shinkansen", "山陽新幹線", "kyushushinkansen:KS", .metro, false),
     ]
 
     /// Decision 753: the lines of the cities outside Taiwan drawn along

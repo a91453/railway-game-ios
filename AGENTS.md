@@ -20,7 +20,9 @@ not only Claude Code. Read it first and follow it. In particular:
   personal data: this repository is public.
 - Never commit to `main`, force-push or rewrite `main`'s history, or enable
   auto-merge. Merge a pull request once its CI is green (owner's standing
-  rule, 2026-11-17; merge `origin/main` into it first if `main` moved);
+  rule, 2026-11-17; merge `origin/main` into it only when it conflicts
+  or needs something on `main`, not just because `main` moved, owner
+  2026-11-26);
   when CI is red, fix it and push (`CLAUDE.md`, Workflow).
 - Report every check as **VERIFIED** (it ran, and where) or **UNVERIFIED**.
 - A choice that would otherwise wait for the owner is made by the agent

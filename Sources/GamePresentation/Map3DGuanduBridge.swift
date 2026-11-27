@@ -63,7 +63,7 @@ struct Map3DArchBridgeDeck: Sendable {
     /// (``Map3DScene/Builder/foot(of:)``). None: the water at its middle.
     var piers: [Float] = []
 
-    static let all = [Map3DGuanduBridge.deck, Map3DTrussBridge.xiluo.line]
+    static let all = [Map3DGuanduBridge.deck, Map3DTrussBridge.xiluo.line, Map3DPengwanBridge.deck]
 
     /// How far the road's top stands over the model's deck, metres: as
     /// decision 873's deck between 淡江大橋's carriageways keeps under it.

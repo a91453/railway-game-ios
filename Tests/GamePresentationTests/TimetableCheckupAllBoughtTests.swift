@@ -338,14 +338,17 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         }
     }
 
-    /// Decision 1029: the Sanyo Shinkansen bought alone, from a new game's
-    /// land in the north-west.
+    /// Decision 1029: the Sanyo Shinkansen, from a new game's land in the
+    /// north-west; SANYO-HAKATA-SHARED (decision 1032), bought after the
+    /// Kyushu Shinkansen, whose track at Hakata it runs onto, the two
+    /// lines played together.
     func testSanyoShinkansen() throws {
         try full()
         for (label, rules) in Self.rules where rules == .realistic {
-            let name = "fukuoka sanyoshinkansen:SY \(label)"
+            let name = "fukuoka kyushushinkansen:KS+KS2+sanyoshinkansen:SY \(label)"
             try check(name, {
                 let session = try Self.fukuoka(rules: rules)
+                try Self.buyTogether(["kyushushinkansen:KS", "kyushushinkansen:KS2"], in: session)
                 try Self.buyTogether(["sanyoshinkansen:SY"], in: session)
                 return session.world
             }())

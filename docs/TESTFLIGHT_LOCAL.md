@@ -1,6 +1,6 @@
 # 在作者的 Mac 上本機發 TestFlight 內測（不經 GitHub Actions）
 
-平常的發版是 `testflight.yml`（`docs/TESTFLIGHT_GITHUB_ACTIONS.md`）。這份是同一套步驟改在作者自己的 Mac 上跑，只發**內部測試**（`testFlightInternalTestingOnly`）：不送審、不開外部測試。第一次是 2026-11-27 發 0.6.0（152.1），從 origin/main `b168ab80e`。
+平常的發版是 `testflight.yml`（`docs/TESTFLIGHT_GITHUB_ACTIONS.md`）。這份是同一套步驟改在作者自己的 Mac 上跑，預設只發**內部測試**（`testFlightInternalTestingOnly`）；加 `--external` 則可外部測試並送 Beta App Review。第一次是 2026-11-27 發 0.6.0（152.1），從 origin/main `b168ab80e`。
 
 一樣只有作者能決定發版（`CLAUDE.md`）；作者說「發內測」之後，session 才可以照這份做。
 
@@ -20,7 +20,19 @@ tools/release/testflight-local.sh
 
 預設是「最新一次成功的 `testflight.yml` run 號」加 `.1`，例如 CI 最後是 152，本機就發 `152.1`。CI 的 build 號是 `N`（第一次）或 `N.2`～`N.99`（重跑），從來不用 `N.1`（`testflight-preflight.sh`），所以本機和 CI 永遠不會撞號，下一次 CI（153）也一定比本機的大。同一個 CI 版之後再發本機版，腳本自己接著用 `152.1.1`、`152.1.2`…（記在 `~/RailwayTestFlight/last-release.json`）。
 
+用 `--build N` 給整數號（例如 11-27 的 0.6.0 (153)）就不在上面的保證裡：那個號碼和 CI 下一個 run 號一樣時，下一次 `testflight.yml` 的上傳會因 build 號重複被拒。CI 讀不到 `last-release.json`，所以這之後要用 CI 發，先在 `testflight` 環境把 `BUILD_NUMBER_OFFSET` 設成讓 run 號加上去大過本機那一號（153 之後設 `1`）；或繼續本機發（REVIEW-L38 P3-4）。
+
 build 號只在封存時以 `CURRENT_PROJECT_VERSION` 傳進去，repo 裡的 `project.yml` 不用改，也不用開 PR。
+
+## 外部測試（`--external`）
+
+`--external` 匯出時不加 `testFlightInternalTestingOnly`，處理完把 build 加進所有 External Testing 群組並送 Beta App Review（`local_release.py external`）。`--whats-new <檔案>` 用寫好的更新說明當 What to Test（不用的話是上次發版之後合的 PR 清單）。例如 153：
+
+```sh
+tools/release/testflight-local.sh --build 153 --external --whats-new ~/RailwayTestFlight/153/whats-new-153.txt
+```
+
+本機新傳的地圖包版本也要過審才會給外部測試者；送審後到 App Store Connect 看那幾包的狀態。給了整數 build 號（例如 153），下一次 CI 的 run 號如果也是 153 會撞號，CI 那次要改 `BUILD_NUMBER_OFFSET`。
 
 ## 和 CI 不同的地方
 

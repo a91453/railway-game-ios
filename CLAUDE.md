@@ -555,10 +555,17 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   never force-push `main` or rewrite its history, never enable auto-merge.
   Merging (owner's standing rule, 2026-11-17: 「PR 綠了就合」): a session
   merges a pull request once its CI is green, its own or another
-  session's; when CI is red, it fixes the failure and pushes. Before
-  merging, it merges `origin/main` into the branch if `main` has moved,
-  and merges only after the new head's CI is green. A TestFlight release
-  still waits for the user (below).
+  session's; when CI is red, it fixes the failure and pushes. It does not
+  merge `origin/main` into the branch just because `main` has moved: only
+  when the pull request conflicts with `main` (GitHub says so, or
+  `conflict-watch.yml` comments) or needs something that is only on
+  `main`, and then it merges only after the new head's CI is green
+  (owner, 2026-11-26 08:05: 「只有真衝突的才併 main 重跑」; on 2026-11-27,
+  30 of 38 merges of `main` into pull requests had no conflict, and each
+  started CI again, `docs/handoff/CIOPT-18.md`). A wrong
+  combination that slips through is caught by `main`'s push run, and
+  fixed with a pull request. A TestFlight release still waits for the
+  user (below).
 - The account runs at most 40 jobs at once, 5 of them macOS; a full Swift
   tier is 19 jobs (ARCHITECTURE decision 187; decision 411's shared build
   added the build job, decision 544's continuation cut the shards from 20

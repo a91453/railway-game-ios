@@ -47,8 +47,8 @@ extension OverseasMap {
             "芬蘭拉普蘭的羅瓦涅米，從穆羅拉一路到凱米耶爾維，約 107 × 55 公里，一開始全部開放，可以收購往凱米耶爾維與往穆羅拉的路線。"
         )
         case .fukuoka: language.text(
-            "Japan's Fukuoka, Saga and Kumamoto prefectures: you start with about 33 by 33 km round Fukuoka and buy the rest as your railway grows. You can buy the Fukuoka City Subway's three lines and the Kyushu Shinkansen.",
-            "日本的福岡、佐賀、熊本三縣：一開始是福岡市一帶約 33 × 33 公里，其餘用買的。可以收購福岡市地鐵三條路線與九州新幹線。"
+            "Japan's Fukuoka, Saga, Nagasaki and Kumamoto prefectures: you start with about 33 by 33 km round Fukuoka and buy the rest as your railway grows. You can buy Fukuoka's three subway lines, the high-speed lines from Hakata to Kumamoto and Shin-Minamata and from Takeo-Onsen to Nagasaki, and the limited express from Hakata to Takeo-Onsen; with realistic rules, the high-speed line from Hakata to Kokura too.",
+            "日本的福岡、佐賀、長崎、熊本四縣：一開始是福岡市一帶約 33 × 33 公里，其餘用買的。可以收購福岡的地鐵三條路線、博多—熊本—新水俁與武雄溫泉—長崎的高速鐵路、博多—武雄溫泉的特急；寫實規則下還有博多—小倉的高速鐵路。"
         )
         }
     }
