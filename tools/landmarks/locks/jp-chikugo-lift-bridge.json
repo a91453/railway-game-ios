@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-chikugo-lift-bridge: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-chikugo-lift-bridge" : {
+      "hash" : "3a51806804273b0b",
+      "triangles" : 7192
+    },
+    "jp-chikugo-lift-bridge-far" : {
+      "hash" : "4a6072488acad751",
+      "triangles" : 2352
+    }
+  }
+}
