@@ -41,7 +41,12 @@ extension Map3DScene.Builder {
         case .temple:
             let model = Self.placedTempleModels[building.look]
             target = .close
-            mesh(at: base) { $0.append(model.mesh, at: base, forward: facing) }
+            // Decision 1035: the first look's dog and pigeons, as a temple's.
+            let animals = building.look == 0 ? templeAnimals(.temple, centre: base) : Map3DMesh()
+            mesh(at: base) {
+                $0.append(model.mesh, at: base, forward: facing)
+                $0.append(animals, at: base, forward: facing)
+            }
             let hall = base + facing * model.hall.x + Map3DPoint(0, Self.templeHallFloor, 0)
             for level in [Target.near, .far] {
                 target = level

@@ -82,15 +82,19 @@ struct StationKitBuilder {
         let n=(points[1]-points[0]).cross(points[2]-points[0]),c=points.reduce(Map3DPoint.zero) { $0+$1*(1/Float(points.count)) }
         mesh.addFacet(n.dot(c-inside)>=0 ? points : Array(points.reversed()),color:color)
     }
-    mutating func add(_ model: Map3DModelPack.Model,at p: Map3DPoint,angle: Float = 0) {
-        let c=cosf(angle),s=sinf(angle)
+    /// Decision 1035: `scale` times its size, and `height` times more
+    /// upward (a dragon column cut to a gate's eaves).
+    mutating func add(_ model: Map3DModelPack.Model,at p: Map3DPoint,angle: Float = 0,scale: Float = 1,height: Float = 1) {
+        let c=cosf(angle),s=sinf(angle),up=scale*height
         for i in stride(from:0,to:model.vertices.count,by:3) {
             mesh.appendTriangle(model.vertices[i..<i+3].map { v in
                 // The model's normal turned the same way: a scene that draws
                 // this mesh as it is (temples, parks, station shops) lights
-                // it by these, and a zero normal shades black.
-                Map3DVertex(Map3DPoint(c*v.x+s*v.y,v.z,s*v.x-c*v.y)+p,normal:Map3DPoint(c*v.nx+s*v.ny,v.nz,s*v.nx-c*v.ny),
-                            color:v.color,layer:v.layer)
+                // it by these, and a zero normal shades black. Stretched
+                // upward, its upward part shrinks by as much.
+                let normal=Map3DPoint(c*v.nx+s*v.ny,v.nz/height,s*v.nx-c*v.ny)
+                return Map3DVertex(Map3DPoint(scale*(c*v.x+s*v.y),up*v.z,scale*(s*v.x-c*v.y))+p,
+                                   normal:height == 1 ? normal : normal.normalized ?? normal,color:v.color,layer:v.layer)
             })
         }
     }
