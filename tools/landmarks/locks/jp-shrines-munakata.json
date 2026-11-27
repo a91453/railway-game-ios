@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-shrines-munakata: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-shrines-munakata" : {
+      "hash" : "36cbcdeddda607fb",
+      "triangles" : 1772
+    },
+    "jp-shrines-munakata-far" : {
+      "hash" : "c38ec6bf4019e2a5",
+      "triangles" : 876
+    }
+  }
+}

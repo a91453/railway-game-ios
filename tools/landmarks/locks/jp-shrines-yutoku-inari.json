@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-shrines-yutoku-inari: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-shrines-yutoku-inari" : {
+      "hash" : "2bc64a18e75e6aa5",
+      "triangles" : 4412
+    },
+    "jp-shrines-yutoku-inari-far" : {
+      "hash" : "ecb95db0db3da39c",
+      "triangles" : 1924
+    }
+  }
+}
