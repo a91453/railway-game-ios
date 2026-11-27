@@ -189,3 +189,31 @@ python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py /tmp/fk/n02/N02-25_GML/U
 - **軌距與限界**：線與機廠都寫了 `gaugeMm: 1435`、`loadingGauge: "shinkansen"`、`electrification`、`maxSpeedKmh: 260`，給之後的 TRACK-ELECTRIFICATION 讀；軌距遊戲照系統名鋪（`TrackGauge.ofRealLine`，決策 970、975：1,435 mm 新幹線級），不讀這幾個欄位。
 - **節數**：8 節（N700 系「瑞穗」「櫻」的編組，`DemoRealLines.cars(ofSystem:)`），月台 200 m。
 - **顏色** `#C8102E` 是本專案選的（JR 九州的紅，比旁邊空港線的橘紅深）；OSM 的路線關係沒有顏色。
+
+## 海鷗接力號（博多—武雄溫泉，決策 1028）
+
+特急リレーかもめ的在來線資料放在 `tools/fukuoka-map/relay-kamome/`，已併進地圖包：日本地圖的第三個系統 `jrkyushu`（線 `RK`），
+1,067 mm 窄軌，在收購清單單獨賣。讀法與九州新幹線一樣，指令都在 repo 根目錄跑：
+
+```sh
+# 從 N02 與 OSM 重做暫存資料夾（最後一個參數是地圖包：班次要讀裡面西九州新幹線的時刻）。
+python3 -I tools/fukuoka-map/build_relay_kamome.py /tmp/fk/n02/N02-25_GML/UTF-8/N02-25_Station.geojson \
+  /tmp/fk/osm/kyushu.pbf tools/fukuoka-map/relay-kamome RailwayGameApp/Resources/MapPacks/fukuoka
+# 只重排一天的班次（西九州新幹線的時刻改了時）。
+python3 -I tools/fukuoka-map/build_relay_kamome.py times tools/fukuoka-map/relay-kamome RailwayGameApp/Resources/MapPacks/fukuoka
+# 併進地圖包，再排進 metro_runs.json。
+python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py merge tools/fukuoka-map/relay-kamome RailwayGameApp/Resources/MapPacks/fukuoka
+python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/MapPacks/fukuoka
+```
+
+每次讀了什麼、量到多少寫在 `relay_kamome_sources.json`。
+
+- **線形**：OSM 鹿兒島本線、JR長崎本線、JR佐世保線三個 infrastructure relation 的 `railway=rail` 正線。量到 81.85 km（真實 81.9 km），高架與橋 6.4 km。
+  江北（肥前山口）佐世保線從一條正線分出、從另一條進來，所以渡線不略掉（不然多繞 1.4 km）。
+- **車站**：N02 的博多、鳥栖、新鳥栖、佐賀、江北、武雄溫泉（代碼 `RK01`–`RK06` 是本專案的）。武雄溫泉的站點改放在 10、11 號線島式月台中心
+  （OSM way 846511481），N02 的點在月台東北約 90 m；10 號線（way 458032623）在 OSM 是 `service=siding`，特地收進來，佐世保線穿站的正線不收。
+- **博多的高架**：真實的在來線月台在博多站 2 樓，OSM 沒有標成橋；工具在博多站北 230 m 到南 215 m 寫一段高架（`HAKATA_VIADUCT`，`note` 寫明）。
+- **班次是估計**：照地圖包裡西九州新幹線的估計一天，每班かもめ從武雄溫泉開前 3 分鐘有一班到、每班かもめ到後 3 分鐘有一班開（同月台對面轉乘），
+  一天 42 班、各站停，站間照距離與 130 km/h 算，博多到武雄溫泉 57 分 30 秒。
+- **顏色** `#FAAF18`：OSM 長崎本線 route_master 11823798 的色。
+- **節數**：6 節（885 系），沒有機廠，晚上博多 4 組、武雄溫泉 1 組。

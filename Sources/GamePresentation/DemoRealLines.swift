@@ -92,6 +92,9 @@ public struct DemoRealLines: Sendable {
         // SHINKANSEN-SALE (decision 975): the N700's eight, as the real
         // Sakura and Mizuho sets (KYUSHU-SHINKANSEN-TRAINS, decision 977).
         case "kyushushinkansen": 8
+        // Decision 1028: the Relay Kamome's six, the 885 series' (the 787's
+        // run six to eight).
+        case "jrkyushu": 6
         case "tymc", "afr_sched": 4
         case "krtc", "sanying": 3
         default: 2

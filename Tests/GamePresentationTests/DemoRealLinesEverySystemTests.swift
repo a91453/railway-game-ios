@@ -64,7 +64,7 @@ final class DemoRealLinesEverySystemTests: XCTestCase {
             if keys[system] == nil { keys[system] = key }
         }
         XCTAssertEqual(
-            Set(keys.keys), ["tra_sched", "thsr_sched", "afr_sched", "mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt", "hkmtr", "vr", "fksubway", "kyushushinkansen"],
+            Set(keys.keys), ["tra_sched", "thsr_sched", "afr_sched", "mrt", "tymc", "ntdlrt", "ntalrt", "sanying", "krtc", "tmrt", "hkmtr", "vr", "fksubway", "kyushushinkansen", "jrkyushu"],
             "every system of the bundled railways"
         )
         // Hong Kong's MTR, Rovaniemi's VR, Fukuoka's subway lines and the
@@ -72,7 +72,8 @@ final class DemoRealLinesEverySystemTests: XCTestCase {
         // map) are not on Taiwan's map: theirs are laid on their own maps
         // (`HongKongMapTests`, `HongKongEveryLineTests`,
         // `RovaniemiRailwaysTests`, `FukuokaRailwaysTests`,
-        // `KyushuShinkansenTests`).
+        // `KyushuShinkansenTests`), and so is JR Kyushu's Relay Kamome
+        // (decision 1028, `RelayKamomeTests`).
         let overseas = Set(OverseasMap.allCases.flatMap(\.systems))
         for (system, key) in keys.sorted(by: { $0.key < $1.key }) where !overseas.contains(system) {
             let session = try taiwan()

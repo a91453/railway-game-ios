@@ -42,10 +42,11 @@ enum Map3DViaduct: Sendable, Hashable {
     /// `systems`) builds. Decision 996: the Kyushu Shinkansen's the High
     /// Speed Rail's, as its line is once bought (``Map3DSceneTrack``'s
     /// `isHighSpeed`) and as ``DemoRealLines`` gives it high-speed cars.
+    /// Decision 1028: JR Kyushu's conventional lines the TRA's.
     init(system: String) {
         switch system {
         case "thsr_sched", "kyushushinkansen": self = .highSpeed
-        case "tra_sched", "afr_sched": self = .railway
+        case "tra_sched", "afr_sched", "jrkyushu": self = .railway
         default: self = .metro
         }
     }
