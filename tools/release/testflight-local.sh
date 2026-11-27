@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Releases the current commit to TestFlight from the owner's Mac, without
-# GitHub Actions: internal testing only (testFlightInternalTestingOnly), no
-# review, no external testing. The steps and their order follow
+# GitHub Actions: internal testing only (testFlightInternalTestingOnly) unless
+# --external. The steps and their order follow
 # .github/workflows/testflight.yml; see docs/TESTFLIGHT_LOCAL.md for why each
 # one differs and what the owner has to press.
 #
@@ -16,6 +16,10 @@
 #                    no (default, as CI's): pack.json only, so the packs come
 #                    from App Store Connect; yes: the app carries every map
 #                    pack whole (testflight.yml's carry_map_packs)
+#   --external       an external-capable build (no testFlightInternalTestingOnly):
+#                    after processing it joins every External Testing group
+#                    and is submitted to Beta App Review
+#   --whats-new FILE What to Test, as written, instead of the merged-PR list
 #   --archive PATH   reuse an archive this script already made for --build
 #   --no-upload      stop after the IPA check (nothing is sent to Apple)
 #   --skip-packs     do not upload map packs (an earlier run already did)
@@ -50,6 +54,8 @@ archive=""
 upload=true
 packs=true
 carry=no
+external=false
+whats_new_file=""
 while (($#)); do
   case "$1" in
     --build) build="${2:?--build needs a number}"; shift 2 ;;
@@ -57,6 +63,8 @@ while (($#)); do
     --no-upload) upload=false; shift ;;
     --skip-packs) packs=false; shift ;;
     --carry-map-packs) carry="${2:?--carry-map-packs needs yes or no}"; shift 2 ;;
+    --external) external=true; shift ;;
+    --whats-new) whats_new_file="$(cd "$(dirname "${2:?--whats-new needs a file}")" && pwd)/$(basename "$2")"; shift 2 ;;
     *) echo "usage: $0 [--build N] [--carry-map-packs yes|no] [--archive PATH] [--no-upload] [--skip-packs]" >&2; exit 64 ;;
   esac
 done
@@ -65,6 +73,7 @@ step() { printf '\n== %s\n' "$1"; }
 die() { echo "error: $1" >&2; exit 1; }
 
 [[ "$carry" == yes || "$carry" == no ]] || die "--carry-map-packs takes yes or no, not $carry."
+[[ -z "$whats_new_file" || -s "$whats_new_file" ]] || die "$whats_new_file is empty or missing."
 # The Mac's last release ({"build", "commit"}): map packs and What to Test
 # compare with it when it is newer than CI's (tools/release/local_release.py).
 record="$HOME/RailwayTestFlight/last-release.json"
@@ -73,12 +82,11 @@ local_release() { python3 -I tools/release/local_release.py "$@" --record "$reco
 step "Checks"
 git fetch -q origin main
 [[ -z "$(git status --porcelain)" ]] || die "the working copy has changes; release from a clean checkout."
-# origin/main itself, or a branch on it that changes only docs and this
-# script (the app built is then origin/main's).
-git merge-base --is-ancestor origin/main HEAD ||
-  die "HEAD does not contain origin/main ($(git rev-parse --short origin/main)); check out origin/main first."
-extra="$(git diff --name-only origin/main HEAD | grep -vE '^(docs/|tools/release/)' || true)"
-[[ -z "$extra" ]] || die "HEAD changes files beyond origin/main: $extra"
+# A commit of main (origin/main or an older one), or a branch on one that
+# changes only docs and this script: the app built is that main commit's.
+base="$(git merge-base HEAD origin/main)"
+extra="$(git diff --name-only "$base" HEAD | grep -vE '^(docs/|tools/release/)' || true)"
+[[ -z "$extra" ]] || die "HEAD changes files beyond main's $(git rev-parse --short "$base"): $extra"
 major="$(xcodebuild -version | awk 'NR == 1 { split($2, v, "."); print v[1] }')"
 ((major >= 27)) || die "App Store Connect needs Xcode 27 or later; this is Xcode $major."
 team="$(gh variable get APPLE_TEAM_ID --env testflight)"
@@ -90,7 +98,9 @@ if [[ -z "$build" ]]; then
   build="$(local_release next-build --ci-build "$last")"
 fi
 [[ "$build" =~ ^[1-9][0-9]{0,3}(\.[0-9]{1,2}){0,2}$ ]] || die "build number $build is not N, N.M or N.M.K."
-echo "Commit $(git rev-parse --short HEAD), build $build, map packs carried: $carry, Xcode $(xcodebuild -version | head -1)."
+scope=internal
+[[ "$external" != true ]] || scope=external
+echo "App of main $(git rev-parse --short "$base"), build $build, $scope TestFlight, map packs carried: $carry, Xcode $(xcodebuild -version | head -1)."
 carry_args=()
 if [[ "$carry" == yes ]]; then carry_args=(CARRY_MAP_PACKS=YES); else carry_args=(CARRY_MAP_PACKS=NO); fi
 
@@ -195,14 +205,16 @@ write_options() {
 	<string>automatic</string>
 	<key>teamID</key>
 	<string>$team</string>
-	<key>testFlightInternalTestingOnly</key>
-	<true/>
+$internal_entry
 	<key>uploadSymbols</key>
 	<true/>
 </dict>
 </plist>
 PLIST
 }
+internal_entry=""
+[[ "$external" == true ]] || internal_entry="	<key>testFlightInternalTestingOnly</key>
+	<true/>"
 write_options export "$work/ExportOptions.plist"
 write_options upload "$work/UploadOptions.plist"
 
@@ -247,7 +259,7 @@ rm -rf "$work/upload"
   -archivePath "$archive" -exportPath "$work/upload" \
   -exportOptionsPlist "$work/UploadOptions.plist" "${auth[@]}"
 
-echo "Uploaded $version ($build) for internal TestFlight testing from $(git rev-parse --short HEAD)."
+echo "Uploaded $version ($build) for $scope TestFlight testing, the app of main $(git rev-parse --short "$base")."
 # What to Test compares with the release before this one, so it is written
 # before this one is recorded.
 GITHUB_TOKEN="$(gh auth token)" GITHUB_REPOSITORY="$repo_slug" GITHUB_RUN_ID=0 \
@@ -256,8 +268,11 @@ GITHUB_TOKEN="$(gh auth token)" GITHUB_REPOSITORY="$repo_slug" GITHUB_RUN_ID=0 \
 while IFS= read -r subject; do
   grep -vxF -- "- $subject" "$work/whats-new.txt" >"$work/whats-new.tmp" || true
   mv "$work/whats-new.tmp" "$work/whats-new.txt"
-done < <(git log --format=%s origin/main..HEAD)
-local_release record --build "$build" --commit "$(git rev-parse origin/main)"
+done < <(git log --format=%s "$base"..HEAD)
+if [[ -n "$whats_new_file" ]]; then
+  cp "$whats_new_file" "$work/whats-new.txt"
+fi
+local_release record --build "$build" --commit "$(git rev-parse "$base")"
 put_back
 saved_default=""
 
@@ -268,6 +283,12 @@ ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ASC_PRIVATE_KEY="$(cat "
   ASC_APP_ID="$app_id" BUILD_NUMBER="$build" APP_VERSION="$version" \
   GITHUB_STEP_SUMMARY="$work/processing-summary.md" \
   python3 -I .github/scripts/testflight-processing.py --whats-new "$work/whats-new.txt"
+
+if [[ "$external" == true ]]; then
+  step "External Testing groups and Beta App Review"
+  ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ASC_KEY_PATH="$key" ASC_APP_ID="$app_id" \
+    local_release external --build "$build" --version "$version"
+fi
 
 echo
 echo "https://appstoreconnect.apple.com/apps/$app_id/testflight/ios"
