@@ -1,6 +1,6 @@
 ---
 name: model-look
-description: 3D 模型「看圖再改」的規矩：做或改任何會進遊戲的原生 3D 模型（車站、建築、地標、kit 零件、列車、公車、船、纜車）時，動手前先讀。測試全過只代表沒做錯，不代表好看、認得出來；這裡管的是後者：先有真實照片，用遊戲鏡頭的角度與大小拍圖、和照片並排、對清單找毛病、改，自動檢查全過才送審，審查舊版列車 1 輪、其他 2 輪（第 2 輪換家），最後交一張總覽圖給作者或另一個 session 判。Use whenever you build, rebuild or restyle a native 3D model for the game (station-kit, civic-kit, commercial-kit and the other kits, landmarks, rolling stock, buses), or someone says a model「不像」「像盒子」「認不出來」「品質不好」, even if they only ask to "redo" or "fix" one model.
+description: 3D 模型「看圖再改」的規矩：做或改任何會進遊戲的原生 3D 模型（車站、建築、地標、kit 零件、列車、公車、船、纜車）時，動手前先讀。測試全過只代表沒做錯，不代表好看、認得出來；這裡管的是後者：先有真實照片，用遊戲鏡頭的角度與大小拍圖、和照片並排、對清單找毛病、改，自動檢查全過才送審，審查舊版列車 1 輪、其他 2 輪（審的人和做的人不同家），最後交一張總覽圖給作者或另一個 session 判。Use whenever you build, rebuild or restyle a native 3D model for the game (station-kit, civic-kit, commercial-kit and the other kits, landmarks, rolling stock, buses), or someone says a model「不像」「像盒子」「認不出來」「品質不好」, even if they only ask to "redo" or "fix" one model.
 ---
 
 # 看圖再改：公開的程式規則
@@ -34,7 +34,7 @@ kit 的測試（面數、封底、接點、決定性）只查「有沒有做錯�
 
 - 送審前先跑自動檢查到全過：列車 `tools/texture-palette/port_check.py`，建築、地標、自然景點 `tools/landmark-survey/landmark_check.py`（[landmark-survey](../landmark-survey/SKILL.md)）。
 - **舊版列車轉新版：1 輪**。找舊版模型 → 調成真車比例 → 套車頭規則 → `port_check.py` 全過 → 換家審一次 → 過了就合；只退局部小修就修好、自動檢查再過即合；只有換底模或改結構（車鼻重做、窗數或車長改了、編組改了）才再審。全文在私有素材庫 `docs/studio/rolling-stock-studio.md`「舊版轉新版：審一次就合」。
-- **舊版建築轉新版、全新列車、全新建築：2 輪**，第 2 輪一定換另一家審。第 2 輪只退小項就修好、自動檢查再過即合；第 2 輪還退大項（形狀、比例、結構、派工單寫錯）才開第 3 輪，第 3 輪是上限。
+- **舊版建築轉新版、全新列車、全新建築：2 輪**。每一輪的審查只要和做的人不同家（Gemini 做的不給 Gemini 審、Claude 做的不給 Claude 審）；同帳號、和第 1 輪同一位審查者都可以，換人只是偏好，不為換帳號等（作者 2026-11-27「審核不要那麼嚴」）。第 2 輪只退小項就修好、自動檢查再過即合；第 2 輪還退大項（形狀、比例、結構、派工單寫錯）才開第 3 輪，第 3 輪是上限。
 
 ## 5. 交付
 
