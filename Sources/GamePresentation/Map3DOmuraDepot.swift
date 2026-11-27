@@ -34,10 +34,12 @@ enum Map3DOmuraDepotSheds {
 
 enum Map3DOmuraDepotOffice {
     /// tileWhite, tankSteel, steel, concrete, dark (the doorways, not lit)
-    /// and glass (the windows: the office's bands, the sheds' clerestory).
+    /// and glass (the windows: the office's bands, the sheds' clerestory),
+    /// the depots' own dark glass (decision 931), not the studio's #405560,
+    /// which is not in the palette (decision 891).
     static let palette: [UInt32] = [
         Map3DPalette.tileWhite, Map3DPalette.tankSteel, Map3DPalette.steel, Map3DPalette.concrete, Map3DPalette.dark,
-        Map3DTEMU2000.glass,
+        Map3DDepotFacilities.glass,
     ]
 
     static let registration = Map3DLandmarkRegistration(
