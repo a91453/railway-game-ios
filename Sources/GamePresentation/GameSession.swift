@@ -3271,7 +3271,15 @@ public final class GameSession {
             )
             return false
         }
-        lineDraft.append(station.id)
+        // TestFlight 2026-11-27: a station the line passes, or one on
+        // another way between two picked, goes where the track has it, not
+        // after the end the line would have to turn back from
+        // (``GameWorld/trackInsertionIndex(of:into:preferring:)``).
+        if let index = world.trackInsertionIndex(of: station.id, into: lineDraft, preferring: lineDraft.count) {
+            lineDraft.insert(station.id, at: index)
+        } else {
+            lineDraft.append(station.id)
+        }
         refreshLineDraftRoute()
         message = nil
         return true
