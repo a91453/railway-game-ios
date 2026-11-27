@@ -1,7 +1,7 @@
 {
   "comment" : "Decision 782: the models of the registered train freightWagons (Map3DFreightWagons): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
-  "lampCount" : 10,
-  "lamps" : "f75c93c58645b4ec",
+  "lampCount" : 14,
+  "lamps" : "dde23982eb120ff2",
   "models" : {
     "set-FREIGHTBULK-car" : {
       "hash" : "b5da52f64582a7b3",
@@ -26,6 +26,22 @@
     "set-FREIGHTBULKFar-tail" : {
       "hash" : "faf29123717e33ae",
       "triangles" : 1344
+    },
+    "set-FREIGHTCEMENT-car" : {
+      "hash" : "cdc77cb887ab0eda",
+      "triangles" : 1808
+    },
+    "set-FREIGHTCEMENT-tail" : {
+      "hash" : "d95e87a4a58f329b",
+      "triangles" : 1832
+    },
+    "set-FREIGHTCEMENTFar-car" : {
+      "hash" : "6749fd68fa23ae9f",
+      "triangles" : 804
+    },
+    "set-FREIGHTCEMENTFar-tail" : {
+      "hash" : "72483fc34f5ee4fb",
+      "triangles" : 828
     },
     "set-FREIGHTEMPTY-car" : {
       "hash" : "2db3ef14e1998353",

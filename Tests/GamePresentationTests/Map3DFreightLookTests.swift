@@ -46,7 +46,7 @@ final class Map3DFreightLookTests: XCTestCase {
         XCTAssertEqual(Map3DFreightLoad.of(TrainCargo(train: train, groups: [CargoGroup(origin: station, kind: .goods, tons: 40)])), .goods)
         XCTAssertEqual(Map3DFreightLoad.of(TrainCargo(train: train, groups: [CargoGroup(origin: station, kind: .materials, tons: 40)])), .materials)
         let mixed = TrainCargo(train: train, groups: [CargoGroup(origin: station, kind: .goods, tons: 40),
-                                                      CargoGroup(origin: StationID(rawValue: 2), kind: .materials, tons: 41)])
+                                                      CargoGroup(origin: StationID(rawValue: 3), kind: .materials, tons: 41)])
         XCTAssertEqual(Map3DFreightLoad.of(mixed), .materials)
         let tie = TrainCargo(train: train, groups: [CargoGroup(origin: station, kind: .goods, tons: 40),
                                                     CargoGroup(origin: station, kind: .materials, tons: 40)])

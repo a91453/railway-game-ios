@@ -33,6 +33,8 @@ extension Map3DScene.Builder {
         // Decision 947: beside a guideway, level with its cars' doors
         // and clear of its widest car.
         let guided = guideways(of: snapshot).edges
+        // Decision 1033: the street trams' stops, beside embedded track.
+        let kinds = trackKinds(of: snapshot)
         for (index, platform) in platforms.enumerated() {
             guard platform.points.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) else { continue }
             let line = platform.points.map { point($0) + Self.lifted }
@@ -73,10 +75,16 @@ extension Map3DScene.Builder {
                 if room(-1) < Self.platformWidth, room(1) > room(-1) { side = 1 }
                 width = room(side)
             }
+            // Decision 1033: a street tram's stop, low and unroofed, the
+            // studio's model in place of the platform and its canopy.
+            let stop = guideway == nil && Map3DTramStop.stands(
+                track: kinds[platform.platform.edge], structure: platform.structure,
+                length: Map3DStreetLife.Path(line)?.length ?? .infinity, island: partner != nil || curved != nil)
+            if stop { width = min(width, Map3DTramStop.width) }
             // Decision 947: what stands on a platform stands
             // ``platformHeight`` over its line, so a guideway's platform's
             // line is raised (or lowered) by the difference.
-            let rise = guideway.map { $0.platformTop - Self.platformHeight } ?? 0
+            let rise = guideway.map { $0.platformTop - Self.platformHeight } ?? (stop ? Map3DTramStop.top - Self.platformHeight : 0)
             let laid = rise == 0 ? line : line.map { $0 + Map3DPoint(0, rise, 0) }
             state.platforms.platformLines.append(laid) // Decision 263: no street over it.
             // An island's `width` is its half on this track's side: the
@@ -90,6 +98,21 @@ extension Map3DScene.Builder {
             // Decision 259: its waiting crowd, and the station's
             // passengers outside.
             addStationLife(line: laid, offset: offset, width: width, station: platform.platform.station)
+            if stop, let path = Map3DStreetLife.Path(laid) {
+                let at = path.at(path.length / 2)
+                let edgePoint = at.point + at.right * (side * edge), back = at.right * side
+                let saved = target
+                for (level, full) in [(Target.near, true), (.far, false)] {
+                    target = level
+                    let model = Map3DTramStop.placed(full: full, edge: edgePoint, along: at.along, back: back)
+                    mesh(at: middle) { $0.append(model) }
+                }
+                target = saved
+                state.platforms.laidPlatforms.append(LaidPlatform(station: platform.platform.station, line: laid, offset: offset, width: width,
+                                                                  structure: platform.structure, island: false,
+                                                                  edge: platform.platform.edge, tramStop: true))
+                continue
+            }
             mesh(at: middle) { mesh in
                 mesh.addRibbon(along: laid, width: width, offset: offset, lift: Self.platformHeight, depth: Self.platformHeight + Self.bedDrop + rise,
                                top: Map3DPalette.platform, side: Map3DPalette.platform, topPaint: Self.paving, sidePaint: Self.concrete,

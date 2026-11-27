@@ -181,7 +181,8 @@ extension Map3DScene.Builder {
                 for full in [true, false] { meshes[full] = stood.mesh(models[full]!) }
             } else {
                 let centre = anchor
-                let body = LandmarkMesh.corners(Map3DHongKongLandmark.body(of: models[true]!), origin: centre, rotation: 0)
+                let body = landmark.registration?.body.map { $0.map { Map3DPoint(centre.x + $0.x, 0, centre.z - $0.y) } }
+                    ?? LandmarkMesh.corners(Map3DHongKongLandmark.body(of: models[true]!), origin: centre, rotation: 0)
                 guard isClearOfTrack(body) else { continue }
                 // On its podium where the ground is lower than its foot; one
                 // sunk into a hillside (decision 913) with its floor on the
