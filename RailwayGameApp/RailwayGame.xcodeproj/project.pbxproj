@@ -273,6 +273,7 @@
 		CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */; };
 		CC9E99100E350FA519724E36 /* kenney-ui-open.wav in Resources */ = {isa = PBXBuildFile; fileRef = EBFE12DC5EE8EA16F13F9F9A /* kenney-ui-open.wav */; };
 		CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E2BC9805D886DEE596859 /* ControlPanel.swift */; };
+		CDA18253B2F398708E4021E3 /* taiwan_land_price.dat in Resources */ = {isa = PBXBuildFile; fileRef = C08BDAD17AE71940CF931C07 /* taiwan_land_price.dat */; };
 		CDB469C7BE7C6097272449BE /* chime-tourist.wav in Resources */ = {isa = PBXBuildFile; fileRef = 52449D8DCD618CC726CACDDE /* chime-tourist.wav */; };
 		CDBCC1C27BD15017BA4A9E69 /* BaseMap in Resources */ = {isa = PBXBuildFile; fileRef = DA79BA929F6262FB0DD353E2 /* BaseMap */; };
 		CE4A55FA3D5A13F0CFC0FFAA /* coins.wav in Resources */ = {isa = PBXBuildFile; fileRef = 825875E22D08C0197C0EC180 /* coins.wav */; };
@@ -610,6 +611,7 @@
 		BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackViews.swift; sourceTree = "<group>"; };
 		C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonUITests.swift; sourceTree = "<group>"; };
 		C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EconomyPanel.swift; sourceTree = "<group>"; };
+		C08BDAD17AE71940CF931C07 /* taiwan_land_price.dat */ = {isa = PBXFileReference; path = taiwan_land_price.dat; sourceTree = "<group>"; };
 		C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_pingxi_runs.json; sourceTree = "<group>"; };
 		C251D4CCDA182936D3B548DB /* tpe-temple-zhinan.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-zhinan.m3dmodel"; sourceTree = "<group>"; };
 		C32DC68DE89FFF96A515EA04 /* chime-metro.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-metro.wav"; sourceTree = "<group>"; };
@@ -758,6 +760,7 @@
 			children = (
 				CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */,
 				2C59CD3C076F73D4C4D5094B /* taiwan_heights.dat */,
+				C08BDAD17AE71940CF931C07 /* taiwan_land_price.dat */,
 				F104E3ABF4FB1175A1038A45 /* taiwan_landcover.dat */,
 				69236EA935C27C1BCE988215 /* taiwan_no_build.json */,
 				CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */,
@@ -1445,6 +1448,7 @@
 				A3C9D6B6FECF2BBDAD9C372A /* station_transfers.json in Resources */,
 				A904805EE220E391FA3C4618 /* taiwan_coverage.dat in Resources */,
 				D4FDC4F705567E31E0A61764 /* taiwan_heights.dat in Resources */,
+				CDA18253B2F398708E4021E3 /* taiwan_land_price.dat in Resources */,
 				A25288EF35439864404F191E /* taiwan_landcover.dat in Resources */,
 				94E81FC86FD208CF85F36A0E /* taiwan_no_build.json in Resources */,
 				4CC1E6E850C8B587B582C668 /* taiwan_place_names.json in Resources */,

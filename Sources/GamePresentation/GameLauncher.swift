@@ -654,6 +654,11 @@ public final class GameLauncher {
             water: anchor.map { water(at: $0, data: data) } ?? [], steep: anchor.map { steep(at: $0, data: data) } ?? [],
             buysMap: anchor == nil && options.buysMap && !demo
         )
+        // Decision 1025: how dear the places of a map whose land came all
+        // at once are.
+        if let anchor, !world.land.cells.isEmpty, let prices = data.coverage?.landPrice {
+            try? world.setLandLocations(prices.locations(frame: RealWorldFrame(anchor: anchor, bounds: world.bounds), bounds: world.bounds))
+        }
         options.apply(to: &world, modeShiftCap: cap)
         if demo { world.setUnlimitedFunds(true) }
         return world
@@ -2674,7 +2679,9 @@ public struct RealWorldData: Sendable {
         }
         let water = grid("taiwan_water", WaterGrid.init(data:))
         let heights = grid("taiwan_heights", ext: "dat", HeightGrid.init(data:))
-        let coverage = grid("taiwan_coverage", ext: "dat", CoverageGrid.init(data:))
+        var coverage = grid("taiwan_coverage", ext: "dat", CoverageGrid.init(data:))
+        // Decision 1025: the land prices go with the coverage.
+        coverage?.landPrice = grid("taiwan_land_price", ext: "dat", LandPriceGrid.init(data:))
         var placeNames = grid("taiwan_place_names", PlaceNames.init(data:))
         // Decision 569: the landmarks go with the place names.
         placeNames?.landmarks = grid("taiwan_station_landmarks", StationLandmarks.init(data:))

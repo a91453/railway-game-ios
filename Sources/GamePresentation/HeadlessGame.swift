@@ -374,7 +374,12 @@ public final class RealWorldFiles {
             session.heights = heights
         }
         if set.coverage, session.coverage == nil {
-            coverage = try coverage ?? CoverageGrid(data: data("taiwan_coverage.dat"))
+            if coverage == nil {
+                var read = try CoverageGrid(data: data("taiwan_coverage.dat"))
+                // Decision 1025: the land prices go with the coverage.
+                read.landPrice = try? LandPriceGrid(data: data("taiwan_land_price.dat"))
+                coverage = read
+            }
             session.coverage = coverage
         }
         if set.baseMap, session.baseMap == nil {
