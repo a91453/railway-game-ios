@@ -133,6 +133,9 @@ def centroid(rings, tx, ty, scale):
 
 TABLE = {}
 DENSITY = None
+# A guessed newcomer's ceiling (`held_to_neighbours`).
+NEIGHBOURS_KNOWN = 10
+SPARSE_STOREYS = 2
 
 
 def compare(job):
@@ -175,7 +178,38 @@ def compare(job):
             added.append((sort_key, attributes, rings))
     added.sort(key=lambda b: b[0])
     county = T._mode([r[5] for r in rows]) if rows else None
-    return key, kept, gone, added, county
+    storeys = collections.Counter(b[2] >> 8 for b in bundled if b[2] >> 8) if blob is not None else collections.Counter()
+    return key, kept, gone, added, county, storeys
+
+
+def held_to_neighbours(results):
+    """A guessed newcomer is no taller than most houses already round it:
+    the 3 × 3 tiles' bundled p75 (`NEIGHBOURS_KNOWN` houses or more), else
+    `SPARSE_STOREYS`. The density guess alone put five to nine storeys on
+    Qimei and Xiaoliuqiu, where nothing real is over four (decision 707)."""
+    near = {r[0]: r[5] for r in results}
+    out = []
+    for k, kept, gone, added, county, _ in results:
+        counts = collections.Counter()
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                counts.update(near.get((k[0] + dx, k[1] + dy), ()))
+        total = sum(counts.values())
+        cap = SPARSE_STOREYS
+        if total >= NEIGHBOURS_KNOWN:
+            seen = 0
+            for storeys in sorted(counts):
+                seen += counts[storeys]
+                if seen >= 0.75 * total:
+                    cap = storeys
+                    break
+        held = []
+        for sort_key, attributes, rings in added:
+            if attributes >> 5 & 7 == GUESS and attributes >> 8 > cap:
+                attributes = cap << 8 | attributes & 0xFF
+            held.append((sort_key, attributes, rings))
+        out.append((k, kept, gone, held, county))
+    return out
 
 
 def patch(archive, extract, counties, population, release, out, report_path):
@@ -195,7 +229,7 @@ def patch(archive, extract, counties, population, release, out, report_path):
     ids = {k: tile_id(T.ZOOM, k[0], k[1]) for k in keys}
     jobs = [(k, tiles.get(k, []), entries.get(ids[k])) for k in keys]
     with multiprocessing.get_context('fork').Pool() as workers:
-        results = workers.map(compare, jobs, chunksize=64)
+        results = held_to_neighbours(workers.map(compare, jobs, chunksize=64))
 
     connection = duckdb.connect()
     connection.sql('INSTALL spatial; LOAD spatial;')
