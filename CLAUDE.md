@@ -602,8 +602,10 @@ Read and respect `docs/ARCHITECTURE.md`. In short:
   (`tools/texture-palette/port_check.py` for trains,
   `tools/landmark-survey/landmark_check.py` for buildings and landmarks),
   then a train ported from the owner's old version takes one review, and
-  an old building ported, a new train or a new building take two, the
-  second by another studio; small fixes merge once the check is green
+  an old building ported, a new train or a new building take two; every
+  review is by an AI family other than the maker's, and the same account
+  or the first round's reviewer may take the second (owner, 2026-11-27:
+  review order is a preference, nothing waits for another account); small fixes merge once the check is green
   again, and only major items left after the second review open a third.
   The studio workflow (who builds, briefs, reviews, lessons, the list of
   models still to make) is kept in the private assets repository,
