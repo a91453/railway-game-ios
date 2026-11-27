@@ -442,7 +442,13 @@ final class SharedStationLayoutTests: XCTestCase {
             let laidBy = try Self.buy(order, on: session)
             let world = session.world
             let laid = Self.platforms(of: world, laidBy: laidBy)
-            XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            // Only Shin-Tosu, where the Relay Kamome crosses under the
+            // Kyushu Shinkansen (`testTheRelayKamomeMeetsTheKamomeAcrossThePlatform`).
+            let stacked = Self.stacked(laid, in: world)
+            XCTAssertTrue(
+                stacked.allSatisfy { $0.hasPrefix("新鳥栖: ") && $0.contains(RelayKamomeTests.id) && $0.contains(shinkansen) },
+                "\(order): \(stacked)"
+            )
             XCTAssertEqual(world.stations.filter { $0.name == "熊本" }.count, 1, "\(order): one Kumamoto")
             let kumamoto = try XCTUnwrap(world.stations.first { $0.name == "熊本" }?.id)
             let pair = try XCTUnwrap(Self.between(south, shinkansen, at: kumamoto, in: laid), "\(order)")
