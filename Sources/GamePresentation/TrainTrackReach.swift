@@ -20,8 +20,11 @@ enum TrainTrackReach {
     /// lengths lays past it (one car, decision 565: its nose at its head).
     static let behind = Int64(2 * TrainCars.drawnCarLength)
     /// How much track ahead of its head: more than its first car's front
-    /// half, and the little more a set drawn at its own lengths lays.
-    static let ahead = Int64(TrainCars.drawnCarLength)
+    /// half, and the little more a set drawn at its own lengths lays;
+    /// since TURNBACK (2026-11-27) more than a whole car, the longest (a
+    /// high-speed car's 25 m), which a train turned round at a terminus
+    /// lays ahead of its head (``turnRoom(of:in:)``).
+    static let ahead = Int64(1.5 * TrainCars.drawnCarLength)
 
     /// Train `train`'s centre line from its head back along its body and
     /// then ``behind`` further along the track it came by, head first, as
@@ -72,6 +75,65 @@ enum TrainTrackReach {
             start = 0
         }
         return points
+    }
+
+    /// TURNBACK (the owner's report of 2026-11-27: the maglev, monorail
+    /// and suspended monorail standing a car past the end of their
+    /// terminus, into the buildings beyond): GameCore turns a train round
+    /// at a stop with its head where its tail was (``GameWorld/reverseTrain(_:)``),
+    /// and the maps draw its first car's nose at its head (decision 565),
+    /// so its cars, a car longer than its head-to-tail length, were laid a
+    /// car past the platform's end it had stopped at. For a train pulling
+    /// out of the stop where it was turned round (its timetable's last
+    /// stop reverses it and it is on its way to the next, or it stands at
+    /// the end of its service), with its tail on a platform of that stop's
+    /// station: how far its tail is from that platform's end behind it, in
+    /// world units. 0 once turned round, more as it pulls out;
+    /// ``TrainCars`` lays ahead of its head what does not fit there.
+    /// `nil` for any other train.
+    static func turnRoom(of train: Train, in world: GameWorld) -> Int64? {
+        let timetable = train.timetable
+        let left: Int
+        switch train.execution {
+        case .travellingToStop(let stop, let cycle)?:
+            if stop > 0 {
+                left = stop - 1
+            } else if cycle > 0 {
+                left = timetable.count - 1
+            } else {
+                return nil
+            }
+        case nil:
+            left = timetable.count - 1
+        case .waitingAtStop?:
+            return nil
+        }
+        guard timetable.indices.contains(left), timetable[left].reverses, let (traversal, offset) = tail(of: train, in: world),
+              let edge = world.network.edge(traversal.edge) else { return nil }
+        let at = traversal.direction == .forward ? offset : edge.length - offset
+        let rooms = world.network.platforms(on: edge.id)
+            .filter { $0.station == timetable[left].station && $0.start <= at && at <= $0.end }
+            .map { traversal.direction == .forward ? at - $0.start : $0.end - at }
+        return rooms.min()
+    }
+
+    /// Where train `train`'s tail is: the traversal it is on, facing the
+    /// way the train does, and how far along it. Its head for a train of
+    /// one car; `nil` for a train not placed or a body that cannot be
+    /// followed.
+    static func tail(of train: Train, in world: GameWorld) -> (traversal: TrackTraversal, offset: Int64)? {
+        guard case .onEdge(var traversal, var offset)? = train.position else { return nil }
+        var remaining = train.length
+        var trail = train.trailEdges.makeIterator()
+        while remaining > offset {
+            remaining -= offset
+            guard let edge = world.network.edge(traversal.edge), let node = world.network.node(edge.start(of: traversal.direction)),
+                  let id = trail.next(), let behind = world.network.edge(id), let leaving = behind.traversal(leaving: node.id)
+            else { return nil }
+            traversal = leaving.reversed
+            offset = behind.length
+        }
+        return (traversal, offset - remaining)
     }
 
     /// Along `geometry` travelled `direction`, from offset `from` to
