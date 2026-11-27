@@ -169,7 +169,9 @@ enum Map3DExteriorStudy: Hashable, Sendable, CaseIterable {
             switch station {
             case .keelung: return [B.way929730121, B.way1069178919, B.way367861777]
             case .chiayi: return [B.way286891391]
-            case .tainan: return [B.way204493488, B.way204493489, B.way1568887226]
+            // STATION-ALIGN-APPLY (decision 1022): the 1936 station's own,
+            // not the bus station's it stood on before.
+            case .tainan: return [B.relation6477070, B.way1568887226]
             case .beimen: return [B.way353120128]
             case .fenqihu: return [B.way444296747]
             case .alishan: return [B.way344586161]
