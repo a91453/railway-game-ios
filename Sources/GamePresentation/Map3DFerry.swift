@@ -34,10 +34,14 @@ public enum Map3DFerry {
         /// catamaran of the outlying island routes, from the local studio
         /// (``Map3DHKOutlyingFerry``): one bow, turns round.
         case hongKongOutlying
+        /// Decision 1033: Taiwan's blue and white deep-V fast ferry of the
+        /// Donggang–Xiaoliuqiu crossing, from the local studio
+        /// (``Map3DLiuqiuFerry``): one bow, turns round.
+        case liuqiu
 
         /// Length overall and beam, metres (decision 579).
-        public var length: Float { self == .tamsui ? 18 : self == .cijin ? 25.3 : self == .hongKong ? 34 : 40.1 }
-        public var beam: Float { self == .tamsui ? 4.43 : self == .cijin ? 8.2 : self == .hongKong ? 8.6 : 11.2 }
+        public var length: Float { self == .tamsui ? 18 : self == .cijin ? 25.3 : self == .hongKong ? 34 : self == .liuqiu ? 30.5 : 40.1 }
+        public var beam: Float { self == .tamsui ? 4.43 : self == .cijin ? 8.2 : self == .hongKong ? 8.6 : self == .liuqiu ? 7 : 11.2 }
         /// People it takes (decision 579's sources; the game's boats take
         /// ``FerryRoute/capacity`` whichever is drawn).
         /// Hong Kong's: none sourced (decision 909), Cijin's.
@@ -58,8 +62,10 @@ public enum Map3DFerry {
         /// each end, its front window at x 14.94, 6.9–7.5 m up.
         /// Decision 930: the catamaran's bridge is the front of its upper
         /// deck, its window at x 9.02, 4.85–6.63 m up.
-        public var bridgeFront: Float { self == .tamsui ? 5.7 : self == .cijin ? 5.9 : self == .hongKong ? 14.3 : 8.4 }
-        public var bridgeEye: Float { self == .tamsui ? 3.6 : self == .cijin ? 6.9 : self == .hongKong ? 7.3 : 6.2 }
+        /// Decision 1033: the Xiaoliuqiu ferry's raked windscreen runs
+        /// from x 5.70, 4.95 m up, back to x 4.40, 6.25 m up.
+        public var bridgeFront: Float { self == .tamsui ? 5.7 : self == .cijin ? 5.9 : self == .hongKong ? 14.3 : self == .liuqiu ? 4.4 : 8.4 }
+        public var bridgeEye: Float { self == .tamsui ? 3.6 : self == .cijin ? 6.9 : self == .hongKong ? 7.3 : self == .liuqiu ? 5.8 : 6.2 }
         /// The cabin window view's seat: a seated eye 1.15 m over the
         /// saloon's floor (the open lower deck at 0.77 m; the upper saloon
         /// at 3.40 m), as far out to the side as the walls and posts
@@ -69,12 +75,16 @@ public enum Map3DFerry {
         /// 2.25 m out) they filled the window; from 1.6 m they frame it.
         /// Hong Kong's: its upper saloon (floor 3.6 m, glass out to 4.23 m).
         /// The catamaran's: its upper deck (floor 4.6 m, glass out to 4.85 m).
-        public var seatAcross: Float { self == .tamsui ? 0.4 : self == .cijin ? 2.6 : self == .hongKong ? 2.8 : 3.4 }
-        public var seatHeight: Float { self == .tamsui ? 1.92 : self == .cijin ? 4.55 : self == .hongKong ? 4.75 : 5.75 }
+        /// The Xiaoliuqiu ferry's: its upper saloon (floor 4.55 m, glass
+        /// out to 2.60 m).
+        public var seatAcross: Float { self == .tamsui ? 0.4 : self == .cijin ? 2.6 : self == .hongKong ? 2.8 : self == .liuqiu ? 1.4 : 3.4 }
+        public var seatHeight: Float { self == .tamsui ? 1.92 : self == .cijin ? 4.55 : self == .hongKong ? 4.75 : self == .liuqiu ? 5.7 : 5.75 }
         /// How tall it stands over the water, for the view beside it (to
         /// the wheelhouse's roof).
         /// The catamaran's to its green roof (its radar mast reaches 11 m).
-        public var height: Float { self == .tamsui ? 4.6 : self == .cijin ? 7.8 : self == .hongKong ? 7.9 : 7.5 }
+        /// The Xiaoliuqiu ferry's to its upper saloon's roof (its mast
+        /// reaches 9.45 m).
+        public var height: Float { self == .tamsui ? 4.6 : self == .cijin ? 7.8 : self == .hongKong ? 7.9 : self == .liuqiu ? 6.7 : 7.5 }
 
         /// The boat a route's crossing draws: the double-ended ferry on a
         /// short harbour crossing (under a kilometre, as Gushan–Cijin's
@@ -91,8 +101,12 @@ public enum Map3DFerry {
         /// Peng Chau, Mui Wo and Cheung Chau) the outlying islands' fast
         /// catamaran, a shorter one (the harbour crossings, 1.3 to 3 km)
         /// the harbour ferry.
+        /// Decision 1033: in Taiwan a route of ``outlyingMetres`` or more
+        /// (as Donggang to Xiaoliuqiu's some 14 km) the Xiaoliuqiu fast
+        /// ferry; Finland's and Japan's are drawn as Taiwan's.
         public static func drawn(forMetres metres: Int64, in region: Map3DStreetRegion) -> Boat {
-            region == .hongKong ? (metres >= outlyingMetres ? .hongKongOutlying : .hongKong) : drawn(forMetres: metres)
+            if region == .hongKong { return metres >= outlyingMetres ? .hongKongOutlying : .hongKong }
+            return metres >= outlyingMetres ? .liuqiu : drawn(forMetres: metres)
         }
 
         /// From how long a Hong Kong route is an outlying island one, metres.
@@ -147,6 +161,8 @@ public enum Map3DFerry {
         }
         // Decision 930: the outlying islands' catamaran after those.
         for far in [false, true] { made.append(model(.hongKongOutlying, far: far)) }
+        // Decision 1033: the Xiaoliuqiu ferry last.
+        for far in [false, true] { made.append(model(.liuqiu, far: far)) }
         return made
     }
 
@@ -166,6 +182,9 @@ public enum Map3DFerry {
         }
         if boat == .hongKongOutlying {
             return Map3DHKOutlyingFerry.model(far: far, named: name(boat, far: far)) ?? .flat(named: name(boat, far: far), from: Map3DMesh())
+        }
+        if boat == .liuqiu {
+            return Map3DLiuqiuFerry.model(far: far, named: name(boat, far: far)) ?? .flat(named: name(boat, far: far), from: Map3DMesh())
         }
         var m = CableMesh()
         solids(boat, far: far).append(to: &m.kit.mesh)
@@ -190,7 +209,7 @@ public enum Map3DFerry {
         switch boat {
         case .tamsui: s.tamsui(far: far)
         case .cijin: s.cijin(far: far)
-        case .hongKong, .hongKongOutlying: break
+        case .hongKong, .hongKongOutlying, .liuqiu: break
         }
         return s
     }

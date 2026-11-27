@@ -49,6 +49,11 @@ Chien：「都可以依你覺得對遊戲最好的方式，但記得車站的規
 
 `tw-rail-ref-landmarks-2026-11` 裡的大佛已由 `fgs-big-buddha-2026-11` 取代，不接。
 
+## 決策 1033：要寫程式的五件（規劃 4 串「接入鐵橋、客輪、電停和水泥貨車」，分支 `claude/project-thread-v1klmk`）
+
+- 第一張 PR：西螺大橋、大樹舊鐵橋（逐跨擺，`Map3DTrussBridges.swift`）與小琉球高速客輪（`Map3DFerry.Boat.liuqiu`）。
+- 第二張 PR（還沒做）：無棚電停（路面軌道的站代替有雨棚的月台）、水泥貨車與筒倉（建材貨物的外觀）、大村車輛基地（只放建築，罩在遊戲股道上）。規則寫在決策 1033 §4。
+
 ## 還要做的（素材庫那邊）
 
 各批合併後，在 `railway-assets-private-2` 開一張 PR，把接了的模型的經驗檔「接回遊戲」一節改成已接（附遊戲 PR），並更新 `MODEL-INVENTORY.md`。
