@@ -97,5 +97,6 @@ extension Map3DLandmarkRegistry {
         Map3DYoshinogariSanctuary.registration,
         Map3DYoshinogariWatchtower.registration,
         Map3DMandaPit.registration,
+        Map3DPengwanBridge.registration,
     ]
 }
