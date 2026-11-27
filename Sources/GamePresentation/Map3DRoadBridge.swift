@@ -324,6 +324,14 @@ struct Map3DRoadBridges: Sendable {
     /// owner, 2026-10-24: a road's carriageways and link roads, each its
     /// own line on the map, drew a parapet each side).
     static let beside: Float = 1.5
+    /// Decision 391 (later, BRIDGE-MIDDLE-PARAPET): how near the middle of
+    /// a road another road's line may pass and still be that road itself
+    /// (its own deck, drawn along the same points), metres. Each road
+    /// apart was any line nearer than its half width and 0.5 m, so two
+    /// carriageways drawn overlapping (福岡's city expressway, 6 m apart
+    /// at 13 m wide) were each other's own and each kept a parapet in
+    /// the middle of the deck (the owner's screenshot, 2026-11-27).
+    static let sameLine: Double = 0.3
 
     /// Decision 391 (後來, HK-ROADS): the most a road bridge's line may turn
     /// from a viaduct's track it meets and be running along it, as a
@@ -1792,10 +1800,12 @@ extension Map3DScene.Builder {
         let key = Map3DRoadBridges.key(probe.x, probe.z)
         // Decision 876 (later): copied only where a cell holds one.
         let bridges = state.roadBridges.segments[key] == nil && state.roadBridges.groundCells[key] == nil ? Map3DRoadBridges() : state.roadBridges
-        // Over the probe, and not the road along `centre` itself.
+        // Over the probe, and not the road along `centre` itself
+        // (BRIDGE-MIDDLE-PARAPET: one through its very middle, however
+        // near another overlaps it).
         func covers(_ a: Map3DBaseMap.Point, _ b: Map3DBaseMap.Point, half: Float) -> Bool {
             Map3DRoadBridges.nearest(probe, a, b).distance <= Double(half)
-                && Map3DRoadBridges.nearest(centre, a, b).distance > Double(half) + 0.5
+                && Map3DRoadBridges.nearest(centre, a, b).distance > Map3DRoadBridges.sameLine
         }
         for (number, index) in bridges.segments[key] ?? [] {
             let piece = bridges.pieces[number]
