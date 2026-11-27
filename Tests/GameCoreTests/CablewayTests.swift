@@ -504,4 +504,63 @@ final class CablewayTests: XCTestCase {
         XCTAssertThrowsError(try load { _, rope in rope["transfer"] = ["station": 1, "stop": 1] }, "a transfer at an angle station")
         XCTAssertThrowsError(try load { _, rope in rope["stops"] = Array(repeating: ["row": 0, "column": 0], count: 9) }, "too many stops")
     }
+
+    // MARK: - The funicular (decision 1040)
+
+    /// Hong Kong's Peak Tram: 1,247 m through its six stops at 6 m/s,
+    /// 207.8 s up to 208, and 20 s through each of the four between: 288 s.
+    /// Two cars of 210 make 1,575 an hour each way, 7:30 to 23:00 every
+    /// day: 15.5 hours, 24,412 a way, 48,824 a day, Mondays too.
+    func testThePeakTramsRideAndCapacity() {
+        let stops = (0..<6).map { CablewayStop(cell: CellPosition(row: 0, column: $0)) }
+        let peak = Cableway(id: CablewayID(rawValue: 1), kind: .funicular, stops: stops, legMetres: [86, 182, 238, 575, 166])
+        XCTAssertEqual(peak.metres, 1_247)
+        XCTAssertEqual(peak.rideSeconds(from: 0, to: 5), 288)
+        XCTAssertEqual(peak.rideSeconds(from: 0, to: 1), 15, "86 m at 6 m/s, no stop between")
+        XCTAssertEqual(peak.dailyCapacity(onDay: 0), 48_824, "a Monday the same")
+        XCTAssertEqual(peak.dailyCapacity(onDay: 5), 48_824, "a Saturday the same")
+        XCTAssertEqual(Cableway.Kind.funicular.opens(onDay: 1), 27_000)
+        XCTAssertEqual(Cableway.Kind.funicular.closes(onDay: 1), 82_800)
+        let gondola = Cableway(id: CablewayID(rawValue: 2), stops: stops, legMetres: [86, 182, 238, 575, 166])
+        XCTAssertEqual(gondola.dailyCapacity(onDay: 1), Cableway.dailyCapacity(onDay: 1), "a gondola's as before")
+        XCTAssertEqual(gondola.rideSeconds(from: 0, to: 5), 250 + 4 * 60)
+        XCTAssertEqual(peak.dailyCost, gondola.dailyCost, "running paid as a gondola's")
+        XCTAssertTrue(peak.isValid)
+    }
+
+    /// It runs on a Monday and through a thunderstorm; a typhoon still
+    /// stops it.
+    func testThePeakTramRunsOnMondayAndInAThunderstorm() throws {
+        var world = try world()
+        let built = try world.createCableway(stops: line, kind: .funicular)
+        XCTAssertEqual(built.kind, .funicular)
+        XCTAssertTrue(world.cablewayIsOpen(built.id, onDay: 0), "day 0 is a Monday")
+        try world.advance(ticks: 1_440 + 30)
+        XCTAssertEqual(try XCTUnwrap(world.cableway(id: built.id)).days.first?.closed, false, "Monday booked open")
+        world.setDisruptions(try XCTUnwrap(Disruptions(level: .standard, country: "TW", seed: 7)))
+        let stormy = try XCTUnwrap((0..<720).first { world.weather(onDay: $0) == .thunderstorm && world.typhoons(onDay: $0).isEmpty })
+        XCTAssertTrue(world.cablewayIsOpen(built.id, onDay: stormy))
+        if let windy = (0..<720).first(where: { !world.typhoons(onDay: $0).isEmpty }) {
+            let gondola = try world.createCableway(stops: line)
+            XCTAssertEqual(world.cablewayIsOpen(built.id, onDay: windy), world.cablewayIsOpen(gondola.id, onDay: windy),
+                           "a typhoon stops both alike")
+        }
+    }
+
+    /// A funicular saves its kind and loads it back; a gondola writes no
+    /// kind at all, so its save reads as every save before.
+    func testTheKindIsSavedOnlyForAFunicular() throws {
+        var world = try world()
+        let gondola = try world.createCableway(stops: line)
+        let funicular = try world.createCableway(stops: line, kind: .funicular)
+        let data = try JSONEncoder().encode(SavedGame(world: world))
+        let object = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let saved = try XCTUnwrap((object["world"] as? [String: Any])?["cableways"] as? [[String: Any]])
+        XCTAssertNil(saved[0]["kind"])
+        XCTAssertEqual(saved[1]["kind"] as? String, "funicular")
+        let loaded = try JSONDecoder().decode(SavedGame.self, from: data).world
+        XCTAssertEqual(loaded, world)
+        XCTAssertEqual(loaded.cableway(id: gondola.id)?.kind, .aerial)
+        XCTAssertEqual(loaded.cableway(id: funicular.id)?.kind, .funicular)
+    }
 }

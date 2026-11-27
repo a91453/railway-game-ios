@@ -58,6 +58,12 @@ public struct RealCableway: Hashable, Sendable {
         public let boards: Bool
     }
 
+    /// Decision 1040: a point of a funicular's track on the Earth.
+    public struct TrackPoint: Hashable, Sendable {
+        public let latitude: Double
+        public let longitude: Double
+    }
+
     public let name: String
     public let englishName: String
     public let stops: [Stop]
@@ -65,6 +71,18 @@ public struct RealCableway: Hashable, Sendable {
     /// Decision 586: the station it meets, by name and place (its first
     /// stop's real transfer), or `nil` to meet the nearest.
     public var meets: Stop?
+    /// Decision 1040: what runs on it: a gondola lift, or a funicular
+    /// laid only as it is (the player draws no funicular stop by stop).
+    public var kind: Cableway.Kind = .aerial
+    /// Decision 1040: a funicular's track from its first stop to its last,
+    /// each stop one of its points (``trackStops``); empty for a gondola,
+    /// whose rope runs straight from stop to stop.
+    public var track: [TrackPoint] = []
+    /// Decision 1040: the point of ``track`` each stop stands at, in order.
+    public var trackStops: [Int] = []
+    /// Decision 1040: the points of ``track`` its passing loop runs
+    /// between, where the car going up meets the one coming down.
+    public var passingLoop: ClosedRange<Int>?
 
     /// The Maokong Gondola: four stations and two angle stations, 4,033 m
     /// (gondola.taipei). Where the stops are: along the line of
@@ -173,14 +191,56 @@ public struct RealCableway: Hashable, Sendable {
         meets: Stop(name: "東涌", englishName: "Tung Chung", latitude: 22.289158, longitude: 113.941405, boards: true)
     )
 
+    /// Decision 1040: Hong Kong's Peak Tram, a funicular from Garden Road
+    /// up to the Peak: its track the line of OpenStreetMap's
+    /// `railway=funicular` ways of the Peak Tram (4338940, 85404052,
+    /// 85404150, 265943512, 265943515, 622565242, 1046739316, 1046739317,
+    /// 1117280223, 1165024097, 1308940440, 1308940441; osmtoday.com's Hong
+    /// Kong extract of 2026-11-27, ODbL) from the Garden Road stop
+    /// (node 2525250101) to the Peak (node 26412045), the passing loop's
+    /// west track (265943512, the east one is 265943513); its six stations
+    /// its nodes 2525250101 花園道, 526904599 堅尼地道, 988059698 麥當勞道,
+    /// 988059498 梅道, 988059821 白加道 and 26412045 山頂, each a point of
+    /// the line; each span the line's metres between them, 1,247 m in all
+    /// (the operator says about 1.4 km with the stations' tracks, and
+    /// 4.5–6 minutes end to end: 1,247 m at 6 m/s and four stops of 20 s
+    /// make 4.8). Every one boards: the operator lists all six. It meets
+    /// no railway: MTR Central is some 600 m from Garden Road.
+    public static let peakTram = RealCableway(
+        name: "山頂纜車", englishName: "Peak Tram",
+        stops: [
+            Stop(name: "花園道", englishName: "Garden Road", latitude: 22.2771695, longitude: 114.158577, boards: true),
+            Stop(name: "堅尼地道", englishName: "Kennedy Road", latitude: 22.276545, longitude: 114.1580862, boards: true),
+            Stop(name: "麥當勞道", englishName: "MacDonnell Road", latitude: 22.2751722, longitude: 114.1571206, boards: true),
+            Stop(name: "梅道", englishName: "May Road", latitude: 22.2733633, longitude: 114.155887, boards: true),
+            Stop(name: "白加道", englishName: "Barker Road", latitude: 22.2709577, longitude: 114.1517471, boards: true),
+            Stop(name: "山頂", englishName: "The Peak", latitude: 22.271123, longitude: 114.1501414, boards: true)
+        ],
+        legMetres: [86, 182, 238, 575, 166],
+        kind: .funicular,
+        track: [
+            (22.2771695, 114.1585770), (22.2769392, 114.1583785), (22.2768893, 114.1583380), (22.2768355, 114.1582941),
+            (22.2767649, 114.1582439), (22.2765450, 114.1580862), (22.2764321, 114.1580080), (22.2762955, 114.1579122),
+            (22.2756926, 114.1574881), (22.2751722, 114.1571206), (22.2747827, 114.1568307), (22.2742035, 114.1564041),
+            (22.2733633, 114.1558870), (22.2730611, 114.1556754), (22.2729948, 114.1556136), (22.2729253, 114.1555332),
+            (22.2728732, 114.1554799), (22.2721453, 114.1549689), (22.2712816, 114.1543629), (22.2710967, 114.1542349),
+            (22.2710300, 114.1541816), (22.2709637, 114.1541117), (22.2709084, 114.1540389), (22.2708634, 114.1539661),
+            (22.2708224, 114.1538857), (22.2707940, 114.1538063), (22.2707709, 114.1537159), (22.2707542, 114.1536219),
+            (22.2707494, 114.1535337), (22.2707533, 114.1534625), (22.2708793, 114.1524047), (22.2709577, 114.1517471),
+            (22.2709780, 114.1515542), (22.2709886, 114.1514534), (22.2711097, 114.1503039), (22.2711230, 114.1501414),
+        ].map { TrackPoint(latitude: $0.0, longitude: $0.1) },
+        trackStops: [0, 5, 9, 12, 31, 35],
+        passingLoop: 13...30
+    )
+
     /// The real cable cars the mode knows by their stops.
-    public static let all: [RealCableway] = [.maokong, .sunMoonLake, .wulai, .ngongPing]
+    public static let all: [RealCableway] = [.maokong, .sunMoonLake, .wulai, .ngongPing, .peakTram]
 
     /// The real cable car `cableway` was laid as (decision 583: its stops'
     /// names for the follow bar): the same stops on the same cells, the
     /// same spans; `nil` for one the player laid stop by stop.
     public static func matching(_ cableway: Cableway, in world: GameWorld) -> RealCableway? {
-        all.first { $0.legMetres == cableway.legMetres && $0.stops(in: world) == cableway.stops }
+        all.first { $0.kind == cableway.kind && $0.legMetres == cableway.legMetres && $0.stops(in: world) == cableway.stops }
     }
 }
 
@@ -195,6 +255,7 @@ extension GameSession {
         let cell = CellPosition(containing: point)
         cablewayDraftLegs = nil
         cablewayDraftMeets = nil
+        cablewayDraftKind = nil
         if cablewayDraft.last?.cell == cell {
             cablewayDraft.removeLast()
             return
@@ -214,6 +275,7 @@ extension GameSession {
         cablewayDraft.removeLast()
         cablewayDraftLegs = nil
         cablewayDraftMeets = nil
+        cablewayDraftKind = nil
     }
 
     /// The real cable cars on this map the mode offers to lay as they are
@@ -245,6 +307,7 @@ extension GameSession {
         cablewayDraft = stops
         cablewayDraftLegs = real.legMetres
         cablewayDraftMeets = real.meetsNear(in: world)
+        cablewayDraftKind = real.kind == .aerial ? nil : real.kind
         lookAt(stops[stops.count / 2].cell.middle)
     }
 
@@ -253,12 +316,14 @@ extension GameSession {
     /// What the stops picked would build; `nil` until there are two.
     public var cablewayPreview: CablewayPreview? {
         guard cablewayDraft.count >= 2 else { return nil }
-        let key = CablewayPreviewKey(stops: cablewayDraft, legs: cablewayDraftLegs, meets: cablewayDraftMeets, balance: world.economy.balance, cableways: world.cableways.count)
+        let key = CablewayPreviewKey(stops: cablewayDraft, legs: cablewayDraftLegs, meets: cablewayDraftMeets, kind: cablewayDraftKind,
+                                     balance: world.economy.balance, cableways: world.cableways.count)
         if let memo = cablewayPreviewMemo, memo.key == key { return memo.preview }
         var copy = world
         let preview: CablewayPreview
         do throws(GameError) {
-            let built = try copy.createCableway(stops: cablewayDraft, legMetres: cablewayDraftLegs, meetsNear: cablewayDraftMeets)
+            let built = try copy.createCableway(stops: cablewayDraft, legMetres: cablewayDraftLegs, meetsNear: cablewayDraftMeets,
+                                                kind: cablewayDraftKind ?? .aerial)
             preview = CablewayPreview(
                 stations: built.stops.filter(\.boards).count, metres: built.metres, price: world.economy.balance - copy.economy.balance,
                 rideMinutes: (built.rideSeconds(from: 0, to: built.stops.count - 1) + 30) / 60, problem: nil
@@ -283,15 +348,18 @@ extension GameSession {
     @discardableResult
     public func buildCableway() -> Bool {
         guard cablewayPreview?.problem == nil, cablewayDraft.count >= 2 else { return false }
-        let done = perform(.createCableway(stops: cablewayDraft, legMetres: cablewayDraftLegs, meetsNear: cablewayDraftMeets)) { _, before, after in
+        let command = PlayerCommand.Edit.createCableway(stops: cablewayDraft, legMetres: cablewayDraftLegs, meetsNear: cablewayDraftMeets,
+                                                        kind: cablewayDraftKind)
+        let done = perform(command) { _, before, after in
             let price = before.economy.balance - after.economy.balance
-            let name = after.cableways.last.map { CablewayText.name($0.id, in: language) } ?? ""
+            let name = after.cableways.last.map { CablewayText.name($0, in: language) } ?? ""
             return language.text("\(name) now runs, for \(price.moneyText).", "\(name)開通了，花費 \(price.moneyText)。")
         }
         guard done != nil else { return false }
         cablewayDraft = []
         cablewayDraftLegs = nil
         cablewayDraftMeets = nil
+        cablewayDraftKind = nil
         return true
     }
 
@@ -378,13 +446,14 @@ extension GameSession {
             stations: stations, metres: cableway.metres,
             minutes: (cableway.rideSeconds(from: 0, to: cableway.stops.count - 1) + 30) / 60, in: language
         ))
+        let hourly = cableway.kind.hourlyCapacity
         rows.append(language.text(
-            "\(Cableway.hourlyCapacity.groupedText) people an hour each way · \(Cableway.fare.moneyText) a ride",
-            "單向每小時 \(Cableway.hourlyCapacity.groupedText) 人 · 每人 \(Cableway.fare.moneyText)"
+            "\(hourly.groupedText) people an hour each way · \(Cableway.fare.moneyText) a ride",
+            "單向每小時 \(hourly.groupedText) 人 · 每人 \(Cableway.fare.moneyText)"
         ))
-        let hours = Cableway.operatingHours(onDay: today)
+        let hours = "\(CablewayText.clock(cableway.kind.opens(onDay: today)))–\(CablewayText.clock(cableway.kind.closes(onDay: today)))"
         rows.append(open
-            ? language.text("Runs today, 9:00–\(9 + hours):00", "今天營運 9:00–\(9 + hours):00")
+            ? language.text("Runs today, \(hours)", "今天營運 \(hours)")
             : language.text("Stands still today: \(closedReason(cableway, onDay: today).english)", "今天停駛：\(closedReason(cableway, onDay: today).chinese)"))
         if let station = cableway.transfer.flatMap({ world.station(id: $0.station) }) {
             rows.append(language.text("Meets \(station.name) station", "接 \(station.name)站"))
@@ -416,14 +485,16 @@ extension GameSession {
                 "Costs \(cableway.dailyCost.moneyText) a day to run", "每天營運成本 \(cableway.dailyCost.moneyText)"
             ))
         }
-        return CablewayCard(id: id, title: CablewayText.name(id, in: language), rows: rows, runs: open)
+        return CablewayCard(id: id, title: CablewayText.name(cableway, in: language), rows: rows, runs: open)
     }
 
     /// Why cable car `cableway` stands still on `day`, as GameCore's
     /// ``GameWorld/cablewayIsOpen(_:onDay:)`` checks it.
     private func closedReason(_ cableway: Cableway, onDay day: Int64) -> (english: String, chinese: String) {
-        if StationDemand.weekday(ofDay: day) == 1, world.holiday(onDay: day) == nil { return ("Monday maintenance", "週一例行保養") }
-        if world.weather(onDay: day, atCableway: cableway.id) == .thunderstorm { return ("thunderstorm", "雷雨") }
+        if cableway.kind.restsOnMonday, StationDemand.weekday(ofDay: day) == 1, world.holiday(onDay: day) == nil {
+            return ("Monday maintenance", "週一例行保養")
+        }
+        if cableway.kind.stopsInThunderstorms, world.weather(onDay: day, atCableway: cableway.id) == .thunderstorm { return ("thunderstorm", "雷雨") }
         return ("typhoon", "颱風")
     }
 }
@@ -433,6 +504,7 @@ struct CablewayPreviewKey: Hashable {
     let stops: [CablewayStop]
     let legs: [Int64]?
     let meets: PlanPoint?
+    let kind: Cableway.Kind?
     let balance: Money
     let cableways: Int
 }
@@ -450,6 +522,19 @@ public enum CablewayText {
     /// "Cable car 1" / "纜車 1".
     public static func name(_ id: CablewayID, in language: DisplayLanguage) -> String {
         language.text("Cable car \(id.rawValue)", "纜車 \(id.rawValue)")
+    }
+
+    /// Decision 1040: `cableway`'s name: a gondola's ``name(_:in:)``, a
+    /// funicular's "Funicular 1" / "纜索鐵路 1".
+    public static func name(_ cableway: Cableway, in language: DisplayLanguage) -> String {
+        guard cableway.kind == .funicular else { return name(cableway.id, in: language) }
+        return language.text("Funicular \(cableway.id.rawValue)", "纜索鐵路 \(cableway.id.rawValue)")
+    }
+
+    /// Decision 1040: second `second` of a day as "7:30" or "23:00".
+    static func clock(_ second: Int64) -> String {
+        let minutes = second / 60
+        return "\(minutes / 60):\(minutes % 60 < 10 ? "0" : "")\(minutes % 60)"
     }
 
     /// "4 stations · 4,033 m · 17 min end to end".

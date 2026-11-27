@@ -29,6 +29,7 @@ extension GameSession {
         cablewayDraft = []
         cablewayDraftLegs = nil
         cablewayDraftMeets = nil
+        cablewayDraftKind = nil
         message = nil
     }
 

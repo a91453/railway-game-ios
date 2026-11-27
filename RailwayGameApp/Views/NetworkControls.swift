@@ -457,7 +457,8 @@ struct NetworkControls: View {
                         Label {
                             Text(verbatim: language.text("Lay the \(real.englishName)", "照真實路線拉\(real.name)"))
                         } icon: {
-                            Image(systemName: "cablecar")
+                            // Decision 1040: the Peak Tram runs on rails.
+                            Image(systemName: real.kind == .funicular ? "tram" : "cablecar")
                         }
                     }
                     .accessibilityIdentifier(index == 0 ? "network.cablewayReal" : "network.cablewayReal.\(index)")

@@ -54,7 +54,72 @@ public struct Map3DCableways: Sendable {
         let spans: [Span]
         /// Decision 615: whose cabins it runs.
         let look: CabinLook
+        /// Decision 1040: a funicular's track on the ground, its two cars
+        /// riding it; `nil` for a gondola, whose cabins ride ``spans``.
+        var track: Track? = nil
     }
+
+    /// Decision 1040: a funicular's track laid on the drawn ground: the
+    /// real one's line (``RealCableway/track``) where the cable car was
+    /// laid as one, else straight from stop to stop; a point every
+    /// ``trackStep`` at most, so it follows the slope.
+    struct Track: Sendable {
+        /// The rails' middle line on the ground, and each point's metres
+        /// along it from the first stop.
+        let points: [Map3DPoint]
+        let along: [Float]
+        /// Each stop's metres along it.
+        let stops: [Float]
+        /// The passing loop's metres along it, where the two cars pass.
+        let loop: ClosedRange<Float>?
+
+        var length: Float { along.last ?? 0 }
+
+        /// The point `metres` along it and the way up it there (with the
+        /// slope).
+        func point(at metres: Float) -> (point: Map3DPoint, forward: Map3DPoint) {
+            let m = min(max(metres, 0), length)
+            var i = 0
+            while i + 2 < along.count, along[i + 1] < m { i += 1 }
+            let a = points[i], b = points[i + 1]
+            let piece = max(along[i + 1] - along[i], 0.001)
+            let t = min(max((m - along[i]) / piece, 0), 1)
+            return (a + (b - a) * t, (b - a).normalized ?? Map3DPoint(1, 0, 0))
+        }
+
+        /// How far car `side` (−1 or 1) stands from the middle line at
+        /// `metres`: the passing loop's half width inside it, easing in and
+        /// out over ``loopEase``; 0 elsewhere, the cars on one track.
+        func offset(at metres: Float, side: Float) -> Float {
+            guard let loop else { return 0 }
+            let into = min(metres - loop.lowerBound, loop.upperBound - metres)
+            guard into > 0 else { return 0 }
+            let t = min(into / Map3DCableways.loopEase, 1)
+            return side * Map3DCableways.loopHalfWidth * t * t * (3 - 2 * t)
+        }
+
+        /// The metres along it of a car at `glide`'s place.
+        func metres(at place: CablewayCabins.Place) -> Float {
+            switch place {
+            case .station(let stop, _): return stops[stop]
+            case .span(let leg, let permille, _): return stops[leg] + (stops[leg + 1] - stops[leg]) * Float(permille) / 1_000
+            }
+        }
+    }
+
+    /// Decision 1040: the longest piece of a funicular's track drawn
+    /// straight, metres.
+    public static let trackStep: Float = 8
+    /// Decision 1040: how far apart the two tracks of a funicular's passing
+    /// loop lie, half of it, metres (the Peak Tram's 1,524 mm gauge and
+    /// 2.86 m cars), and the metres the loop's tracks take to part.
+    public static let loopHalfWidth: Float = 1.8
+    public static let loopEase: Float = 30
+    /// Decision 1040: the track bed's width and height, and the rails'
+    /// distance apart (the Peak Tram's gauge), metres.
+    public static let bedWidth: Float = 2.8
+    public static let bedHeight: Float = 0.25
+    public static let gauge: Float = 1.524
 
     /// Decision 615: the cabins a cable car runs, picked by where it is,
     /// not by the player: the Sun Moon Lake Ropeway's near it, Maokong's
@@ -62,11 +127,13 @@ public struct Map3DCableways: Sendable {
     /// Decision 930: Wulai's two large cabins near it.
     public enum CabinLook: Sendable {
         case maokong, sunMoonLake, ngongPing, wulai
+        /// Decision 1040: a funicular's two Peak Tram cars.
+        case peakTram
 
         /// Decision 930: whether a line of it runs two cabins, one going
         /// up as the other comes down (``CablewayCabins/numbers(of:pair:)``),
         /// not a loop of many.
-        public var isPair: Bool { self == .wulai }
+        public var isPair: Bool { self == .wulai || self == .peakTram }
     }
 
     /// Decision 930: within this of either of the Wulai cable car's
@@ -94,7 +161,10 @@ public struct Map3DCableways: Sendable {
     /// Lake's when any of its stops lies within ``sunMoonLakeReach`` of a
     /// Sun Moon Lake Ropeway station, Maokong's otherwise (and on a map
     /// not on the Earth).
-    public static func look(of cableway: Cableway, in world: GameWorld) -> CabinLook { look(ofStops: cableway.stops, in: world) }
+    /// Decision 1040: a funicular runs the Peak Tram's cars wherever it is.
+    public static func look(of cableway: Cableway, in world: GameWorld) -> CabinLook {
+        cableway.kind == .funicular ? .peakTram : look(ofStops: cableway.stops, in: world)
+    }
 
     /// Decision 615: the cabins a cable car of `stops` runs (as ``look(of:in:)``).
     public static func look(ofStops stops: [CablewayStop], in world: GameWorld) -> CabinLook {
@@ -155,6 +225,7 @@ public struct Map3DCableways: Sendable {
         }
         lines = world.cableways.compactMap { cableway in
             guard cableway.stops.count >= 2 else { return nil }
+            if cableway.kind == .funicular { return Self.funicular(cableway, world: world, scene: scene) }
             let feet = cableway.stops.map { foot($0.cell.middle) }
             func direction(_ leg: Int) -> Map3DPoint {
                 let d = feet[leg + 1] - feet[leg]
@@ -192,6 +263,59 @@ public struct Map3DCableways: Sendable {
 
     /// Whether there is anything to draw.
     public var isEmpty: Bool { lines.isEmpty }
+
+    /// Decision 1040: funicular `cableway` laid in `scene`: its track (the
+    /// real one's line when it was laid as one, ``RealCableway/matching``,
+    /// else straight between its stops' cells), a terminal hall past each
+    /// end (the gondola's, for now), and no towers or ropes.
+    static func funicular(_ cableway: Cableway, world: GameWorld, scene: Map3DScene) -> Line {
+        func onGround(_ flat: Map3DPoint) -> Map3DPoint {
+            Map3DPoint(flat.x, scene.drawnGround.height(x: flat.x, z: flat.z, world: world), flat.z)
+        }
+        var corners: [Map3DPoint] = [], stopCorners: [Int] = [], loopCorners: ClosedRange<Int>?
+        if let real = RealCableway.matching(cableway, in: world), real.track.count >= 2,
+           real.trackStops.count == cableway.stops.count, let frame = RealWorldFrame(world: world) {
+            corners = real.track.map {
+                let (x, y) = frame.worldPosition(latitude: $0.latitude, longitude: $0.longitude)
+                return scene.point(worldX: x, worldY: y, height: 0)
+            }
+            stopCorners = real.trackStops
+            loopCorners = real.passingLoop
+        } else {
+            corners = cableway.stops.map { scene.point(worldX: Double($0.cell.middle.x), worldY: Double($0.cell.middle.y), height: 0) }
+            stopCorners = Array(corners.indices)
+        }
+        // Each straight piece cut into pieces of ``trackStep`` at most, on
+        // the ground; the metres along kept for every corner.
+        var points: [Map3DPoint] = [onGround(corners[0])], along: [Float] = [0], cornerMetres: [Float] = [0]
+        for (a, b) in zip(corners, corners.dropFirst()) {
+            let flat = Map3DPoint(b.x - a.x, 0, b.z - a.z).length
+            let pieces = max(1, Int((flat / trackStep).rounded(.up)))
+            for i in 1...pieces {
+                let p = onGround(a + (b - a) * (Float(i) / Float(pieces)))
+                along.append(along[along.count - 1] + (p - points[points.count - 1]).length)
+                points.append(p)
+            }
+            cornerMetres.append(along[along.count - 1])
+        }
+        let stops = stopCorners.map { cornerMetres[min($0, cornerMetres.count - 1)] }
+        let loop = loopCorners.map { cornerMetres[$0.lowerBound]...cornerMetres[min($0.upperBound, cornerMetres.count - 1)] }
+        let track = Track(points: points, along: along, stops: stops, loop: loop)
+        // The halls past the ends, the cars' front ends inside them.
+        let first = track.point(at: 0), last = track.point(at: track.length)
+        func level(_ p: Map3DPoint) -> Map3DPoint { Map3DPoint(p.x, 0, p.z).normalized ?? Map3DPoint(1, 0, 0) }
+        let down = level(first.forward) * -1, up = level(last.forward)
+        let halls = [
+            Hall(foot: onGround(first.point + down * hallPast), along: down, kind: .terminal),
+            Hall(foot: onGround(last.point + up * hallPast), along: up, kind: .terminal),
+        ]
+        return Line(id: cableway.id, cableway: cableway, halls: halls, spans: [], look: .peakTram, track: track)
+    }
+
+    /// Decision 1040: how far past a funicular's end stop its terminal hall
+    /// stands, metres: the 22 m hall over the 28 m car's front end, the
+    /// wheel beyond it.
+    public static let hallPast: Float = 8
 
     /// The rope's middle line `share` (0–1) along `span`, sagging between
     /// supports.
@@ -232,6 +356,9 @@ public struct Map3DCableways: Sendable {
         /// Decision 930: Wulai's two cabins; empty in a pack without them,
         /// which then runs Maokong's there.
         let wulai: [Map3DWulaiCabin.Kind: (near: Int, far: Int)]
+        /// Decision 1040: the Peak Tram's two cars (decision 930's set), and
+        /// a rope's metre for its track; `nil` in a pack without them.
+        let peakTram: (near: Int, far: Int)?
 
         init?(_ pack: Map3DModelPack) {
             func pair(_ name: String) -> (near: Int, far: Int)? {
@@ -267,6 +394,12 @@ public struct Map3DCableways: Sendable {
                 wulai[kind] = p
             }
             self.wulai = wulai
+            let key = Map3DHKPeakTram.key
+            if let near = pack.index(of: "set-\(key)-single"), let far = pack.index(of: "set-\(key)Far-single") {
+                peakTram = (near, far)
+            } else {
+                peakTram = nil
+            }
             self.cabin = cabin
             self.tower = tower
             self.hall = hall
@@ -324,10 +457,15 @@ public struct Map3DCableways: Sendable {
         let whole = Int64(second.rounded(.down))
         var cabins: [(weight: Float, distance: Float, point: Map3DPoint, along: Map3DPoint, pair: (near: Int, far: Int), heavy: Bool)] = []
         for line in lines {
+            // Decision 1040: a funicular's track and its two cars.
             for hall in line.halls {
                 let d = (hall.foot - eye).length
                 guard d < far, let pair = models.hall[hall.kind] else { continue }
                 frame.instances.append(Self.placed(d < near ? pair.near : pair.far, at: hall.foot, along: hall.along))
+            }
+            if let track = line.track {
+                funicular(line, track: track, models: models, second: second, eye: eye, near: near, far: far, into: &frame)
+                continue
             }
             for span in line.spans {
                 for tower in span.towers {
@@ -406,6 +544,68 @@ public struct Map3DCableways: Sendable {
         return frame
     }
 
+    /// Decision 1040: funicular `line`'s track within `far` of `eye` (its
+    /// bed and two rails, the passing loop's two tracks) and its two cars
+    /// on it, tilted with the slope, whole within `near`.
+    func funicular(_ line: Line, track: Track, models: Models, second: Double, eye: Map3DPoint, near: Float, far: Float,
+                   into frame: inout Frame) {
+        func level(_ p: Map3DPoint) -> Map3DPoint { Map3DPoint(p.x, 0, p.z).normalized ?? Map3DPoint(1, 0, 0) }
+        func piece(from a: Map3DPoint, to b: Map3DPoint, width: Float, height: Float) {
+            let x = b - a
+            let left = Map3DPoint(x.z, 0, -x.x).normalized ?? Map3DPoint(0, 0, 1)
+            let up = (x.cross(left)).normalized ?? Map3DPoint(0, 1, 0)
+            let y = left * (width / CableColor.ropeThickness), z = up * (height / CableColor.ropeThickness)
+            frame.instances.append(Map3DInstance(model: models.rope, transform: [x.x, x.y, x.z, 0, y.x, y.y, y.z, 0, z.x, z.y, z.z, 0, a.x, a.y, a.z, 1],
+                                                 stripe: (1, 1, 1)))
+        }
+        for i in 0..<(track.points.count - 1) {
+            let middle = (track.points[i] + track.points[i + 1]) * 0.5
+            guard (middle - eye).length < far else { continue }
+            let metres = (track.along[i] + track.along[i + 1]) / 2
+            let left = Map3DPoint(level(track.points[i + 1] - track.points[i]).z, 0, -level(track.points[i + 1] - track.points[i]).x)
+            // One track, or the loop's two either side of the middle line.
+            let sides: [Float] = track.offset(at: metres, side: 1) > 0.01 ? [-1, 1] : [0]
+            for side in sides {
+                let a = track.points[i] + left * track.offset(at: track.along[i], side: side)
+                let b = track.points[i + 1] + left * track.offset(at: track.along[i + 1], side: side)
+                piece(from: a, to: b, width: Self.bedWidth, height: Self.bedHeight)
+                guard (middle - eye).length < near else { continue }
+                for rail: Float in [-1, 1] {
+                    let r = left * (rail * Self.gauge / 2) + Map3DPoint(0, Self.bedHeight / 2 + 0.07, 0)
+                    piece(from: a + r, to: b + r, width: 0.08, height: 0.14)
+                }
+            }
+        }
+        guard let pair = models.peakTram else { return }
+        let whole = Int64(second.rounded(.down))
+        let open = CablewayCabins.runs(line.id, in: world, at: GameTime(seconds: whole))
+        let numbers = CablewayCabins.numbers(of: line.cableway, pair: true)
+        for cabin in CablewayCabins.cabins(of: line.cableway, atSecond: whole, open: open) where numbers.contains(cabin.number) {
+            var metres = track.metres(at: cabin.place)
+            if open, case .span(let leg, _, let outbound) = cabin.place {
+                // Within the second, glide on, so the cars do not step.
+                let seconds = Float(CablewayCabins.spanSeconds(line.cableway.legMetres[leg], kind: line.cableway.kind))
+                let share = Float(second - Double(whole)) / max(seconds, 1)
+                metres += (track.stops[leg + 1] - track.stops[leg]) * share * (outbound ? 1 : -1)
+            }
+            // The first car on the loop's left track, the other on its right.
+            let side: Float = cabin.number == numbers[0] ? -1 : 1
+            let at = track.point(at: metres)
+            let flat = level(at.forward)
+            let left = Map3DPoint(flat.z, 0, -flat.x)
+            let foot = at.point + left * track.offset(at: metres, side: side) + Map3DPoint(0, Self.bedHeight, 0)
+            let d = (foot - eye).length
+            guard d < far else { continue }
+            // The uphill end at +x (``Map3DHKPeakTram``): along the track
+            // towards the last stop, tilted with it.
+            let x = at.forward, z = (x.cross(left)).normalized ?? Map3DPoint(0, 1, 0)
+            frame.instances.append(Map3DInstance(model: d < near ? pair.near : pair.far,
+                                                 transform: [x.x, x.y, x.z, 0, left.x, left.y, left.z, 0, z.x, z.y, z.z, 0, foot.x, foot.y, foot.z, 1],
+                                                 stripe: (1, 1, 1)))
+            if d < near { frame.nearCabins += 1 } else { frame.farCabins += 1 }
+        }
+    }
+
     // MARK: - Following a cabin (decision 583)
 
     static func isCrystal(_ number: Int) -> Bool { CablewayCabins.isCrystal(number) }
@@ -467,7 +667,7 @@ public struct Map3DCableways: Sendable {
     /// is no such cabin. Its place moves on without a jump, through the
     /// stops too (``CablewayCabins/glide(of:on:atSecond:)``).
     public func pose(of id: CabinID, second: Double) -> Map3DFollow.Pose? {
-        guard let line = lines.first(where: { $0.id == id.cableway }),
+        guard let line = lines.first(where: { $0.id == id.cableway }), line.track == nil,
               CablewayCabins.numbers(of: line.cableway, pair: line.look.isPair).contains(id.number),
               CablewayCabins.runs(id.cableway, in: world, at: GameTime(seconds: Int64(second.rounded(.down)))) else { return nil }
         let at = place(CablewayCabins.glide(of: id.number, on: line.cableway, atSecond: second), on: line)
@@ -496,7 +696,7 @@ public struct Map3DCableways: Sendable {
     public func cabin(atX x: Float, y: Float, camera: Map3DCamera, second: Double, within reach: Float) -> CabinID? {
         var best: (away: Float, id: CabinID)?
         let eye = camera.eye
-        for line in lines {
+        for line in lines where line.track == nil {
             guard CablewayCabins.runs(line.id, in: world, at: GameTime(seconds: Int64(second.rounded(.down)))) else { continue }
             for number in CablewayCabins.numbers(of: line.cableway, pair: line.look.isPair) {
                 let at = place(CablewayCabins.glide(of: number, on: line.cableway, atSecond: second), on: line)
