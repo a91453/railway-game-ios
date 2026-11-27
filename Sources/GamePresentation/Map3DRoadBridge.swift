@@ -235,6 +235,17 @@ struct Map3DRoadBridges: Sendable {
     /// road's height there (a link drawn beside its main road, within
     /// their widths, comes down only past it).
     static let steepestRamp: Double = 2
+    /// RAMP-GRADE (2026-11-27): the steepest a link road's bridge comes
+    /// down at between where it leaves its main road and its open end
+    /// (Japan's 道路構造令 §20: 7 % on a road for 40 km/h, an
+    /// interchange ramp's), or its own grade where that is steeper (a
+    /// street's). One too short to come down at it from there stands that
+    /// much higher at its open end, and the road on from it on the ground
+    /// comes down the rest (``Map3DRoadBridges/End``): the map tags only
+    /// the viaduct part of a ramp as a bridge, the rest an embankment.
+    static func rampGrade(_ kind: Map3DBaseMap.RoadKind) -> Float {
+        max(grade(kind), 0.07)
+    }
     /// Decision 822 (後來三): the least sine of the angle at which a lower
     /// bridge crosses under a higher one of its deck (20°); less is two
     /// running side by side whose lines the map draws across each other
@@ -940,20 +951,22 @@ extension Map3DScene.Builder {
             let rise = pieceRise(result, piece: number, at: end)
             guard rise > 0.05 else { continue }
             let kind = bridges[number].kind
+            // RAMP-GRADE: a link road's at its ramp's grade.
+            let grade = result.pieces[number].isRamp ? Map3DRoadBridges.rampGrade(kind) : Map3DRoadBridges.grade(kind)
             let outward = Point(x: dx / length, z: dz / length)
             // Decision 822: a road running on from the end under a deck at
             // the end's height stays at it while it lies there, as one
             // leaving a raised road at a junction does (decision 607): it
             // ramped down under the deck, a slab 1–4 m beneath it (the
             // owner's IMG_5323, 忠孝橋's east end and 台北橋's in 三重).
-            let level = Double(levelRun(from: end, outward: outward, rise: rise, reach: Double(rise / Map3DRoadBridges.grade(kind)), in: result))
-            let reach = Double(min(rise / Map3DRoadBridges.grade(kind), Map3DRoadBridges.longestRamp) + Map3DRoadBridges.half(kind)) + 4 + level
+            let level = Double(levelRun(from: end, outward: outward, rise: rise, reach: Double(rise / grade), in: result))
+            let reach = Double(min(rise / grade, Map3DRoadBridges.longestRamp) + Map3DRoadBridges.half(kind)) + 4 + level
             let low = Map3DRoadBridges.key(end.x - reach, end.z - reach), high = Map3DRoadBridges.key(end.x + reach, end.z + reach)
             for row in low.row...high.row {
                 for column in low.column...high.column { result.endCells[Map3DScene.ChunkKey(column: column, row: row), default: []].append(result.ends.count) }
             }
             result.ends.append(.init(point: end, outward: outward, half: Map3DRoadBridges.half(kind), rise: rise,
-                                     grade: Map3DRoadBridges.grade(kind), plateau: Float(level),
+                                     grade: grade, plateau: Float(level),
                                      roads: result.runOn(from: end, axis: outward, reach: reach)))
         }
         spreadRamps(into: &result)
@@ -1163,10 +1176,19 @@ extension Map3DScene.Builder {
         guard rise > 0, !bridges.pieces[number].dips.isEmpty else { return rise }
         let piece = bridges.pieces[number], deck = bridges.decks[piece.deck]
         let along = known ?? piece.travelled(to: p)
-        var dip: Float = 0
-        for mark in piece.dips { dip = max(dip, min(mark.drop, mark.drop - deck.grade * Float(abs(along - mark.from) - mark.flat))) }
-        guard dip > 0 else { return rise }
-        return max(rise - dip, min(rise, floorRise(deck, at: p, ground: ground)), 0)
+        // RAMP-GRADE: under its height where it comes down to (a mark is
+        // at one of its ends), rising from there at the deck's grade, not
+        // under its height here: one already on its way down there (a
+        // link road's ramp, a lift to a higher level) came down by both
+        // at once, at twice the grade (天神's links, 12 %).
+        var cap = Float.infinity
+        for mark in piece.dips {
+            let end = mark.from < 1e-6 ? piece.points[0] : piece.points[piece.points.count - 1]
+            let top = levelRise(bridges, piece: number, at: end, deckRise: deckRise(deck, at: end), along: mark.from)
+            cap = min(cap, top - mark.drop + deck.grade * Float(max(abs(along - mark.from) - mark.flat, 0)))
+        }
+        guard cap < rise else { return rise }
+        return max(cap, min(rise, floorRise(deck, at: p, ground: ground)), 0)
     }
 
     /// ``pieceRise(_:piece:at:deckRise:along:ground:)`` before its
@@ -1198,7 +1220,12 @@ extension Map3DScene.Builder {
         let down = mix(before.down, after.down), up = mix(before.up, after.up)
         guard down.isFinite, up.isFinite else { return rise }
         let grade = Map3DRoadBridges.grade(piece.kind)
-        let cap = down + up > 0 ? max(Float(down) * grade, rise * Float(down / (down + up))) : 0
+        // RAMP-GRADE: the share of the most it reaches along it (where it
+        // is lifted to a higher level), not of its height here, which
+        // already comes down where its lift does: the two came down
+        // together, at twice the grade or more (天神's links, 19–23 %).
+        let top = piece.lifted.isEmpty ? rise : max(rise, min(full, piece.lifted.map(\.rise).max() ?? rise))
+        let cap = down + up > 0 ? max(Float(down) * grade, top * Float(down / (down + up))) : 0
         guard cap < rise else { return rise }
         return min(rise, max(cap, floorRise(deck, at: p, ground: ground)))
     }
@@ -1496,8 +1523,9 @@ extension Map3DScene.Builder {
                     if rise > ceiling, rise > need[hold.sample] { need[hold.sample] = rise }
                 }
                 guard need.contains(where: { $0 > ceiling + 0.01 }) || !piece.lifted.isEmpty else { continue }
-                // Coming down from each at twice its grade, either way.
-                let slope = Float(Map3DRoadBridges.steepestRamp) * Map3DRoadBridges.grade(piece.kind)
+                // Coming down from each, either way.
+                // RAMP-GRADE: at a ramp's grade, no steeper.
+                let slope = Map3DRoadBridges.rampGrade(piece.kind)
                 for index in samples.indices.dropFirst() {
                     need[index] = max(need[index], need[index - 1] - slope * Float(samples[index].along - samples[index - 1].along))
                 }
@@ -1613,7 +1641,7 @@ extension Map3DScene.Builder {
         }
         guard !portals.isEmpty else { return }
         // Dijkstra from `sources` (a binary heap of distance, node).
-        func distances(from sources: [Int]) -> [Double] {
+        func distances(from sources: [Int], starting start: [Int: Double] = [:]) -> [Double] {
             var found = [Double](repeating: .infinity, count: samples.count)
             var heap: [(distance: Double, node: Int)] = []
             func less(_ a: Int, _ b: Int) -> Bool { (heap[a].distance, heap[a].node) < (heap[b].distance, heap[b].node) }
@@ -1639,7 +1667,7 @@ extension Map3DScene.Builder {
                 }
                 return top
             }
-            for source in Set(sources).sorted() { push((0, source)) }
+            for source in Set(sources).sorted() { push((start[source] ?? 0, source)) }
             while !heap.isEmpty {
                 let next = pop()
                 guard next.distance < found[next.node] else { continue }
@@ -1648,7 +1676,7 @@ extension Map3DScene.Builder {
             }
             return found
         }
-        let down = distances(from: portals)
+        var down = distances(from: portals)
         // Where a link road still lies on its main road's surface with
         // room to come down from there at twice its grade at most, it
         // leaves the main road there.
@@ -1663,6 +1691,20 @@ extension Map3DScene.Builder {
         }
         guard !junctions.isEmpty else { return }
         let up = distances(from: junctions)
+        // RAMP-GRADE: an open end nearer where its link leaves the main
+        // road than its rise at ``Map3DRoadBridges/rampGrade(_:)`` is
+        // looked at as that much further from the ground, so it comes down
+        // at that grade and stands as high as is left at its end.
+        var start: [Int: Double] = [:]
+        for portal in portals where up[portal].isFinite {
+            let piece = pieces[samples[portal].piece]
+            // The deck's height: what it may be lifted to later
+            // (``levelHeights(into:others:)``).
+            let rise = result.decks[piece.deck].lifts.map(\.rise).max() ?? 0
+            let short = Double(rise / Map3DRoadBridges.rampGrade(piece.kind)) - up[portal]
+            if short > 1 { start[portal] = min(short, Double(Map3DRoadBridges.longestRamp)) }
+        }
+        if !start.isEmpty { down = distances(from: portals, starting: start) }
         for number in ramps {
             let nodes = first[number]!...final[number]!
             guard nodes.contains(where: { down[$0].isFinite }), nodes.contains(where: { up[$0].isFinite }) else { continue }
