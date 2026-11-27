@@ -1,6 +1,6 @@
 // SPLIT-HOTSPOTS-2 (REAL-TRAINS-PER-REGION): which of the game's train
 // sets Japan's real lines run (the Fukuoka City Subway, the Kyushu and
-// Nishi-Kyushu Shinkansen and the Relay Kamome), split from Map3DRealTrains.swift's ``Map3DRealTrains/formation(system:id:name:)``
+// Nishi-Kyushu Shinkansen, the Relay Kamome and the Sanyo Shinkansen), split from Map3DRealTrains.swift's ``Map3DRealTrains/formation(system:id:name:)``
 // so that a pull request adding one place's trains changes only its file.
 
 extension Map3DRealTrains {
@@ -33,6 +33,12 @@ extension Map3DRealTrains {
             // the line's two fleets (until they had their own models, the
             // Taroko).
             return Formation(key: Map3DKyushu885.key, cars: Map3DKyushu885.cars, alternate: Map3DKyushu787.key)
+        case "sanyoshinkansen":
+            // Decision 1029: the Sanyo Shinkansen's N700S, sixteen cars,
+            // its odd-numbered trains the 700 series' sixteen (the
+            // garage's, first drawn on a line here), the line's two
+            // fleets as the game has them.
+            return Formation(key: Map3DN700S.key, cars: 16, alternate: Map3DSeries700.key)
         default:
             return nil
         }

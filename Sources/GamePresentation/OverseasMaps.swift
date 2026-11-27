@@ -39,11 +39,12 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     /// map, ``system`` first: Japan's map has the Fukuoka City Subway's and
     /// the Kyushu Shinkansen's (`kyushushinkansen.json`), another
     /// company's, on another gauge, and (decision 1028) JR Kyushu's
-    /// conventional lines' (`jrkyushu.json`, the Relay Kamome's).
+    /// conventional lines' (`jrkyushu.json`, the Relay Kamome's) and
+    /// (decision 1029) JR West's Sanyo Shinkansen's (`sanyoshinkansen.json`).
     public var systems: [String] {
         switch self {
         case .hongKong, .rovaniemi: [system]
-        case .fukuoka: [system, "kyushushinkansen", "jrkyushu"]
+        case .fukuoka: [system, "kyushushinkansen", "jrkyushu", "sanyoshinkansen"]
         }
     }
 
@@ -763,6 +764,9 @@ extension RealRailways.System {
             // Decision 998: the Nishi-Kyushu Shinkansen's, the Kamome's
             // deeper red (`build_nishi_kyushu_shinkansen.py`'s `COLOUR`).
             "kyushushinkansen|NK": RealRailways.RGB(0xA6192E),
+            // Decision 1030: Kumamoto to Shin-Minamata, the same line
+            // south of Kumamoto, in its red.
+            "kyushushinkansen|KS2": RealRailways.RGB(0xC8102E),
         ]),
         // Decision 1028: JR Kyushu's conventional lines, a system of their
         // own so the Relay Kamome is sold apart from the Shinkansen it
@@ -771,6 +775,13 @@ extension RealRailways.System {
         // `COLOUR`).
         RealRailways.System(id: "jrkyushu", english: "JR Kyushu conventional lines", chinese: "JR九州在來線", lineColors: [
             "jrkyushu|RK": RealRailways.RGB(0xFAAF18),
+        ]),
+        // Decision 1029: JR West's Sanyo Shinkansen, a system of its own
+        // so it is sold apart from JR Kyushu's Shinkansen it shares
+        // Hakata with. The colour is JR West's blue
+        // (`build_sanyo_shinkansen.py`'s `COLOUR`).
+        RealRailways.System(id: "sanyoshinkansen", english: "JR West", chinese: "JR西日本", lineColors: [
+            "sanyoshinkansen|SY": RealRailways.RGB(0x0072BC),
         ]),
     ]
 
@@ -821,6 +832,14 @@ extension RealBranchLine {
         // Another system than the subway's, so sold on its own
         // (``RealLineBundle/groups(of:)``).
         ("kyushushinkansen", "KS", "Kyushu Shinkansen", "九州新幹線", nil, .metro, false),
+        // Decision 1030 (KYUSHU-SHINKANSEN-MINAMATA): the line on south
+        // from Kumamoto to Shin-Minamata, the last station before the
+        // map's south edge, a line of its own so that a game which has
+        // Hakata to Kumamoto keeps it as it is and is sold the rest
+        // (`build_kyushu_shinkansen_south.py`). It shares Kumamoto, so a
+        // new game buys the two together (``RealLineBundle/groups(of:)``),
+        // Hakata to Kumamoto laid first.
+        ("kyushushinkansen", "KS2", "Kyushu Shinkansen (Shin-Minamata)", "九州新幹線（新水俁）", nil, .metro, false),
         // Decision 998 (NISHI-KYUSHU-SALE): the Nishi-Kyushu Shinkansen,
         // Takeo-Onsen to Nagasaki, a line of the same system but with no
         // station shared with the Kyushu Shinkansen's, so sold on its own
@@ -834,6 +853,10 @@ extension RealBranchLine {
         // (``RealLineBundle/groups(of:)``), bought as a branch line is (a
         // limited express an hour or half an hour apart, as Rovaniemi's).
         ("jrkyushu", "RK", "Relay Kamome", "海鷗接力號", nil, .branch, false),
+        // Decision 1029 (SANYO-SHINKANSEN-KOKURA): the Sanyo Shinkansen,
+        // Hakata to Kokura, JR West's, sold on its own (another system,
+        // ``RealLineBundle/groups(of:)``) as the Kyushu Shinkansen is.
+        ("sanyoshinkansen", "SY", "Sanyo Shinkansen", "山陽新幹線", nil, .metro, false),
     ]
 
     /// Decision 753: the lines of the cities outside Taiwan drawn along

@@ -146,6 +146,17 @@ public struct RealBranchLine: Hashable, Sendable {
     /// data.
     static let taiwanHighSpeedRail = "thsr_sched:THSR"
 
+    /// The lines on sale only where trains run in block sections
+    /// (realistic rules): the High Speed Rail (THSR-SALE, decision 993);
+    /// SANYO-SHINKANSEN-KOKURA (decision 1029), the Sanyo Shinkansen, whose
+    /// trains run 55.9 km from Hakata to Kokura with no station between.
+    /// Without block sections a train sets off only when no train is on
+    /// its way, the other way, to the station it leaves (the way to the
+    /// next stop is taken whole, both stations' turnouts with it): a whole
+    /// day under simple rules sent each of its sets only once the train
+    /// coming the other way was in, 131 of 148 runs late and 8 not sent.
+    static let onSaleInBlockSectionsOnly: Set<String> = [taiwanHighSpeedRail, "sanyoshinkansen:SY"]
+
     /// Decision 993: what the Taiwan High Speed Rail pays a month for its
     /// upkeep once bought, NT$10,000,000. It is sold with realistic rules
     /// only, whose trains cost more to run: a day of a new Taiwan game
@@ -1961,6 +1972,17 @@ extension RealLineLaying {
                 at: own.at[index], before: index > 0 ? own.at[index - 1] : nil, after: index < own.at.count - 1 ? own.at[index + 1] : nil, carried: own.carried
             )
         }
+        // SANYO-SHINKANSEN-KOKURA (decision 1029): a station on its line's
+        // real viaduct is not moved beside the company's track under the
+        // ground there. The Sanyo Shinkansen, bought after the Kyushu
+        // Shinkansen, had its Hakata moved west over the Kuko Line, 47 m
+        // off the Kyushu Shinkansen's islands, which spread east.
+        func standsOnAViaduct(_ index: Int) -> Bool {
+            let own = carried()
+            return RealLineAcquisition.isRaised(
+                at: own.at[index], before: index > 0 ? own.at[index - 1] : nil, after: index < own.at.count - 1 ? own.at[index + 1] : nil, carried: own.carried
+            )
+        }
         let besideShared = whereItStood || joined != nil ? nil : sharedEnds(
             of: inItsLane, points: points, through: besideThrough, shared: { index in
                 let station = (index == 0 ? junctionStation?.id : nil) ?? sameName(index)
@@ -1975,7 +1997,7 @@ extension RealLineLaying {
                 let overtakes = line.isDoubleTrack && line.overtakeStations.contains(name) && runs.runs.contains { !$0.passes.isEmpty }
                 return Self.throughStationExtent(of: line, name: name, tracks: tracks, overtakes: overtakes, layout: layout)
             },
-            sunk: standsInATunnel
+            sunk: standsInATunnel, raised: standsOnAViaduct
         )
         if besideThrough, besideShared?.moved.contains(where: { $0 > 0 && $0 < runs.stops.count - 1 }) != true {
             return refused("No station between the line's ends is beside the company's track.", "這條線中間沒有和公司軌道並排的共用車站。")
@@ -2617,6 +2639,9 @@ extension RealLineLaying {
         var depotsLaid: [(stop: Int?, depot: RealLineAcquisition.Depot)] = []
         // Decision 556: where along the line each depot beside it stands.
         var depotAlong: [Int: Double] = [:]
+        // Decision 1030: which end's overnight trains each depot beside
+        // the line stables (``RealLineDepotSite/stablesFor``).
+        var depotStablesFor: [Int: String] = [:]
         for ((site, points, j, onFirst), marks) in zip(depotsAt, depotMarks) {
             guard let laid = RealLineDepotLayout.lay(
                 site, points: points, along: path, at: j, second: plans[onFirst ? 0 : 1].plan, onFirst: onFirst, marks: marks, first: pieces.count,
@@ -2624,6 +2649,7 @@ extension RealLineLaying {
             ) else { continue }
             pieces += laid.pieces
             depotAlong[depotsLaid.count] = j
+            depotStablesFor[depotsLaid.count] = site.stablesFor
             depotsLaid.append((nil, laid.depot))
         }
         // Decision 489: a depot past an end, its lead on from the main
@@ -2725,12 +2751,14 @@ extension RealLineLaying {
             // The depot past this end, or, on a line with none past an
             // end, the one beside the line for a station between.
             // Decision 556: the nearest beside the line first, then the
-            // next nearest while the station has trains left.
+            // next nearest while the station has trains left. Decision
+            // 1030: at an end, the one beside the line that stables its
+            // trains.
             let rooms = depotEnds.isEmpty
                 ? (stop > 0 && stop < lastStop
                     ? depotsLaid.indices.filter { depotsLaid[$0].stop == nil }
                     .sorted { abs((depotAlong[$0] ?? 0) - along[stop].along) < abs((depotAlong[$1] ?? 0) - along[stop].along) }
-                    : [])
+                    : depotsLaid.indices.filter { depotStablesFor[$0] == name })
                 : depotsLaid.indices.filter { depotsLaid[$0].stop == stop }
             for room in rooms {
                 while count > 0, !depotRooms[room].isEmpty {

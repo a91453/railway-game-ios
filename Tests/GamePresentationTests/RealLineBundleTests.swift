@@ -65,9 +65,14 @@ final class RealLineBundleTests: XCTestCase {
         // itself too. Decision 1028: the Relay Kamome, JR Kyushu's
         // conventional line, another system, shares Hakata with both and
         // Shin-Tosu and Takeo-Onsen with the Shinkansen, sold by itself.
+        // Decision 1029: the Sanyo Shinkansen, JR West's, another system,
+        // shares Hakata with all of them but the Hakozaki Line, sold by
+        // itself. Decision 1030: Kumamoto to Shin-Minamata, the Kyushu
+        // Shinkansen's line south, shares Kumamoto with it: sold with it,
+        // laid after it.
         let fukuoka = try FukuokaRailwaysTests.fukuoka()
         checkEveryLineIsSoldOnce(fukuoka)
-        XCTAssertEqual(bundles(of: fukuoka), [["fksubway:K", "fksubway:H", "fksubway:N"], ["kyushushinkansen:KS"], ["kyushushinkansen:NK"], ["jrkyushu:RK"]])
+        XCTAssertEqual(bundles(of: fukuoka), [["fksubway:K", "fksubway:H", "fksubway:N"], ["kyushushinkansen:KS", "kyushushinkansen:KS2"], ["kyushushinkansen:NK"], ["jrkyushu:RK"], ["sanyoshinkansen:SY"]])
     }
 
     func testABundleIsNamedAfterItsFirstLine() throws {

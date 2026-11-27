@@ -68,7 +68,7 @@ extension NetworkPreview {
     /// shows, rather than the radius's own.
     public func radiusText(in language: DisplayLanguage, curveSpeedLimits: Bool) -> String {
         let radius = tightestRadius
-        let speed = marks.map { marks in
+        let speed: String? = marks.map { marks in
             marks.lowestSpeed.map { language.text("up to \($0) km/h", "可跑 \($0) km/h") }
         } ?? TrackCurvature.speedText(radius, in: language)
         guard curveSpeedLimits, let speed else {

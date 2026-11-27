@@ -37,7 +37,7 @@ public struct PlaceNames: Sendable {
         /// Whether the name is in `language` itself, not the Chinese one
         /// shown for want of an English name.
         public func isShown(in language: DisplayLanguage) -> Bool {
-            language != .english || english != nil
+            language.base != .english || english != nil
         }
     }
 
