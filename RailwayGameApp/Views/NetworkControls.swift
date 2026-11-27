@@ -36,7 +36,7 @@ struct NetworkControls: View {
         // (``NetworkModeRow``), so it never scrolls away under a tall
         // inspector at large text (AI tester round 1, 2026-11-23).
         VStack(alignment: .leading, spacing: 8) {
-            // Decision 1020: two stations just built and joined by track
+            // Decision 1024: two stations just built and joined by track
             // lead straight on to their line, above what the mode shows.
             if let offer = session.lineFromBuiltTrack, session.networkMode == .build || session.networkMode == .platform {
                 LineFromBuiltTrackRow(session: session, offer: offer) {
@@ -694,7 +694,7 @@ struct NetworkControls: View {
 /// each stretch between the rail and the ground in the colour of what
 /// carries it, the ground's line and the rail's over them; the heights at
 /// the top and bottom, the length, and a key of the kinds it shows.
-/// Decision 1020: the line between two stations the track tools just
+/// Decision 1024: the line between two stations the track tools just
 /// built, offered on the build card: what it joins, and the button that
 /// leaves Build for Lines with the line ready.
 private struct LineFromBuiltTrackRow: View {

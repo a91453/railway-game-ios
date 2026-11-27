@@ -1,6 +1,6 @@
 import GameCore
 
-// Decision 1020 (the owner, 2026-11-27: 「你鋪設完 照理說 路線設定 在跳出去」):
+// Decision 1024 (the owner, 2026-11-27: 「你鋪設完 照理說 路線設定 在跳出去」):
 // laying track and making a line were two places, Build and Lines, and a
 // player in a hurry had to remember to leave one for the other. Once the
 // track tools have built two stations that track joins, the build card
@@ -12,7 +12,7 @@ import GameCore
 // from its own menu, after the track.
 
 /// A line the build card offers between stations just built (decision
-/// 1020): its two ends, in the order they were built, and how many
+/// 1024): its two ends, in the order they were built, and how many
 /// stations the track between them passes, the two counted.
 public struct LineFromBuiltTrack: Equatable, Sendable {
     public let from: StationID
@@ -45,7 +45,7 @@ extension GameSession {
     /// built.
     static let builtStationsKept = 4
 
-    /// Decision 1020: the line the build card offers, or `nil`: none
+    /// Decision 1024: the line the build card offers, or `nil`: none
     /// found, the tutorial leads (its own steps make the first line), or
     /// the newest station built is already on a line (the line was made,
     /// or the station added to one).
@@ -91,7 +91,7 @@ extension GameSession {
         if best != builtTrackLine { builtTrackLine = best }
     }
 
-    /// Decision 1020: starts the offered line: a new draft from one end
+    /// Decision 1024: starts the offered line: a new draft from one end
     /// to the other, picking on the map on, so a station tapped next adds
     /// to it as a line picked by hand. A draft already begun is dropped.
     /// Never changes the world. The app then leaves Build and opens Lines.

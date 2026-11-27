@@ -700,11 +700,11 @@ public final class GameSession {
     /// without a button for each.
     public internal(set) var isPickingLineStops = false
 
-    /// Decision 1020: the stations the track tools built last, oldest
+    /// Decision 1024: the stations the track tools built last, oldest
     /// first (``noteStationBuiltWithTrackTools(_:)``).
     var stationsBuiltWithTrackTools: [StationID] = []
 
-    /// Decision 1020: the two ends of the longest stretch of track joining
+    /// Decision 1024: the two ends of the longest stretch of track joining
     /// stations just built, worked out when a station or track is built;
     /// the build card offers a line between them (``lineFromBuiltTrack``).
     var builtTrackLine: LineFromBuiltTrack?

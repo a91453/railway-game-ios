@@ -43,7 +43,7 @@ final class LineDraftSummaryUITests: XCTestCase {
         // Both maps open with lines, so the panel lists them first and folds
         // the new line's form into "New Line…" below them (decision 196),
         // off the screen on a phone: scrolled to, not waited for. Decision
-        // 1020: the row starts picking, and the form comes to the top.
+        // 1024: the row starts picking, and the form comes to the top.
         if !app.buttons["Add Selected Station"].appears(within: 3) {
             let newLine = app.buttons["line.new"]
             reveal(newLine)

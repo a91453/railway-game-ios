@@ -201,7 +201,7 @@ public enum LinesListPart: Hashable, Sendable {
     case lines
     /// The rows that are not a line: the whole network, Advanced, New
     /// Line… and the real lines for sale. New Line… starts picking, which
-    /// puts the new line's form at the top (decision 1020).
+    /// puts the new line's form at the top (decision 1024).
     case entries
 }
 

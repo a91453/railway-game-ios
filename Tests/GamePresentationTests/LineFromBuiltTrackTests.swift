@@ -3,7 +3,7 @@ import Foundation
 @testable import GamePresentation
 import XCTest
 
-/// Decision 1020 (the owner, 2026-11-27): two stations the track tools
+/// Decision 1024 (the owner, 2026-11-27): two stations the track tools
 /// built, joined by track, lead from Build to their line; and Lines'
 /// New Line… starts picking at once, which brings the form to the top.
 @MainActor

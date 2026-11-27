@@ -393,7 +393,7 @@ struct LinesPanel: View {
     }
 
     /// The new line's form folded into one row while the lines come first
-    /// (decision 196). Decision 1020 (the owner, 2026-11-27: 「按新路線每次
+    /// (decision 196). Decision 1024 (the owner, 2026-11-27: 「按新路線每次
     /// 都要往下滑3次」): the row starts picking on the map at once, which
     /// puts the form at the top of the panel (``listsLinesFirst``), its
     /// Pick on Map in view, rather than unfolding it under the list.
