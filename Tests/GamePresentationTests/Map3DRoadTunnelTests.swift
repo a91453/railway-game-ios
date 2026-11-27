@@ -164,6 +164,59 @@ final class Map3DRoadTunnelTests: XCTestCase {
         XCTAssertLessThan(try XCTUnwrap(triangles["pinglin"]) / max(portals["pinglin"]?.count ?? 1, 1), 1_500)
     }
 
+    /// Decision 611 (later, ROAD-TUNNEL-FLAT): on level ground a tunnel
+    /// whose way in runs under wood still opens into a portal; under no
+    /// wood, or with wood only round its mouth, it does not (a city's
+    /// underpass).
+    func testATunnelUnderWoodOnLevelGroundHasAPortal() throws {
+        var (builder, _) = try real(latitude: 25.0478, longitude: 121.5170, half: 300)
+        let end = Map3DBaseMap.TunnelEnd(kind: .trunk, isRamp: false, oneway: true, point: Point(x: 0, z: 0),
+                                         inward: [Point(x: 0, z: 0), Point(x: 30, z: 0), Point(x: 64, z: 0)])
+        func area(_ minX: Double, _ maxX: Double) -> Map3DBaseMap.Area {
+            let ring = [Point(x: minX, z: -40), Point(x: maxX, z: -40), Point(x: maxX, z: 40), Point(x: minX, z: 40)]
+            return Map3DBaseMap.Area(cover: .wood, rings: [ring], bounds: .init(minX: minX, minZ: -40, maxX: maxX, maxZ: 40))
+        }
+        XCTAssertLessThan(abs(builder.drawnGround(x: 40, z: 0) - builder.drawnGround(x: 0, z: 0)), Builder.roadTunnelRise)
+        XCTAssertTrue(builder.roadPortals([end]).isEmpty)
+        let wooded = builder.roadPortals([end], areas: [area(5, 120)])
+        XCTAssertEqual(wooded.count, 1)
+        XCTAssertEqual(wooded.first?.style, .nameplate)
+        XCTAssertTrue(builder.roadPortals([end], areas: [area(-60, 20)]).isEmpty)
+        // A grass field over it is not a hill.
+        let grass = Map3DBaseMap.Area(cover: .grass, rings: area(5, 120).rings, bounds: area(5, 120).bounds)
+        XCTAssertTrue(builder.roadPortals([end], areas: [grass]).isEmpty)
+        // Nor is a tunnel too short to say.
+        let short = Map3DBaseMap.TunnelEnd(kind: .trunk, isRamp: false, oneway: true, point: Point(x: 0, z: 0),
+                                           inward: [Point(x: 0, z: 0), Point(x: 20, z: 0)])
+        XCTAssertTrue(builder.roadPortals([short], areas: [area(5, 120)]).isEmpty)
+    }
+
+    /// Decision 611 (later, ROAD-TUNNEL-FLAT): a trunk road's tunnel west
+    /// of 諫早 (Nagasaki) whose ridge the pack's mean heights draw level
+    /// but the tiles cover with wood: the owner's screenshot of such a
+    /// wooded hill showed the road stopping short with no portal. Its end
+    /// now has one, and the ends into a drawn hill keep theirs.
+    func testATrunkTunnelUnderLevelWoodNearIsahayaHasAPortal() throws {
+        let ground = try OverseasGround(city: .fukuoka, pack: XCTUnwrap(HongKongRailwaysTests.pack(.fukuoka)))
+        let tiles = try BaseMapTiles(data: Data(contentsOf: HongKongBaseMapTests.taiwan, options: .alwaysMapped), cities: ground.baseMaps)
+        var world = GameWorld.newOverseasGame(ground, wholeMap: true)
+        try world.mapGround()
+        let frame = try XCTUnwrap(RealWorldFrame(world: world))
+        let at = frame.worldPosition(latitude: 32.7810, longitude: 130.0025)
+        let metre = Double(WorldCoordinate.unitsPerMetre), half = 300.0
+        let region = WorldRegion(minX: at.x - half * metre, minY: at.y - half * metre, maxX: at.x + half * metre, maxY: at.y + half * metre)
+        let map = Map3DBaseMap(tiles: tiles, frame: frame, region: region, originX: at.x, originY: at.y)
+        var builder = Builder(originX: at.x, originY: at.y, region: region, world: world, heights: ground.heights)
+        let trunk = map.tunnelEnds.filter { $0.kind == .trunk }
+        XCTAssertEqual(trunk.count, 3)
+        let level = try XCTUnwrap(trunk.first { $0.point.x < -200 })
+        XCTAssertTrue(Builder.runsUnderWood(level, areas: map.areas))
+        XCTAssertTrue(builder.roadPortals([level]).isEmpty, "the ground is drawn level there")
+        XCTAssertEqual(builder.roadPortals([level], areas: map.areas).count, 1)
+        XCTAssertEqual(builder.roadPortals(trunk).count, 2)
+        XCTAssertEqual(builder.roadPortals(trunk, areas: map.areas).count, 3)
+    }
+
     /// #1925's review, 1: on level ground the hill over a portal is wide
     /// and low, in the ground's own colour: it reaches 20 m and more out
     /// beside it, and most of it falls no steeper than 1 : 2.
