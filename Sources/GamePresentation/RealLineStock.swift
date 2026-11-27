@@ -57,6 +57,9 @@ public enum RealLineStock {
         case Map3DKyushuN700.key: language.text("N700", "N700")
         case Map3DKyushu800.key: language.text("Series 800", "800 系")
         case Map3DN700SKamome.key: language.text("N700S Kamome", "N700S かもめ")
+        // Decision 1028 (continued): the Relay Kamome's.
+        case Map3DKyushu885.key: language.text("Series 885", "885 系")
+        case Map3DKyushu787.key: language.text("Series 787", "787 系")
         default: nil
         }
     }
