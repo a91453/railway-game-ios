@@ -180,8 +180,10 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         // Decision 1028: and the Relay Kamome, JR Kyushu's conventional
         // line, another system again, `testRelayKamome`. Decision 1029:
         // and JR West's Sanyo Shinkansen, `testSanyoShinkansen`, on sale
-        // only under the realistic rules, as the High Speed Rail.
-        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS", "kyushushinkansen:NK", "jrkyushu:RK"])
+        // only under the realistic rules, as the High Speed Rail. Decision
+        // 1030: and Kumamoto to Shin-Minamata, sold with Hakata–Kumamoto
+        // (they share Kumamoto), which `testFukuokaShinkansen` plays with it.
+        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS", "kyushushinkansen:KS2", "kyushushinkansen:NK", "jrkyushu:RK"])
         let realisticFukuoka = Set(try Self.fukuoka(rules: .realistic).buyableRealLines.map(\.id))
         XCTAssertEqual(realisticFukuoka.subtracting(fukuoka), ["sanyoshinkansen:SY"], "the Sanyo Shinkansen under the realistic rules")
     }
@@ -200,7 +202,7 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         XCTAssertEqual(taiwan, [["ntdlrt:V", "ntdlrt:VB"], ["tra:LIUJIA", "tra:NEIWAN"]])
         XCTAssertEqual(hongKong, [["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"]], "TimetableCheckupFullTests plays hk TCL+AEL+DRL, in this order")
         XCTAssertEqual(rovaniemi, [["vr:KJA", "vr:MUL"]])
-        XCTAssertEqual(fukuoka.map(Set.init), [["fksubway:K", "fksubway:H", "fksubway:N"]], "testFukuokaLines plays them")
+        XCTAssertEqual(fukuoka.map(Set.init), [["fksubway:K", "fksubway:H", "fksubway:N"], ["kyushushinkansen:KS", "kyushushinkansen:KS2"]], "testFukuokaLines and testFukuokaShinkansen play them")
     }
 
     // MARK: - The whole days
@@ -294,13 +296,15 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     /// SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen, sold on its
     /// own on Japan's map (another system than the subway's), bought
     /// from a new game's land in the north-west, under both rules.
+    /// Decision 1030: with Kumamoto to Shin-Minamata, sold with it, laid
+    /// after it as a game that already has Hakata–Kumamoto lays it.
     func testFukuokaShinkansen() throws {
         try full()
         for (label, rules) in Self.rules {
-            let name = "fukuoka kyushushinkansen:KS \(label)"
+            let name = "fukuoka kyushushinkansen:KS+KS2 \(label)"
             try check(name, {
                 let session = try Self.fukuoka(rules: rules)
-                try Self.buyTogether(["kyushushinkansen:KS"], in: session)
+                try Self.buyTogether(["kyushushinkansen:KS", "kyushushinkansen:KS2"], in: session)
                 return session.world
             }())
         }

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Checks a built RailwayGame.app carries both of the game's languages
-# (ARCHITECTURE decision 257): English and Traditional Chinese, each with
-# its InfoPlist.strings, and the String Catalog's Chinese text. iOS offers
+# Checks a built RailwayGame.app carries all of the game's languages
+# (ARCHITECTURE decision 257; Japanese since decision 1034): English,
+# Traditional Chinese and Japanese, each with its InfoPlist.strings, and
+# the String Catalog's Chinese and Japanese text. iOS offers
 # an app only the languages its bundle has, so a lost .lproj would leave
 # the player one language and an empty language row in Settings.
 #
@@ -22,14 +23,16 @@ for dir in "$app"/*.lproj; do
 done
 [[ "$found" == true ]] || echo "  (none)"
 
-for language in en zh-Hant; do
+for language in en zh-Hant ja; do
   [[ -f "$app/$language.lproj/InfoPlist.strings" ]] \
     || fail "The app has no $language.lproj/InfoPlist.strings: iOS would not offer $language."
 done
 # The String Catalog compiles to one Localizable.strings per translated
 # language; English, its source, may need none.
-[[ -f "$app/zh-Hant.lproj/Localizable.strings" ]] \
-  || fail "The app has no zh-Hant.lproj/Localizable.strings: the String Catalog's Chinese text is missing."
+for language in zh-Hant ja; do
+  [[ -f "$app/$language.lproj/Localizable.strings" ]] \
+    || fail "The app has no $language.lproj/Localizable.strings: the String Catalog's $language text is missing."
+done
 
 [[ "$failed" == false ]]
-echo "Both languages are in the app."
+echo "All three languages are in the app."

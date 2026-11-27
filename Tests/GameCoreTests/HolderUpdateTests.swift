@@ -38,6 +38,7 @@ final class HolderUpdateTests: XCTestCase {
     }
 
     func testManyTrainsKeepTheHoldersTheyWouldWorkOut() throws {
+        var unchanged = 0
         for (layout, trains) in [(TickScaleReportTests.Layout.meet, 12), (.ring, 8)] {
             for blocks in [false, true] {
                 var world = try TickScaleReportTests.world(trains: trains, layout: layout, blocks: blocks, budget: 900)
@@ -51,7 +52,11 @@ final class HolderUpdateTests: XCTestCase {
                 }
                 XCTAssertEqual(world, unchecked, "\(layout) with \(trains) trains, block sections \(blocks): the check changed the world")
                 XCTAssertGreaterThan(audit.updates, 240, "\(layout) with \(trains) trains, block sections \(blocks): the holders were hardly ever changed in place")
+                unchanged += audit.unchanged
             }
         }
+        // Decision 1036: trains changed whose holding and claim were not
+        // were left in the holders as they were, and checked so.
+        XCTAssertGreaterThan(unchanged, 0, "no train changed was ever left in the holders as it was, so that was never checked")
     }
 }

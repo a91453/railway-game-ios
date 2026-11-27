@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-dazaifu-taiko-bridge: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-dazaifu-taiko-bridge" : {
+      "hash" : "c918a7fb7a708bf5",
+      "triangles" : 3432
+    },
+    "jp-dazaifu-taiko-bridge-far" : {
+      "hash" : "c5ea239d47207864",
+      "triangles" : 1564
+    }
+  }
+}

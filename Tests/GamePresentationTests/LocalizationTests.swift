@@ -10,8 +10,12 @@ final class LocalizationTests: XCTestCase {
         for identifier in ["zh-Hant", "zh-Hant-TW", "zh_TW", "zh-HK", "ZH"] {
             XCTAssertEqual(DisplayLanguage(localization: identifier), .traditionalChinese, identifier)
         }
-        for identifier in ["en", "en-GB", "Base", "ja", "fr-CA", "", "-"] {
+        for identifier in ["en", "en-GB", "Base", "fr-CA", "", "-"] {
             XCTAssertEqual(DisplayLanguage(localization: identifier), .english, identifier)
+        }
+        // Decision 1034: Japanese has a language of its own.
+        for identifier in ["ja", "ja-JP", "JA"] {
+            XCTAssertEqual(DisplayLanguage(localization: identifier), .japanese, identifier)
         }
     }
 

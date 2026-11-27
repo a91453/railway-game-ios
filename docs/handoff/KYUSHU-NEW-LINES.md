@@ -2,7 +2,7 @@
 
 ## 進度
 
-- 做到哪：第一張（RELAY-KAMOME-LINE，海鷗接力號，決策 1028）合併；第二張（山陽新幹線，決策 1029）由接手串做完；**第三張（決策 1030）還沒開工，要再開一串**。
+- 做到哪：第一張（RELAY-KAMOME-LINE，海鷗接力號，決策 1028）合併；第二張（山陽新幹線，決策 1029）由接手串做完；第三張（九州新幹線熊本—新水俣，決策 1030）由「鋪設九州新幹線熊本到新水俣」串做完（分支 `claude/project-thread-9ackeo`）。三張都做完，剩下的寫在決策 1029 §6、1030 §6。
 - 已驗證：`RelayKamomeTests`、`SharedStationLayoutTests.testTheRelayKamomeMeetsTheKamomeAcrossThePlatform`、福岡與九州新幹線、西九州新幹線的測試與一天體檢（數字見決策 1028 §4 與 `CheckupBudgets/Fukuoka.swift`）。
 - 下一步的第一個指令：讀 `docs/priorities/SHINKANSEN-EXTEND.md`（素材庫 -2）與本檔下面兩節，再讀 `real-line-laying`、`depot-work` 兩個 skill。
 
@@ -53,7 +53,7 @@
 
 ## 第三張：KYUSHU-SHINKANSEN-MINAMATA（決策 1030，評分 2.50）
 
-**還沒開工**（接手串「鋪設山陽與九州新幹線延伸」壓縮 1 次，照規則不接新工作；決策 1030 仍保留）。那串量到的：
+**做完**：`docs/decisions/1030.md`（另一條線 `KS2`、新局和博多—熊本一起買、真的富合機廠、熊本並排、兩種規則體檢全 0）。下面是開工前量到的：
 
 - OSM 的九州新幹線從熊本 (130.687997, 32.789556) 量到新八代 31.80 km、到新水俣 74.67 km，橋與高架 38.0 km、隧道 35.4 km；N02 站點見下。
 - **最大的難處是機廠**：遊戲自己鋪的熊本機廠（`RealLineDepotSite.kumamoto`，接點 (32.788870, 130.687550)、場到 32.7859，8 股）正好在延伸段要走的線上。

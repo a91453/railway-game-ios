@@ -65,16 +65,17 @@ on:
         default: changed
       carry_map_packs:
         description: >-
-          Whether the app carries every map pack whole (DEBUG-150), so a city
-          whose download does not come is still played. "yes" (default): the
-          app is some 140 MB larger. "no": only each city's pack.json, so a
-          city is there once its pack has downloaded (MAP-PACK-COPY: choose it
-          only once a build that carries them showed the download works).
+          Whether the app carries every map pack whole. "no" (default): only
+          each city's pack.json, so a city is there once its pack has
+          downloaded from App Store Connect (0.6.0 (152.1.1) showed the
+          download, and removing and downloading again, work; DEBUG-150).
+          "yes": the app is some 140 MB larger and a city whose download
+          does not come is still played.
         type: choice
         options:
-          - "yes"
           - "no"
-        default: "yes"
+          - "yes"
+        default: "no"
 
 permissions:
   contents: read

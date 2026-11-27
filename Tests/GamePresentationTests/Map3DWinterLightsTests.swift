@@ -219,7 +219,12 @@ final class Map3DWinterLightsTests: XCTestCase {
         // Decision 949: then the bicycle rack and shed.
         XCTAssertEqual(Array(names[firstJapanStreet + japanStreet.count + bicycles.count + 1..<firstJapanStreet + japanStreet.count + bicycles.count + 3]),
                        Map3DBikeParking.Unit.allCases.map(\.rawValue))
-        XCTAssertEqual(names[firstJapanStreet + japanStreet.count + bicycles.count + 3], Map3DLowFloorBus.routeModel().name)
+        // Decision 1037: then the second batch of people, the route bus
+        // still last.
+        let secondPeople = Map3DPedestrian.secondDrawn.map(\.name)
+        let firstSecond = firstJapanStreet + japanStreet.count + bicycles.count + 3
+        XCTAssertEqual(Array(names[firstSecond..<firstSecond + secondPeople.count]), secondPeople)
+        XCTAssertEqual(names[firstSecond + secondPeople.count], Map3DLowFloorBus.routeModel().name)
         for decor in Map3DWinterDecor.allCases {
             XCTAssertEqual(pack.models[first + decor.index].triangleCount, try XCTUnwrap(decor.model).triangleCount)
         }

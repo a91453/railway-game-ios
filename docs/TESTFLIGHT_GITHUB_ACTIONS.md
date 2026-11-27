@@ -1,5 +1,7 @@
 # GitHub Actions → TestFlight
 
+不經 GitHub Actions、直接在作者的 Mac 上發內部測試：`docs/TESTFLIGHT_LOCAL.md`（`tools/release/testflight-local.sh`）。
+
 目前的發佈路線是在 macOS runner 上完成以下步驟：作者 Mac 上發版專用的 runner（`chien-mac-release`，決策 1016）在線又有空時用它，否則用 GitHub 託管的 `xcode-27` 映像（選 Xcode 27.2、iOS 27 SDK；決策 857，2026-11-18 之前是 `macos-26` 的 Xcode 26.6），再上傳到 TestFlight。手動執行時可選 `internal`（僅內部測試）或 `external`（可加入 External Testing 群組並送 Beta App Review）：
 
 1. Archive（Release）

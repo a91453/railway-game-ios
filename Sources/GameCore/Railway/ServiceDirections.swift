@@ -99,6 +99,16 @@ extension GameWorld {
         /// Each following train's route envelope (see
         /// ``followingCover(of:_:memo:)``), for its last values asked about.
         var followingCovers: [TrainID: [(train: Train, cover: TrackCover)]] = [:]
+        /// Decision 1036: each train's route envelope (see
+        /// ``GameWorld/envelopeCover(of:memo:)``), for its last values
+        /// asked about.
+        var envelopeCovers: [TrainID: [(train: Train, cover: TrackCover)]] = [:]
+        /// Decision 1036: each train's claim (see
+        /// ``GameWorld/claimCover(of:memo:)``), for its last values asked
+        /// about, and the track it comes to rest on (see
+        /// ``GameWorld/restingTrack(of:memo:)``), for its last value.
+        var claimCovers: [TrainID: [(train: Train, cover: TrackCover?)]] = [:]
+        var restingTracks: [TrainID: (train: Train, track: [TrackResource])] = [:]
         /// ``foulingSpansByEdge()``, once worked out.
         var foulingByEdge: [TrackEdgeID: [TrackSpan]]?
         /// The paths searched for (see ``PathMemo``).

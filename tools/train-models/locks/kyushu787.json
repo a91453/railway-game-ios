@@ -1,0 +1,39 @@
+{
+  "comment" : "Decision 782: the models of the registered train kyushu787: FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 4,
+  "lamps" : "96c181d1ba52cf42",
+  "models" : {
+    "light-set-kyushu787-car" : {
+      "hash" : "76b30f5b4f518760",
+      "triangles" : 302
+    },
+    "light-set-kyushu787-carBack" : {
+      "hash" : "503a858124e09060",
+      "triangles" : 302
+    },
+    "light-set-kyushu787-head" : {
+      "hash" : "45609b498cfa7eeb",
+      "triangles" : 157
+    },
+    "light-set-kyushu787-tail" : {
+      "hash" : "fbbd99df7f9d01eb",
+      "triangles" : 157
+    },
+    "set-kyushu787-car" : {
+      "hash" : "fb43fcbb3a60cd99",
+      "triangles" : 2256
+    },
+    "set-kyushu787-carBack" : {
+      "hash" : "9ab69b6cedc1162f",
+      "triangles" : 2256
+    },
+    "set-kyushu787-head" : {
+      "hash" : "91ee3d8b3bc7be47",
+      "triangles" : 2884
+    },
+    "set-kyushu787-tail" : {
+      "hash" : "7be7bd956fe7d7ca",
+      "triangles" : 2884
+    }
+  }
+}

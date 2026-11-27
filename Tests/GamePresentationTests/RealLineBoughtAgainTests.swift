@@ -165,11 +165,16 @@ final class RealLineBoughtAgainTests: XCTestCase {
         try Self.boughtAgain(["fksubway:K", "fksubway:H", "fksubway:N"]) { try FukuokaRailwaysTests.fukuoka() }
     }
 
-    /// SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen, sold by
-    /// itself, removed and bought again: its viaduct, its deep tunnels
-    /// and its depot past Kumamoto where the first purchase stood them.
+    /// SHINKANSEN-SALE (decision 975): the Kyushu Shinkansen, removed and
+    /// bought again: its viaduct, its deep tunnels and its depot past
+    /// Kumamoto where the first purchase stood them. Since decision 1030
+    /// a new game buys it with Kumamoto to Shin-Minamata, which shares
+    /// Kumamoto, so the two are the group (and cost more than the map's
+    /// opening money).
     func testTheKyushuShinkansenIsBoughtAgain() throws {
-        try Self.boughtAgain([KyushuShinkansenTests.id]) { try FukuokaRailwaysTests.fukuoka() }
+        try Self.boughtAgain([KyushuShinkansenTests.id, KyushuShinkansenSouthTests.id]) {
+            try FukuokaRailwaysTests.fukuoka(balance: RelayKamomeTests.everyLine)
+        }
     }
 
     func testHongKongsAirportThreeAreBoughtAgain() throws {

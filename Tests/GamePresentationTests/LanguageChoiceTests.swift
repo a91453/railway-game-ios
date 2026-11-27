@@ -10,6 +10,7 @@ final class LanguageChoiceTests: XCTestCase {
         XCTAssertNil(LanguageChoice.system.appleLanguages)
         XCTAssertEqual(LanguageChoice.english.appleLanguages, ["en"])
         XCTAssertEqual(LanguageChoice.traditionalChinese.appleLanguages, ["zh-Hant"])
+        XCTAssertEqual(LanguageChoice.japanese.appleLanguages, ["ja"])
     }
 
     func testTheChoiceIsReadBackFromTheAppsOverride() {
@@ -20,6 +21,9 @@ final class LanguageChoiceTests: XCTestCase {
         XCTAssertEqual(LanguageChoice(appleLanguages: ["zh-Hant"]), .traditionalChinese)
         // What iOS Settings writes when the player picks Chinese there.
         XCTAssertEqual(LanguageChoice(appleLanguages: ["zh-Hant-TW"]), .traditionalChinese)
+        // Decision 1034: Japanese, as iOS Settings writes it too.
+        XCTAssertEqual(LanguageChoice(appleLanguages: ["ja"]), .japanese)
+        XCTAssertEqual(LanguageChoice(appleLanguages: ["ja-JP"]), .japanese)
         for choice in LanguageChoice.allCases {
             XCTAssertEqual(LanguageChoice(appleLanguages: choice.appleLanguages), choice)
         }
@@ -30,6 +34,7 @@ final class LanguageChoiceTests: XCTestCase {
             for device in DeviceFamily.allCases {
                 XCTAssertEqual(LanguageChoice.english.title(in: language, on: device), "English")
                 XCTAssertEqual(LanguageChoice.traditionalChinese.title(in: language, on: device), "繁體中文")
+                XCTAssertEqual(LanguageChoice.japanese.title(in: language, on: device), "日本語")
             }
         }
         XCTAssertEqual(LanguageChoice.system.title(in: .english, on: .iPhone), "Same as iPhone")
@@ -46,6 +51,8 @@ final class LanguageChoiceTests: XCTestCase {
         XCTAssertTrue(LanguageChoice.traditionalChinese.needsRestart(from: .english, showing: .english))
         XCTAssertTrue(LanguageChoice.system.needsRestart(from: .english, showing: .english))
         XCTAssertFalse(LanguageChoice.system.needsRestart(from: .system, showing: .english))
+        XCTAssertTrue(LanguageChoice.japanese.needsRestart(from: .english, showing: .english))
+        XCTAssertFalse(LanguageChoice.japanese.needsRestart(from: .system, showing: .japanese))
         let note = LanguageChoice.traditionalChinese.restartNote(in: .english, on: .iPhone)
         XCTAssertFalse(note.isEmpty)
         XCTAssertNotEqual(note, LanguageChoice.traditionalChinese.restartNote(in: .traditionalChinese, on: .iPhone))

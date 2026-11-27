@@ -1,5 +1,6 @@
 /// The start screen's language menu (ARCHITECTURE decision 257): follow the
-/// iPhone's languages, or always English, or always Traditional Chinese.
+/// iPhone's languages, or always English, Traditional Chinese or Japanese
+/// (decision 1034).
 ///
 /// iOS shows an app's language row in Settings only when the device lists
 /// two or more languages, so the game offers the choice itself. The choice
@@ -10,6 +11,7 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
     case system
     case english
     case traditionalChinese
+    case japanese
 
     /// The choice an app's `AppleLanguages` override (nil when it has none)
     /// stands for.
@@ -18,7 +20,11 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
             self = .system
             return
         }
-        self = DisplayLanguage(localization: first) == .traditionalChinese ? .traditionalChinese : .english
+        switch DisplayLanguage(localization: first) {
+        case .english: self = .english
+        case .traditionalChinese: self = .traditionalChinese
+        case .japanese: self = .japanese
+        }
     }
 
     /// The app's `AppleLanguages` override for this choice; nil removes it,
@@ -28,6 +34,7 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
         case .system: nil
         case .english: ["en"]
         case .traditionalChinese: ["zh-Hant"]
+        case .japanese: ["ja"]
         }
     }
 
@@ -39,6 +46,7 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
         case .system: language.text("Same as \(device.name)", "跟隨 \(device.name)")
         case .english: "English"
         case .traditionalChinese: "繁體中文"
+        case .japanese: "日本語"
         }
     }
 
@@ -51,6 +59,7 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
         case .system: return true
         case .english: return shown != .english
         case .traditionalChinese: return shown != .traditionalChinese
+        case .japanese: return shown != .japanese
         }
     }
 
@@ -63,7 +72,7 @@ public enum LanguageChoice: CaseIterable, Hashable, Sendable {
                 "The game will use the \(device.name)'s language the next time it opens. \(device.reopenNote(in: .english))",
                 "下次開啟遊戲時會跟隨 \(device.name) 的語言。\(device.reopenNote(in: .traditionalChinese))"
             )
-        case .english, .traditionalChinese:
+        case .english, .traditionalChinese, .japanese:
             language.text(
                 "The game will be in \(title(in: language, on: device)) the next time it opens. \(device.reopenNote(in: .english))",
                 "下次開啟遊戲時會換成\(title(in: language, on: device))。\(device.reopenNote(in: .traditionalChinese))"
