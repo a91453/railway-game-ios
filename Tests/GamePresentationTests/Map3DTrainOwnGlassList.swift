@@ -46,6 +46,8 @@ enum Map3DTrainOwnGlassList {
         "set-series700-", // Decision 989: the 700 series in its own paint.
         "set-kyushu800", // Decision 978: the Kyushu Shinkansen's 800 series.
         "set-n700sKamome-", // Decision 998 (continued): the N700S Kamome.
+        "set-kyushu885-", // Decision 1028 (continued): the Relay Kamome's 885 series.
+        "set-kyushu787-", // Decision 1028 (continued): and its 787 series.
     ]
 
     /// Every studio car checked face by face (`Map3DTrainOwnGlassTests`):
@@ -71,6 +73,8 @@ enum Map3DTrainOwnGlassList {
         { far in far ? [] : Map3DN700S.Unit.allCases.map { Map3DN700ST.model($0) } }, // N700ST-PAINT: near only.
         { far in far ? [] : Map3DKyushu800.Unit.allCases.map { Map3DKyushu800.model($0) } }, // Decision 978: near only.
         { far in far ? [] : Map3DN700SKamome.Unit.allCases.map { Map3DN700SKamome.model($0) } }, // Decision 998 (continued): near only.
+        { far in far ? [] : Map3DKyushu885.Unit.allCases.map { Map3DKyushu885.model($0) } }, // Decision 1028 (continued): near only.
+        { far in far ? [] : Map3DKyushu787.Unit.allCases.map { Map3DKyushu787.model($0) } }, // Decision 1028 (continued): near only.
     ]
 
     /// The studio cars whose dark faces were never taken for glass, so
@@ -79,7 +83,9 @@ enum Map3DTrainOwnGlassList {
     /// by name prefix. The Tuen Ma line's are navy; the Keikyu New 1000's
     /// (decision 956) dark is its underframe's and gangways'; so is the
     /// Kyushu Shinkansen's N700's (decision 977), the N700S's (decision
-    /// 979) and the 800's (decision 978: its cab mask and car ends too).
+    /// 979) and the 800's (decision 978: its cab mask and car ends too);
+    /// the 885's and the 787's (decision 1028, continued) are their masks,
+    /// lamp housings, bogies and floors.
     static let darkNeverGlass: [String] = [
         "mtr-tuen-ma",
         "keikyu-new1000",
@@ -87,5 +93,7 @@ enum Map3DTrainOwnGlassList {
         "n700s-",
         "n700st-",
         "kyushu-800",
+        "kyushu-885",
+        "kyushu-787",
     ]
 }

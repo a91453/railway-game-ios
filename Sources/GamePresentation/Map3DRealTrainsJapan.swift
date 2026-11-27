@@ -28,10 +28,11 @@ extension Map3DRealTrains {
             if id == "NK" { return Formation(key: Map3DN700SKamome.key, cars: Map3DN700SKamome.cars) }
             return Formation(key: Map3DKyushuN700.key, cars: Map3DKyushuN700.cars, alternate: Map3DKyushu800.key)
         case "jrkyushu":
-            // Decision 1028: the Relay Kamome's 885 series drawn, until it
-            // has its own (RELAY-KAMOME-TRAINS), as the TEMU1000, the
-            // Taroko, Hitachi's train built from the 885.
-            return Formation(key: "taroko", cars: 8)
+            // Decision 1028 (continued): the Relay Kamome's 885 series,
+            // six cars, and its odd-numbered trains the 787 series' six,
+            // the line's two fleets (until they had their own models, the
+            // Taroko).
+            return Formation(key: Map3DKyushu885.key, cars: Map3DKyushu885.cars, alternate: Map3DKyushu787.key)
         default:
             return nil
         }
