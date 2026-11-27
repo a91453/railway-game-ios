@@ -449,8 +449,21 @@ public struct RealBranchLine: Hashable, Sendable {
     ]
 
     public func name(in language: DisplayLanguage) -> String {
-        language.text(english, chinese)
+        if language == .japanese, let japanese = Self.japaneseNames["\(system)|\(network)"] { return japanese }
+        return language.text(english, chinese)
     }
+
+    /// Decision 1034: the official Japanese names of the lines in Japan,
+    /// by system and line id; the others are named in English in Japanese,
+    /// as in English.
+    static let japaneseNames: [String: String] = [
+        "fksubway|K": "空港線",
+        "fksubway|H": "箱崎線",
+        "fksubway|N": "七隈線",
+        "kyushushinkansen|KS": "九州新幹線",
+        "kyushushinkansen|NK": "西九州新幹線",
+        "jrkyushu|RK": "リレーかもめ",
+    ]
 
     /// Decision 400: the runs of the light rail or metro `id`, from where
     /// it parts from `after` when that is already bought; decision 493,

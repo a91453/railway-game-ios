@@ -31,8 +31,17 @@ enum Map3DScooter {
     }
 
     /// Within this distance of the eye, metres, a riding scooter is drawn
-    /// in full; farther, decision 259's block scooter.
-    static let detailReach: Float = 350
+    /// in full; farther, decision 259's block scooter. Decision 1037: the
+    /// studio's scooters and riders (612 to 768 triangles) are some 1.8
+    /// times the program's (376 to 406), so the reach is cut until a
+    /// street costs no more triangles than it did with decision 446's 350
+    /// m: 240 m in Taiwan, whose scooters are fewer now (57% or Taipei's
+    /// 46%, from some 70%); 150 m in Hong Kong and Japan, where so few
+    /// ride that their far blocks (160) cost about what the near ones
+    /// saved (the near ones' extra 492 over 1 − 150/350 of the reach).
+    static func detailReach(in region: Map3DStreetRegion) -> Float {
+        region == .taiwan ? 240 : 150
+    }
 
     /// How far apart the scooters of a row stand, metres (the reference's
     /// 0.74–0.81 m).

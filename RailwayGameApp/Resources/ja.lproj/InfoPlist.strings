@@ -1,0 +1,8 @@
+/* Official localized Home Screen display name. */
+"CFBundleDisplayName" = "鉄道ゲーム";
+/* Decision 335: why the real-world picker's "Use My Location" asks for location. */
+"NSLocationWhenInUseUsageDescription" = "現在地は、実在の地図の開始枠をお近くに移すために一度だけ使います。どこにも送信されません。";
+/* Why a postcard's Save Image and the photo mode (decision 987) may add a picture to Photos. */
+"NSPhotoLibraryAddUsageDescription" = "保存を選んだときに、ポストカードや鉄道の写真を写真に保存します。";
+/* Decision 409: the name of the game's save type, shown in Files and when a save is shared. */
+"Railway Game Save" = "鉄道ゲームのセーブデータ";

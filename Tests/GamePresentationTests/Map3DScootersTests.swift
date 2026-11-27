@@ -14,15 +14,16 @@ final class Map3DScootersTests: XCTestCase {
 
     func testTheThreeScootersAreTheirRealSizes() throws {
         for (kind, height, length) in [
-            (Map3DStreetModel.stepScooter, Float(1.68), Float(1.85)), (.stepScooterPair, 1.68, 1.85), (.electricScooter, 1.68, 1.85),
-            (.deliveryScooter, 1.68, 1.85),
+            (Map3DStreetModel.stepScooter, Float(1.68), Float(1.9)), (.stepScooterPair, 1.68, 1.9), (.electricScooter, 1.68, 1.9),
+            (.deliveryScooter, 1.68, 1.9),
         ] {
             let shape = try model(kind)
             XCTAssertEqual(shape.minimum.z, 0, accuracy: 0.01, "\(kind) stands on the ground")
             XCTAssertEqual(shape.maximum.z, height, accuracy: 0.08, "\(kind): the rider's helmet")
             XCTAssertEqual(shape.length, length, accuracy: 0.15, "\(kind)")
             XCTAssertLessThan(shape.maximum.y - shape.minimum.y, 0.9, "\(kind): a scooter's handlebar and the rider's elbows")
-            XCTAssertTrue((300...460).contains(shape.triangleCount), "\(kind): \(shape.triangleCount) triangles")
+            // Decision 1037: the studio's, with their riders.
+            XCTAssertTrue((600...830).contains(shape.triangleCount), "\(kind): \(shape.triangleCount) triangles")
             // Its paint takes the instance's colour; its lamps glow.
             XCTAssertTrue(shape.vertices.contains { $0.color >> 24 == 0 }, "\(kind)")
             XCTAssertTrue(shape.vertices.contains { $0.layer == Map3DVertex.glowing }, "\(kind)")
@@ -141,7 +142,14 @@ final class Map3DScootersTests: XCTestCase {
         for kind in [Map3DStreetModel.stepScooter, .electricScooter, .deliveryScooter] {
             XCTAssertTrue(kinds.contains(try XCTUnwrap(index(kind))), "\(kind)")
         }
-        XCTAssertFalse(near.instances.contains { blocks.contains($0.model) }, "all within reach of the eye")
+        // Decision 1037: in full within 240 m of the eye, the blocks beyond.
+        let edge = (Map3DScooter.detailReach(in: .taiwan) * Map3DScooter.detailReach(in: .taiwan) - 150 * 150).squareRoot()
+        for instance in near.instances {
+            let away = Map3DPoint(instance.transform[12] - 200, 0, instance.transform[14]).length
+            if detailed.contains(instance.model) { XCTAssertLessThan(away, edge + 0.5) }
+            if blocks.contains(instance.model) { XCTAssertGreaterThan(away, edge - 0.5) }
+        }
+        XCTAssertGreaterThan(near.instances.filter { detailed.contains($0.model) }.count, 20)
         let far = life.frame(target: Map3DPoint(200, 0, 0), distance: 600, time: 77, detail: .full, activity: .init())
         XCTAssertFalse(far.instances.contains { detailed.contains($0.model) })
         XCTAssertTrue(far.instances.contains { blocks.contains($0.model) })

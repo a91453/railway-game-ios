@@ -52,8 +52,12 @@ final class Map3DMeshyMarketTempleTests: XCTestCase {
         let kit = { (part: Map3DCivicKit.Part) in Map3DCivicKit.model(for: part).triangleCount }
         let temple = try XCTUnwrap(Map3DScene.Builder.templeModels[.temple]), small = try XCTUnwrap(Map3DScene.Builder.templeModels[.small])
         let lions = try Map3DTempleStoneLion.allCases.reduce(0) { $0 + (try XCTUnwrap($1.model)).triangleCount }
-        XCTAssertEqual(temple.triangles, 12 + kit(.templeHall) + kit(.templeGate) + burner + lions)
-        XCTAssertEqual(small.triangles, 12 + kit(.templeSideHall) + burner + lions)
+        // Decision 1035: the ridge's cut-tile dragons and the gate's two
+        // dragon columns on the temple, the Tudigong figure in the shrine,
+        // their far shapes (``Map3DScene/Builder/templeProps``).
+        let prop = { (prop: Map3DTempleProp) in try XCTUnwrap(prop.model).triangleCount }
+        XCTAssertEqual(temple.triangles, 12 + kit(.templeHall) + kit(.templeGate) + burner + lions + (try prop(.ridgeDragonsFar)) + 2 * (try prop(.dragonPillarFar)))
+        XCTAssertEqual(small.triangles, 12 + kit(.templeSideHall) + burner + lions + (try prop(.tudigongFar)))
         // Every piece within the alley's 26 m by 32 m square.
         for place in Map3DMeshyMarketTemple.alley {
             XCTAssertLessThan(abs(place.x) + 2.2, 13)

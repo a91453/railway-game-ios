@@ -49,3 +49,4 @@ main `c5a6892`（#2770 合併後）沒有找到遊戲的 bug：新功能測試�
 2. 等夜間 `ci.yml` 與 full lane 跑在 main 上（cron 17:37／18:17 UTC，常延遲數小時；main 若一直在合拆分 PR，就由統籌串挑送審 commit 手動各跑一次）。
 3. 看 full lane 的 iPad 教學 job：若 `testTraditionalChineseTutorialNavigation` 又是 springboard 等 60 秒、超過 8 分鐘，開一張 CI 單（不是 App bug），先別擋送審。
 4. 福岡尖峰間隔 +4 剛好等於預算，下次重鋪福岡地圖包時要手動跑一次體檢（決策 582「後來」已記）。
+5. 地圖包（11-27 補）：上架版改回不內建。本機內測 0.6.0 (152.1.1) 只帶 `pack.json`，作者 iPhone 上下載、刪除後重新下載都正常，所以 `CARRY_MAP_PACKS` 預設改成 NO、`testflight.yml` 的 `carry_map_packs` 與本機腳本預設都改成 `no`（DEBUG-150「進度」）。送審時「素材包」要附上六包現行版本。
