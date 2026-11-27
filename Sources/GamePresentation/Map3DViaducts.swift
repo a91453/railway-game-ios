@@ -141,6 +141,9 @@ struct Map3DViaducts: Sendable {
         let line: [Map3DPoint]
         let kind: TrackSectionKind
         let viaduct: Map3DViaduct
+        /// Decision 1035: the player's own track (not a real line's
+        /// scenery), whose viaducts may have shops under them.
+        var owned = true
     }
 
     struct Pier: Sendable {
@@ -150,12 +153,19 @@ struct Map3DViaducts: Sendable {
         let forward: Map3DPoint
         let kind: TrackSectionKind
         let viaduct: Map3DViaduct
+        /// Decision 1035: the piece it stands under, and whether it is the
+        /// player's own.
+        var piece = 0
+        var owned = true
     }
 
     var pieces: [Piece] = []
     var piers: [Pier] = []
     /// Where the last piece ended and how far on its next pier stands.
     var last: (end: Map3DPoint, next: Float, kind: TrackSectionKind, viaduct: Map3DViaduct)?
+    /// Decision 1035: whether the pieces laid now are the player's own
+    /// track; false while the real lines' scenery is laid.
+    var owned = true
 
     var isEmpty: Bool { pieces.isEmpty && piers.isEmpty }
 
@@ -169,7 +179,7 @@ struct Map3DViaducts: Sendable {
     mutating func add(_ line: [Map3DPoint], grounds: [Float], kind: TrackSectionKind, viaduct: Map3DViaduct, from along: Float? = nil) {
         guard line.count > 1 else { return }
         let look = viaduct.look(over: kind)
-        pieces.append(Piece(line: line, kind: kind, viaduct: viaduct))
+        pieces.append(Piece(line: line, kind: kind, viaduct: viaduct, owned: owned))
         var travelled: Float = 0
         var next = look.span / 2
         if let along {
@@ -183,7 +193,7 @@ struct Map3DViaducts: Sendable {
                 let share = (next - travelled) / step
                 let top = a + (b - a) * share + Map3DPoint(0, -Map3DScene.Builder.bedDrop - look.girderDepth, 0)
                 let foot = grounds[index - 1] + (grounds[index] - grounds[index - 1]) * share
-                if top.y - foot > 0.5 { piers.append(Pier(top: top, foot: foot, forward: b - a, kind: kind, viaduct: viaduct)) }
+                if top.y - foot > 0.5 { piers.append(Pier(top: top, foot: foot, forward: b - a, kind: kind, viaduct: viaduct, piece: pieces.count - 1, owned: owned)) }
                 next += look.span
             }
             travelled += step
@@ -247,6 +257,9 @@ extension Map3DScene.Builder {
         var viaducts = Map3DViaducts()
         /// Decision 407: the player's track a high-speed line runs on.
         var highSpeedEdges: Set<TrackEdgeID>?
+        /// Decision 1035: the spans between two piers of the player's own
+        /// viaducts, waiting for shops (``addViaductShops()``).
+        var shopSpans: [ViaductSpan] = []
     }
 
     /// Decision 407: the player's track high-speed lines run on.
@@ -315,6 +328,7 @@ extension Map3DScene.Builder {
         guard !state.elevated.viaducts.isEmpty else { return }
         let laid = state.elevated.viaducts
         state.elevated.viaducts = Map3DViaducts()
+        state.elevated.viaducts.owned = laid.owned
         let cells = laid.segmentCells()
         for (number, piece) in laid.pieces.enumerated() {
             let line = piece.line, look = piece.viaduct.look(over: piece.kind)
@@ -479,6 +493,10 @@ extension Map3DScene.Builder {
         var cells: [Map3DScene.ChunkKey: [Int]] = [:]
         for (index, request) in requests.enumerated() { cells[Map3DViaducts.cell(request.top), default: []].append(index) }
         var used = [Bool](repeating: false, count: requests.count)
+        // Decision 1035: each piece's piers as they stand, for the spans
+        // between them.
+        var stood: [Int: [Map3DViaducts.StoodPier]] = [:]
+        defer { addShopSpans(stood) }
         for (index, request) in requests.enumerated() where !used[index] {
             used[index] = true
             let look = request.viaduct.look(over: request.kind)
@@ -515,6 +533,10 @@ extension Map3DScene.Builder {
             guard top.y - foot > 0.5, !hangsFromCables(x: top.x, z: top.z) else { continue }
             let base = Map3DPoint(top.x, foot, top.z), capFoot = top.y - look.capDepth
             state.elevated.piers.append(base)
+            if request.owned {
+                stood[request.piece, default: []].append(Map3DViaducts.StoodPier(top: top, foot: foot, forward: forward, spread: spread,
+                                                                                  kind: request.kind, viaduct: request.viaduct))
+            }
             mesh(at: base) { mesh in
                 switch look.pier {
                 case let .wall(along, wide, cap):
