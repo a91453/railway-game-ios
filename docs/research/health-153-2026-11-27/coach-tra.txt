@@ -1,0 +1,43 @@
+tra: laid 15 lines, 259 stations, 2 missed: Laid 15 real lines with 259 stations; the trains are running. 2 stations were left out where the track could not go. Traffic control is off, so each line's trains set off one after another.
+tra, without, day 1: trips 454269, fares NT$ 6,814,035, airports that fly to Hong Kong: Taoyuan Airport Terminal 1 0; Taoyuan Airport Terminal 2 0; Taichung International Airport 0; Kaohsiung International Airport 0; Hualien Airport 0
+### tra: 15 lines, 241 stations, 162 trains
+
+Coach stops 128, with a station 23 (基隆轉運站 → Keelung; 羅東轉運站 → Luodong; 宜蘭轉運站 → Yilan; 臺北轉運站 → Taipei; 南港轉運站東站 → Nangang; 臺中轉運中心 → Taichung; 桃園站(國光) → Taoyuan; 臺南轉運站 → Tainan; 板橋客運站 → Banqiao; 永康轉運站 → Yongkang; 礁溪轉運站 → Jiaoxi; 海科館 → Haikeguan; 新竹轉運站 → Hsinchu; 四腳亭 → Sijiaoting; 八斗子車站 → Badouzi; 中壢客運中壢總站 → Zhongli (Taoyuan); 建國客運站 → Kaohsiung; 萬華車站 → Wanhua; 高鐵臺中站 → Xinwuri; 嘉義市轉運中心 → Chiayi; 第三市場 → Taichung; 松山車站(八德) → Songshan; 暖暖郵局 → Nuannuan); pairs with a coach 42, of them losing trips 39; the coaches bring 14084 riders a day.
+| A day's demand | Trips | Fares (each pair at its fare) |
+| --- | --: | --: |
+| Without coaches | 470909 | NT$ 7,063,635 |
+| The coaches take | 388 (0.1%) | NT$ 5,820 (0.1%) |
+| The coaches bring (riders, both ways) | 14084 | |
+| From | To | Rail: minutes / fare | Coach: minutes / a day / fare | Trips without | The coach takes | Share |
+| --- | --- | --: | --: | --: | --: | --: |
+| Taipei | Hsinchu | 91 / 15 | 73 / 105 / 136 | 453 | 38 | 8.4% |
+| Zhongli (Taoyuan) | Taipei | 48 / 15 | 40 / 57 / 75 | 830 | 33 | 4.0% |
+| Hsinchu | Taipei | 91 / 15 | 77 / 114 / 130 | 442 | 33 | 7.5% |
+| Songshan | Nuannuan | 48 / 15 | 26 / 77 / 44 | 98 | 22 | 22.4% |
+| Luodong | Taipei | 139 / 15 | 70 / 75 / 127 | 88 | 22 | 25.0% |
+| Yilan | Taipei | 128 / 15 | 69 / 70 / 123 | 77 | 19 | 24.7% |
+| Nuannuan | Songshan | 48 / 15 | 28 / 75 / 48 | 96 | 18 | 18.8% |
+| Luodong | Banqiao | 147 / 15 | 89 / 45 / 146 | 187 | 13 | 7.0% |
+| Banqiao | Luodong | 147 / 15 | 97 / 45 / 146 | 190 | 12 | 6.3% |
+| Taichung | Taipei | 196 / 15 | 155 / 75 / 286 | 134 | 12 | 9.0% |
+| Songshan | Sijiaoting | 52 / 15 | 32 / 77 / 51 | 74 | 12 | 16.2% |
+| Sijiaoting | Songshan | 52 / 15 | 33 / 75 / 54 | 72 | 11 | 15.3% |
+| Yilan | Banqiao | 136 / 15 | 87 / 42 / 141 | 139 | 10 | 7.2% |
+| Taipei | Tainan | 365 / 15 | 242 / 90 / 516 | 61 | 9 | 14.8% |
+| Kaohsiung | Taipei | 421 / 15 | 284 / 67 / 552 | 59 | 9 | 15.3% |
+| Jiaoxi | Taipei | 119 / 15 | 55 / 50 / 103 | 34 | 9 | 26.5% |
+| Banqiao | Yilan | 136 / 15 | 98 / 40 / 141 | 141 | 8 | 5.7% |
+| Tainan | Taipei | 366 / 15 | 245 / 87 / 520 | 59 | 8 | 13.6% |
+| Nangang | Luodong | 130 / 15 | 49 / 43 / 112 | 33 | 8 | 24.2% |
+| Luodong | Nangang | 130 / 15 | 52 / 47 / 112 | 32 | 8 | 25.0% |
+| Yilan | Nangang | 119 / 15 | 52 / 44 / 102 | 29 | 7 | 24.1% |
+| Nangang | Yilan | 119 / 15 | 46 / 43 / 102 | 29 | 7 | 24.1% |
+| Jiaoxi | Banqiao | 127 / 15 | 75 / 50 / 118 | 73 | 6 | 8.2% |
+| Banqiao | Jiaoxi | 127 / 15 | 81 / 52 / 118 | 74 | 5 | 6.8% |
+| Jiaoxi | Wanhua | 123 / 15 | 68 / 50 / 109 | 65 | 5 | 7.7% |
+The most taken of a pair: Jiaoxi → Taipei 26.4% of 34; of a pair with 100 trips a day or more: Taichung → Taipei 8.9% of 134.
+tra, with, day 1: trips 467498, fares NT$ 7,012,470, airports that fly to Hong Kong: Taoyuan Airport Terminal 1 0; Taoyuan Airport Terminal 2 0; Taichung International Airport 0; Kaohsiung International Airport 0; Hualien Airport 0
+| Day | Trips: without / with | Fares: without / with | Operating profit: without / with | Fullest train: without / with | Station full or gave up: without / with | Riders the coaches bring | Trips the coaches take (read at noon) | Lines in profit without and at a loss with |
+| --: | --: | --: | --: | --: | --: | --: | --: | --- |
+| 1 | 454269 / 467498 (+2.9%) | NT$ 6,814,035 / NT$ 7,012,470 (+2.9%) | NT$ -28,647,776 / NT$ -28,449,341 | 110% / 110% | 15671 / 17470 | 14084 | 388 | none; of 15 lines, in profit without 0, with 0; the line whose profit falls most: TRA Taitung–Hualien NT$ -32 |
+### What the coaches do on the other maps (1 days)
