@@ -53,8 +53,8 @@ extension OverseasMap {
             "整個香港，約 63 × 45 公里，一開始全部開放、不用買地。不計成就與排名。"
         )
         case .fukuoka: language.text(
-            "The whole of the Japan map, the Fukuoka, Saga and Kumamoto prefectures, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
-            "日本整張地圖，福岡、佐賀、熊本三縣，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
+            "The whole of the Japan map, the Fukuoka, Saga, Nagasaki and Kumamoto prefectures, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
+            "日本整張地圖，福岡、佐賀、長崎、熊本四縣，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
         )
         case .rovaniemi: nil
         }
