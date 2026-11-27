@@ -890,12 +890,12 @@
       "triangles" : 2884
     },
     "life-deliveryScooter" : {
-      "hash" : "f9183d4b8f7a13b0",
-      "triangles" : 376
+      "hash" : "162ecb4507cb6d6c",
+      "triangles" : 694
     },
     "life-electricScooter" : {
-      "hash" : "2c8fb614d72029a7",
-      "triangles" : 382
+      "hash" : "535782db7c198f80",
+      "triangles" : 612
     },
     "life-garbageTruck" : {
       "hash" : "70a63df64e2b81c4",
@@ -918,12 +918,12 @@
       "triangles" : 150
     },
     "life-scooter" : {
-      "hash" : "20e5f75767239673",
+      "hash" : "38b2dd0d16d8f93c",
       "triangles" : 160
     },
     "life-scooterPair" : {
-      "hash" : "368fc9ed6ae12384",
-      "triangles" : 210
+      "hash" : "13e3c90f60438f32",
+      "triangles" : 204
     },
     "life-shuttleBus" : {
       "hash" : "cac326b6a5813477",
@@ -934,12 +934,12 @@
       "triangles" : 70
     },
     "life-stepScooter" : {
-      "hash" : "7ef6cf389f11a00c",
-      "triangles" : 380
+      "hash" : "97bf4d9ee380d423",
+      "triangles" : 652
     },
     "life-stepScooterPair" : {
-      "hash" : "7d69fe6540c39348",
-      "triangles" : 406
+      "hash" : "70fc04d9c119b047",
+      "triangles" : 768
     },
     "life-van" : {
       "hash" : "4ce5aebc8b8efc90",
@@ -4712,6 +4712,74 @@
     "crossing-warning-arm" : {
       "hash" : "803535afcebb03cd",
       "triangles" : 68
+    },
+    "ped-office-woman-standing" : {
+      "hash" : "7e86d414cc13c944",
+      "triangles" : 292
+    },
+    "ped-office-woman-walking" : {
+      "hash" : "486e39e21ae8b214",
+      "triangles" : 292
+    },
+    "ped-schoolboy-standing" : {
+      "hash" : "cb4b22a8690f5f3a",
+      "triangles" : 288
+    },
+    "ped-schoolboy-walking" : {
+      "hash" : "1541c48773a8698c",
+      "triangles" : 292
+    },
+    "ped-phone-standing" : {
+      "hash" : "e75ecc3b55d0e00f",
+      "triangles" : 292
+    },
+    "ped-phone-walking" : {
+      "hash" : "3177d790e883fa3a",
+      "triangles" : 292
+    },
+    "ped-tourist-standing" : {
+      "hash" : "49e8f8faca9eec0f",
+      "triangles" : 292
+    },
+    "ped-tourist-walking" : {
+      "hash" : "6aa4a885d32df16",
+      "triangles" : 292
+    },
+    "ped-worker-standing" : {
+      "hash" : "d2c7b3aa885c0d73",
+      "triangles" : 292
+    },
+    "ped-worker-walking" : {
+      "hash" : "d28b159f06d89a3f",
+      "triangles" : 292
+    },
+    "ped-grandma-cart-standing" : {
+      "hash" : "ce935aec37b4c8cd",
+      "triangles" : 414
+    },
+    "ped-grandma-cart-walking" : {
+      "hash" : "6b1310881a71032b",
+      "triangles" : 418
+    },
+    "ped-mother-stroller-standing" : {
+      "hash" : "738249d1467a3e6",
+      "triangles" : 420
+    },
+    "ped-mother-stroller-walking" : {
+      "hash" : "5b3d568b7faee85a",
+      "triangles" : 420
+    },
+    "ped-jogger-running" : {
+      "hash" : "21791c1f641d9bfb",
+      "triangles" : 300
+    },
+    "ped-delivery-standing" : {
+      "hash" : "8da9dcca28853180",
+      "triangles" : 348
+    },
+    "ped-delivery-walking" : {
+      "hash" : "701d1f3d105968f6",
+      "triangles" : 352
     }
   }
 }

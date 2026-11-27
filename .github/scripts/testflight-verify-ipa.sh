@@ -131,10 +131,10 @@ elif [[ -e "$app/embedded.mobileprovision" ]]; then
 fi
 
 # --- Map packs ---------------------------------------------------------------
-# Decision 858: the app carries each city's pack.json; DEBUG-150: and, while
-# the download is not seen to work (0.6.0 (150) found none of its files on
-# the owner's iPhone), every file of each pack too (CARRY_MAP_PACKS in
-# project.yml). Each city's pack is either whole or pack.json alone.
+# Decision 858: the app carries each city's pack.json, and every file of
+# each pack too only when built with CARRY_MAP_PACKS=YES (project.yml;
+# DEBUG-150 carried them while the download was not seen to work). Each
+# city's pack is either whole or pack.json alone.
 map_pack_manifests=0
 map_pack_files=0
 if [[ -d "$app/MapPacks" ]]; then

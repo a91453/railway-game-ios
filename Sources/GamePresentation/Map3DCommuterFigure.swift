@@ -27,6 +27,14 @@ public enum Map3DCommuterFigure {
     /// blocks).
     public static func mostCloseUp(of people: Int) -> Int { min(150, people / 4) }
 
+    /// Decision 1037: the most triangles a frame's close-up people may
+    /// take, ``mostCloseUp(of:)`` at the 300 each decision 918's six cost
+    /// on average (the commuter a quarter, 288; the others 286–356), so
+    /// the second batch's people with a cart or a pram (up to 420) cost
+    /// no more than before: past it, the block.
+    public static let meanCloseUpTriangles = 300
+    public static func mostCloseUpTriangles(of people: Int) -> Int { mostCloseUp(of: people) * meanCloseUpTriangles }
+
     /// The colour of each of the mesh's palette indices: skin, hair, the
     /// shirt (alpha 0: the instance's colour, as the block figure's
     /// body), the trousers, and the shoes and backpack, the block

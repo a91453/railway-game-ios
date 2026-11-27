@@ -1211,7 +1211,7 @@
 				C61135149A74BBA2B4090747 /* Resources */,
 				B071A2BE9B6A4A2054356841 /* Frameworks */,
 				890901FE297FA321BDA11000 /* Embed ExtensionKit Extensions */,
-				F1A313266896B1BDBD4DCF4B /* Copy the map packs (whole, or pack.json only in Release when CARRY_MAP_PACKS is NO) */,
+				A0882F0745F638FBF97B4141 /* Copy the map packs (whole in Debug or when CARRY_MAP_PACKS is YES, else pack.json only) */,
 			);
 			buildRules = (
 			);
@@ -1525,7 +1525,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		F1A313266896B1BDBD4DCF4B /* Copy the map packs (whole, or pack.json only in Release when CARRY_MAP_PACKS is NO) */ = {
+		A0882F0745F638FBF97B4141 /* Copy the map packs (whole in Debug or when CARRY_MAP_PACKS is YES, else pack.json only) */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -1535,14 +1535,14 @@
 			);
 			inputPaths = (
 			);
-			name = "Copy the map packs (whole, or pack.json only in Release when CARRY_MAP_PACKS is NO)";
+			name = "Copy the map packs (whole in Debug or when CARRY_MAP_PACKS is YES, else pack.json only)";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -eu\nfrom=\"$SRCROOT/Resources/MapPacks\"\nto=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/MapPacks\"\nrm -rf \"$to\"\nmkdir -p \"$to\"\nif [ \"$CONFIGURATION\" = \"Debug\" ] || [ \"${CARRY_MAP_PACKS:-YES}\" != \"NO\" ]; then\n  cp -R \"$from/.\" \"$to/\"\nelse\n  for manifest in \"$from\"/*/pack.json; do\n    city=\"$(basename \"$(dirname \"$manifest\")\")\"\n    mkdir -p \"$to/$city\"\n    cp \"$manifest\" \"$to/$city/pack.json\"\n  done\nfi\n";
+			shellScript = "set -eu\nfrom=\"$SRCROOT/Resources/MapPacks\"\nto=\"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/MapPacks\"\nrm -rf \"$to\"\nmkdir -p \"$to\"\nif [ \"$CONFIGURATION\" = \"Debug\" ] || [ \"${CARRY_MAP_PACKS:-NO}\" = \"YES\" ]; then\n  cp -R \"$from/.\" \"$to/\"\nelse\n  for manifest in \"$from\"/*/pack.json; do\n    city=\"$(basename \"$(dirname \"$manifest\")\")\"\n    mkdir -p \"$to/$city\"\n    cp \"$manifest\" \"$to/$city/pack.json\"\n  done\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

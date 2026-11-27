@@ -509,16 +509,33 @@ metro-four-leading
 metro-four-middleFront
 metro-four-middleRear
 metro-four-trailing
+ped-delivery-standing
+ped-delivery-walking
 ped-elderly-standing
 ped-elderly-walking
+ped-grandma-cart-standing
+ped-grandma-cart-walking
+ped-jogger-running
+ped-mother-stroller-standing
+ped-mother-stroller-walking
 ped-office-standing
 ped-office-walking
+ped-office-woman-standing
+ped-office-woman-walking
+ped-phone-standing
+ped-phone-walking
+ped-schoolboy-standing
+ped-schoolboy-walking
 ped-student-standing
 ped-student-walking
+ped-tourist-standing
+ped-tourist-walking
 ped-traveller-standing
 ped-traveller-walking
 ped-umbrella-standing
 ped-umbrella-walking
+ped-worker-standing
+ped-worker-walking
 peopleMover-cab lamps light-peopleMover-cab 82ea7634ef3dcabf
 peopleMover-car lamps light-peopleMover-car e863433f6f5722e5
 prop-busStop
