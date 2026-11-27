@@ -86,6 +86,9 @@ extension Map3DScene {
         if let baseMap, let frame = worldFrame {
             real = Map3DBaseMap(tiles: baseMap, frame: frame, region: region, originX: originX, originY: originY,
                                 names: builder.look.streets.hasStreetNameSigns)
+            // BRIDGE-LANDMARK-DECK: a landmark bridge's road on its own
+            // deck, not the map's bridge too.
+            real = real?.leavingOut(builder.landmarkDecks(frame: frame))
             // Decision 834: the motorways held to their grade, their
             // cuttings cut out of the ground laid next.
             builder.state.roadGrade = builder.gradeMotorways(of: real!)
