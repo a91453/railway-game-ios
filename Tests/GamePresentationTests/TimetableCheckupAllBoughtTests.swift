@@ -345,10 +345,10 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
     func testSanyoShinkansen() throws {
         try full()
         for (label, rules) in Self.rules where rules == .realistic {
-            let name = "fukuoka kyushushinkansen:KS+sanyoshinkansen:SY \(label)"
+            let name = "fukuoka kyushushinkansen:KS+KS2+sanyoshinkansen:SY \(label)"
             try check(name, {
                 let session = try Self.fukuoka(rules: rules)
-                try Self.buyTogether(["kyushushinkansen:KS"], in: session)
+                try Self.buyTogether(["kyushushinkansen:KS", "kyushushinkansen:KS2"], in: session)
                 try Self.buyTogether(["sanyoshinkansen:SY"], in: session)
                 return session.world
             }())
