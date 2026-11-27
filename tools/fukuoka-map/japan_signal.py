@@ -21,9 +21,10 @@ What it changes, and only this:
   falls on the texture's dark seam beside the post's strip, and the post
   showed a black stripe in the game (2026-11-27);
 - each light's square face (the texture's lens) becomes the pale face
-  with a dark ring and a round lens of 30 cm on it, the lens the
+  with a dark ring and a round lens of 27 cm on it, the lens the
   signals' red, amber or green (``Map3DProp/signalLights``), lit in the
-  model that shows it;
+  model that shows it; its hood 1.3 times as wide, so the ring and the
+  lens fit between its walls;
 - the earlier version's 12 m post is drawn at the game's scale: the whole
   model 0.64 of its size, so a light is 45 cm square (the lens 30 cm),
   the arm 0.9 m longer, so the lights hang over the lane as Taiwan's
@@ -54,8 +55,16 @@ MODELS = {'jp-signal-red': 'red', 'jp-signal-amber': 'amber', 'jp-signal-green':
 SCALE = 0.64
 REACH, FROM = 0.9, 0.5      # the arm's far part (beyond 0.5 m) moved out 0.9 m
 DROP, ABOVE = 0.7, 4.0      # everything above 4 m lowered 0.7 m
-LENS, RING = 0.15, 0.175    # the lens's and its dark ring's radius
+LENS, RING = 0.135, 0.155   # the lens's and its dark ring's radius
 SIDES = 12
+# The old hoods' walls stand 12.5 cm from a light's middle, inside the
+# ring's and the lens's edge, so the ring stuck out past them and their
+# walls cut into the lens: the round frame looked broken in the game
+# (2026-11-27). Each hood is made this much wider about its light's
+# middle (its walls about 16 cm out, its outside 21.5 cm, short of the
+# next hood's 22.4 cm), and the ring (15.5 cm) and the lens fit inside it.
+HOOD_WIDEN = 1.3
+FACE = -0.184               # in front of the lights' faces (x = −0.182, the game's x): a hood
 
 
 def png_pixels(data):
@@ -204,12 +213,24 @@ def main(glb, swift):
 
     models = []
     for name, shown in MODELS.items():
+        hoods = 0
         tris = list(triangles)
         for light, middle in sorted(lenses.items()):
             tris += disc(middle, RING, 0.006, 'dark')
             tris += disc(middle, LENS, 0.012, f'{light}_lit' if light == shown else f'{light}_unlit')
         # glTF (x, y up, z) -> the game's mesh axes (x, -z, y), as glb_to_swift.
-        game = [([(p[0], -p[2], p[1]) for p in pts], MATERIALS.index(paint)) for pts, paint in tris]
+        game = [([(p[0], -p[2], p[1]) for p in pts], paint) for pts, paint in tris]
+        middles = [-place(middle)[2] for middle in lenses.values()]
+        widened = []
+        for pts, paint in game:
+            if paint in ('steel', 'tankSteel') and all(p[0] < FACE for p in pts):
+                y = sum(p[1] for p in pts) / 3
+                centre = min(middles, key=lambda m: abs(m - y))
+                pts = [(p[0], centre + (p[1] - centre) * HOOD_WIDEN, p[2]) for p in pts]
+                hoods += 1
+            widened.append((pts, MATERIALS.index(paint)))
+        game = widened
+        assert hoods == 48, hoods
         text, count = encode(game)
         print(f'{name}: {count} triangles')
         models.append((name, text, count))

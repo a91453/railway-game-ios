@@ -66,6 +66,36 @@ final class Map3DJapanSignalTests: XCTestCase {
         }
     }
 
+    /// Each light's dark ring is round and whole: no hood's wall stands
+    /// over it. The old hoods' walls stood 12.5 cm from a light's middle,
+    /// inside the ring's 17.5 cm, and the round frame looked broken on the
+    /// iPhone (2026-11-27).
+    func testTheHoodsClearTheRings() throws {
+        let lights = Map3DProp.signalLights.flatMap { [$0.lit, $0.unlit] }
+        for unit in Unit.allCases {
+            let model = try XCTUnwrap(Map3DJapanSignal.model(unit))
+            let triangles = stride(from: 0, to: model.vertices.count, by: 3).map { Array(model.vertices[$0..<$0 + 3]) }
+            // Each lens's middle, across the head (y).
+            let lenses = triangles.filter { lights.contains($0[0].color) }
+            var middles: [Float] = []
+            for colour in Set(lenses.map { $0[0].color }) {
+                let ys = lenses.filter { $0[0].color == colour }.flatMap { $0.map(\.y) }
+                middles.append((ys.min()! + ys.max()!) / 2)
+            }
+            XCTAssertEqual(middles.count, 3, "\(unit)")
+            func across(_ y: Float) -> Float { middles.map { abs(y - $0) }.min()! }
+            // The rings: dark, in front of the lights' faces.
+            let rings = triangles.filter { $0[0].color == Map3DPalette.dark && $0.allSatisfy { $0.x < -0.184 } }
+            let ring = try XCTUnwrap(rings.flatMap { $0.map { across($0.y) } }.max())
+            // The hoods: grey, in front of the faces; their walls as low as a ring.
+            let hoods = triangles.filter { [Map3DPalette.steel, Map3DPalette.tankSteel].contains($0[0].color) && $0.allSatisfy { $0.x < -0.184 } }
+            XCTAssertEqual(hoods.count, 48, "\(unit)")
+            let walls = hoods.flatMap { $0 }.filter { $0.z < 5.6 + ring }
+            XCTAssertFalse(walls.isEmpty)
+            XCTAssertGreaterThan(try XCTUnwrap(walls.map { across($0.y) }.min()), ring + 0.002, "\(unit)")
+        }
+    }
+
     /// The pack's signal models swap to Japan's lit as the clock says, red
     /// for red and amber together; Taiwan's stay Taiwan's.
     func testTheClockLightsJapansOwn() throws {
