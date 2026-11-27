@@ -175,6 +175,10 @@ extension GameSession {
         let steep = water?.steepCells(frame: frame, bounds: world.bounds, in: wanted) ?? []
         do throws(GameError) {
             try world.expandLand(wanted.sorted(), cells: cells, water: wet, steep: steep)
+            // Decision 1025: and how dear its places are.
+            if let prices = coverage?.landPrice {
+                try world.setLandLocations(prices.locations(in: wanted, frame: frame, bounds: world.bounds))
+            }
         } catch {
             // The blocks are in the world and not read yet, and the cells
             // and the water lie in them, the cells off the water, so
