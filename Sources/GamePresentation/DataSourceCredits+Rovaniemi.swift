@@ -19,8 +19,8 @@ extension DataSourceCredits {
                         "從羅瓦涅米經米西到凱米耶爾維的路線，以及往南到穆羅拉的主線，十二月一週裡每一班客車都照真實時刻行駛。"
                     ),
                     notice: language.text(
-                        "Timetables, station codes and station names: Source: Fintraffic / digitraffic.fi, licence CC 4.0 BY. Track, station positions, bridges and tunnels: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with Fintraffic or VR Group.",
-                        "時刻、車站代號與站名：來源 Fintraffic／digitraffic.fi，授權 CC 4.0 BY。軌道、車站位置、橋梁與隧道：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與 Fintraffic、芬蘭國鐵（VR Group）沒有任何關係。"
+                        "Timetables, station codes and station names: Source: Fintraffic / digitraffic.fi, licence CC 4.0 BY. Track, station positions, platforms, bridges and tunnels: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with Fintraffic or VR Group.",
+                        "時刻、車站代號與站名：來源 Fintraffic／digitraffic.fi，授權 CC 4.0 BY。軌道、車站位置、月台、橋梁與隧道：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與 Fintraffic、芬蘭國鐵（VR Group）沒有任何關係。"
                     ),
                     links: [
                         DataSourceCredit.Link(title: language.text("Digitraffic licence", "Digitraffic 授權"), url: "https://www.digitraffic.fi/en/terms-of-service/"),

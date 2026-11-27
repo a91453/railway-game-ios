@@ -159,12 +159,12 @@ extension Map3DScene.Builder {
     /// (``stationLandmarkPlace(_:snapshot:frame:)``).
     @discardableResult
     mutating func addHongKongLandmarks(frame: RealWorldFrame, snapshot: RailwaySnapshot? = nil) -> Set<String> {
-        typealias Placed = (id: String, latitude: Double, longitude: Double, baseHeight: Float, sink: Float,
+        typealias Placed = (id: String, latitude: Double, longitude: Double, baseHeight: Float, sink: Float, deck: Float?,
                             model: (Bool) -> LandmarkMesh, registration: Map3DLandmarkRegistration?)
         let landmarks: [Placed] = Map3DHongKongLandmark.allCases.map { landmark in
-            (landmark.rawValue, landmark.latitude, landmark.longitude, landmark.baseHeight, 0, landmark.model(full:), nil)
+            (landmark.rawValue, landmark.latitude, landmark.longitude, landmark.baseHeight, 0, nil, landmark.model(full:), nil)
         } + Map3DLandmarkRegistry.landmarks.map { landmark in
-            (landmark.id, landmark.latitude, landmark.longitude, landmark.baseHeight, landmark.sink, landmark.model(full:), landmark)
+            (landmark.id, landmark.latitude, landmark.longitude, landmark.baseHeight, landmark.sink, landmark.deck, landmark.model(full:), landmark)
         }
         var built = Set<String>()
         for landmark in landmarks {
@@ -186,8 +186,14 @@ extension Map3DScene.Builder {
                 // On its podium where the ground is lower than its foot; one
                 // sunk into a hillside (decision 913) with its floor on the
                 // ground at its middle, its foot that far below.
-                let found = landmark.sink > 0 ? drawnGround(x: centre.x, z: centre.z)
+                var found = landmark.sink > 0 ? drawnGround(x: centre.x, z: centre.z)
                     : body.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0
+                // BRIDGE-LANDMARK-DECK: a road bridge's deck level with the
+                // ground at its ends, where the roads come onto it.
+                if let deck = landmark.deck, let ends = Self.deckEnds(of: models[true]!, deck: deck) {
+                    let heights = ends.map { drawnGround(x: centre.x + $0.x, z: centre.z - $0.y) }
+                    found = heights.reduce(0, +) / Float(heights.count) - deck
+                }
                 let ground = max(found, landmark.baseHeight) - landmark.sink
                 for full in [true, false] { meshes[full] = models[full]!.placed(origin: centre, ground: ground, rotation: 0) }
             }
@@ -208,6 +214,35 @@ extension Map3DScene.Builder {
             built.insert(landmark.id)
         }
         return built
+    }
+
+    /// BRIDGE-LANDMARK-DECK: the two ends of a bridge landmark's road,
+    /// model metres east and north of its middle: the points of its
+    /// surface `deck` metres up (within half a metre) farthest apart.
+    static func deckEnds(of model: LandmarkMesh, deck: Float) -> [(x: Float, y: Float)]? {
+        let top = model.vertices.filter { abs($0.z - deck) <= 0.5 }.map { (x: $0.x, y: $0.y) }
+        guard let first = top.min(by: { ($0.x, $0.y) < ($1.x, $1.y) }) else { return nil }
+        func far(from p: (x: Float, y: Float)) -> (x: Float, y: Float) {
+            top.max { hypot($0.x - p.x, $0.y - p.y) < hypot($1.x - p.x, $1.y - p.y) }!
+        }
+        let one = far(from: first)
+        return [one, far(from: one)]
+    }
+
+    /// BRIDGE-LANDMARK-DECK: the plans of the road bridges among the
+    /// registry's landmarks (``Map3DLandmarkRegistration/deck``) in the
+    /// region, on level ground: where the real map's own bridge is left
+    /// out (``Map3DBaseMap/leavingOut(_:)``), the landmark's deck carrying
+    /// its road instead (decision 907's §3: the two drawn one inside the
+    /// other).
+    func landmarkDecks(frame: RealWorldFrame) -> [LandmarkPlan] {
+        Map3DLandmarkRegistry.landmarks.compactMap { landmark in
+            guard landmark.deck != nil else { return nil }
+            let place = frame.worldPosition(latitude: landmark.latitude, longitude: landmark.longitude)
+            guard contains(x: place.x, y: place.y) else { return nil }
+            let centre = point(x: place.x, y: place.y, height: 0)
+            return LandmarkPlan(landmark.model(full: false).placed(origin: centre, ground: 0, rotation: 0))
+        }
     }
 
     /// Whether the scene point `middle` stands on a landmark's ground (or
@@ -269,5 +304,35 @@ struct LandmarkPlan: Sendable, Equatable {
             for c in (column - 1)...(column + 1) where c >= 0 && c < columns && covered[r * columns + c] { return true }
         }
         return false
+    }
+}
+
+extension Map3DBaseMap {
+    /// BRIDGE-LANDMARK-DECK: how much of a bridge's line, every 4 m along
+    /// it, a landmark bridge's plan must cover for it to be left out.
+    static let landmarkDeckShare: Double = 0.8
+
+    /// BRIDGE-LANDMARK-DECK: the map without its bridges (and the roads
+    /// on them) that `plans`' landmark bridges stand over: most of their
+    /// line (``landmarkDeckShare``) under one plan.
+    func leavingOut(_ plans: [LandmarkPlan]) -> Map3DBaseMap {
+        guard !plans.isEmpty else { return self }
+        func under(_ points: [Point]) -> Bool {
+            var samples: [Map3DPoint] = []
+            for (a, b) in zip(points, points.dropFirst()) {
+                let length = ((b.x - a.x) * (b.x - a.x) + (b.z - a.z) * (b.z - a.z)).squareRoot()
+                let steps = max(1, Int((length / 4).rounded(.up)))
+                for step in 0..<steps {
+                    let t = Double(step) / Double(steps)
+                    samples.append(Map3DPoint(Float(a.x + (b.x - a.x) * t), 0, Float(a.z + (b.z - a.z) * t)))
+                }
+            }
+            guard !samples.isEmpty else { return false }
+            return plans.contains { plan in Double(samples.filter(plan.covers).count) >= Double(samples.count) * Self.landmarkDeckShare }
+        }
+        var map = self
+        map.roads.removeAll { $0.bridgeLevel > 0 && under($0.points) }
+        map.bridges.removeAll { under($0.points) }
+        return map
     }
 }

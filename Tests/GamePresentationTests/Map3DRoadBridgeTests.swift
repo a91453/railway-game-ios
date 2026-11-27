@@ -358,6 +358,29 @@ final class Map3DRoadBridgeTests: XCTestCase {
         XCTAssertTrue(between.isEmpty, "a parapet between the decks: \(between.count) points")
     }
 
+    /// Decision 391 (later, BRIDGE-MIDDLE-PARAPET): the owner's screenshot
+    /// (2026-11-27) of 福岡's two carriageways mapped nearer than a deck's
+    /// width, so their decks overlap: each was the other's own road, and
+    /// each kept a parapet in the middle of the deck. Only the outer edges
+    /// have one now.
+    func testOverlappingDecksHaveNoParapetInTheMiddle() throws {
+        let world = try flatWorld(track: false)
+        let half = Map3DRoadBridges.half(.secondary)
+        let north: Double = 600, south = north + Double(half)
+        let builder = built(world, roads: [road([(100, north), (400, north)], level: 1), road([(400, south), (100, south)], level: 1),
+                                           road([(250, 500), (250, 750)], kind: .minor)])
+        let meshes = meshes(builder)
+        let top = try XCTUnwrap(roadTop(230, Float(north), in: meshes))
+        let parapets: [Float] = meshes.flatMap(\.vertices).filter { (vertex: Map3DVertex) -> Bool in
+            Self.concrete.contains(vertex.color) && vertex.x > 100 && vertex.x < 400 && vertex.y > top + 0.5
+        }.map(\.z)
+        let outer: (north: Float, south: Float) = (Float(north) - half, Float(south) + half)
+        XCTAssertTrue(parapets.contains { abs($0 - outer.north) < 0.5 }, "the outer parapet, north")
+        XCTAssertTrue(parapets.contains { abs($0 - outer.south) < 0.5 }, "the outer parapet, south")
+        let middle = parapets.filter { $0 > outer.north + 1 && $0 < outer.south - 1 }
+        XCTAssertTrue(middle.isEmpty, "a parapet on the deck: \(middle.count) points")
+    }
+
     /// A ramp's walls stand only where it is a parapet's height (1 m) or
     /// more over the ground: lower, the road meets the ground it lies on.
     func testARampNearTheGroundHasNoWalls() throws {

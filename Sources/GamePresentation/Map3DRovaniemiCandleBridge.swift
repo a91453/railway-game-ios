@@ -8,12 +8,15 @@
 /// 155.5° as OpenStreetMap's outline (way `man_made=bridge`), the pylon
 /// toward the town's (north-west) bank, and written here by
 /// `tools/landmarks/glb_to_swift.py` (``encoded``). Its z 0 is the river's
-/// surface.
+/// surface; its road 9.5 m over it, set level with the banks' roads
+/// (BRIDGE-LANDMARK-DECK: on the lowest ground under its corners it
+/// stood 4–5 m over them, the owner's IMG_5675).
 enum Map3DRovaniemiCandleBridge {
     static let registration = Map3DLandmarkRegistration(
         id: "rovaniemi-candle-bridge", map: "rovaniemi",
         // The middle of OpenStreetMap's outline.
         latitude: 66.5029052, longitude: 25.7422479,
+        deck: 9.5,
         // steel (deck girders and stays), roadGrey (the road), dark (the
         // railings), concrete (pylon and piers), beacon_lit (the lamps).
         palette: [Map3DPalette.steel, Map3DPalette.arcade, Map3DPalette.dark, Map3DPalette.concrete, CableParts.Paint.warm],
