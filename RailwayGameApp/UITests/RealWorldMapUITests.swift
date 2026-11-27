@@ -94,6 +94,32 @@ final class RealWorldMapUITests: XCTestCase {
         }
     }
 
+    /// 2026-11-27 (TestFlight, an iPhone held sideways): a station found
+    /// by name moved the map there, but Build Here stayed hidden under the
+    /// search until its close button was tapped. A tap on the station now
+    /// leaves the search, and Build Here is there to tap.
+    func testAStationFoundByNameCanBeBuiltAtOnce() {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .landscapeLeft
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        defer { app.terminate() }
+        tappable(app.buttons.matching(identifier: "start.newGame"), name: "start.newGame").tap()
+        tappable(app.buttons.matching(identifier: "newGame.realWorld"), name: "newGame.realWorld").tap()
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.appears(within: 30), "The picker opens")
+        search.tap()
+        search.typeText("Banqiao")
+        let banqiao = app.buttons.matching(identifier: "station.tra_sched|板橋").firstMatch
+        XCTAssertTrue(banqiao.appears(within: 30), "Banqiao is found")
+        banqiao.waitUntilSettled()
+        app.tapMiddle(of: banqiao)
+        let start = app.buttons.matching(identifier: "realWorld.start").firstMatch
+        XCTAssertTrue(start.appears(within: 5), "Build Here is back once the station is chosen")
+        XCTAssertTrue(start.becomesHittable(within: 5), "Build Here can be tapped without closing the search")
+    }
+
     func testUseMyLocationLeavesTheMapAndSaysWhyItFoundNothing() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
