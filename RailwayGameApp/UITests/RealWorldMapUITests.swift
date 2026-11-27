@@ -96,8 +96,10 @@ final class RealWorldMapUITests: XCTestCase {
 
     /// 2026-11-27 (TestFlight, an iPhone held sideways): a station found
     /// by name moved the map there, but Build Here stayed hidden under the
-    /// search until its close button was tapped. A tap on the station now
-    /// leaves the search, and Build Here is there to tap.
+    /// search until its close button was tapped. A tap on what was found
+    /// now leaves the search, and Build Here is there to tap. The city's
+    /// row is tapped: sideways the keyboard covers the stations' rows
+    /// under it, and both move the map the same way (`show(_:)`).
     func testAStationFoundByNameCanBeBuiltAtOnce() {
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .landscapeLeft
@@ -111,7 +113,7 @@ final class RealWorldMapUITests: XCTestCase {
         XCTAssertTrue(search.appears(within: 30), "The picker opens")
         search.tap()
         search.typeText("Banqiao")
-        let banqiao = app.buttons.matching(identifier: "station.tra_sched|板橋").firstMatch
+        let banqiao = app.buttons.matching(identifier: "match.tra-banqiao").firstMatch
         XCTAssertTrue(banqiao.appears(within: 30), "Banqiao is found")
         banqiao.waitUntilSettled()
         app.tapMiddle(of: banqiao)
