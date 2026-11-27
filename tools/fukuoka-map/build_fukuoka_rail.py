@@ -477,6 +477,7 @@ def write(folder, name, value):
 OSM, MLIT, OURS = "OpenStreetMap", "National Land Numerical Information (railway data N02, 2025), MLIT", "this project"
 ESTAT, GSI = "e-Stat (Statistics Bureau of Japan)", "GSI elevation tiles"
 OVERTURE, PLATEAU = "Overture Maps", "PLATEAU, MLIT"
+KUMAMOTO_GTFS = "熊本市交通局's GTFS (kumamotoshiden), CC BY 2.1 JP"
 PLATEAU_CREDIT = ("「3D都市モデル（Project PLATEAU）」（国土交通省）を加工して作成 (https://www.mlit.go.jp/plateau/site-policy/, "
                   "compatible with CC BY 4.0)")
 OVERTURE_CREDIT = ("Overture Maps Foundation (overturemaps.org), buildings, release 2026-11-18.0, ODbL 1.0; its outlines "
@@ -520,6 +521,10 @@ SOURCES = {
     # merged by `build_kyushu_shinkansen.py merge`.
     "sanyoshinkansen.json": {"stations": MLIT, "shape": OSM, "segs.run, dwellSec (estimated from distance and 300 km/h)": OURS},
     "sanyoshinkansen_times.json": {"sets (laid out from estimated headways)": OURS},
+    # KUMAMOTO-TRAM (decision 1041): `build_kumamoto_tram.py`, merged by
+    # `build_kyushu_shinkansen.py merge`.
+    "kumamotocity.json": {"stations": KUMAMOTO_GTFS, "shape": OSM, "segs.run (the timetable's), dwellSec": OURS},
+    "kumamotocity_times.json": {"sets": KUMAMOTO_GTFS},
 }
 MLIT_CREDIT = ("「国土数値情報（鉄道データ）」（国土交通省）"
                "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html を加工して作成, CC BY 4.0")

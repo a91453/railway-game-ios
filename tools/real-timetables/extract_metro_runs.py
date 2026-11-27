@@ -118,6 +118,21 @@ DEPOT_ENDS = {"ntdlrt:V": ("崁頂",), "trtc:BR": ("動物園", "南港展覽館
 # between): what the timetable would stand there beyond that waits or
 # is not run in the game (the decision measures how many).
 MID_DEPOTS = {"tymc:A"}
+# Decision 1041: the lines whose every train stands overnight at one
+# station, in the real depot beside it (between the ends, as a line's of
+# `MID_DEPOTS`) or past it (an end, as `DEPOT_ENDS`'), by their game id:
+# that station. Their timetables (the operator's, which leaves out the
+# runs to and from the depot) start trains at stations near the depot:
+# each is brought from it before its first run of the day and taken back
+# after its last (`stabled`), as few trains as the day can be run with.
+# Set by `tools/fukuoka-map/extract_fukuoka_runs.py` for Kumamoto's trams.
+STABLED_AT = {}
+# The tracks such a line's end station is laid with: its own and a loop
+# either side, as a street tram's terminus has room for (Kumamoto's have
+# two). The depot takes in the trains it has no room for; deeper loops
+# reached past the next stop, 250 to 300 m off, and into the second
+# track's ramp out of the end.
+STABLED_END_TRACKS = 3
 # Decision 898: the game's least dwell at a station (`ServiceDwell.minimum`),
 # in seconds, and whether a line bought with a depot counts its trains by
 # it. A timetable's call is `DWELL` long, so the game's train comes in
@@ -389,6 +404,19 @@ def parked(tool, found, days, stops, line, prompt=True):
     return line, None
 
 
+def stabled(tool, found, days, stops, station, most=60):
+    """Decision 1041: the line's runs with every train standing overnight
+    at `station` (``STABLED_AT``), as few as run its days, each brought
+    to its first run of the day and back after its last by positioning
+    runs; or why none fits."""
+    problem = f"no day runs with {most} trains at {station}"
+    for count in range(1, most + 1):
+        line, problem = tool.line_runs({"trains": found}, days, stops, start={station: count}, prompt=True)
+        if not problem:
+            return line, None
+    return None, problem
+
+
 def depot_tracks(tool, found, start, stops, depots):
     """Decision 489: the most trainsets standing at each station at once
     on any weekday of a line bought with a depot beside its end station
@@ -478,10 +506,20 @@ def main(folder, out):
         depots = DEPOT_ENDS.get(game_id)
         # Decision 898: a line with a depot counts its trains by the game's
         # dwell, and with time to make a delay good.
-        if COUNT_GAME_DWELL and (depots or game_id in MID_DEPOTS):
+        if COUNT_GAME_DWELL and (depots or game_id in MID_DEPOTS or game_id in STABLED_AT):
             tool.LATE_PER_CALL = max(0, GAME_DWELL - DWELL)
             tool.RECOVERY = RECOVERY
-        line, problem = tool.line_runs({"trains": found}, days, stops)
+        stable = STABLED_AT.get(game_id)
+        if stable:
+            # Decision 1041: every train comes from the one station it
+            # stands at overnight, so none leaves early for a station
+            # between (decision 712's `OUT_BEFORE_FIRST`, kept for the
+            # other lines).
+            tool.OUT_BEFORE_FIRST = False
+            line, problem = stabled(tool, found, days, stops, stable)
+            tool.OUT_BEFORE_FIRST = OUT_BEFORE_FIRST
+        else:
+            line, problem = tool.line_runs({"trains": found}, days, stops)
         tool.TURNAROUND = turnaround
         if single and not problem:
             if sum(line["overnight"].values()) != 1 or any(n != 1 for n in line["tracks"].values()):
@@ -501,6 +539,29 @@ def main(folder, out):
             worst = {s: n for s, n in line["tracks"].items() if n > (most if s in ends else 3)}
             if worst:
                 problem = f"stations need more tracks than the game lays, with the depot: {worst}"
+        elif stable and not problem:
+            ends = (stops[0], stops[-1])
+            # Counted without the positioning runs, which the game does
+            # not run: bought with the depot, its own empty runs take the
+            # trains in and out (decision 479), so a train with no further
+            # run at a station goes in at once rather than waiting there
+            # for a run to the depot.
+            real = [r for r in line["runs"] if not r.get("positioning")]
+            line["tracks"] = depot_tracks(tool, real, line["overnight"], stops, (stable,))
+            capped = {}
+            for station, count in line["tracks"].items():
+                most = STABLED_END_TRACKS if station in ends else BETWEEN_TRACKS
+                # A station between the ends with the depot beside it has
+                # only the line's two tracks: the trains the timetable
+                # stands there wait in the depot, and a loop there would
+                # take the line its wye needs (Kōtsūkyoku-mae's).
+                if station == stable and station not in ends:
+                    most = 2
+                if count > most:
+                    capped[station] = count
+                    line["tracks"][station] = most
+            if capped:
+                print(f"{label}: laid with fewer tracks than the timetable would stand at once: {capped}")
         elif game_id in MID_DEPOTS and not problem:
             ends = (stops[0], stops[-1])
             between = tuple(s for s in line["overnight"] if s not in ends)

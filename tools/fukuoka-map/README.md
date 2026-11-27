@@ -267,3 +267,28 @@ python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/Ma
 - **班次是估計**：熊本 6:00 起，白天每小時、尖峰每 30 分，新水俣末班 23:00，每向 21 班，各站停，26 分 53 秒；新水俣折返 18 分（決策 1030 §1）。
 - **機廠**：真的熊本總合車輛所（富合，`depot.json`），接點離熊本 8.45 km，遊戲鋪 3 股，收熊本晚上的 3 組（`RealLineDepotSite.tomiai`）。
 - **新水俣**：3 股（`extract_fukuoka_runs.py` 的 `TRACKS_AT_LEAST`），照真實 2 面 3 線（JR 九州構內圖，Duet 研究）。
+
+## 熊本市電 A、B 系統（決策 1041）
+
+熊本市電的資料放在 `tools/fukuoka-map/kumamoto-tram/`，已併進地圖包：日本地圖的系統 `kumamotocity`（線 `A`、`B`），標準軌、
+路面電車，在收購清單一起賣（A 先鋪，B 從辛島町鋪到上熊本）。指令都在 repo 根目錄跑：
+
+```sh
+# GTFS（熊本市交通局，CC BY 2.1 JP）：
+#   https://api.gtfs-data.jp/v2/organizations/kumamoto-shiden/feeds/kumamotoshiden/files/feed.zip?rid=current，解到 <gtfs>
+# 從 GTFS 與 OSM 重做暫存資料夾（kyushu.pbf 整份，不裁）。
+python3 -I tools/fukuoka-map/build_kumamoto_tram.py <gtfs> /tmp/fk/osm/kyushu.pbf tools/fukuoka-map/kumamoto-tram
+# 只重排一天的班次（新的 GTFS、改了 RUN_ON 時；不讀 OSM）。
+python3 -I tools/fukuoka-map/build_kumamoto_tram.py times <gtfs> tools/fukuoka-map/kumamoto-tram
+# 併進地圖包，再排進 metro_runs.json。
+python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py merge tools/fukuoka-map/kumamoto-tram RailwayGameApp/Resources/MapPacks/fukuoka
+python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/MapPacks/fukuoka
+```
+
+輸入的雜湊記在 `kumamoto_tram_sources.json`（2026-11-27 的 GTFS 與 kyushu.pbf sha256 `b44db297…42c9`）。
+
+- **站、站名、每一班**：GTFS（A 26 站、B 28 站；平日、土曜、日祝三種，國定假日跑日祝）。每站取兩個月台（`<n>_1`、`<n>_2`）的中點。
+- **軌道**：OSM 的 `railway=tram`（`BOX` 裡的熊本市內）。
+- **熊本站前折返的班次延到田崎橋**（`RUN_ON`）：平日 18 班、日祝 2 班，原因見決策 1041 §3。
+- **過夜**：`extract_fukuoka_runs.py` 的 `STABLED_AT`，A 22 組在交通局前（大江車庫）、B 9 組在上熊本（上熊本車庫）。
+- **軌距、電、速度**：1,435 mm、DC 600 V 架空線、40 km/h，寫在線上當記錄。

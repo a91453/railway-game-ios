@@ -85,6 +85,26 @@ extension DataSourceCredits {
                         openStreetMapCopyright(in: language),
                     ]
                 ),
+                // Decision 1041: the Kumamoto City Tram's Lines A and B
+                // (`MapPacks/fukuoka/kumamotocity.json`), stations and
+                // timetable from the operator's own GTFS feed (CC BY 2.1 JP).
+                DataSourceCredit(
+                    id: "kumamotoTram",
+                    title: language.text("Kumamoto City Tram", "熊本市電"),
+                    detail: language.text(
+                        "The Kumamoto City Tram’s Lines A and B, with their stops’ names in Chinese, English and Japanese and their trams’ real timetable.",
+                        "熊本市電 A 系統與 B 系統，電車站有中文、英文與日文站名，電車照真實時刻表行駛。"
+                    ),
+                    notice: language.text(
+                        "Stops, their names and the timetable: Kumamoto City Transportation Bureau’s GTFS data (熊本市交通局), CC BY 2.1 JP, changed for the game. Track and depots: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with the Kumamoto City Transportation Bureau.",
+                        "電車站、站名與時刻表：熊本市交通局的 GTFS 資料，CC BY 2.1 JP，為遊戲改過。軌道與車庫：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與熊本市交通局沒有任何關係。"
+                    ),
+                    links: [
+                        DataSourceCredit.Link(title: language.text("Kumamoto City Tram GTFS data", "熊本市電 GTFS 資料"), url: "https://gtfs-data.jp/search?target_feed=kumamoto-shiden/kumamotoshiden"),
+                        DataSourceCredit.Link(title: "CC BY 2.1 JP", url: "https://creativecommons.org/licenses/by/2.1/jp/"),
+                        openStreetMapCopyright(in: language),
+                    ]
+                ),
                 // FUKUOKA-GROUND: the pack's base map, buildings, heights and people.
                 DataSourceCredit(
                     id: "fukuokaMap",

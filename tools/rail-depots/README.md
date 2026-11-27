@@ -75,3 +75,14 @@ python3 -I tools/rail-depots/fukuoka_depot_site.py kyushu.pbf
 - 福岡市交通局沒有公開基地可停幾列。遊戲的股數是橋本站內放不下的列車數（23 組扣掉站內 4 組，19 股），一股停一列，和其他機廠的算法一樣。
 
 俯視圖：`HASHIMOTO_DEPOT_DUMP=$PWD/hashimoto.json swift test --skip-build --filter HashimotoDepotDumpTests`，再 `PLOT_SITES=hashimoto python3 -I tools/rail-depots/plot_depots.py kyushu.pbf out.png hashimoto.json`。
+
+熊本市電的大江車庫與上熊本車庫（`RealLineDepotSite.oe`、`kamiKumamoto`，決策 1041）：`kumamoto_tram_depot_site.py` 讀 osmtoday.com 的九州整包檔（2026-11-27 下載的那一份 sha256 `b44db297c59e46149ac3578f90dab7688c3665d1c500c544cf05928284d842c9`）：
+
+```sh
+curl -L -o kyushu.pbf https://osmtoday.com/asia/japan/kyushu.pbf
+python3 -I tools/rail-depots/kumamoto_tram_depot_site.py kyushu.pbf
+```
+
+- 大江車庫（way 1086686019 到 1086686021）：在交通局前東邊約 100 m 從北側正線分出去，往北北東約 140 m。遊戲的三角線與兩組渡線要約 400 m 離站的直線，接點往東移 220 m（到味噌天神前之間的中點），引線接到真的場。
+- 上熊本車庫（way 413212655 到 413212667）：真的在線的西側，40 m 外是 JR 的高架（way 190982786、530022189），端點過去的機廠引線會折回頭。遊戲的接點在上熊本站過去 100 m、方位 18°，場放東北側；引線壓過熊本電鐵的地面軌道（遊戲裡沒有）。
+- 熊本市交通局沒有公開車庫可停幾列。股數是各線的組數，一股停一列（A 22、B 9），和其他機廠的算法一樣。俯視圖沒畫。

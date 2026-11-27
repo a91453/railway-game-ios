@@ -116,7 +116,29 @@ public struct RealBranchLine: Hashable, Sendable {
     /// than the train itself in a world with real car lengths (decision
     /// 227), where six 25 m cars do not stand at seven cars' 112 m.
     func platformLength(real: Bool) -> Int64 {
-        Self.platformLength(cars: cars, of: trainType, real: real)
+        Self.streetTramStop(system: system) ?? Self.platformLength(cars: cars, of: trainType, real: real)
+    }
+
+    /// Decision 1041: the length of a street tram's stop, where `system`
+    /// runs street trams: the Kumamoto City Tram's 26 m, the studio's
+    /// unroofed stop (``Map3DTramStop``), which holds its longest real
+    /// trams (the 2400's three sections, 21.35 m) and stands in place of
+    /// the game's platform; a car more than its one-car trains (32 m)
+    /// would be longer than a stop, and drawn as a platform with a
+    /// canopy. `nil` for the other systems.
+    static func streetTramStop(system: String) -> Int64? {
+        system == "kumamotocity" ? 26 * WorldCoordinate.unitsPerMetre : nil
+    }
+
+    /// Decision 1041: how its trams run where `system` runs street trams:
+    /// the Kumamoto City Tram's 40 km/h at most, the limit of Japan's
+    /// tramway operating rules (軌道運転規則, article 53, for cars with
+    /// power brakes) its trams run to, starting and braking as the game's
+    /// metro trains do. `nil` for the other systems, whose trains run as
+    /// their type does.
+    static func streetTramPerformance(system: String) -> TrainPerformance? {
+        system == "kumamotocity" ? TrainPerformance(acceleration: TrainPerformance.metro.acceleration,
+                                                    braking: TrainPerformance.metro.braking, topSpeed: 40) : nil
     }
 
     static func platformLength(cars: Int, of type: TrainType?, real: Bool) -> Int64 {
@@ -153,7 +175,12 @@ public struct RealBranchLine: Hashable, Sendable {
     /// a train in from Zuoying left for Zuoying again on the northbound
     /// track, against the trains coming north, and the line deadlocked
     /// south of Taichung on its first morning.
-    var turnsBackBetween: Bool { isTaoyuanAirport || isTaiwanHighSpeedRail }
+    /// Decision 1041: and a street tram's (the Kumamoto City Tram's Line A,
+    /// whose trams turn at Kumamoto-Ekimae, Suidōchō, Shin-Suizenji-Ekimae
+    /// and Karashimachō as the real ones do): with none, a tram turned
+    /// there ran back on the other way's track, met the next one head on,
+    /// and was pushed back a stop at a time.
+    var turnsBackBetween: Bool { isTaoyuanAirport || isTaiwanHighSpeedRail || Self.streetTramStop(system: system) != nil }
 
     /// THSR-SALE (decision 993): whether it is the Taiwan High Speed Rail.
     var isTaiwanHighSpeedRail: Bool { id == Self.taiwanHighSpeedRail }
@@ -350,7 +377,18 @@ public struct RealBranchLine: Hashable, Sendable {
         // THSR-SALE (decision 993): the Taiwan High Speed Rail keeps the
         // metro's loops it was measured with (decision 993 §4); laying it
         // as decision 995's high-speed line is a later step.
-        !isUrban ? .branch : trainType == .highSpeed && !isTaiwanHighSpeedRail ? .highSpeed : cars > RealLineLayout.lightRailCars ? .metro : .lightRail
+        if Self.streetTramStop(system: system) != nil { return .streetTram }
+        return !isUrban ? .branch : trainType == .highSpeed && !isTaiwanHighSpeedRail ? .highSpeed : cars > RealLineLayout.lightRailCars ? .metro : .lightRail
+    }
+
+    /// Decision 1041: how long its second track takes to move out beside
+    /// the first past an end station, and back in short of the other: a
+    /// street tram's 40 m, as its stops stand 150 to 500 m apart (Line A's
+    /// last two, Nihongiguchi and Tasakibashi, 148 m), where the 100 m of
+    /// every other line's (``HighSpeedDemo/rampLength``) put a stop's
+    /// second platform on the curve.
+    var secondTrackRamp: Double {
+        Self.streetTramStop(system: system) != nil ? 40 * RealLineAcquisition.metre : HighSpeedDemo.rampLength
     }
 
     /// Decision 652: the stations between its ends (by their names in the
@@ -499,6 +537,8 @@ public struct RealBranchLine: Hashable, Sendable {
         "kyushushinkansen|KS": "九州新幹線",
         "kyushushinkansen|NK": "西九州新幹線",
         "jrkyushu|RK": "リレーかもめ",
+        "kumamotocity|A": "熊本市電A系統",
+        "kumamotocity|B": "熊本市電B系統",
     ]
 
     /// Decision 400: the runs of the light rail or metro `id`, from where
@@ -559,6 +599,16 @@ struct RealLineLayout {
     /// The most cars a train laid with ``lightRail``'s loops has: their
     /// straight 100 m holds its platform.
     static let lightRailCars = 3
+    /// Decision 1041: a street tram's (Kumamoto's), its stops 150 to 500 m
+    /// apart and its trams one 18 m car: a loop reaches 60 m and moves out
+    /// over 30 m (a curve of some 37 m radius, its 6 m out), one either
+    /// side of an end, so an end's loops stay short of the next stop. Its
+    /// straight, 60 m, holds the 26 m stop with the 16 m kept clear of a
+    /// node either side (``RealWorldDemo/platformMargin``); at 50 m it did
+    /// not, and the loop was laid as one edge along the track.
+    static let streetTram = RealLineLayout(
+        loopReach: 60 * RealLineAcquisition.metre, loopRamp: 30 * RealLineAcquisition.metre, loopOffset: RealWorldDemo.groundLoopOffset, endLevels: 1
+    )
     /// A metro's of longer trains (decision 400, 10j-3): as a light rail's,
     /// its loops reaching 150 m, so their straight holds a platform of six
     /// cars and more.
@@ -2396,7 +2446,7 @@ extension RealLineLaying {
         // terminal's, as the high-speed demo's up track (decision 281); the
         // trains toward the junction keep to the first. Each end station is
         // on the first alone, with its loops.
-        let ramp = HighSpeedDemo.rampLength, gap = RealWorldDemo.shortestEdge
+        let ramp = line.secondTrackRamp, gap = RealWorldDemo.shortestEdge
         var second: (a: Double, b: Double, out: Double)?
         if double, let first = spans.first, let last = spans.last {
             // GRADE-CROSSING-SHALUN: a line joining another's track has its
@@ -2615,7 +2665,13 @@ extension RealLineLaying {
                 }
                 // The middle of the loop, flat for a platform as long as
                 // the line's: a metro's trains are longer than the demo's.
-                let middle = loopPath.length / 2, loopHalf = max(halves[loop.stop], Double(RealWorldDemo.platformLength) / 2)
+                // Decision 1041: a street tram's stop its own 26 m, shorter
+                // than the demo's platform, which would cover the whole of
+                // its short loop and leave no room for a node at either
+                // ramp's end (the loop laid as one edge along the track).
+                let shortest = RealBranchLine.streetTramStop(system: line.system) != nil
+                let middle = loopPath.length / 2
+                let loopHalf = shortest ? halves[loop.stop] : max(halves[loop.stop], Double(RealWorldDemo.platformLength) / 2)
                 let zone = (middle - loopHalf)...(middle + loopHalf)
                 offPath.insert(plans.count)
                 plans.append((
@@ -3229,6 +3285,10 @@ extension RealLineLaying {
         // (decision 168): its riders pay the high-speed fare, and its
         // stations draw the long trips of the people round them.
         if acquisition.trainType == .highSpeed { try world.setLinePerformance(line.id, to: .highSpeed) }
+        // Decision 1041: street trams planned and run at their 40 km/h.
+        let realSystem = String(acquisition.realLine.split(separator: ":").first ?? "")
+        let tramPerformance = RealBranchLine.streetTramPerformance(system: realSystem)
+        if let tramPerformance { try world.setLinePerformance(line.id, to: tramPerformance) }
         // Decision 535 (continued, KLRT): a ring, before its runs; each
         // run's way round turned with the stops.
         let ring = acquisition.ring == true
@@ -3273,7 +3333,8 @@ extension RealLineLaying {
         let built = world.economy.balance
         let count = acquisition.trains.count
         try world.setLineTrainsInService(line.id, to: TrainsInService(peak: count, offPeak: count, low: count))
-        let length = RealBranchLine.platformLength(cars: acquisition.cars, of: acquisition.trainType, real: world.realCarLengths)
+        let length = RealBranchLine.streetTramStop(system: realSystem)
+            ?? RealBranchLine.platformLength(cars: acquisition.cars, of: acquisition.trainType, real: world.realCarLengths)
         for start in acquisition.trains {
             let train: TrainID
             if let type = acquisition.trainType {
@@ -3282,6 +3343,7 @@ extension RealLineLaying {
                 train = try world.purchaseTrain(named: start.name).id
             }
             try world.setTrainCars(train, to: acquisition.cars)
+            if let tramPerformance { try world.setTrainPerformance(train, to: tramPerformance) }
             let on: TrackEdgeID, at: Int64
             if let platform = start.onPlatform {
                 guard world.network.platforms.contains(platform) else { throw .invalidTrackGeometry }

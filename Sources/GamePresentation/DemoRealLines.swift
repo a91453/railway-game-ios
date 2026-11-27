@@ -98,6 +98,9 @@ public struct DemoRealLines: Sendable {
         // Decision 1029: the Sanyo Shinkansen's sixteen, the N700S's and
         // the 700 series' (the Nozomi and Hikari sets).
         case "sanyoshinkansen": 16
+        // Decision 1041: the Kumamoto City Tram's one, its low-floor
+        // trams two sections joined, 18.4 m.
+        case "kumamotocity": 1
         case "tymc", "afr_sched": 4
         case "krtc", "sanying": 3
         default: 2
@@ -129,7 +132,7 @@ public struct DemoRealLines: Sendable {
         case "mrt": key == "mrt|BR" ? .apm : key == "mrt|Y" ? .b : .a
         case "krtc": key == "krtc|C" ? .c : .a
         case "tymc", "sanying", "tmrt": .b
-        case "ntdlrt", "ntalrt": .c
+        case "ntdlrt", "ntalrt", "kumamotocity": .c
         default: nil
         }
     }
