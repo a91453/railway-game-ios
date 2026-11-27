@@ -23,7 +23,10 @@ final class Map3DTrainSetTests: XCTestCase {
     /// trains), all behind the R200.
     static let lowFreight: Set<String> = [Map3DFreightWagons.emptyKey, Map3DFreightWagons.emptyKey + "Far",
                                           Map3DFreightWagons.bulkKey, Map3DFreightWagons.bulkKey + "Far"]
-    static let freight: [String] = ["FREIGHT", "FREIGHTFar"] + lowFreight.sorted()
+    /// Decision 1033's cement train, behind the R200 too, its wagons as
+    /// tall as a container wagon's load.
+    static let freight: [String] = ["FREIGHT", "FREIGHTFar", Map3DFreightWagons.cementKey, Map3DFreightWagons.cementKey + "Far"]
+        + lowFreight.sorted()
 
     /// Every set's cars are in the pack: a car's length and width, on the
     /// rail, up to a lowered pantograph's height, in their own colours (none
