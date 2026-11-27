@@ -65,7 +65,8 @@ final class SavedWorldTickReportTests: XCTestCase {
             try GameWorld.$holderAudit.withValue(holders) { try report(environment, path) }
         }
         let text = "SAVED_WORLD audit: \(answers.checked) answers given again were the answers worked out again; "
-            + "\(holders.updates) holders changed in place were the holders worked out again (\(holders.rebuilds) worked out); "
+            + "\(holders.updates) holders changed in place were the holders worked out again (\(holders.rebuilds) worked out, "
+            + "\(holders.unchanged) trains changed left in them as they were); "
             + "\(answers.detoursNotSearched) ways round not searched for were none when searched for (\(answers.detoursSearched) searched for); "
             + "\(answers.heldNotAsked) departures kept from their way without asking were kept when asked\n"
         FileHandle.standardError.write(Data(text.utf8))
