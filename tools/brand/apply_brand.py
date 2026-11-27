@@ -10,6 +10,7 @@ This script writes them into the files the app is built from:
   RailwayGameApp/Resources/GameBrand.json         what the app reads
   RailwayGameApp/Resources/en.lproj/InfoPlist.strings
   RailwayGameApp/Resources/zh-Hant.lproj/InfoPlist.strings
+  RailwayGameApp/Resources/ja.lproj/InfoPlist.strings  (decision 1034)
   RailwayGameApp/Info.plist                       the save type's name and extension
 
 It changes the working copy only: never commit what it writes
@@ -17,7 +18,8 @@ It changes the working copy only: never commit what it writes
 
   git checkout -- RailwayGameApp/Resources/GameBrand.json \\
     RailwayGameApp/Resources/en.lproj/InfoPlist.strings \\
-    RailwayGameApp/Resources/zh-Hant.lproj/InfoPlist.strings RailwayGameApp/Info.plist
+    RailwayGameApp/Resources/zh-Hant.lproj/InfoPlist.strings \\
+    RailwayGameApp/Resources/ja.lproj/InfoPlist.strings RailwayGameApp/Info.plist
 
 Usage:
   python3 -I tools/brand/apply_brand.py <brand.json> [--github-mask]
@@ -33,8 +35,9 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 APP = ROOT / "RailwayGameApp"
-NEUTRAL = {"english": "Railway Game", "chinese": "鐵道遊戲", "saveExtension": "railwaygame"}
-FIELDS = {"english", "chinese", "saveExtension", "website", "contactEmail"}
+NEUTRAL = {"english": "Railway Game", "chinese": "鐵道遊戲", "japanese": "鉄道ゲーム", "saveExtension": "railwaygame"}
+# "japanese" is optional (decision 1034): without it a Japanese game shows the English name.
+FIELDS = {"english", "chinese", "japanese", "saveExtension", "website", "contactEmail"}
 
 
 def fail(message):
@@ -86,6 +89,7 @@ def main(argv):
             if value:
                 print(f"::add-mask::{value}")
     english, chinese = brand["english"], brand["chinese"]
+    japanese = brand.get("japanese") or english
     replace(APP / "Resources/en.lproj/InfoPlist.strings", [
         ('"CFBundleDisplayName" = "Railway Game";', f'"CFBundleDisplayName" = "{english}";', 1),
         ('"Railway Game Save" = "Railway Game Save";', f'"{english} Save" = "{english} Save";', 1),
@@ -94,6 +98,10 @@ def main(argv):
         ('"CFBundleDisplayName" = "鐵道遊戲";', f'"CFBundleDisplayName" = "{chinese}";', 1),
         ('"Railway Game Save" = "鐵道遊戲存檔";', f'"{english} Save" = "{chinese}存檔";', 1),
     ])
+    replace(APP / "Resources/ja.lproj/InfoPlist.strings", [
+        ('"CFBundleDisplayName" = "鉄道ゲーム";', f'"CFBundleDisplayName" = "{japanese}";', 1),
+        ('"Railway Game Save" = "鉄道ゲームのセーブデータ";', f'"{english} Save" = "{japanese}のセーブデータ";', 1),
+    ])
     replace(APP / "Info.plist", [
         ("<string>Railway Game Save</string>", f"<string>{english} Save</string>", 2),
         ("<string>railwaygame</string>", f"<string>{brand['saveExtension']}</string>", 1),
@@ -101,7 +109,7 @@ def main(argv):
     current = json.loads((APP / "Resources/GameBrand.json").read_text(encoding="utf-8"))
     if current != NEUTRAL:
         fail("RailwayGameApp/Resources/GameBrand.json is not the neutral brand (already applied?)")
-    out = {key: brand[key] for key in ("english", "chinese", "saveExtension", "website", "contactEmail") if brand.get(key)}
+    out = {key: brand[key] for key in ("english", "chinese", "japanese", "saveExtension", "website", "contactEmail") if brand.get(key)}
     (APP / "Resources/GameBrand.json").write_text(
         json.dumps(out, ensure_ascii=False, indent=2, separators=(",", " : ")) + "\n", encoding="utf-8")
     print("apply_brand: the brand is in the working copy (do not commit it).")

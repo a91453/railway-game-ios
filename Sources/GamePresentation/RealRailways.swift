@@ -294,8 +294,20 @@ public struct RealRailways: Sendable {
         public let system: System
         public let chinese: String
         public let english: String?
+        /// Its Japanese name, for a station in Japan (`station_names.json`'s
+        /// `ja`, from MLIT's railway data; decision 1034), or `nil`.
+        public let japanese: String?
         public let coordinate: Coordinate
         public let palette: Palette
+
+        init(system: System, chinese: String, english: String?, japanese: String? = nil, coordinate: Coordinate, palette: Palette) {
+            self.system = system
+            self.chinese = chinese
+            self.english = english
+            self.japanese = japanese
+            self.coordinate = coordinate
+            self.palette = palette
+        }
 
         /// The system and the name: unique.
         public var id: String { "\(system.id)|\(chinese)" }
@@ -303,9 +315,12 @@ public struct RealRailways: Sendable {
         /// Its English name from the site's `i18n/stations.json`; the
         /// Chinese one where the site has none. Two names the data tells
         /// apart by a suffix (中壢 "Zhongli_Taoyuan", 中里 "Zhongli_Yilan")
-        /// show it in brackets: "Zhongli (Yilan)".
+        /// show it in brackets: "Zhongli (Yilan)". In Japanese, a station
+        /// in Japan has its Japanese name (decision 1034); any other its
+        /// English one, as in English.
         public func name(in language: DisplayLanguage) -> String {
-            language.text(english.map(Self.shown) ?? chinese, chinese)
+            if language == .japanese, let japanese { return japanese }
+            return language.base == .english ? english.map(Self.shown) ?? chinese : chinese
         }
 
         static func shown(_ english: String) -> String {
@@ -383,8 +398,9 @@ public struct RealRailways: Sendable {
     /// why; empty when all could. Listed for debugging (the data sources
     /// screen), never dropped silently.
     public let loadIssues: [RealDataLoadIssue]
-    /// ``stations`` by ``stationKey(_:)`` of their Chinese and English
-    /// names (the data's and the one shown): indices in the site's order.
+    /// ``stations`` by ``stationKey(_:)`` of their Chinese, English (the
+    /// data's and the one shown) and Japanese names: indices in the site's
+    /// order.
     private let stationIndicesByKey: [String: [Int]]
 
     /// The railways in the site's `track_lines.geojson`,
@@ -454,6 +470,7 @@ public struct RealRailways: Sendable {
                 system: mark.system,
                 chinese: name,
                 english: names[mark.system.id]?[name]?.en,
+                japanese: names[mark.system.id]?[name]?.ja,
                 coordinate: mark.coordinate,
                 palette: mark.palette
             ))
@@ -471,7 +488,7 @@ public struct RealRailways: Sendable {
         self.loadIssues = loadIssues + (operations?.loadIssues ?? [])
         var byKey: [String: [Int]] = [:]
         for (index, station) in stations.enumerated() {
-            for key in Set([station.chinese, station.english, station.english.map(Station.shown)].compactMap { $0 }.map(Self.stationKey)).sorted() where !key.isEmpty {
+            for key in Set([station.chinese, station.english, station.english.map(Station.shown), station.japanese].compactMap { $0 }.map(Self.stationKey)).sorted() where !key.isEmpty {
                 byKey[key, default: []].append(index)
             }
         }
@@ -638,6 +655,7 @@ extension RealRailways {
     private struct NameFile: Decodable {
         struct Name: Decodable {
             let en: String?
+            let ja: String?
         }
 
         let systems: [String: [String: Name]]
