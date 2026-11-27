@@ -45,6 +45,31 @@ python3 $T window out/taiwan.pmtiles 25.0133 121.4637 3072 heights.json $P windo
 
 `FootprintWindowMeasure.swift.txt` 是量板橋 3 × 3 的測試範本：暫時複製進 `Tests/GamePresentationTests/`，用 `FOOTPRINT_WINDOW=window.json swift test --filter FootprintWindowMeasure` 跑，跑完刪掉（同 `tools/map3d-preview/` 的做法）。
 
+## 每月換 Overture 新版（決策 1026）
+
+Overture 大約每四週出一版，S3 只留最近兩版。`refresh_release.py` 把新版**逐棟**補進內建檔，不整檔重建
+（整檔重建要重抓 GHSL、三年的臺中圖、臺北套繪圖、使用執照與實價登錄，見上面幾節）：
+
+```sh
+R=tools/overture-footprint-tiles/refresh_release.py
+python3 -I $R latest                                   # S3 上最新的版本
+python3 -I $R current $A                               # 內建檔現在是哪一版（metadata 的 overture）
+python3 $T extract <新版> $C new.parquet               # 約 1 分鐘
+python3 -I $R patch $A new.parquet $C $P <新版> out.pmtiles refresh.json   # 約 5 分鐘
+cp out.pmtiles $A                                      # 只在 patch 結束碼是 0 時
+```
+
+- 新版每格照 `build` 的同一套簡化、取整重編，外形沒變的房子和內建檔的位元組一樣，就**留著原樣**（使用執照、實價登錄、
+  臺中圖的樓層都不動）；只有原本是推算或 OSM 標的樓層、而新版有 OSM 標的，才換成新的標。
+- 內建檔有、新版沒有的：拆了或 OSM 重畫了，**拿掉**；但在官方輪廓的縣市（`OFFICIAL`，現在只有臺中市）裡的留著，那些本來就不是 Overture 的。
+- 新版有、內建檔沒有的：**補進來**，除非留下的房子蓋住它一成以上、或它蓋住某棟留下的房子一半以上（決策 1001 的去重，
+  和 `official_outlines.py` 同一條，所以被臺中圖換掉的 Overture 房子不會回來）。樓層照 OSM 的標，沒有就照密度猜（`proposed_storeys`）。
+- 寫檔前先比對（`LIMITS`）：縣市外形沒變的比例、每縣市拆掉與新增的比例、全台淨變化、單格掉多少。任何一條超過就**不寫檔**、
+  報告寫哪一條、結束碼 3。
+- 車站地標、地標、遊戲自己的車站在畫地圖時照位置拿掉底下的房子（`underLandmark`、`replacedPlots`、`underRailway`），
+  不看房子的編號，所以換新版後照樣拿掉。
+- 換完把 `DataSourceCredits.taiwanFootprintRelease` 改成新版本號；`FootprintReleaseTests` 守著兩邊一致。
+
 ## 決定性
 
 同一份 `footprints.parquet`（與 `storeys.parquet`）產出位元完全相同的檔：每棟依 Overture id 讀、每格內依重心排序、環的方向固定、gzip 等級 9 不寫時間（`mtime=0`），PMTiles 寫法是 `tools/basemap/build_basemap.py` 的 `write_pmtiles`。2026-10-23 以 0.5 m 跑兩次，23 個檔逐一 SHA-256 相同；決策 389 加上樓層後再跑兩次，也相同。Python 的 zlib 版本不同時 gzip 位元組可能不同，解開後的內容相同。
