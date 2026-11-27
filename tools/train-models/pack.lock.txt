@@ -70,6 +70,8 @@ ferry-hongKong-single
 ferry-hongKong-single-far
 ferry-hongKongOutlying-single
 ferry-hongKongOutlying-single-far
+ferry-liuqiu-single
+ferry-liuqiu-single-far
 ferry-pier-finger-single
 ferry-pier-finger-single-far
 ferry-pier-hall-single

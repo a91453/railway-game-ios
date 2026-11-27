@@ -182,7 +182,7 @@ struct StationStampMark: View {
 
     var body: some View {
         let ink = stamp.ink.color
-        let other: DisplayLanguage = language == .english ? .traditionalChinese : .english
+        let other: DisplayLanguage = language.base == .english ? .traditionalChinese : .english
         let second = stamp.name(in: other)
         VStack(spacing: side * 0.03) {
             Text(verbatim: stamp.name(in: language))

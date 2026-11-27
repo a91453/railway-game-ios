@@ -96,7 +96,35 @@ final class Map3DFerriesTests: XCTestCase {
         XCTAssertLessThan(Map3DFerry.Boat.hongKongOutlying.height, Map3DFerry.Boat.hongKong.height)
         XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 3_999, in: .hongKong), .hongKong)
         XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 4_000, in: .hongKong), .hongKongOutlying)
-        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 4_000, in: .taiwan), .tamsui)
+        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 4_000, in: .taiwan), .liuqiu)
+    }
+
+    /// Decision 1033: Taiwan's Xiaoliuqiu fast ferry as the studio made it
+    /// (revision-2's `stats.json`): the triangles, the size, the window
+    /// bands lit, the colours the game's own; a Taiwan route of 4 km or
+    /// more draws it, a shorter one the river and harbour boats.
+    func testTaiwansLongCrossingsDrawTheXiaoliuqiuFerry() throws {
+        let boat = Map3DFerry.model(.liuqiu), far = Map3DFerry.model(.liuqiu, far: true)
+        XCTAssertEqual(boat.triangleCount, 1_772)
+        XCTAssertEqual(far.triangleCount, 596)
+        for model in [boat, far] {
+            XCTAssertEqual(model.maximum.x - model.minimum.x, Map3DFerry.Boat.liuqiu.length, accuracy: 0.01, model.name)
+            XCTAssertEqual(model.maximum.y - model.minimum.y, Map3DFerry.Boat.liuqiu.beam, accuracy: 0.01, model.name)
+            XCTAssertEqual(model.minimum.z, -0.8, accuracy: 0.01, model.name)
+            XCTAssertEqual(model.maximum.z, 9.45, accuracy: 0.01, "\(model.name): its mast's top")
+            XCTAssertEqual(Set(model.vertices.filter(\.glows).map(\.color)), [CableParts.Paint.warm], model.name)
+            XCTAssertTrue(Set(model.vertices.map(\.color)).isSubset(of: Set(Map3DLiuqiuFerry.meshPalette)), model.name)
+        }
+        XCTAssertEqual(boat.vertices.filter(\.glows).count, 350 * 3)
+        XCTAssertEqual(far.vertices.filter(\.glows).count, 50 * 3)
+        XCTAssertFalse(Map3DFerry.Boat.liuqiu.isDoubleEnded, "one bow: it turns round")
+        // The wheelhouse's eye inside the boat, under its roof.
+        XCTAssertLessThan(Map3DFerry.Boat.liuqiu.bridgeFront, Map3DFerry.Boat.liuqiu.length / 2)
+        XCTAssertLessThan(Map3DFerry.Boat.liuqiu.bridgeEye, Map3DFerry.Boat.liuqiu.height)
+        XCTAssertLessThan(Map3DFerry.Boat.liuqiu.seatAcross, Map3DFerry.Boat.liuqiu.beam / 2)
+        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 3_999, in: .taiwan), .tamsui)
+        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 14_000, in: .taiwan), .liuqiu)
+        XCTAssertEqual(Map3DFerry.Boat.drawn(forMetres: 14_000, in: .hongKong), .hongKongOutlying)
     }
 
     func testTheDrawnModelsAreInTheGamesPack() {

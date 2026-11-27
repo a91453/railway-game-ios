@@ -31,7 +31,7 @@ extension GameSession {
         let isEnglish = english.map { RealRailways.stationKey($0) == key } ?? false
         let second: String?
         if isEnglish {
-            second = language == .english && station.system.namesInLatin ? nil : station.chinese
+            second = language.base == .english && station.system.namesInLatin ? nil : station.chinese
         } else {
             second = english
         }

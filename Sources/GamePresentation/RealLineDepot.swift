@@ -54,6 +54,13 @@ struct RealLineDepotSite: Sendable {
     /// one lies (``RealLineDepotLayout/Strip``); `nil` for one fanned
     /// along a lead.
     var strip: Strip? = nil
+    /// Decision 1030: for a depot beside the line, the end station (by
+    /// its name in the timetable) whose trains it stables overnight, as a
+    /// depot past that end would: Tomiai's, 8 km from Kumamoto, where
+    /// Kumamoto to Shin-Minamata's day starts and ends. `nil`: a depot
+    /// beside the line stables only the trains standing overnight at the
+    /// stations between the ends, as before.
+    var stablesFor: String? = nil
 
     /// Decision 602: where a fanned yard's lead runs and how its sidings
     /// split. The lead goes on from the line's end through `leads` (the
@@ -344,6 +351,26 @@ struct RealLineDepotSite: Sendable {
         sidings: 8, beyond: "熊本", compact: true
     )
 
+    /// Decision 1030 (KYUSHU-SHINKANSEN-MINAMATA): Kumamoto to
+    /// Shin-Minamata's depot, the real one, JR Kyushu's Kumamoto General
+    /// Rolling Stock Depot (熊本総合車両所, landuse way 732086837) at
+    /// Tomiai, beside the line east of it 8.45 km south of Kumamoto, as
+    /// the High Speed Rail's Wuri depot is (``thsrWuri``). Its lead leaves
+    /// the line at (32.716903, 130.673816) and runs 1.47 km south to the
+    /// yard, whose thirteen 288 m stabling tracks run from round 32.7038,
+    /// 130.6722 to 32.7012, 130.6717
+    /// (`tools/fukuoka-map/kyushu-shinkansen-south/depot.json`, osmtoday's
+    /// whole extract of Kyushu, 2026-11-27). JR Kyushu publishes no
+    /// stabling plan; its sidings hold the line's three sets, one each.
+    /// Hakata to Kumamoto keeps the depot of its own past Kumamoto
+    /// (``kumamoto``), laid before this line is.
+    static let tomiai = RealLineDepotSite(
+        line: "kyushushinkansen:KS2", english: "Kumamoto General Depot", chinese: "熊本綜合車輛所",
+        junction: (32.716903, 130.673816),
+        yard: ((32.703771, 130.672198), (32.701221, 130.671665)),
+        sidings: 3, beyond: nil, compact: false, stablesFor: "熊本"
+    )
+
     /// THSR-SALE (decision 993): the High Speed Rail's depot past Nangang,
     /// its north end, on from its track there along the real line's way
     /// east, where the real Nangang sidings (南港留置線, ``HighSpeedDemo/realDepots``)
@@ -393,7 +420,7 @@ struct RealLineDepotSite: Sendable {
     /// one past Shuangcheng; decision 556, the Taoyuan Airport MRT two
     /// beside the line).
     static func sites(of line: String) -> [RealLineDepotSite] {
-        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan, hashimoto, kumamoto, thsrNangang, thsrWuri, thsrZuoying].filter { $0.line == line }
+        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan, hashimoto, kumamoto, tomiai, thsrNangang, thsrWuri, thsrZuoying].filter { $0.line == line }
     }
 
     /// Decision 556: whether its sidings fan out away from the line, not
@@ -407,7 +434,8 @@ struct RealLineDepotSite: Sendable {
     /// are laid only on the second track's side, as they were.
     /// THSR-SALE (decision 993): and the High Speed Rail's Wuri depot,
     /// east of the line.
-    var mayLeaveTheFirstTrack: Bool { line.hasPrefix("hkmtr:") || line == "thsr_sched:THSR" }
+    /// Decision 1030: and Tomiai's, east of the line.
+    var mayLeaveTheFirstTrack: Bool { line.hasPrefix("hkmtr:") || line == "thsr_sched:THSR" || line == "kyushushinkansen:KS2" }
 
     func name(in language: DisplayLanguage) -> String {
         language.text(english, chinese)

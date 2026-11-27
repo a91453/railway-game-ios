@@ -855,10 +855,12 @@ extension Map3DScene.Builder {
         // way at its grade. Over the water at the model's middle, where the
         // landmark is set (``Map3DLandmarkRegistration/sink``), so a chunk
         // built apart finds the same height.
-        for arch in archBridges() {
+        let arches = archBridges()
+        for arch in arches {
             let reach = Double(Map3DSuspensionBridge.corridor), spacing: Float = 25
             let flat = Float(reach) + spacing / 2, last = arch.deck.half - flat
-            let water = drawnGround(x: arch.middle.x, z: arch.middle.z)
+            // Decision 1033: a long bridge's on the lowest ground under its piers.
+            let water = foot(of: arch)
             var holds: [Point] = [], raised: [Int: Map3DBaseMap.RoadKind] = [:]
             let count = Int((2 * last / spacing).rounded(.up))
             for step in 0...count {
@@ -894,7 +896,8 @@ extension Map3DScene.Builder {
             let rise = Map3DRoadBridges.rise(ofLevel: level)
             let cuttings = overCutting[deck], near = Double(Map3DRoadBridges.plateau) * Double(Map3DRoadBridges.plateau)
             if length >= Map3DRoadBridges.culvert {
-                for (_, wet) in overWater[deck].sorted(by: { ($0.key.row, $0.key.column) < ($1.key.row, $1.key.column) }) {
+                for (_, wet) in overWater[deck].sorted(by: { ($0.key.row, $0.key.column) < ($1.key.row, $1.key.column) })
+                    where !arches.contains(where: { $0.covers(x: Float(wet.point.x), z: Float(wet.point.z)) }) {
                     let ground = drawnGround(x: Float(wet.point.x), z: Float(wet.point.z))
                     bounds[deck].append(.init(point: wet.point, height: ground + Map3DRoadBridges.overWater, isFloor: true,
                                               flat: Map3DRoadBridges.wetFlat))
@@ -903,6 +906,10 @@ extension Map3DScene.Builder {
             let lifts = length < Map3DRoadBridges.culvert ? [] : crossings[deck].sorted { ($0.key.row, $0.key.column) < ($1.key.row, $1.key.column) }
                 .filter { lift in !cuttings.contains { ($0.x - lift.value.x) * ($0.x - lift.value.x) + ($0.z - lift.value.z) * ($0.z - lift.value.z) <= near } }
                 .map { (point: $0.value, rise: rise) }
+                // Decision 1033: on a landmark bridge the deck's own
+                // height holds, not a crossing's (西螺大橋's 8.5 m over the
+                // riverside road at its north bank).
+                .filter { lift in !arches.contains { $0.covers(x: Float(lift.point.x), z: Float(lift.point.z)) } }
             result.decks.append(.init(lifts: lifts, grade: Map3DRoadBridges.grade(kind), bounds: bounds[deck]))
         }
         result.pieces = bridges.enumerated().map { number, bridge in

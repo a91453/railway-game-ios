@@ -66,6 +66,25 @@ extension DataSourceCredits {
                         openStreetMapCopyright(in: language),
                     ]
                 ),
+                // Decision 1029: the Sanyo Shinkansen, Hakata to Kokura
+                // (`MapPacks/fukuoka/sanyoshinkansen.json`).
+                DataSourceCredit(
+                    id: "sanyoShinkansen",
+                    title: language.text("Sanyo Shinkansen", "山陽新幹線"),
+                    detail: language.text(
+                        "JR West’s Sanyo Shinkansen from Hakata to Kokura, with its two stations’ names in Chinese, English and Japanese, at estimated times.",
+                        "JR西日本山陽新幹線博多到小倉，兩個車站有中文、英文與日文站名，照估計的時刻行駛。"
+                    ),
+                    notice: language.text(
+                        "Stations and their Japanese names: made by processing “National Land Numerical Information (Railway Data)” (Ministry of Land, Infrastructure, Transport and Tourism), CC BY 4.0 (「国土数値情報（鉄道データ）」（国土交通省）を加工して作成). Track, tunnels and viaducts: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with West Japan Railway Company or the Government of Japan.",
+                        "車站與日文站名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成，CC BY 4.0。軌道、隧道與高架：© OpenStreetMap 貢獻者，ODbL 1.0。本遊戲與西日本旅客鐵道、日本政府沒有任何關係。"
+                    ),
+                    links: [
+                        landNumericalRailwayData(in: language),
+                        ccByLicense,
+                        openStreetMapCopyright(in: language),
+                    ]
+                ),
                 // FUKUOKA-GROUND: the pack's base map, buildings, heights and people.
                 DataSourceCredit(
                     id: "fukuokaMap",

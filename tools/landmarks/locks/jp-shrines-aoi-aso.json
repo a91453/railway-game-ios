@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark jp-shrines-aoi-aso: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "jp-shrines-aoi-aso" : {
+      "hash" : "59b43a015d8c4ce8",
+      "triangles" : 2108
+    },
+    "jp-shrines-aoi-aso-far" : {
+      "hash" : "730908d6486f2117",
+      "triangles" : 976
+    }
+  }
+}
