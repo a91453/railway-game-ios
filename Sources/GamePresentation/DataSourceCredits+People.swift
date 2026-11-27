@@ -32,6 +32,26 @@ extension DataSourceCredits {
                         openGovernmentLicense(in: language),
                     ]
                 ),
+                // Decision 1025 (REAL-LAND-PRICE): how dear each place's
+                // land is, from the real-price registry's sales
+                // (`tools/real-land-price/`).
+                DataSourceCredit(
+                    id: "landPrice",
+                    title: language.text("Land prices", "地價"),
+                    detail: language.text(
+                        "How dear land is in each place of a real-world map of Taiwan, against the rest of the country: what buying land for your buildings costs, what they let for, and what clearing homes and shops for a line costs.",
+                        "台灣實景地圖上每個地方的地比全台貴或便宜多少：替公司建物買地、建物的租金、蓋路線拆遷房子店家要付多少，都照這個算。"
+                    ),
+                    notice: language.text(
+                        "Ministry of the Interior, Department of Land Administration: real-price registry of real estate transactions, sales of 2021 to 2026; Ministry of the Interior: township boundaries; and the door-number points of Taiwan’s cities and counties by their governments, through OpenAddresses and Overture Maps. Used under the Open Government Data License, version 1.0. The game takes each sale’s land price over the country’s median of the same zone, on cells of about 230 m.",
+                        "內政部地政司「不動產買賣實價登錄批次資料」（110 至 115 年的買賣）、內政部「鄉鎮市區界線」、各縣市政府的門牌坐標（經 OpenAddresses、Overture Maps 取得），依「政府資料開放授權條款第 1 版」使用。遊戲把每筆買賣的土地單價和全台同類分區的中位數相比，每格約 230 公尺。"
+                    ),
+                    links: [
+                        DataSourceCredit.Link(title: language.text("Real-price registry", "不動產買賣實價登錄批次資料"), url: "https://data.gov.tw/dataset/18703"),
+                        DataSourceCredit.Link(title: "OpenAddresses", url: "https://openaddresses.io"),
+                        openGovernmentLicense(in: language),
+                    ]
+                ),
                 // Decision 298: the real stations' riders a day, which
                 // the transfers of a station by one follow
                 // (`tools/real-ridership/`).

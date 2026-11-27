@@ -20,7 +20,7 @@
 /// next one.
 public struct SavedGame: Equatable, Sendable {
     /// The version this build writes.
-    public static let currentVersion = 115
+    public static let currentVersion = 116
 
     public let world: GameWorld
 
@@ -315,6 +315,9 @@ extension SavedGame: Codable {
         // Version 114 to 115: a map the player opened whole from the start
         // says so (decision 992). Earlier saves never were one: nothing to
         // turn.
+        // Version 115 to 116: a map's land can say how dear its place is
+        // (`"landLocations"`, decision 1025). Earlier saves hold none, and
+        // their land is worth what it was: nothing to turn.
         self.world = world
     }
 
