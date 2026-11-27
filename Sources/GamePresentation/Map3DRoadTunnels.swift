@@ -13,6 +13,19 @@ extension Map3DScene.Builder {
     /// into a hill. Less (a city's underpass, a covered street), none.
     static let roadTunnelRise: Float = 4
     static let riseReach: Float = 40
+    /// Decision 611 (later, ROAD-TUNNEL-FLAT): where the drawn ground does
+    /// not rise, a tunnel whose way in runs under wood (the tiles' wood
+    /// cover) is still taken into a hill: at the points every
+    /// ``tunnelWoodStep`` metres in, as far as ``Map3DBaseMap/tunnelReach``,
+    /// at least ``tunnelWoodShare`` of them under wood, and its line in at least
+    /// ``tunnelWoodReach`` long. The 1.875″ grid's mean heights smooth a
+    /// low wooded ridge away (a trunk road's tunnel west of 諫早, drawn
+    /// level): the road stopped short of a green hill that is not drawn,
+    /// with no portal. A city's underpass runs under streets and
+    /// buildings, not wood.
+    static let tunnelWoodStep: Double = 12
+    static let tunnelWoodShare: Double = 0.6
+    static let tunnelWoodReach: Double = 30
     /// Rising less than this over the first ``galleryReach`` metres, the
     /// hillside starts further in: a gallery (明隧道) reaches out to it.
     static let galleryRise: Float = 1.5
@@ -60,8 +73,8 @@ extension Map3DScene.Builder {
     /// The portals of `ends` the scene stands: an end whose ground rises
     /// into a hill, two freeway carriageways side by side (facing the same
     /// way within 10°, 6 to 14 m apart across, 12 m along) as one pair.
-    mutating func roadPortals(_ ends: [Map3DBaseMap.TunnelEnd]) -> [RoadPortal] {
-        struct Found { let end: Map3DBaseMap.TunnelEnd; let point: Map3DPoint; let into: Map3DPoint; let rise: (Float) -> Float }
+    mutating func roadPortals(_ ends: [Map3DBaseMap.TunnelEnd], areas: [Map3DBaseMap.Area] = []) -> [RoadPortal] {
+        struct Found { let end: Map3DBaseMap.TunnelEnd; let point: Map3DPoint; let into: Map3DPoint; let rise: (Float) -> Float; var wooded = false }
         var found: [Found] = []
         for end in ends {
             let start = Map3DPoint(Float(end.point.x), 0, Float(end.point.z))
@@ -77,8 +90,9 @@ extension Map3DScene.Builder {
                 samples.append((step, drawnGround(x: at.x, z: at.z) - ground))
             }
             func rise(_ within: Float) -> Float { samples.filter { $0.0 <= within }.map(\.1).max() ?? 0 }
-            guard rise(Self.riseReach) >= Self.roadTunnelRise else { continue }
-            found.append(Found(end: end, point: Map3DPoint(start.x, ground, start.z), into: into, rise: rise))
+            let hill = rise(Self.riseReach) >= Self.roadTunnelRise
+            guard hill || Self.runsUnderWood(end, areas: areas) else { continue }
+            found.append(Found(end: end, point: Map3DPoint(start.x, ground, start.z), into: into, rise: rise, wooded: !hill))
         }
         // Decision 661 (review L13-7): the ends in an order of their own
         // (by place), and the pairs closest first, so that the portals do
@@ -102,7 +116,9 @@ extension Map3DScene.Builder {
                 let back = (middle - a).dot(into) - min(0, (b - a).dot(into))
                 point = Map3DPoint(middle.x - into.x * back, min(a.y, b.y), middle.z - into.z * back)
             }
-            let gentle = one.rise(Self.galleryReach) < Self.galleryRise
+            // ROAD-TUNNEL-FLAT: under wood on ground drawn level, the
+            // portal's own hillside is the hill: a head wall, not a gallery.
+            let gentle = !one.wooded && one.rise(Self.galleryReach) < Self.galleryRise
             let (style, width) = Self.portalStyle(kind: one.end.kind, oneway: one.end.oneway, ramp: one.end.isRamp, paired: paired, gentle: gentle)
             // The lining's depth: where the ground inside first rises
             // ``liningRise`` over the road.
@@ -155,7 +171,7 @@ extension Map3DScene.Builder {
         let kept = target
         target = .near
         defer { target = kept }
-        let portals = roadPortals(ends)
+        let portals = roadPortals(ends, areas: areas)
         let zones = portals.map(Self.clearZone)
         for (index, portal) in portals.enumerated() {
             var built = Map3DMesh()
@@ -163,6 +179,33 @@ extension Map3DScene.Builder {
             addRoadPortal(portal, cover: Self.cover(at: portal.point, in: areas), clear: others, into: &built)
             mesh(at: portal.point) { $0.append(built) }
         }
+    }
+
+    /// Decision 611 (later, ROAD-TUNNEL-FLAT): whether `end`'s way in runs
+    /// under wood of `areas` (``tunnelWoodStep``, ``tunnelWoodShare``, ``tunnelWoodReach``).
+    static func runsUnderWood(_ end: Map3DBaseMap.TunnelEnd, areas: [Map3DBaseMap.Area]) -> Bool {
+        let woods = areas.filter { $0.cover == .wood }
+        guard !woods.isEmpty else { return false }
+        var points: [Map3DBaseMap.Point] = []
+        var travelled = 0.0, mark = tunnelWoodStep
+        for (a, b) in zip(end.inward, end.inward.dropFirst()) {
+            let dx = b.x - a.x, dz = b.z - a.z, length = (dx * dx + dz * dz).squareRoot()
+            guard length > 1e-6 else { continue }
+            while mark <= travelled + length {
+                let t = (mark - travelled) / length
+                points.append(Map3DBaseMap.Point(x: a.x + dx * t, z: a.z + dz * t))
+                mark += tunnelWoodStep
+            }
+            travelled += length
+        }
+        guard travelled >= tunnelWoodReach, !points.isEmpty else { return false }
+        let under = points.filter { p in
+            woods.contains { area in
+                guard area.bounds.minX <= p.x, p.x <= area.bounds.maxX, area.bounds.minZ <= p.z, p.z <= area.bounds.maxZ else { return false }
+                return area.rings.reduce(0) { count, ring in count + (Self.contains(ring, x: p.x, z: p.z) ? 1 : 0) } % 2 == 1
+            }
+        }
+        return Double(under.count) >= Double(points.count) * tunnelWoodShare
     }
 
     /// Decision 611 (#1925's review, 1): the hillside's colour and paint, as
