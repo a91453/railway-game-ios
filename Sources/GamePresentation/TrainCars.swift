@@ -50,6 +50,26 @@ public enum TrainCars {
         pitch == Double(Train.carLength) || pitch <= 0 ? drawnCarLength / 2 : 0
     }
 
+    /// TURNBACK (the owner's report of 2026-11-27): how much further ahead
+    /// of its head than `lead` to lay the nose of a train turned round at
+    /// a terminus, its cars `needed` long end to end and its body (head to
+    /// tail, ``Train/length``) `body`, its tail `room` from the end of the
+    /// platform it was turned round at (``TrainMotion/Run/turnRoom``).
+    ///
+    /// GameCore turns a train round with its head where its tail was, and
+    /// its cars are drawn from a nose at its head (decision 565), so the
+    /// car more than its body that stood inside the platform behind its
+    /// tail as it pulled in would lie past the end it stopped at once it
+    /// was turned: a whole car past the end of a terminus's track. What
+    /// does not fit behind its tail is laid ahead of its head instead, so
+    /// the turned train stands where it stood and pulls out from there,
+    /// its cars still while the head covers that much. 0 for any other
+    /// train (`room` `nil`).
+    static func turnShift(room: Double?, needed: Double, lead: Double, body: Double) -> Double {
+        guard let room else { return 0 }
+        return max(0, needed - lead - body - room)
+    }
+
     /// How many cars a train of `length` (``Train/length``, world units
     /// from its first car's centre to its last's) has, its cars
     /// `carPitch` apart (``Train/carPitch``, ``TrainMotion/Run/carPitch``;
@@ -66,13 +86,17 @@ public enum TrainCars {
     ///
     /// Decision 538: along `track` (``TrainMotion/Run/track(at:)``) past
     /// the body's two ends, as far as it goes, rather than straight on.
+    ///
+    /// TURNBACK: `turnRoom` (``TrainMotion/Run/turnRoom(at:)``), how far
+    /// its tail is from the end of the platform it was turned round at.
     public static func cars(
         body: [TrainMotion.Point], heading: TrainMotion.Point, count: Int, gap: Double = 0,
         length: Double = drawnCarLength, lead: Double = 0,
-        track: (ahead: [TrainMotion.Point], behind: [TrainMotion.Point])? = nil
+        track: (ahead: [TrainMotion.Point], behind: [TrainMotion.Point])? = nil, turnRoom: Double? = nil
     ) -> [[TrainMotion.Point]] {
         guard count > 0, length > 0,
-              let trail = spine(body: body, heading: heading, lead: lead, needed: length * Double(count), track: track) else { return [] }
+              let trail = spine(body: body, heading: heading, lead: lead, needed: length * Double(count), track: track, turnRoom: turnRoom)
+        else { return [] }
         let trim = min(max(gap, 0), length / 2) / 2
         return (0..<count).map { index in
             let front = Double(index) * length
@@ -100,9 +124,13 @@ public enum TrainCars {
         let count = count(length: run.length, carPitch: run.carPitch)
         let length = carLength(pitch: run.carPitch), lead = noseLead(pitch: run.carPitch)
         let along = run.lag * (1 - min(max(progress, 0), 1))
+        // TURNBACK: turned round at a terminus, what of it does not fit
+        // behind its tail lies ahead of its head.
+        let room = run.turnRoom(at: progress)
+        let shift = turnShift(room: room, needed: length * Double(count), lead: lead, body: run.length)
         // Where the nose is along the trail: before its start (negative),
         // on the track ahead of the head now.
-        let nose = along - lead
+        let nose = along - lead - shift
         let trail = run.trail, ahead = run.aheadTrail
         if nose + length * Double(count) <= trail.length, -nose <= ahead.length {
             return (0..<count).map { index in
@@ -111,7 +139,8 @@ public enum TrainCars {
                 return Array(ahead.points(from: 0, to: -front).reversed()) + trail.points(from: 0, to: back).dropFirst()
             }
         }
-        return cars(body: run.body(at: progress), heading: head.heading, count: count, length: length, lead: lead, track: run.track(at: progress))
+        return cars(body: run.body(at: progress), heading: head.heading, count: count, length: length, lead: lead, track: run.track(at: progress),
+                    turnRoom: room)
     }
 
     /// Decision 399: the cars of a train drawn at their own `lengths`
@@ -138,7 +167,7 @@ public enum TrainCars {
     /// cars make, a hair shorter).
     public static func cars(
         body: [TrainMotion.Point], heading: TrainMotion.Point, lengths: [Double], gaps: [Double], real: Double? = nil, lead: Double = 0,
-        track: (ahead: [TrainMotion.Point], behind: [TrainMotion.Point])? = nil
+        track: (ahead: [TrainMotion.Point], behind: [TrainMotion.Point])? = nil, turnRoom: Double? = nil
     ) -> [[TrainMotion.Point]] {
         var whole = 0.0
         for (index, length) in lengths.enumerated() { whole += length + (index < gaps.count ? gaps[index] : 0) }
@@ -154,7 +183,8 @@ public enum TrainCars {
             fronts.append(front)
             front += (length + (index < gaps.count ? gaps[index] : 0)) * scale
         }
-        guard !lengths.isEmpty, let trail = spine(body: body, heading: heading, lead: lead, needed: front, track: track) else { return [] }
+        guard !lengths.isEmpty, let trail = spine(body: body, heading: heading, lead: lead, needed: front, track: track, turnRoom: turnRoom)
+        else { return [] }
         return lengths.indices.map { trail.points(from: fronts[$0], to: fronts[$0] + lengths[$0] * scale) }
     }
 
@@ -164,12 +194,14 @@ public enum TrainCars {
     /// straight on, at least `needed` long. Decision 538: with `track`,
     /// the nose and what lies past the tail along it, as far as it goes:
     /// on a sharp curve, laid straight on, the last car swung metres off
-    /// the track (104.1, Zhuzhong's viaduct platform).
+    /// the track (104.1, Zhuzhong's viaduct platform). TURNBACK: further
+    /// ahead by ``turnShift(room:needed:lead:body:)`` given `turnRoom`.
     private static func spine(
         body: [TrainMotion.Point], heading: TrainMotion.Point, lead: Double, needed: Double,
-        track: (ahead: [TrainMotion.Point], behind: [TrainMotion.Point])? = nil
+        track: (ahead: [TrainMotion.Point], behind: [TrainMotion.Point])? = nil, turnRoom: Double? = nil
     ) -> TrainMotion.Trail? {
         guard let head = body.first else { return nil }
+        let lead = lead + turnShift(room: turnRoom, needed: needed, lead: lead, body: TrainMotion.Trail(body).length)
         let forward = unit(heading) ?? backward(body).map { TrainMotion.Point(x: -$0.x, y: -$0.y) } ?? TrainMotion.Point(x: 1, y: 0)
         var spine: [TrainMotion.Point] = []
         if lead > 0 {

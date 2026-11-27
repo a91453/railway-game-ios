@@ -201,6 +201,17 @@ public struct TrainMotion: Sendable {
         /// Decision 837: what it carries, for a freight line's train
         /// (``Map3DFreightLoad``); empty for any other.
         public internal(set) var freightLoad: Map3DFreightLoad = .empty
+        /// TURNBACK (2026-11-27): pulling out of the stop where GameCore
+        /// turned it round, how far its tail is from the end of that stop's
+        /// platform behind it, in world units
+        /// (``TrainTrackReach/turnRoom(of:in:)``); `nil` otherwise.
+        var turnRoom: Double?
+
+        /// TURNBACK: ``turnRoom`` at `progress`, where its tail was then:
+        /// nearer the platform's end before it moved on.
+        func turnRoom(at progress: Double) -> Double? {
+            turnRoom.map { max(0, $0 - lag * (1 - min(max(progress, 0), 1))) }
+        }
 
         /// Its head at `progress` from the last tick (0) to now (1): where
         /// and which way it faces.
@@ -378,7 +389,7 @@ public struct TrainMotion: Sendable {
                 livery: TrainLivery.of(type: train.type, performance: train.performance),
                 trail: trail, lag: lag, length: Double(train.length), carPitch: Double(train.carPitch), heading: heading,
                 aheadTrail: Trail(TrainTrackReach.front(of: train, in: world).map(Point.init)), bodyEnd: bodyEnd,
-                freightLoad: loads[train.id] ?? .empty
+                freightLoad: loads[train.id] ?? .empty, turnRoom: TrainTrackReach.turnRoom(of: train, in: world).map(Double.init)
             ))
         }
         self.runs = runs
