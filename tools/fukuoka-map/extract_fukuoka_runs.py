@@ -65,11 +65,11 @@ def main(folder):
     # platform before the one standing there has gone, and with one track
     # waited at Shin-Tosu (24 runs a day late).
     # Decision 1030: Shin-Minamata, where the trains from Kumamoto turn
-    # round in ten minutes (`build_kyushu_shinkansen_south.FAR_TURN`),
-    # with two tracks, so a late train in does not hold the next one at
-    # Shin-Yatsushiro; the real station's are uncertain (two side
-    # platforms or 2面3線, the Duet research of 2026-11-27).
-    tool.TRACKS_AT_LEAST = {f"{SHINKANSEN}:KS": {"博多": 2}, f"{SHINKANSEN}:KS2": {"新水俁": 2}}
+    # round in eighteen minutes (`build_kyushu_shinkansen_south.FAR_TURN`),
+    # with the real station's three tracks (2面3線, 11-13: JR Kyushu's
+    # station plan via the Duet research of 2026-11-27), so a late train
+    # in does not hold the next one at Shin-Yatsushiro.
+    tool.TRACKS_AT_LEAST = {f"{SHINKANSEN}:KS": {"博多": 2}, f"{SHINKANSEN}:KS2": {"新水俁": 3}}
     out = os.path.join(folder, "metro_runs.json")
     tool.main(folder, out)
     with open(out, encoding="utf-8") as f:

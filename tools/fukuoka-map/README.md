@@ -266,4 +266,4 @@ python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/Ma
 - **車站**：N02 的熊本、新八代、新水俣（代碼 `KS07`–`KS09`）。熊本從博多—熊本的熊本點起，兩條線的月台才會並排，不會頭尾相接（決策 1030 §1）。
 - **班次是估計**：熊本 6:00 起，白天每小時、尖峰每 30 分，新水俣末班 23:00，每向 21 班，各站停，26 分 53 秒；新水俣折返 18 分（決策 1030 §1）。
 - **機廠**：真的熊本總合車輛所（富合，`depot.json`），接點離熊本 8.45 km，遊戲鋪 3 股，收熊本晚上的 3 組（`RealLineDepotSite.tomiai`）。
-- **新水俣**：2 股（`extract_fukuoka_runs.py` 的 `TRACKS_AT_LEAST`）；真實 2 面 3 線（Duet 研究）。
+- **新水俣**：3 股（`extract_fukuoka_runs.py` 的 `TRACKS_AT_LEAST`），照真實 2 面 3 線（JR 九州構內圖，Duet 研究）。

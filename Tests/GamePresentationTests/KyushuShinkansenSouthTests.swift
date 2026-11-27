@@ -38,7 +38,7 @@ final class KyushuShinkansenSouthTests: XCTestCase {
         XCTAssertEqual(real.filter { $0.calls.first?.station == "熊本" }.count, 21)
         XCTAssertTrue(real.allSatisfy { $0.passes.isEmpty && $0.calls.count == 3 }, "every train calls at every station")
         XCTAssertEqual(runs.overnight, ["熊本": 3], "every set spends the night at Kumamoto's end, in the depot")
-        XCTAssertEqual(runs.tracks["新水俁"], 2, "two tracks where the trains turn")
+        XCTAssertEqual(runs.tracks["新水俁"], 3, "the real station's three tracks where the trains turn")
 
         XCTAssertEqual(TrackGauge.ofRealLine(Self.id), .shinkansen)
         XCTAssertEqual(RealLineDepotSite.sites(of: Self.id).map(\.chinese), ["熊本綜合車輛所"])
@@ -119,7 +119,7 @@ final class KyushuShinkansenSouthTests: XCTestCase {
             let name = try XCTUnwrap(world.station(id: stop)?.name)
             let platforms = world.network.platforms(of: stop)
             if name != "熊本" {
-                XCTAssertEqual(platforms.count, 2, name)
+                XCTAssertEqual(platforms.count, name == "新水俁" ? 3 : 2, name)
             }
             for platform in platforms {
                 XCTAssertEqual(Double(platform.end - platform.start) / metre, 200, accuracy: 0.5, name)
