@@ -200,10 +200,9 @@ public enum LinesListPart: Hashable, Sendable {
     /// The lines, in groups or one section.
     case lines
     /// The rows that are not a line: the whole network, Advanced, New
-    /// Line… and the real lines for sale.
+    /// Line… and the real lines for sale. New Line… starts picking, which
+    /// puts the new line's form at the top (decision 1020).
     case entries
-    /// The new line's form, under its New Line… row when that is opened.
-    case newLine
 }
 
 /// Decision 486: how the lines panel shows its search, filter and sort
@@ -229,8 +228,8 @@ public enum LinesListControls: Equatable, Sendable {
     /// line follow them.
     public var parts: [LinesListPart] {
         switch self {
-        case .pinned: [.entries, .newLine, .lines]
-        case .inline: [.controls, .lines, .entries, .newLine]
+        case .pinned: [.entries, .lines]
+        case .inline: [.controls, .lines, .entries]
         }
     }
 

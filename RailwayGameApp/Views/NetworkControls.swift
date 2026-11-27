@@ -36,6 +36,17 @@ struct NetworkControls: View {
         // (``NetworkModeRow``), so it never scrolls away under a tall
         // inspector at large text (AI tester round 1, 2026-11-23).
         VStack(alignment: .leading, spacing: 8) {
+            // Decision 1020: two stations just built and joined by track
+            // lead straight on to their line, above what the mode shows.
+            if let offer = session.lineFromBuiltTrack, session.networkMode == .build || session.networkMode == .platform {
+                LineFromBuiltTrackRow(session: session, offer: offer) {
+                    // Build first: leaving it clears the status line,
+                    // which then says the line is ready.
+                    session.selectTool(.select)
+                    session.startLineFromBuiltTrack()
+                    screen?.panel = .lines
+                }
+            }
             switch session.networkMode {
             case .build:
                 buildOptions
@@ -683,6 +694,45 @@ struct NetworkControls: View {
 /// each stretch between the rail and the ground in the colour of what
 /// carries it, the ground's line and the rail's over them; the heights at
 /// the top and bottom, the length, and a key of the kinds it shows.
+/// Decision 1020: the line between two stations the track tools just
+/// built, offered on the build card: what it joins, and the button that
+/// leaves Build for Lines with the line ready.
+private struct LineFromBuiltTrackRow: View {
+    let session: GameSession
+    let offer: LineFromBuiltTrack
+    let start: () -> Void
+
+    var body: some View {
+        let language = session.language
+        let from = session.world.station(id: offer.from)?.name ?? ""
+        let to = session.world.station(id: offer.to)?.name ?? ""
+        VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: offer.title(from: from, to: to, in: language))
+                .font(.footnote.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(verbatim: offer.detail(in: language))
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button(action: start) {
+                Label {
+                    Text(verbatim: LineFromBuiltTrack.buttonTitle(in: language))
+                        .font(.subheadline.weight(.semibold))
+                } icon: {
+                    Image(systemName: "point.3.connected.trianglepath.dotted")
+                }
+                .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(ThemeProminentButtonStyle())
+            .accessibilityIdentifier("network.lineFromTrack")
+        }
+        .padding(10)
+        .background(Theme.primary.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("network.lineFromTrackCard")
+    }
+}
+
 private struct LongSectionView: View {
     let chart: LongSectionChart
     let length: Int64

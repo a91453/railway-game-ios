@@ -91,9 +91,6 @@ struct LinesPanel: View {
     /// where it waits behind a button.
     @State private var searchOpened = false
     @FocusState private var searchFocused: Bool
-    /// Decision 196: whether the new line's form shows while the lines
-    /// come first.
-    @State private var showsNewLine = false
     /// Decision 481: the pages over the list of lines; the line page
     /// follows ``GameSession/openedLine``.
     @State private var path: [LinesPanelPage] = []
@@ -317,8 +314,6 @@ struct LinesPanel: View {
         .task(id: modeShiftKey) {
             await workOutModeShift(modeShiftKey)
         }
-        // Decision 196: a line made from the unfolded form folds it again.
-        .onChange(of: session.world.lines.count) { showsNewLine = false }
         .onAppear { sortLinesNow() }
         .onChange(of: lineSort) { sortLinesNow() }
         // The pattern's stops are indices into the selected line's:
@@ -394,27 +389,25 @@ struct LinesPanel: View {
         case .controls: inlineControlsSection
         case .lines: listedLines
         case .entries: entriesSection
-        case .newLine:
-            if showsNewLine {
-                draftSection
-            }
         }
     }
 
     /// The new line's form folded into one row while the lines come first
-    /// (decision 196); picking a station puts it back at the top.
+    /// (decision 196). Decision 1020 (the owner, 2026-11-27: 「按新路線每次
+    /// 都要往下滑3次」): the row starts picking on the map at once, which
+    /// puts the form at the top of the panel (``listsLinesFirst``), its
+    /// Pick on Map in view, rather than unfolding it under the list.
     private var newLineButton: some View {
         Button {
-            withAnimation(MotionRule.change.layout(reduceMotion: reduceMotion)) { showsNewLine.toggle() }
+            session.startPickingLineStops()
         } label: {
             Label {
                 Text(verbatim: session.language.text("New Line…", "新路線…"))
             } icon: {
-                Image(systemName: showsNewLine ? "chevron.down" : "plus.circle")
+                Image(systemName: "plus.circle")
             }
         }
         .accessibilityIdentifier("line.new")
-        .accessibilityAddTraits(showsNewLine ? .isSelected : [])
     }
 
     /// Decision 481: the rows over the short list (under it on a short

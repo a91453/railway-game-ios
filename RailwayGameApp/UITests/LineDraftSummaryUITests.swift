@@ -42,15 +42,17 @@ final class LineDraftSummaryUITests: XCTestCase {
         tap(app.buttons["entry.lines"])
         // Both maps open with lines, so the panel lists them first and folds
         // the new line's form into "New Line…" below them (decision 196),
-        // off the screen on a phone: scrolled to, not waited for.
+        // off the screen on a phone: scrolled to, not waited for. Decision
+        // 1020: the row starts picking, and the form comes to the top.
         if !app.buttons["Add Selected Station"].appears(within: 3) {
             let newLine = app.buttons["line.new"]
             reveal(newLine)
             tap(newLine)
             // A tap while the list still glides only stops it (run
-            // 39456665951): the row is selected once its form is open.
-            if !isSelected(newLine, within: 3) { tap(newLine) }
-            XCTAssertTrue(isSelected(newLine, within: 3), "The new line's form did not open")
+            // 39456665951): the form is open once its Pick on Map shows.
+            let pick = app.buttons["line.draft.pick"]
+            if !pick.appears(within: 3), newLine.exists { tap(newLine) }
+            XCTAssertTrue(pick.appears(within: 3), "The new line's form did not open")
         }
         reveal(app.buttons["Add Selected Station"])
         tap(app.buttons["Add Selected Station"])
@@ -105,15 +107,6 @@ final class LineDraftSummaryUITests: XCTestCase {
         XCTAssertTrue(control.becomesHittable(within: 10), "Covered \(control)")
         control.waitUntilSettled()
         control.tap()
-    }
-
-    private func isSelected(_ control: XCUIElement, within timeout: TimeInterval) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        while !(control.exists && control.isSelected) {
-            guard Date() < deadline else { return false }
-            Thread.sleep(forTimeInterval: 0.1)
-        }
-        return true
     }
 
     /// `above`: the row is above the list's place, as the draft's summary
