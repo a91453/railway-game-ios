@@ -1162,7 +1162,7 @@ extension Map3DScene.Builder {
                     seed: lifeSeed(path.points[0], salt: 256), buses: !road.isRamp && Self.busRoutes.contains(kind))
                 lane.collects = !road.isRamp && Self.collectionRounds.contains(kind)
                 lane.oneWayStreet = road.oneway && !road.isRamp && kind != .motorway
-                if let outline = taipeiOutline {
+                if let outline = state.streets.taipeiOutline {
                     let metre = Double(WorldCoordinate.unitsPerMetre)
                     lane.taipei = Map3DStreetScooters.contains(outline, x: Double(middle.x) * metre + originX, y: Double(middle.z) * metre + originY)
                 }

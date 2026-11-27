@@ -98,6 +98,17 @@ final class Map3DStreetScootersTests: XCTestCase {
         XCTAssertNil(Map3DStreetScooters.taipei(in: nil, region: .taiwan))
     }
 
+    /// A scene round Taipei Main Station from the base map marks its
+    /// lanes in the city as Taipei's.
+    func testTaipeisLanesAreMarked() throws {
+        let tiles = try BaseMapTiles(data: Data(contentsOf: Map3DFrameCostReportTests.baseMap.appendingPathComponent("taiwan.pmtiles"),
+                                                options: .alwaysMapped))
+        let world = GameWorld.newGame(anchor: try XCTUnwrap(GeoAnchor(latitudeDegrees: 25.0478, longitudeDegrees: 121.5170)))
+        let lanes = Map3DScene(world: world, baseMap: tiles, cityTiles: []).streetLife.lanes
+        XCTAssertGreaterThan(lanes.count, 100)
+        XCTAssertGreaterThan(lanes.filter(\.taipei).count, lanes.count / 2, "round Taipei Main, Taipei's")
+    }
+
     /// Decision 1037: the full scooters nearer, so a street costs no more
     /// triangles than with the program's ones at 350 m.
     func testTheFullScootersReach() {
