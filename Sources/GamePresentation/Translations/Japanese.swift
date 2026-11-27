@@ -1154,6 +1154,7 @@ Fullest train yesterday {0}%	昨日の最混雑列車 {0}%
 Fullest {0}: {1} riders with no trains	最混雑{0}：{1}人、列車なし
 Fullest {0}: {1} riders, {2}% of the seats	最混雑{0}：{1}人、座席の{2}%
 Funds	資金
+Funicular {0}	ケーブルカー{0}
 GSI terms of use	国土地理院の利用規約
 Gain or loss on sale (realized)	売却損益（実現）
 Game Center achievements	Game Centerの実績
@@ -2332,7 +2333,7 @@ Running trains	運行
 Running {0} over {1}, due {2}	{1}を{0}で走行、{2}着予定
 Runs as its line is planned.	路線の設定どおりに走ります。
 Runs off the map	地図の外に出る
-Runs today, 9:00–{0}:00	本日運行 9:00–{0}:00
+Runs today, {0}	本日運行 {0}
 Rush {0}	ラッシュ {0}
 S	南
 Sails today, 7:00–{0}:00	本日運航 7:00〜{0}:00

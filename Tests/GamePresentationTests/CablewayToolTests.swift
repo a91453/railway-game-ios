@@ -359,6 +359,79 @@ final class CablewayToolTests: XCTestCase {
         XCTAssertEqual(session.realCablewayOffers, [])
     }
 
+    /// Decision 1040: on a map of Central the mode offers the Peak Tram: six
+    /// stations that all board, 1,247 m, laid as a funicular whose card
+    /// gives its hours, 7:30 to 23:00 every day, and its two cars of 210.
+    func testThePeakTramIsOfferedAndLaidAsAFunicular() throws {
+        let session = try realSession(latitude: 22.2740, longitude: 114.1545, cells: 64)
+        XCTAssertEqual(session.realCablewayOffers.map(\.name), ["山頂纜車"])
+        session.traceRealCableway(.peakTram)
+        XCTAssertEqual(session.cablewayDraftKind, .funicular)
+        let stops = session.cablewayDraft
+        XCTAssertEqual(stops.count, 6)
+        XCTAssertTrue(stops.allSatisfy(\.boards), "all six board")
+        XCTAssertLessThan(stops[5].cell.column, stops[0].cell.column, "the Peak lies west")
+        XCTAssertGreaterThan(stops[5].cell.row, stops[0].cell.row, "and south")
+        let preview = try XCTUnwrap(session.cablewayPreview)
+        XCTAssertNil(preview.problem)
+        XCTAssertEqual(preview.stations, 6)
+        XCTAssertEqual(preview.metres, 1_247)
+        XCTAssertEqual(session.networkDraftText(), "6 站 · 1,247 公尺 · 全程 5 分")
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        XCTAssertNil(session.cablewayDraftKind)
+        let built = try XCTUnwrap(session.world.cableways.last)
+        XCTAssertEqual(built.kind, .funicular)
+        XCTAssertEqual(RealCableway.matching(built, in: session.world), .peakTram)
+        XCTAssertEqual(Map3DCableways.look(of: built, in: session.world), .peakTram)
+        XCTAssertTrue(Map3DCableways.CabinLook.peakTram.isPair)
+        XCTAssertEqual(CablewayCabins.numbers(of: built, pair: false).count, 2, "two cars, never a rope of cabins")
+        XCTAssertEqual(session.realCablewayOffers, [], "not once it is built")
+        let card = try XCTUnwrap(session.cablewayCard(built.id))
+        XCTAssertEqual(card.title, "纜索鐵路 \(built.id.rawValue)")
+        XCTAssertEqual(card.rows[1], "單向每小時 1,575 人 · 每人 \(Cableway.fare.moneyText)")
+        if card.runs { XCTAssertEqual(card.rows[2], "今天營運 7:30–23:00") }
+        XCTAssertFalse(card.rows.contains { $0.contains("班距") || $0.contains("每隔") }, "no headway on the card")
+    }
+
+    /// Decision 1040: the loop at the Peak Tram's speed and stops, and its
+    /// two cars standing one at each end while it is shut.
+    func testThePeakTramsLoopAndItsCarsAtRest() throws {
+        let session = try realSession(latitude: 22.2740, longitude: 114.1545, cells: 64)
+        session.traceRealCableway(.peakTram)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        let built = try XCTUnwrap(session.world.cableways.last)
+        let loop = CablewayCabins.loopSeconds(of: built)
+        XCTAssertEqual(loop, 2 * (15 + 31 + 40 + 96 + 28) + 2 * 5 * 20, "each span at 6 m/s, 20 s at every stop passed or turned at")
+        let cars = CablewayCabins.numbers(of: built, pair: false)
+        let shut = CablewayCabins.cabins(of: built, atSecond: 0, open: false).filter { cars.contains($0.number) }.map(\.place)
+        XCTAssertEqual(shut.count, 2)
+        XCTAssertNotEqual(shut[0], shut[1], "one at each end")
+    }
+
+    /// Decision 1040: the 3D map lays the Peak Tram on its real track,
+    /// some 1.25 km, and draws its two cars on
+    /// it, running at noon and standing at the ends at 3:00, never a
+    /// tower or a rope span.
+    func testTheMapDrawsThePeakTramsTwoCarsOnItsTrack() throws {
+        let session = try realSession(latitude: 22.2740, longitude: 114.1545, cells: 64)
+        session.traceRealCableway(.peakTram)
+        XCTAssertTrue(session.buildCableway(), session.message?.text ?? "")
+        let scene = Map3DScene(world: session.world)
+        let laid = Map3DCableways(world: session.world, scene: scene)
+        let line = try XCTUnwrap(laid.lines.first)
+        let track = try XCTUnwrap(line.track)
+        XCTAssertTrue(line.spans.isEmpty, "no rope overhead")
+        XCTAssertEqual(track.length, 1_250, accuracy: 40, "the real track")
+        let pack = Map3DModelPack.standard
+        let cars = Set(["set-hkPeakTram-single", "set-hkPeakTramFar-single"].compactMap { pack.index(of: $0) })
+        XCTAssertEqual(cars.count, 2)
+        let middle = track.point(at: track.length / 2).point
+        for second in [12.0 * 3_600, 3.0 * 3_600] {
+            let frame = laid.frame(second: second, eye: middle + Map3DPoint(80, 60, 0), target: middle, pack: pack)
+            XCTAssertEqual(frame.instances.filter { cars.contains($0.model) }.count, 2, "two cars at \(second)")
+        }
+    }
+
     /// With the Tung Chung Line bought, the cable car laid as it is meets
     /// MTR Tung Chung at its Tung Chung stop.
     func testTheNgongPingCableCarMeetsTungChung() throws {

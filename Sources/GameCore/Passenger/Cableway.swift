@@ -32,6 +32,12 @@
 // (`sunmoon-ropeway.js`). Neither carries riders or money (gap). The
 // Maokong Gondola's figures come from its operator's pages (gondola.taipei)
 // and, where those are silent, Wikipedia: decision 574 lists each one.
+//
+// Decision 1040: a cableway is a gondola lift unless it is a funicular
+// (``Cableway/Kind/funicular``, Hong Kong's Peak Tram): two cars on rails
+// up a slope, one rope between them. Riders, money and sightseers are a
+// gondola's; its speed, stops, hours and the weather it runs in are its
+// own (``Cableway/Kind``).
 
 /// Decision 586: how tourists reach a sight no station serves on foot:
 /// by train to ``station``, then on by ``feeder``
@@ -94,7 +100,60 @@ public struct CablewayDay: Hashable, Codable, Sendable {
 
 /// A cableway (decision 574).
 public struct Cableway: Hashable, Sendable {
+    /// Decision 1040: what runs on it.
+    public enum Kind: String, Hashable, Codable, Sendable {
+        /// A gondola lift (decision 574): cabins on a rope overhead.
+        case aerial
+        /// A funicular (Hong Kong's Peak Tram): two cars on rails up the
+        /// ground, one going up as the other comes down.
+        case funicular
+
+        /// The speed it runs at, metres a second: a gondola's
+        /// ``Cableway/metresPerSecond``; the Peak Tram's 6 (its operator).
+        public var metresPerSecond: Int64 {
+            self == .aerial ? Cableway.metresPerSecond : 6
+        }
+
+        /// The seconds it takes through each stop between the ends: a
+        /// gondola's ``Cableway/stopPassSeconds``; the Peak Tram's 20, its
+        /// cars stopping at the four between on request (the project's
+        /// own figure).
+        public var stopSeconds: Int64 {
+            self == .aerial ? Cableway.stopPassSeconds : 20
+        }
+
+        /// The people an hour it carries each way: a gondola's
+        /// ``Cableway/hourlyCapacity``; the Peak Tram's 1,575, its two
+        /// cars of 210 (its operator).
+        public var hourlyCapacity: Int64 {
+            self == .aerial ? Cableway.hourlyCapacity : 1_575
+        }
+
+        /// The second of game day `day` it opens: a gondola at 9:00; the
+        /// Peak Tram at 7:30 (its operator).
+        public func opens(onDay day: Int64) -> Int64 {
+            self == .aerial ? 9 * 3_600 : 7 * 3_600 + 1_800
+        }
+
+        /// The second of game day `day` it closes: a gondola after
+        /// ``Cableway/operatingHours(onDay:)``; the Peak Tram at 23:00
+        /// every day (its operator).
+        public func closes(onDay day: Int64) -> Int64 {
+            self == .aerial ? opens(onDay: day) + Cableway.operatingHours(onDay: day) * 3_600 : 23 * 3_600
+        }
+
+        /// Whether it stands still on a Monday that is no holiday: a
+        /// gondola's maintenance day; the Peak Tram runs every day.
+        public var restsOnMonday: Bool { self == .aerial }
+
+        /// Whether it stands still in a thunderstorm: a gondola stops for
+        /// lightning; the Peak Tram's cars run on the ground, closed.
+        public var stopsInThunderstorms: Bool { self == .aerial }
+    }
+
     public let id: CablewayID
+    /// Decision 1040: what runs on it; a gondola lift in every save before.
+    public internal(set) var kind: Kind = .aerial
     /// Its stops, in order: the first and last board, two boarding at
     /// least, no two in a row on one cell.
     public internal(set) var stops: [CablewayStop]
@@ -199,6 +258,13 @@ public struct Cableway: Hashable, Sendable {
         legMetres.reduce(0, +)
     }
 
+    /// Decision 1040: the most riders it carries on game day `day`, both
+    /// ways: its kind's ``Kind/hourlyCapacity`` through its hours, which
+    /// are a gondola's ``dailyCapacity(onDay:)``.
+    public func dailyCapacity(onDay day: Int64) -> Int64 {
+        kind.hourlyCapacity * (kind.closes(onDay: day) - kind.opens(onDay: day)) / 3_600 * 2
+    }
+
     /// The hours it runs on game day `day`: 9:00 to 21:00, and to 22:00 on
     /// a weekend (gondola.taipei).
     public static func operatingHours(onDay day: Int64) -> Int64 {
@@ -227,12 +293,14 @@ public struct Cableway: Hashable, Sendable {
     }
 
     /// Seconds on board from stop `a` to stop `b`: the rope's metres at
-    /// ``metresPerSecond``, rounded up, and ``stopPassSeconds`` for each
-    /// stop passed between.
+    /// its kind's ``Kind/metresPerSecond`` (a gondola's
+    /// ``metresPerSecond``), rounded up, and its ``Kind/stopSeconds`` for
+    /// each stop passed between.
     public func rideSeconds(from a: Int, to b: Int) -> Int64 {
         let low = min(a, b), high = max(a, b)
         let metres = legMetres[low..<high].reduce(0, +)
-        return (metres + Self.metresPerSecond - 1) / Self.metresPerSecond + Int64(max(0, high - low - 1)) * Self.stopPassSeconds
+        let speed = kind.metresPerSecond
+        return (metres + speed - 1) / speed + Int64(max(0, high - low - 1)) * kind.stopSeconds
     }
 
     /// Minutes on board from stop `a` to stop `b`, rounded half up.
@@ -278,7 +346,7 @@ extension CablewayStop: Codable {
 
 extension Cableway: Codable {
     private enum CodingKeys: String, CodingKey {
-        case id, stops, legMetres, feederTrips, feederMinutes, localTrips, localMinutes, transfer, meetsNear, ridersToday, riderThousandths, days
+        case id, kind, stops, legMetres, feederTrips, feederMinutes, localTrips, localMinutes, transfer, meetsNear, ridersToday, riderThousandths, days
     }
 
     /// The cableway, with its derived figures and takings; refused when
@@ -286,6 +354,7 @@ extension Cableway: Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(CablewayID.self, forKey: .id)
+        kind = try container.decodeIfPresent(Kind.self, forKey: .kind) ?? .aerial
         let stops = try container.decode([CablewayStop].self, forKey: .stops)
         guard stops.count <= Self.maximumStops else {
             throw DecodingError.dataCorruptedError(forKey: .stops, in: container, debugDescription: "A cableway has at most \(Self.maximumStops) stops.")
@@ -312,6 +381,9 @@ extension Cableway: Codable {
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
+        // Decision 1040: written for a funicular only, so a gondola's save
+        // is what it was.
+        if kind != .aerial { try container.encode(kind, forKey: .kind) }
         try container.encode(stops, forKey: .stops)
         try container.encode(legMetres, forKey: .legMetres)
         if feederTrips != 0 { try container.encode(feederTrips, forKey: .feederTrips) }
@@ -334,7 +406,8 @@ extension GameWorld {
     /// fewer than the stops) its spans are those lengths; without, the
     /// straight line between the cells' middles, a metre at least. With
     /// `meetsNear` (decision 586, a real one's station) it meets the
-    /// station nearest that point (``Cableway/meetsNear``).
+    /// station nearest that point (``Cableway/meetsNear``). Decision 1040:
+    /// `kind` what runs on it (a gondola lift unless told).
     ///
     /// - Throws, checked in this order: ``GameError/idsExhausted`` once the
     ///   numbers run out; ``GameError/invalidCableway`` for fewer than 2
@@ -346,10 +419,11 @@ extension GameWorld {
     ///   ``GameError/insufficientFunds(required:available:)``. The world is
     ///   then unchanged.
     @discardableResult
-    public mutating func createCableway(stops: [CablewayStop], legMetres: [Int64]? = nil, meetsNear: PlanPoint? = nil) throws(GameError) -> Cableway {
+    public mutating func createCableway(stops: [CablewayStop], legMetres: [Int64]? = nil, meetsNear: PlanPoint? = nil,
+                                        kind: Cableway.Kind = .aerial) throws(GameError) -> Cableway {
         let (id, next) = try Self.allocateID(from: nextCablewayID)
         let legs = try cablewayLegs(stops: stops, given: legMetres)
-        var cableway = Cableway(id: CablewayID(rawValue: id), stops: stops, legMetres: legs)
+        var cableway = Cableway(id: CablewayID(rawValue: id), kind: kind, stops: stops, legMetres: legs)
         guard cableway.isValid else { throw .invalidCableway }
         if let meetsNear {
             let reach = Cableway.namedTransferReach * Cableway.namedTransferReach
@@ -384,13 +458,15 @@ extension GameWorld {
     /// Whether cableway `id` runs on game day `day`: not on a Monday that
     /// is no holiday (its maintenance day), not in a thunderstorm (the
     /// operator stops for lightning), and not while a typhoon covers its
-    /// first stop. `false` for no such cableway.
+    /// first stop. `false` for no such cableway. Decision 1040: a
+    /// funicular runs on Mondays and in thunderstorms
+    /// (``Cableway/Kind/restsOnMonday``, ``Cableway/Kind/stopsInThunderstorms``).
     public func cablewayIsOpen(_ id: CablewayID, onDay day: Int64) -> Bool {
         guard let cableway = cableway(id: id) else { return false }
-        if StationDemand.weekday(ofDay: day) == 1, holiday(onDay: day) == nil { return false }
+        if cableway.kind.restsOnMonday, StationDemand.weekday(ofDay: day) == 1, holiday(onDay: day) == nil { return false }
         // Decision 1004: the weather at its first stop.
         let first = Self.middle(of: cableway.stops[0].cell)
-        if weather(onDay: day, at: first) == .thunderstorm { return false }
+        if cableway.kind.stopsInThunderstorms, weather(onDay: day, at: first) == .thunderstorm { return false }
         return !typhoons(onDay: day).contains { $0.isActive(onDay: day) && $0.covers(first) }
     }
 
@@ -726,7 +802,7 @@ extension GameWorld {
 
     /// The day's cableways, a row for them all: each one's riders (those
     /// from the trains, since decision 880 the sightseers, and its
-    /// ``Cableway/localTrips``, at most
+    /// ``Cableway/localTrips``, at most its
     /// ``Cableway/dailyCapacity(onDay:)``, none on a day it stands still)
     /// pay ``Cableway/fare`` in, and its ``Cableway/dailyCost`` goes out
     /// every day; kept on the cableway for ``Cableway/keptDays`` days.
@@ -736,7 +812,7 @@ extension GameWorld {
         for index in cableways.indices {
             let cableway = cableways[index]
             let open = cablewayIsOpen(cableway.id, onDay: day)
-            let riders = open ? min(Cableway.dailyCapacity(onDay: day), cableway.ridersToday + cableway.localTrips) : 0
+            let riders = open ? min(cableway.dailyCapacity(onDay: day), cableway.ridersToday + cableway.localTrips) : 0
             let dayFares = Money(riders * Cableway.fare.amount)
             let dayCost = cableway.dailyCost
             fares = fares + dayFares

@@ -42,8 +42,11 @@ public enum CablewayCabins {
     /// Seconds once round the loop: each span out and back at
     /// ``Cableway/metresPerSecond`` (rounded up), and
     /// ``Cableway/stopPassSeconds`` at every stop passed or turned at.
+    /// Decision 1040: a funicular's at its own speed and stops
+    /// (``Cableway/Kind``).
     public static func loopSeconds(of cableway: Cableway) -> Int64 {
-        2 * cableway.legMetres.map(spanSeconds).reduce(0, +) + 2 * Int64(cableway.stops.count - 1) * Cableway.stopPassSeconds
+        2 * cableway.legMetres.map { spanSeconds($0, kind: cableway.kind) }.reduce(0, +)
+            + 2 * Int64(cableway.stops.count - 1) * cableway.kind.stopSeconds
     }
 
     /// How many cabins run: as many as fit round the loop at the
@@ -56,18 +59,20 @@ public enum CablewayCabins {
     /// runs: every one of ``count(of:)``, or, with `pair` (an aerial
     /// tramway, as Wulai's: two large cabins, one going up as the other
     /// comes down), the first and the one half the loop behind it.
+    /// Decision 1040: a funicular's two cars so too, whatever `pair` says.
     public static func numbers(of cableway: Cableway, pair: Bool) -> [Int] {
         let count = count(of: cableway)
-        return pair && count > 1 ? [0, count / 2] : Array(0..<count)
+        return (pair || cableway.kind == .funicular) && count > 1 ? [0, count / 2] : Array(0..<count)
     }
 
     /// Whether the cabins run at `time` on `world`: on a day the cable car
     /// runs (``GameWorld/cablewayIsOpen(_:onDay:)``), within its hours
-    /// (from 9:00, ``Cableway/operatingHours(onDay:)``).
+    /// (from 9:00, ``Cableway/operatingHours(onDay:)``; decision 1040, a
+    /// funicular's own, ``Cableway/Kind/opens(onDay:)``).
     public static func runs(_ id: CablewayID, in world: GameWorld, at time: GameTime) -> Bool {
         let day = time.seconds / GameTime.secondsPerDay, second = time.seconds % GameTime.secondsPerDay
-        guard world.cablewayIsOpen(id, onDay: day) else { return false }
-        return second >= 9 * 3_600 && second < (9 + Cableway.operatingHours(onDay: day)) * 3_600
+        guard let kind = world.cableway(id: id)?.kind, world.cablewayIsOpen(id, onDay: day) else { return false }
+        return second >= kind.opens(onDay: day) && second < kind.closes(onDay: day)
     }
 
     /// Every cabin of `cableway` at second `second` (of the day, or any
@@ -128,8 +133,8 @@ public enum CablewayCabins {
     /// The same `at` seconds into the loop.
     static func glide(at: Double, on cableway: Cableway) -> Glide {
         var left = at
-        let legs = cableway.legMetres.map { Double(spanSeconds($0)) }
-        let pass = Double(Cableway.stopPassSeconds)
+        let legs = cableway.legMetres.map { Double(spanSeconds($0, kind: cableway.kind)) }
+        let pass = Double(cableway.kind.stopSeconds)
         for (leg, seconds) in legs.enumerated() {
             if left < seconds { return .span(leg: leg, share: left / seconds, outbound: true) }
             left -= seconds
@@ -160,8 +165,9 @@ public enum CablewayCabins {
 
     // MARK: - Internals
 
-    static func spanSeconds(_ metres: Int64) -> Int64 {
-        (metres + Cableway.metresPerSecond - 1) / Cableway.metresPerSecond
+    /// Decision 1040: at `kind`'s speed.
+    static func spanSeconds(_ metres: Int64, kind: Cableway.Kind = .aerial) -> Int64 {
+        (metres + kind.metresPerSecond - 1) / kind.metresPerSecond
     }
 
     static func isCrystal(_ number: Int) -> Bool {
@@ -179,21 +185,22 @@ public enum CablewayCabins {
     /// Where a cabin `at` seconds into the loop is.
     static func place(at: Int64, on cableway: Cableway) -> Place {
         var left = at
-        let legs = cableway.legMetres.map(spanSeconds)
+        let legs = cableway.legMetres.map { spanSeconds($0, kind: cableway.kind) }
+        let pass = cableway.kind.stopSeconds
         // Out: span i, then stop i + 1.
         for (leg, seconds) in legs.enumerated() {
             if left < seconds { return .span(leg: leg, permille: Int(left * 1_000 / seconds), outbound: true) }
             left -= seconds
-            if left < Cableway.stopPassSeconds { return .station(stop: leg + 1, outbound: leg + 1 < legs.count) }
-            left -= Cableway.stopPassSeconds
+            if left < pass { return .station(stop: leg + 1, outbound: leg + 1 < legs.count) }
+            left -= pass
         }
         // Back: span i, then stop i.
         for leg in legs.indices.reversed() {
             let seconds = legs[leg]
             if left < seconds { return .span(leg: leg, permille: 1_000 - Int(left * 1_000 / seconds), outbound: false) }
             left -= seconds
-            if left < Cableway.stopPassSeconds || leg == 0 { return .station(stop: leg, outbound: leg == 0) }
-            left -= Cableway.stopPassSeconds
+            if left < pass || leg == 0 { return .station(stop: leg, outbound: leg == 0) }
+            left -= pass
         }
         return .station(stop: 0, outbound: true)
     }

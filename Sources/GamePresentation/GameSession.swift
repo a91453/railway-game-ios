@@ -770,6 +770,9 @@ public final class GameSession {
     /// stands (``RealCableway/meetsNear(in:)``); `nil` for one drawn stop
     /// by stop.
     public internal(set) var cablewayDraftMeets: PlanPoint?
+    /// Decision 1040: a funicular's kind when the real one drawn is one
+    /// (``RealCableway/kind``); `nil` for a gondola lift.
+    public internal(set) var cablewayDraftKind: Cableway.Kind?
     /// Whether the next tap puts down an angle station, where the rope
     /// turns and no one boards, rather than a station.
     public var cablewayPlacesAngle = false
