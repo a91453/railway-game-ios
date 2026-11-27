@@ -45,6 +45,57 @@ final class Map3DJapanSignalTests: XCTestCase {
         XCTAssertGreaterThan(model.maximum.y, -0.3)
     }
 
+    /// The post and the arm are the galvanised grey all over, the head and
+    /// the hoods the pale grey: each part takes one colour. Painted one
+    /// colour a triangle, two of the post's long triangles and half the
+    /// arm came out the housing's dark, and the post showed a black stripe
+    /// on the iPhone (2026-11-27).
+    func testThePostAndTheArmAreOneGrey() throws {
+        for unit in Unit.allCases {
+            let model = try XCTUnwrap(Map3DJapanSignal.model(unit))
+            // Three vertices a triangle, each with the triangle's colour.
+            let triangles = stride(from: 0, to: model.vertices.count, by: 3).map { Array(model.vertices[$0..<$0 + 3]) }
+            // The post: a corner below the head, round the foot.
+            let post = triangles.filter { $0.contains { $0.z < 5.3 && abs($0.x) < 0.2 && abs($0.y) < 0.2 } }
+            // The arm: every corner on the post's line, at the arm's height.
+            let arm = triangles.filter { $0.allSatisfy { abs($0.x) < 0.05 && $0.z > 5.5 && $0.z < 5.7 } }
+            XCTAssertEqual(post.count, 6, "\(unit)")
+            XCTAssertEqual(arm.count, 7, "\(unit)")
+            XCTAssertEqual(Set((post + arm).map { $0[0].color }), [Map3DPalette.steel], "\(unit)")
+            XCTAssertFalse(model.vertices.contains { $0.color == Map3DPalette.steel && $0.y < -1.9 && $0.x < -0.045 }, "\(unit): the head is the pale grey")
+        }
+    }
+
+    /// Each light's dark ring is round and whole: no hood's wall stands
+    /// over it. The old hoods' walls stood 12.5 cm from a light's middle,
+    /// inside the ring's 17.5 cm, and the round frame looked broken on the
+    /// iPhone (2026-11-27).
+    func testTheHoodsClearTheRings() throws {
+        let lights = Map3DProp.signalLights.flatMap { [$0.lit, $0.unlit] }
+        for unit in Unit.allCases {
+            let model = try XCTUnwrap(Map3DJapanSignal.model(unit))
+            let triangles = stride(from: 0, to: model.vertices.count, by: 3).map { Array(model.vertices[$0..<$0 + 3]) }
+            // Each lens's middle, across the head (y).
+            let lenses = triangles.filter { lights.contains($0[0].color) }
+            var middles: [Float] = []
+            for colour in Set(lenses.map { $0[0].color }) {
+                let ys = lenses.filter { $0[0].color == colour }.flatMap { $0.map(\.y) }
+                middles.append((ys.min()! + ys.max()!) / 2)
+            }
+            XCTAssertEqual(middles.count, 3, "\(unit)")
+            func across(_ y: Float) -> Float { middles.map { abs(y - $0) }.min()! }
+            // The rings: dark, in front of the lights' faces.
+            let rings = triangles.filter { $0[0].color == Map3DPalette.dark && $0.allSatisfy { $0.x < -0.184 } }
+            let ring = try XCTUnwrap(rings.flatMap { $0.map { across($0.y) } }.max())
+            // The hoods: grey, in front of the faces; their walls as low as a ring.
+            let hoods = triangles.filter { [Map3DPalette.steel, Map3DPalette.tankSteel].contains($0[0].color) && $0.allSatisfy { $0.x < -0.184 } }
+            XCTAssertEqual(hoods.count, 48, "\(unit)")
+            let walls = hoods.flatMap { $0 }.filter { $0.z < 5.6 + ring }
+            XCTAssertFalse(walls.isEmpty)
+            XCTAssertGreaterThan(try XCTUnwrap(walls.map { across($0.y) }.min()), ring + 0.002, "\(unit)")
+        }
+    }
+
     /// The pack's signal models swap to Japan's lit as the clock says, red
     /// for red and amber together; Taiwan's stay Taiwan's.
     func testTheClockLightsJapansOwn() throws {
