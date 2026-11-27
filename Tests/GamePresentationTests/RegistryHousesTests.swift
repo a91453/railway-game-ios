@@ -109,7 +109,7 @@ final class RegistryHousesTests: XCTestCase {
         // The same every time.
         var again = self.builder().builder
         again.state.roadside.registry[cell] = builder.state.roadside.registry[cell]
-        XCTAssertEqual(again.layFrontage(cell, density: 0, shops: false, blocked: []).houses.map(\.house.middle), laid.houses.map(\.house.middle))
+        XCTAssertEqual(again.layFrontage(cell, density: 0, shops: false, blocked: []).houses.map { $0.house.middle }, laid.houses.map { $0.house.middle })
     }
 
     /// A tower's storeys stand as sold, above the cap the real buildings
@@ -123,7 +123,7 @@ final class RegistryHousesTests: XCTestCase {
         var low = Map3DMesh()
         Map3DScene.Builder.addTownHouse(&low, close: &close, blades: &blades, middle: Map3DPoint(0, 0, 0), front: Map3DPoint(0, 0, 1),
                                         width: 16, depth: 18, flats: true, shops: false, wall: 0xFFFFFF, far: false, tallest: 3, r: { _ in 0.5 })
-        func top(_ mesh: Map3DMesh) -> Float { mesh.positions.map(\.y).max() ?? 0 }
+        func top(_ mesh: Map3DMesh) -> Float { mesh.vertices.map { $0.y }.max() ?? 0 }
         XCTAssertGreaterThan(top(mesh), 24 * 3)
         XCTAssertLessThan(top(low), 4 * 4)
     }
