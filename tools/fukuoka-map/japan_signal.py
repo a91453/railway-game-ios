@@ -11,10 +11,15 @@ in `tools/train-models/glb_to_swift.py`'s encoding.
         Sources/GamePresentation/Map3DJapanSignalMesh.swift
 
 What it changes, and only this:
-- the old texture becomes the game's colours, one a triangle, by how light
-  the texture is under it: the housing and the hoods the pale grey
-  (``Map3DPalette/tankSteel``), the post and the arm the galvanised
-  grey (``Map3DPalette/steel``), a dark grey the signals' housing;
+- the old texture becomes the game's colours, one a part (triangles that
+  share a corner): each triangle votes, by its area, for the palette grey
+  nearest how light the texture is under it, and the part takes the grey
+  with the most: the housing and the hoods the pale grey (``Map3DPalette/tankSteel``), the
+  post and the arm the galvanised grey (``Map3DPalette/steel``), a dark
+  grey the signals' housing. One a triangle, as it first was, painted two
+  of the post's six long triangles and half the arm's dark: their edge
+  falls on the texture's dark seam beside the post's strip, and the post
+  showed a black stripe in the game (2026-11-27);
 - each light's square face (the texture's lens) becomes the pale face
   with a dark ring and a round lens of 30 cm on it, the lens the
   signals' red, amber or green (``Map3DProp/signalLights``), lit in the
@@ -108,8 +113,8 @@ def main(glb, swift):
     pixels = png_pixels(blob[view.get('byteOffset', 0):view.get('byteOffset', 0) + view['byteLength']])
     size = len(pixels)
 
-    def grey(uvs):
-        """The palette grey nearest the texture's mean under a triangle."""
+    def lightness(uvs):
+        """The texture's mean lightness under a triangle."""
         samples = []
         for k in range(5):
             for m in range(5 - k):
@@ -118,10 +123,16 @@ def main(glb, swift):
                 v = sum(a[1] * b for a, b in zip(uvs, w))
                 r, g, b = pixels[min(size - 1, max(0, int(v * size)))][min(size - 1, max(0, int(u * size)))]
                 samples.append((r + g + b) / 3)
-        mean = sum(samples) / len(samples)
-        return min(GREYS, key=lambda name: abs(GREYS[name] - mean))
+        return sum(samples) / len(samples)
 
-    triangles, faces = [], {}
+    def area(corners):
+        a, b, c = corners
+        u = [b[i] - a[i] for i in range(3)]
+        v = [c[i] - a[i] for i in range(3)]
+        n = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0])
+        return math.sqrt(sum(x * x for x in n)) / 2
+
+    triangles, faces, shaded = [], {}, []
     for mesh in gltf['meshes']:
         for prim in mesh['primitives']:
             points = accessor(gltf, blob, prim['attributes']['POSITION'])
@@ -139,8 +150,38 @@ def main(glb, swift):
                     faces.setdefault(LENSES[quarter], []).extend(corners)
                     triangles.append(([place(c) for c in corners], 'tankSteel'))
                 else:
-                    triangles.append(([place(c) for c in corners], grey([uvs[i] for i in tri])))
+                    shaded.append((len(triangles), corners, lightness([uvs[i] for i in tri])))
+                    triangles.append(([place(c) for c in corners], None))
     assert sorted(faces) == ['amber', 'green', 'red'], faces.keys()
+
+    # Each part (triangles sharing a corner) takes the palette grey most of
+    # its area is nearest to.
+    parent = {}
+
+    def root(key):
+        parent.setdefault(key, key)
+        while parent[key] != key:
+            parent[key] = parent[parent[key]]
+            key = parent[key]
+        return key
+
+    def key(corner):
+        return tuple(round(v, 5) for v in corner)
+
+    for _, corners, _ in shaded:
+        first = root(key(corners[0]))
+        for corner in corners[1:]:
+            parent[root(key(corner))] = first
+    def nearest(light):
+        return min(GREYS, key=lambda name: abs(GREYS[name] - light))
+
+    votes = {}
+    for _, corners, light in shaded:
+        part = votes.setdefault(root(key(corners[0])), {})
+        part[nearest(light)] = part.get(nearest(light), 0.0) + area(corners)
+    for index, corners, _ in shaded:
+        part = votes[root(key(corners[0]))]
+        triangles[index] = (triangles[index][0], max(sorted(part), key=lambda name: part[name]))
 
     # Each light's lens and ring, a hair in front of its face (the face is
     # at the old z; in front is toward the old +z, the game's −x).
