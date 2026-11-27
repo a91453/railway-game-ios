@@ -58,8 +58,9 @@ extension Map3DScene.Builder {
     }
 
     /// Decision 331: in each of `map`'s parks, nearest the scene's middle
-    /// first, one of the park kit's scenes: on the park's ground, on no
-    /// cell in `cleared`, clear of track, platforms and roads, and
+    /// first, one of the park kit's scenes: on the park's ground, not on
+    /// water nor in a nature reserve (decision 331's seventh later note),
+    /// on no cell in `cleared`, clear of track, platforms and roads, and
     /// ``parkSpacing`` from another; within ``parkTriangles``, and
     /// ``parkChunkTriangles`` a chunk. Returns the cells the scenes stand
     /// on, so no city lot goes there however little of a cell the park
@@ -68,7 +69,9 @@ extension Map3DScene.Builder {
     mutating func addParks(_ map: Map3DBaseMap, clearOf cleared: Set<Map3DScene.ChunkKey>) -> Set<Map3DScene.ChunkKey> {
         let middle = point(x: (region.minX + region.maxX) / 2, y: (region.minY + region.maxY) / 2, height: 0)
         var parks: [(distance: Float, area: Double, centre: Map3DPoint, rings: [[Map3DPoint]], bounds: Map3DBaseMap.Bounds)] = []
-        for area in map.areas where area.cover == .park {
+        // Decision 331's seventh later note: no scene in a nature reserve
+        // or a national park, nor on water a park's outline takes in.
+        for area in map.areas where area.cover == .park && !area.isReserve {
             guard let outer = area.rings.first, outer.count >= 3 else { continue }
             let size = abs(Self.area(outer)) - area.rings.dropFirst().reduce(0) { $0 + abs(Self.area($1)) }
             guard size >= Double(Self.parkModels[.pocketPark]!.length * Self.parkModels[.pocketPark]!.width) else { continue }
@@ -77,6 +80,12 @@ extension Map3DScene.Builder {
             parks.append(((centre - middle).length, size, centre, rings, area.bounds))
         }
         parks.sort { ($0.distance, $0.centre.x, $0.centre.z) < ($1.distance, $1.centre.x, $1.centre.z) }
+        let water = map.areas.filter { $0.cover == .water }.map { area in
+            (bounds: area.bounds, rings: area.rings.map { $0.map { Map3DPoint(Float($0.x), 0, Float($0.z)) } })
+        }
+        func wet(_ point: Map3DPoint) -> Bool {
+            water.contains { Self.within(point, $0.bounds) && Self.inside(point, $0.rings) }
+        }
         var placed: [Map3DPoint] = [], triangles = 0, chunkTriangles: [Map3DScene.ChunkKey: Int] = [:]
         var standing = Set<Map3DScene.ChunkKey>()
         for park in parks {
@@ -96,7 +105,8 @@ extension Map3DScene.Builder {
                     for facing in Self.templeFacings {
                         let footprint = Self.parkFootprint(model, centre: centre, facing: facing)
                         guard footprint.allSatisfy({ Self.within($0, park.bounds) && Self.inside($0, park.rings) }),
-                              Self.inside(centre, park.rings), cleared.isDisjoint(with: cells(under: footprint)), !onPlacedGround(footprint),
+                              Self.inside(centre, park.rings), !(footprint + [centre]).contains(where: wet),
+                              cleared.isDisjoint(with: cells(under: footprint)), !onPlacedGround(footprint),
                               isClear(footprint, facing: facing) else { continue }
                         let ground = footprint.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0
                         let foot = Map3DPoint(centre.x, ground + Self.lift(of: .park), centre.z)

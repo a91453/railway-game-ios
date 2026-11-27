@@ -310,13 +310,15 @@ struct Map3DTrainRoom {
     private static func key(_ x: Int, _ z: Int) -> Int64 { Int64(x) << 32 | Int64(UInt32(bitPattern: Int32(z))) }
 
     /// Room along `line` at the rails' height, the station's ground at
-    /// `ground`: under it too where it runs `raised` over that.
-    mutating func add(line: [Map3DPoint], half: Float, above: Float, ground: Float) {
+    /// `ground`: under it too where it runs `raised` over that; or, given
+    /// `below` (decision 1020's station room), that far under the rails
+    /// whatever their height.
+    mutating func add(line: [Map3DPoint], half: Float, above: Float, ground: Float = 0, below fixed: Float? = nil) {
         // In long straight stretches, a few centimetres off the line: the
         // track is drawn every metre or two, and each stretch cuts.
         let line = Self.simplified(line, within: 0.1)
         for (a, b) in zip(line, line.dropFirst()) {
-            let below = min(a.y, b.y) - ground > Self.raised ? max(a.y, b.y) - ground + 1 : 0.3
+            let below = fixed ?? (min(a.y, b.y) - ground > Self.raised ? max(a.y, b.y) - ground + 1 : 0.3)
             let index = stretches.count
             stretches.append(Stretch(a: a, b: b, half: half, below: below, above: above))
             let reach = half + 1

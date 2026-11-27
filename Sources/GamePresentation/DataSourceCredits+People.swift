@@ -4,6 +4,12 @@
 // links and notices are there too.
 
 extension DataSourceCredits {
+    /// Decision 1026: the Overture release the bundled Taiwan buildings
+    /// (`taiwan_buildings.pmtiles`, its metadata's `overture`) are on;
+    /// `tools/overture-footprint-tiles/refresh_release.py` moves both each
+    /// month. The coverage file and the city tiles stay on 2026-09-23.1.
+    static let taiwanFootprintRelease = "2026-11-18.0"
+
     /// People and riders: where the population, the ridership, the
     /// weather and the buildings' footprints come from.
     static func peopleSection(in language: DisplayLanguage) -> DataSourceSection {
@@ -151,8 +157,8 @@ extension DataSourceCredits {
                         "台灣與澎湖實景地圖上真實建物佔地多少，決定收購城市建物的價錢：停車場便宜，密集的街區貴。台灣、澎湖、金門、馬祖實景 3D 地圖上的建物，以及 3D 城市預覽裡高雄車站、台中車站周圍的建物，也是它的（台中市改用臺中市建物圖）。"
                     ),
                     notice: language.text(
-                        "Overture Maps Foundation (overturemaps.org), buildings, release 2026-09-23.1, under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file, the city tiles and the footprint tiles the game derives from them come with the app, and a complete machine-readable copy under the same licence is available by writing to \(mailbox.english).",
-                        "Overture Maps Foundation（overturemaps.org）建物，2026-09-23.1 版，依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔、城市圖塊與足跡圖塊隨 App 提供，也可來信\(mailbox.chinese)索取以相同授權提供的完整機器可讀檔案。"
+                        "Overture Maps Foundation (overturemaps.org), buildings, release \(taiwanFootprintRelease) (the 3D maps’ buildings; the coverage file and the city tiles: release 2026-09-23.1), under the Open Database License (ODbL) 1.0. Its footprints in Taiwan are © OpenStreetMap contributors (ODbL 1.0) and, where OpenStreetMap has none, from Qian Shi et al., “A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework”, Zenodo, 2023 (CC BY 4.0). The coverage file, the city tiles and the footprint tiles the game derives from them come with the app, and a complete machine-readable copy under the same licence is available by writing to \(mailbox.english).",
+                        "Overture Maps Foundation（overturemaps.org）建物，\(taiwanFootprintRelease) 版（3D 地圖的建物；建蔽率檔與城市圖塊為 2026-09-23.1 版），依開放資料庫授權（ODbL）1.0 使用。台灣的足跡來自 © OpenStreetMap 貢獻者（ODbL 1.0），OpenStreetMap 沒有的地方來自 Qian Shi 等人〈A first high-quality vector data of buildings in East Asian countries based on a comprehensive large-scale mapping framework〉，Zenodo，2023（CC BY 4.0）。遊戲據此整理的建蔽率檔、城市圖塊與足跡圖塊隨 App 提供，也可來信\(mailbox.chinese)索取以相同授權提供的完整機器可讀檔案。"
                     ),
                     links: [
                         DataSourceCredit.Link(title: "Overture Maps", url: overtureURL),
