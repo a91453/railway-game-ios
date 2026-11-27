@@ -170,35 +170,41 @@ extension Map3DScene.Builder {
         for landmark in landmarks {
             let place = frame.worldPosition(latitude: landmark.latitude, longitude: landmark.longitude)
             guard contains(x: place.x, y: place.y) else { continue }
-            let centre = point(x: place.x, y: place.y, height: 0)
             let models = [true: landmark.model(true), false: landmark.model(false)]
-            let body = LandmarkMesh.corners(Map3DHongKongLandmark.body(of: models[true]!), origin: centre, rotation: 0)
-            let ground: Float
+            let anchor = point(x: place.x, y: place.y, height: 0)
+            var meshes: [Bool: Map3DMesh] = [:]
             if let station = landmark.registration, station.station != nil {
+                // Decision 1020: its rails on the drawn ones, cut clear of
+                // the trains' room.
                 let stood = stationLandmarkPlace(station, snapshot: snapshot, frame: frame)
                 guard stood.stands else { continue }
-                ground = stood.ground
+                for full in [true, false] { meshes[full] = stood.mesh(models[full]!) }
             } else {
+                let centre = anchor
+                let body = LandmarkMesh.corners(Map3DHongKongLandmark.body(of: models[true]!), origin: centre, rotation: 0)
                 guard isClearOfTrack(body) else { continue }
                 // On its podium where the ground is lower than its foot; one
                 // sunk into a hillside (decision 913) with its floor on the
                 // ground at its middle, its foot that far below.
                 let found = landmark.sink > 0 ? drawnGround(x: centre.x, z: centre.z)
                     : body.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0
-                ground = max(found, landmark.baseHeight) - landmark.sink
+                let ground = max(found, landmark.baseHeight) - landmark.sink
+                for full in [true, false] { meshes[full] = models[full]!.placed(origin: centre, ground: ground, rotation: 0) }
             }
             let saved = target
             for (level, full) in [(Target.near, true), (.far, false)] {
                 target = level
-                let mesh = models[full]!.placed(origin: centre, ground: ground, rotation: 0)
+                let mesh = meshes[full]!
                 keptColours.formUnion(mesh.vertices.map(\.color))
-                self.mesh(at: centre) { $0.append(mesh) }
+                // In the chunk of its real middle, whether or not it was
+                // moved, as every block puts it.
+                self.mesh(at: anchor) { $0.append(mesh) }
             }
             target = saved
             // OLD-PORT-AUDIT: the ground the model itself covers, not the
             // rectangle round it (Hakata station's, 197 m by 400 m, left
             // 13 real buildings beside it undrawn).
-            state.landmarks.landmarkPlans.append(LandmarkPlan(models[false]!.placed(origin: centre, ground: ground, rotation: 0)))
+            state.landmarks.landmarkPlans.append(LandmarkPlan(meshes[false]!))
             built.insert(landmark.id)
         }
         return built

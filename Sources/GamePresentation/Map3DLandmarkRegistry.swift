@@ -91,10 +91,13 @@ public struct Map3DLandmarkRegistration: Sendable {
 /// building, entrances and canopies of a station whose platforms it
 /// stands over are left out (its platforms stay, laid by the game).
 public struct Map3DStationLandmark: Sendable {
-    /// How high over the model's foot its rails are, when it is set on
-    /// the track drawn under it rather than on the ground (Duoliang's
-    /// platforms on their retaining walls): its rails then at the drawn
-    /// rails' height. `nil` to stand on the ground.
+    /// How high over the model's foot the rails it was built round are
+    /// (Hakata's Shinkansen platforms' roofs clear a train on rails
+    /// 12.3 m up, Kumamoto's shed 10 m, Duoliang's platforms on their
+    /// retaining walls 2.5 m): those rails are then put on the drawn
+    /// rails under it, all of it under them stretched down to the
+    /// ground and all over them raised as much. `nil` to stand on the
+    /// ground as it was built.
     public let railHeight: Float?
 
     public init(railHeight: Float? = nil) {

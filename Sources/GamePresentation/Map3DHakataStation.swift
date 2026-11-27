@@ -21,8 +21,9 @@ enum Map3DHakataStation {
         encoded: encoded,
         // Decision 1020: a station landmark, drawn when the Kyushu
         // Shinkansen is bought too, its own building and canopies then
-        // left out.
-        station: Map3DStationLandmark(),
+        // left out; its Shinkansen platforms' roofs (18.8 m over its foot) clear a
+        // train (6.5 m) on rails 12.3 m up.
+        station: Map3DStationLandmark(railHeight: 12.3),
         // OpenStreetMap's outlines of the main building and the platform
         // roofs, and the Hakata exit's canopy to the west.
         size: (196.7, 400.7, 63.05))

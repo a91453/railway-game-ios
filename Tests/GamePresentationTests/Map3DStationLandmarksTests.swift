@@ -13,11 +13,11 @@ import XCTest
 final class Map3DStationLandmarksTests: XCTestCase {
     private static let metre = Double(WorldCoordinate.unitsPerMetre)
 
-    /// The three station landmarks are registered as such, and Kumamoto's
+    /// The four station landmarks (Mojiko's too) are registered as such, and Kumamoto's
     /// tower is not (no track runs through it).
     func testTheStationLandmarks() {
         let stations = Map3DLandmarkRegistry.landmarks.filter { $0.station != nil }.map(\.id)
-        XCTAssertEqual(Set(stations), ["hakata-station", "kumamoto-station", "duoliang-station"])
+        XCTAssertEqual(Set(stations), ["hakata-station", "kumamoto-station", "duoliang-station", "jp-mojiko-station"])
         XCTAssertNil(Map3DKumamotoStationTower.registration.station)
         XCTAssertEqual(Map3DDuoliangStation.registration.station?.railHeight, 2.5)
     }
@@ -66,8 +66,12 @@ final class Map3DStationLandmarksTests: XCTestCase {
             let frame = try XCTUnwrap(RealWorldFrame(world: world))
             var probe = builder
             let place = probe.stationLandmarkPlace(landmark, snapshot: world.railwaySnapshot(), frame: frame)
-            XCTAssertLessThanOrEqual(place.intrusion, Map3DScene.Builder.stationLeast, "\(landmark.id): m² in the trains' room")
+            XCTAssertLessThanOrEqual(place.share, Map3DScene.Builder.stationCutShare, "\(landmark.id): \(place.intrusion) m² in the trains' room")
             XCTAssertTrue(built.contains(landmark.id), "\(landmark.id) with the Shinkansen bought")
+            // Its rails on the viaduct's, and nothing of it left in the
+            // trains' room once cut.
+            XCTAssertNotNil(place.rails, "\(landmark.id): its rails on the viaduct's")
+            XCTAssertLessThan(place.room.intrusion(of: place.mesh(landmark.model(full: true))), 0.01, "\(landmark.id) cut clear")
             XCTAssertTrue(builder.state.stations.underStationLandmarks.contains(stop), "\(name) stands under \(landmark.id)")
             XCTAssertTrue(builder.state.stations.shellRoofed.contains(stop), "\(name): no kit canopy")
             XCTAssertFalse(builder.state.platforms.laidPlatforms.filter { $0.station == stop }.isEmpty, "\(name)'s platforms stay")
@@ -81,7 +85,7 @@ final class Map3DStationLandmarksTests: XCTestCase {
                 guard let geometry = world.trackGeometry(of: platform.edge) else { return nil }
                 return Double(geometry.location(at: (platform.start + platform.end) / 2).position.z) / Self.metre
             }
-            print("STATION-LANDMARK \(landmark.id): ground \(place.ground) m, rails \(rails) m, \(place.intrusion) m² in the room")
+            print("STATION-LANDMARK \(landmark.id): ground \(place.ground) m, rails \(rails) m, model's \(String(describing: place.rails)), moved \(place.centre), \(place.intrusion) m² (\(place.share * 100) %) cut")
         }
     }
 
@@ -98,7 +102,7 @@ final class Map3DStationLandmarksTests: XCTestCase {
         var probe = builder
         let place = probe.stationLandmarkPlace(landmark, snapshot: session.world.railwaySnapshot(), frame: frame)
         XCTAssertTrue(built.contains(landmark.id), "Duoliang over the South Link Line")
-        XCTAssertLessThanOrEqual(place.intrusion, Map3DScene.Builder.stationLeast, "m² of the model in a car's room")
+        XCTAssertLessThanOrEqual(place.share, Map3DScene.Builder.stationCutShare, "\(place.intrusion) m² of the model in a car's room")
         // The drawn lanes through the model's middle: their rails at the
         // model's (its foot 2.5 m under them).
         let centre = place.centre
@@ -110,11 +114,13 @@ final class Map3DStationLandmarksTests: XCTestCase {
                 let distance = (ap - ab * share).length
                 if distance < best?.distance ?? .greatestFiniteMagnitude { best = (distance, a.y + (b.y - a.y) * share) }
             }
-            return best.flatMap { $0.distance < 6 ? $0 : nil }
+            return best.flatMap { $0.distance < 12 ? $0 : nil }
         }
-        print("STATION-LANDMARK duoliang-station: ground \(place.ground) m, lanes \(lanes), \(place.intrusion) m² in the room")
+        print("STATION-LANDMARK duoliang-station: ground \(place.ground) m, lanes \(lanes), model's \(String(describing: place.rails)), moved \(place.centre), \(place.intrusion) m² (\(place.share * 100) %) cut")
         XCTAssertFalse(lanes.isEmpty, "the line runs through it")
         let nearest = try XCTUnwrap(lanes.min { $0.distance < $1.distance })
-        XCTAssertEqual(place.ground + 2.5, nearest.rails, accuracy: 0.05, "its rails on the drawn rails")
+        XCTAssertEqual(place.ground + (place.rails?.drawn ?? 2.5), nearest.rails, accuracy: 0.05, "its rails on the drawn rails")
+        let cut = place.room.intrusion(of: place.mesh(landmark.model(full: true)))
+        XCTAssertLessThan(cut, 0.01, "nothing of it left in the room once cut")
     }
 }

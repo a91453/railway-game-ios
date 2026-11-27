@@ -26,7 +26,10 @@ enum Map3DKumamotoStation {
                   Map3DPalette.dark, Map3DPalette.cityOfficeWalls[5]],
         glass: [4],
         encoded: encoded,
-        station: Map3DStationLandmark(),
+        // Decision 1020: a station landmark, its shed built round rails
+        // 10 m over its foot (the open ends' room from 10 to 16.5 m,
+        // revision 2's README).
+        station: Map3DStationLandmark(railHeight: 10),
         // The four real platforms' outlines with 10 m at either end, and
         // the canopy to the east.
         size: (298.92, 302.04, 25.0))
