@@ -197,8 +197,9 @@ extension RealBranchLine {
         // sets off only when no train stands, or follows another, on its
         // way to its next stop, and the expresses' way spans several
         // stations: a whole day under simple rules left 44 of its 202
-        // runs not sent, under realistic none.
-        guard id != taiwanHighSpeedRail || world.blockSections else { return nil }
+        // runs not sent, under realistic none. Decision 1029: the Sanyo
+        // Shinkansen too (``onSaleInBlockSectionsOnly``).
+        guard !onSaleInBlockSectionsOnly.contains(id) || world.blockSections else { return nil }
         let after = rail.shares.flatMap { isLaidAlong(sharedBy: id, system: rail.system, $0, in: world, railways: railways) ? $0 : nil }
         guard let runs = metroRuns(of: id, after: after, in: railways) else { return nil }
         return RealBranchLine(

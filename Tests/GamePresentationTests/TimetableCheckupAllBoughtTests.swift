@@ -178,8 +178,12 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         // alone. Decision 998: so is the Nishi-Kyushu Shinkansen, a line of
         // its system sharing no station with it, `testNishiKyushuShinkansen`.
         // Decision 1028: and the Relay Kamome, JR Kyushu's conventional
-        // line, another system again, `testRelayKamome`.
+        // line, another system again, `testRelayKamome`. Decision 1029:
+        // and JR West's Sanyo Shinkansen, `testSanyoShinkansen`, on sale
+        // only under the realistic rules, as the High Speed Rail.
         XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS", "kyushushinkansen:NK", "jrkyushu:RK"])
+        let realisticFukuoka = Set(try Self.fukuoka(rules: .realistic).buyableRealLines.map(\.id))
+        XCTAssertEqual(realisticFukuoka.subtracting(fukuoka), ["sanyoshinkansen:SY"], "the Sanyo Shinkansen under the realistic rules")
     }
 
     /// The groups of lines sharing a station on each map, and the worlds
@@ -325,6 +329,20 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
             try check(name, {
                 let session = try Self.fukuoka(rules: rules)
                 try Self.buyTogether(["jrkyushu:RK"], in: session)
+                return session.world
+            }())
+        }
+    }
+
+    /// Decision 1029: the Sanyo Shinkansen bought alone, from a new game's
+    /// land in the north-west.
+    func testSanyoShinkansen() throws {
+        try full()
+        for (label, rules) in Self.rules where rules == .realistic {
+            let name = "fukuoka sanyoshinkansen:SY \(label)"
+            try check(name, {
+                let session = try Self.fukuoka(rules: rules)
+                try Self.buyTogether(["sanyoshinkansen:SY"], in: session)
                 return session.world
             }())
         }

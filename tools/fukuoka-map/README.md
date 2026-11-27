@@ -217,3 +217,29 @@ python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/Ma
   一天 42 班、各站停，站間照距離與 130 km/h 算，博多到武雄溫泉 57 分 30 秒。
 - **顏色** `#FAAF18`：OSM 長崎本線 route_master 11823798 的色。
 - **節數**：6 節（885 系），沒有機廠，晚上博多 4 組、武雄溫泉 1 組。
+
+## 山陽新幹線（博多—小倉，決策 1029）
+
+JR 西日本的山陽新幹線資料放在 `tools/fukuoka-map/sanyo-shinkansen/`，已併進地圖包：日本地圖的第四個系統 `sanyoshinkansen`（線 `SY`），
+新幹線軌距，在收購清單單獨賣。指令都在 repo 根目錄跑：
+
+```sh
+# 從 N02 與 OSM 重做暫存資料夾。
+python3 -I tools/fukuoka-map/build_sanyo_shinkansen.py /tmp/fk/n02/N02-25_GML/UTF-8/N02-25_Station.geojson \
+  /tmp/fk/osm/kyushu.pbf tools/fukuoka-map/sanyo-shinkansen
+# 只重排一天的班次（改了 SERVICE 時）。
+python3 -I tools/fukuoka-map/build_sanyo_shinkansen.py times tools/fukuoka-map/sanyo-shinkansen
+# 併進地圖包，再排進 metro_runs.json。
+python3 -I tools/fukuoka-map/build_kyushu_shinkansen.py merge tools/fukuoka-map/sanyo-shinkansen RailwayGameApp/Resources/MapPacks/fukuoka
+python3 -I tools/fukuoka-map/extract_fukuoka_runs.py RailwayGameApp/Resources/MapPacks/fukuoka
+```
+
+每次讀了什麼、量到多少寫在 `sanyo_shinkansen_sources.json`。
+
+- **線形**：OSM 的 `railway=rail`、`highspeed=yes`、名字有「山陽新幹線」的正線（relation 1837932）。量到 55.96 km（實キロ 55.9 km；
+  營業キロ 67.2 km 是舊在來線的），隧道 25.5 km、高架與橋 15.5 km。
+- **車站**：N02 的博多、小倉（代碼 `SY01`、`SY02` 是本專案的），站點是月台線的中點。
+- **班次是估計**：整天每 15 分，6:00–23:00，一天 138 班，博多到小倉 15 分 42 秒（300 km/h）。更密時 4 組折返太短，會死結或誤點（決策 1029 §1）。
+- **只在寫實規則賣**：中間沒有站，簡單規則沒有閉塞區間時每班都要等對向車進站才出發（決策 1029 §2）。
+- **顏色** `#0072BC`：JR 西日本的藍，本專案選的（OSM 沒有色）。
+- **節數**：16 節（N700S，隔一組 700 系），沒有機廠（真的在博多南線那頭），晚上博多、小倉各 2 組。

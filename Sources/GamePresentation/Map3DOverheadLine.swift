@@ -31,9 +31,10 @@ extension Map3DScene {
     /// above: the Kyushu Shinkansen (25 kV), the Fukuoka City Subway's
     /// three lines (1,500 V), the MTR's (25 kV on the East Rail Line,
     /// 1,500 V on the others) and VR's two lines at Rovaniemi (25 kV);
-    /// decision 1028, JR Kyushu's conventional lines (20 kV).
+    /// decision 1028, JR Kyushu's conventional lines (20 kV); decision
+    /// 1029, the Sanyo Shinkansen (25 kV).
     static let wiredSystems: Set<String> = ["tra_sched", "thsr_sched", "ntdlrt", "ntalrt",
-                                            "kyushushinkansen", "jrkyushu", "fksubway", "hkmtr", "vr"]
+                                            "kyushushinkansen", "jrkyushu", "sanyoshinkansen", "fksubway", "hkmtr", "vr"]
     /// TRA's lines run by diesel railcars (`DIESEL_BRANCH_IDS`: pingxi,
     /// shenao, jiji, neiwan), by the start of their names; the Neiwan Line
     /// only past Zhuzhong, where the Liujia Line's wires end.

@@ -39,11 +39,12 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     /// map, ``system`` first: Japan's map has the Fukuoka City Subway's and
     /// the Kyushu Shinkansen's (`kyushushinkansen.json`), another
     /// company's, on another gauge, and (decision 1028) JR Kyushu's
-    /// conventional lines' (`jrkyushu.json`, the Relay Kamome's).
+    /// conventional lines' (`jrkyushu.json`, the Relay Kamome's) and
+    /// (decision 1029) JR West's Sanyo Shinkansen's (`sanyoshinkansen.json`).
     public var systems: [String] {
         switch self {
         case .hongKong, .rovaniemi: [system]
-        case .fukuoka: [system, "kyushushinkansen", "jrkyushu"]
+        case .fukuoka: [system, "kyushushinkansen", "jrkyushu", "sanyoshinkansen"]
         }
     }
 
@@ -772,6 +773,13 @@ extension RealRailways.System {
         RealRailways.System(id: "jrkyushu", english: "JR Kyushu conventional lines", chinese: "JR九州在來線", lineColors: [
             "jrkyushu|RK": RealRailways.RGB(0xFAAF18),
         ]),
+        // Decision 1029: JR West's Sanyo Shinkansen, a system of its own
+        // so it is sold apart from JR Kyushu's Shinkansen it shares
+        // Hakata with. The colour is JR West's blue
+        // (`build_sanyo_shinkansen.py`'s `COLOUR`).
+        RealRailways.System(id: "sanyoshinkansen", english: "JR West", chinese: "JR西日本", lineColors: [
+            "sanyoshinkansen|SY": RealRailways.RGB(0x0072BC),
+        ]),
     ]
 
     /// Every system of the cities outside Taiwan.
@@ -834,6 +842,10 @@ extension RealBranchLine {
         // (``RealLineBundle/groups(of:)``), bought as a branch line is (a
         // limited express an hour or half an hour apart, as Rovaniemi's).
         ("jrkyushu", "RK", "Relay Kamome", "海鷗接力號", nil, .branch, false),
+        // Decision 1029 (SANYO-SHINKANSEN-KOKURA): the Sanyo Shinkansen,
+        // Hakata to Kokura, JR West's, sold on its own (another system,
+        // ``RealLineBundle/groups(of:)``) as the Kyushu Shinkansen is.
+        ("sanyoshinkansen", "SY", "Sanyo Shinkansen", "山陽新幹線", nil, .metro, false),
     ]
 
     /// Decision 753: the lines of the cities outside Taiwan drawn along

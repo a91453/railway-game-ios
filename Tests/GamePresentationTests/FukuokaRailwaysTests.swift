@@ -133,8 +133,9 @@ final class FukuokaRailwaysTests: XCTestCase {
         // subway's three; `KyushuShinkansenTests` buys it and plays its day,
         // and `NishiKyushuShinkansenTests` the Nishi-Kyushu Shinkansen's
         // (decision 998); `RelayKamomeTests` the Relay Kamome's (decision
-        // 1028).
-        XCTAssertEqual(try Self.fukuoka().buyableRealLines.map(\.id).sorted(), ["fksubway:H", "fksubway:K", "fksubway:N", "jrkyushu:RK", "kyushushinkansen:KS", "kyushushinkansen:NK"])
+        // 1028); `SanyoShinkansenTests` the Sanyo Shinkansen's (decision
+        // 1029).
+        XCTAssertEqual(try Self.fukuoka().buyableRealLines.map(\.id).sorted(), ["fksubway:H", "fksubway:K", "fksubway:N", "jrkyushu:RK", "kyushushinkansen:KS", "kyushushinkansen:NK", "sanyoshinkansen:SY"])
         for line in Self.lines {
             let id = "fksubway:\(line.id)"
             let session = try Self.fukuoka()
