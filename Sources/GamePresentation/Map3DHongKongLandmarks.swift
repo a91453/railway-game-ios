@@ -212,6 +212,13 @@ extension Map3DScene.Builder {
             // rectangle round it (Hakata station's, 197 m by 400 m, left
             // 13 real buildings beside it undrawn).
             state.landmarks.landmarkPlans.append(LandmarkPlan(meshes[false]!))
+            // Decision 1018 (continued 4): the real buildings it stands in
+            // the place of whose outlines reach beyond it.
+            let reach = Map3DLandmarkRegistration.replacedReach
+            for spot in landmark.registration?.replaces ?? [] {
+                let x = anchor.x + spot.east, z = anchor.z - spot.north
+                state.landmarks.replacedPlots.append(PlacedSquare(minX: x - reach, minZ: z - reach, maxX: x + reach, maxZ: z + reach))
+            }
             built.insert(landmark.id)
         }
         return built

@@ -84,5 +84,14 @@ extension Map3DLandmarkRegistry {
         Map3DSuizenjiEastBridge.registration,
         Map3DOmuraDepotSheds.registration,
         Map3DOmuraDepotOffice.registration,
+        Map3DChikugoLiftBridge.registration,
+        Map3DDazaifuHonden.registration,
+        Map3DDazaifuRomon.registration,
+        Map3DDazaifuTaikoBridge.registration,
+        Map3DMunakataTaisha.registration,
+        Map3DYutokuInari.registration,
+        Map3DAoiAsoShrine.registration,
+        Map3DTsujunBridge.registration,
+        Map3DTenmonBridge.registration,
     ]
 }

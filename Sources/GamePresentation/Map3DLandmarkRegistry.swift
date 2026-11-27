@@ -66,11 +66,26 @@ public struct Map3DLandmarkRegistration: Sendable {
     /// box east and north would reach over the line beside it (Ōmura's
     /// sheds). `nil` for that box.
     let body: [(x: Float, y: Float)]?
+    /// Decision 1018 (continued 4): the middles (the mean of their
+    /// outlines' corners, as ``Map3DFootprints`` takes them) of the real
+    /// buildings it stands in the place of though it covers neither their
+    /// middles nor a third of their corners, metres east and north of its
+    /// own middle: Dazaifu's main hall, whose OpenStreetMap outline is the
+    /// whole precinct, cloister and gate with it. The footprint whose
+    /// middle is within ``replacedReach`` of one is not drawn again but
+    /// counts as built (decision 879's ``Map3DScene/Builder/LandmarkState/replacedPlots``).
+    let replaces: [(east: Float, north: Float)]
+    /// How far from a ``replaces`` point (metres, either way) the
+    /// footprint's middle may be: an outline's corners as the map pack
+    /// keeps them move its mean a little from OpenStreetMap's.
+    static let replacedReach: Float = 6
 
     init(id: String, map: String, latitude: Double, longitude: Double, baseHeight: Float = 0, sink: Float = 0, deck: Float? = nil,
          palette: [UInt32],
          glass: Set<Int> = [], bandedGlass: Set<Int> = [], encoded: [String: String], station: Map3DStationLandmark? = nil,
+         replaces: [(east: Float, north: Float)] = [],
          body: [(x: Float, y: Float)]? = nil, size: (x: Float, y: Float, z: Float)) {
+        self.replaces = replaces
         self.id = id
         self.map = map
         self.latitude = latitude
