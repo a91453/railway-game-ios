@@ -1160,7 +1160,7 @@ public struct SaveSummary: Codable, Hashable, Sendable {
     public func networkText(in language: DisplayLanguage) -> String {
         let map = realWorld == true ? [language.text("Real-world map", "實景地圖")] : []
         switch language {
-        case .english:
+        case .english, .japanese:
             func count(_ n: Int, _ one: String, _ many: String) -> String { n == 1 ? "1 \(one)" : "\(n) \(many)" }
             return (map + [count(stations, "station", "stations"), count(lines, "line", "lines"), count(trains, "train", "trains")])
                 .joined(separator: " · ")
@@ -1176,7 +1176,7 @@ public struct SaveSummary: Codable, Hashable, Sendable {
         let money = fundsText
         let map = realWorld == true ? [language.text("Real-world map", "實景地圖")] : []
         switch language {
-        case .english:
+        case .english, .japanese:
             func count(_ n: Int, _ one: String, _ many: String) -> String { n == 1 ? "1 \(one)" : "\(n) \(many)" }
             return (map + [time, money, count(stations, "station", "stations"), count(lines, "line", "lines"), count(trains, "train", "trains")])
                 .joined(separator: " · ")

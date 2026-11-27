@@ -24,7 +24,7 @@ struct LineLoadProfileChart: View {
     private static let zeroKey = "Zero"
 
     private var refreshKey: [Int64] {
-        [Int64(line.id.rawValue), session.world.clock.now.seconds / 600, session.language == .english ? 0 : 1]
+        [Int64(line.id.rawValue), session.world.clock.now.seconds / 600, Int64(DisplayLanguage.allCases.firstIndex(of: session.language) ?? 0)]
             + line.stops.map { Int64($0.rawValue) }
     }
 

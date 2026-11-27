@@ -288,7 +288,7 @@ public struct FinanceHistory: Hashable, Sendable {
         if hasTrips {
             parts.append(Self.changeText(language.text("passengers", "旅客"), tripsChangePercent, language))
         }
-        return window + (language == .english ? ": " : "：") + parts.joined(separator: language == .english ? ", " : "、")
+        return window + (language.base == .english ? ": " : "：") + parts.joined(separator: language.base == .english ? ", " : "、")
     }
 
     private static func changeText(_ name: String, _ percent: Int?, _ language: DisplayLanguage) -> String {

@@ -32,7 +32,7 @@ extension GameWorld {
             let count = counts[key] ?? (0, 0)
             let line = self.line(id: key.line)
             let end = key.direction == .outbound ? line?.stops.last : line?.stops.first
-            let towards = end.flatMap { station(id: $0)?.name }.map { language.text(" to \($0)", " 往 \($0)") } ?? ""
+            let towards: String = end.flatMap { station(id: $0)?.name }.map { language.text(" to \($0)", " 往 \($0)") } ?? ""
             let name = line?.name ?? language.text("Line #\(key.line.rawValue)", "路線 #\(key.line.rawValue)")
             var text = "\(name)\(towards) · \(count.all)"
             if count.changing > 0 {

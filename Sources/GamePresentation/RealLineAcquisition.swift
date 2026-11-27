@@ -2639,6 +2639,9 @@ extension RealLineLaying {
         var depotsLaid: [(stop: Int?, depot: RealLineAcquisition.Depot)] = []
         // Decision 556: where along the line each depot beside it stands.
         var depotAlong: [Int: Double] = [:]
+        // Decision 1030: which end's overnight trains each depot beside
+        // the line stables (``RealLineDepotSite/stablesFor``).
+        var depotStablesFor: [Int: String] = [:]
         for ((site, points, j, onFirst), marks) in zip(depotsAt, depotMarks) {
             guard let laid = RealLineDepotLayout.lay(
                 site, points: points, along: path, at: j, second: plans[onFirst ? 0 : 1].plan, onFirst: onFirst, marks: marks, first: pieces.count,
@@ -2646,6 +2649,7 @@ extension RealLineLaying {
             ) else { continue }
             pieces += laid.pieces
             depotAlong[depotsLaid.count] = j
+            depotStablesFor[depotsLaid.count] = site.stablesFor
             depotsLaid.append((nil, laid.depot))
         }
         // Decision 489: a depot past an end, its lead on from the main
@@ -2747,12 +2751,14 @@ extension RealLineLaying {
             // The depot past this end, or, on a line with none past an
             // end, the one beside the line for a station between.
             // Decision 556: the nearest beside the line first, then the
-            // next nearest while the station has trains left.
+            // next nearest while the station has trains left. Decision
+            // 1030: at an end, the one beside the line that stables its
+            // trains.
             let rooms = depotEnds.isEmpty
                 ? (stop > 0 && stop < lastStop
                     ? depotsLaid.indices.filter { depotsLaid[$0].stop == nil }
                     .sorted { abs((depotAlong[$0] ?? 0) - along[stop].along) < abs((depotAlong[$1] ?? 0) - along[stop].along) }
-                    : [])
+                    : depotsLaid.indices.filter { depotStablesFor[$0] == name })
                 : depotsLaid.indices.filter { depotsLaid[$0].stop == stop }
             for room in rooms {
                 while count > 0, !depotRooms[room].isEmpty {

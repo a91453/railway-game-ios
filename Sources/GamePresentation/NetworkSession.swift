@@ -1280,7 +1280,7 @@ extension GameSession {
                 return language.text("Tap the map where the track starts.", "點地圖選軌道的起點。")
             }
             guard let end = networkEnd else {
-                let ground = groundText(at: [start]).map { language.text(" (\($0))", "（\($0)）") } ?? ""
+                let ground: String = groundText(at: [start]).map { language.text(" (\($0))", "（\($0)）") } ?? ""
                 return language.text(
                     "From \(start.text(in: language))\(ground). Tap where it ends, or drag there from the start.",
                     "從\(start.text(in: language))\(ground)開始。請點終點，或從起點拖曳過去。"

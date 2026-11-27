@@ -286,11 +286,10 @@ struct MapConstructionHUD: View {
         .accessibilityLabel(heightAccessibilityLabel)
     }
 
-    /// `english` or `chinese` for the session's language. GamePresentation's
-    /// own `DisplayLanguage.text` is internal to that module, so the app
-    /// picks by the public enum, as the line panel does.
+    /// `english` or `chinese` for the session's language (in Japanese the
+    /// table's Japanese for `english`, decision 1034).
     private func text(_ english: String, _ chinese: String) -> String {
-        language == .traditionalChinese ? chinese : english
+        language.text(english, chinese)
     }
 
     private var continuityText: String {

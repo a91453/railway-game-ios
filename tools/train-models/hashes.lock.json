@@ -4389,6 +4389,14 @@
       "hash" : "a47976f9a3948910",
       "triangles" : 592
     },
+    "ferry-liuqiu-single" : {
+      "hash" : "2b4c4ef2ceb16554",
+      "triangles" : 1772
+    },
+    "ferry-liuqiu-single-far" : {
+      "hash" : "957510faf6f8ba1e",
+      "triangles" : 596
+    },
     "ferry-pier-finger-single-far" : {
       "hash" : "4de6cb8db0b75f9f",
       "triangles" : 354

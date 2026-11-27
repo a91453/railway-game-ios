@@ -764,6 +764,9 @@ extension RealRailways.System {
             // Decision 998: the Nishi-Kyushu Shinkansen's, the Kamome's
             // deeper red (`build_nishi_kyushu_shinkansen.py`'s `COLOUR`).
             "kyushushinkansen|NK": RealRailways.RGB(0xA6192E),
+            // Decision 1030: Kumamoto to Shin-Minamata, the same line
+            // south of Kumamoto, in its red.
+            "kyushushinkansen|KS2": RealRailways.RGB(0xC8102E),
         ]),
         // Decision 1028: JR Kyushu's conventional lines, a system of their
         // own so the Relay Kamome is sold apart from the Shinkansen it
@@ -829,6 +832,14 @@ extension RealBranchLine {
         // Another system than the subway's, so sold on its own
         // (``RealLineBundle/groups(of:)``).
         ("kyushushinkansen", "KS", "Kyushu Shinkansen", "九州新幹線", nil, .metro, false),
+        // Decision 1030 (KYUSHU-SHINKANSEN-MINAMATA): the line on south
+        // from Kumamoto to Shin-Minamata, the last station before the
+        // map's south edge, a line of its own so that a game which has
+        // Hakata to Kumamoto keeps it as it is and is sold the rest
+        // (`build_kyushu_shinkansen_south.py`). It shares Kumamoto, so a
+        // new game buys the two together (``RealLineBundle/groups(of:)``),
+        // Hakata to Kumamoto laid first.
+        ("kyushushinkansen", "KS2", "Kyushu Shinkansen (Shin-Minamata)", "九州新幹線（新水俁）", nil, .metro, false),
         // Decision 998 (NISHI-KYUSHU-SALE): the Nishi-Kyushu Shinkansen,
         // Takeo-Onsen to Nagasaki, a line of the same system but with no
         // station shared with the Kyushu Shinkansen's, so sold on its own

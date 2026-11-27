@@ -48,7 +48,7 @@ final class NishiKyushuShinkansenTests: XCTestCase {
         XCTAssertEqual(TrackGauge.ofRealLine(Self.id), .shinkansen)
         let bundles = try FukuokaRailwaysTests.fukuoka().realLineListings.map { $0.bundle.lines.map(\.id) }
             .filter { $0.contains { $0.hasPrefix("kyushushinkansen:") } }
-        XCTAssertEqual(Set(bundles), [["kyushushinkansen:KS"], [Self.id]], "no station shared: each sold by itself")
+        XCTAssertEqual(Set(bundles), [["kyushushinkansen:KS", "kyushushinkansen:KS2"], [Self.id]], "no station shared with the Nishi-Kyushu Shinkansen: sold by itself")
     }
 
     /// Bought alone from a new game's four tiles round Nagasaki (decision
