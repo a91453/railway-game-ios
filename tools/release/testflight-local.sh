@@ -253,7 +253,7 @@ else
   echo "No map pack changed."
 fi
 
-step "Upload the build (internal TestFlight only)"
+step "Upload the build ($scope TestFlight)"
 rm -rf "$work/upload"
 .github/scripts/testflight-retry.sh "Upload" xcodebuild -quiet -exportArchive \
   -archivePath "$archive" -exportPath "$work/upload" \
