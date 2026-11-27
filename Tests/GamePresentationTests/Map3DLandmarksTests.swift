@@ -76,7 +76,10 @@ final class Map3DLandmarksTests: XCTestCase {
         let frame = try XCTUnwrap(RealWorldFrame(world: world))
         let taken = builder.addTemples(temples, frame: frame, clearOf: [])
         let models = Map3DScene.Builder.templeModels
-        XCTAssertEqual(triangles(builder.closeMeshes), [RealTemples.Size.large, .temple, .small].reduce(0) { $0 + models[$1]!.triangles })
+        // Decision 1035: and the dogs and pigeons of some squares.
+        let kits = [RealTemples.Size.large, .temple, .small].reduce(0) { $0 + models[$1]!.triangles }
+        XCTAssertGreaterThanOrEqual(triangles(builder.closeMeshes), kits)
+        XCTAssertLessThanOrEqual(triangles(builder.closeMeshes), kits + 2 * (286 + 5 * 120))
         XCTAssertEqual(triangles(builder.nearMeshes), 3 * 10)
         XCTAssertEqual(triangles(builder.farMeshes), 3 * 10)
         XCTAssertTrue(builder.meshes.isEmpty, "nothing drawn at every distance")

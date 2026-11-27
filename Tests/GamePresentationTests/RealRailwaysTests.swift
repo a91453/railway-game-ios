@@ -350,9 +350,16 @@ final class RealRailwaysTests: XCTestCase {
     }
 
     /// Every source names its licence, in both languages, and links work as
-    /// URLs.
+    /// URLs. The words are checked in the two languages written at the
+    /// calls; Japanese is the translators' (decision 1034) and has the same
+    /// sources and links.
     func testEverySourceIsCredited() throws {
-        for language in DisplayLanguage.allCases {
+        let japanese = DataSourceCredits.sections(in: .japanese).flatMap(\.credits)
+        let english = DataSourceCredits.sections(in: .english).flatMap(\.credits)
+        XCTAssertEqual(japanese.map(\.id), english.map(\.id))
+        XCTAssertEqual(japanese.map { $0.links.map(\.url) }, english.map { $0.links.map(\.url) })
+        XCTAssertTrue(japanese.allSatisfy { !$0.title.isEmpty && !$0.detail.isEmpty && !$0.notice.isEmpty })
+        for language in [DisplayLanguage.english, .traditionalChinese] {
             let sections = DataSourceCredits.sections(in: language)
             XCTAssertEqual(sections.map(\.id), ["railways", "railwayData", "population", "map", "map3D", "cityView", "sounds", "hongKongRailways", "rovaniemiRailways", "fukuokaRailways"])
             let credits = sections.flatMap(\.credits)
@@ -517,7 +524,8 @@ final class RealRailwaysTests: XCTestCase {
     /// New Taipei Metro runs four lines, and the data sources page names
     /// every one of them, not only the Sanying Line.
     func testTheDataSourcesNameNewTaipeiMetrosFourLines() throws {
-        for language in DisplayLanguage.allCases {
+        // The two languages written at the calls (decision 1034).
+        for language in [DisplayLanguage.english, .traditionalChinese] {
             let credit = try XCTUnwrap(DataSourceCredits.sections(in: language).flatMap(\.credits).first { $0.id == "newTaipeiMetro" })
             XCTAssertEqual(credit.title, language.text("New Taipei Metro", "新北捷運"))
             for line in [language.text("Circular Line", "環狀線"), language.text("Danhai Light Rail", "淡海輕軌"),

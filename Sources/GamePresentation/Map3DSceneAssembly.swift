@@ -75,6 +75,7 @@ extension Map3DScene {
         builder.time("read the land cover")
         // Decision 732: Hong Kong's streets on its map.
         builder.streetLife.region = builder.look.streets
+        builder.state.streets.taipeiOutline = Map3DStreetScooters.taipei(in: worldFrame, region: builder.look.streets)
         let snapshot = snapshot ?? world.railwaySnapshot()
         // Decision 737: the ground levelled before anything is laid on it.
         builder.levelGround(under: snapshot)
@@ -137,7 +138,10 @@ extension Map3DScene {
         builder.mark("the player's track and platforms")
         // Decision 339: the real lines' track, clear of the player's, and
         // their trains on it.
+        // Decision 1035: their viaducts are scenery, with no shops under them.
+        builder.state.elevated.viaducts.owned = false
         realTrains = Self.realTrains(world: world, railways: railways, snapshot: snapshot, builder: &builder)
+        builder.state.elevated.viaducts.owned = true
         builder.mark("real railways")
         builder.state.realTrains.realTrackLines = realTrains?.shownLanes ?? []
         // Decision 941 (later): the real map's roads crossing the track on
@@ -198,6 +202,9 @@ extension Map3DScene {
         stationExteriors = builder.state.exteriors.stationExteriors
         // Decision 322: the shops, clear of the streets.
         builder.addShopStreets()
+        // Decision 1035: the shops under the player's viaducts by its
+        // elevated stations, clear of the streets now laid.
+        builder.addViaductShops()
         // Decision 794: where the winter event's trees and lights go.
         builder.addWinterDecor(frame: worldFrame)
         winterLights = Map3DWinterLights(placements: builder.state.winter.winterDecor)
@@ -230,6 +237,8 @@ extension Map3DScene {
         // Decision 458: the bushes on the stations' plazas and the grass
         // beside the line.
         builder.addStationBushes()
+        // Decision 1035: a dog and pigeons on some forecourts.
+        builder.addStationAnimals()
         builder.addBushesBesideTrack(cleared.union(builder.state.realTrains.realTrackCells), clearOf: builtOn)
         builder.mark("trees, bushes and platform things")
         // Decision 229 續: the street lights' pools, seen at night.

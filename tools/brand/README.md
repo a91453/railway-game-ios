@@ -25,6 +25,7 @@ developer".
 {
   "english" : "…",
   "chinese" : "…",
+  "japanese" : "…",
   "saveExtension" : "…",
   "website" : "www.….com",
   "contactEmail" : "…@….com"
@@ -60,8 +61,12 @@ python3 -I tools/brand/apply_brand.py ../railway-assets-private/branding/game-br
 # … build …
 git checkout -- RailwayGameApp/Resources/GameBrand.json \
   RailwayGameApp/Resources/en.lproj/InfoPlist.strings \
-  RailwayGameApp/Resources/zh-Hant.lproj/InfoPlist.strings RailwayGameApp/Info.plist
+  RailwayGameApp/Resources/zh-Hant.lproj/InfoPlist.strings \
+  RailwayGameApp/Resources/ja.lproj/InfoPlist.strings RailwayGameApp/Info.plist
 ```
+
+`japanese` is optional (decision 1034): without it the Japanese Home
+Screen and save type show the English name.
 
 Each value is masked in the Actions logs (`--github-mask`). Git history from
 before 2026-11-15 still has the name; it is not rewritten.

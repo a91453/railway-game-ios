@@ -13,9 +13,9 @@
 #                    Mac releases before the next CI one (CI makes N or N.2
 #                    to N.99 and never N.1, so the two never meet)
 #   --carry-map-packs yes|no
-#                    yes (default): the app carries every map pack whole, as
-#                    CI's default; no: pack.json only, so the packs come from
-#                    App Store Connect (testflight.yml's carry_map_packs)
+#                    no (default, as CI's): pack.json only, so the packs come
+#                    from App Store Connect; yes: the app carries every map
+#                    pack whole (testflight.yml's carry_map_packs)
 #   --archive PATH   reuse an archive this script already made for --build
 #   --no-upload      stop after the IPA check (nothing is sent to Apple)
 #   --skip-packs     do not upload map packs (an earlier run already did)
@@ -49,7 +49,7 @@ build=""
 archive=""
 upload=true
 packs=true
-carry=yes
+carry=no
 while (($#)); do
   case "$1" in
     --build) build="${2:?--build needs a number}"; shift 2 ;;
@@ -92,7 +92,7 @@ fi
 [[ "$build" =~ ^[1-9][0-9]{0,3}(\.[0-9]{1,2}){0,2}$ ]] || die "build number $build is not N, N.M or N.M.K."
 echo "Commit $(git rev-parse --short HEAD), build $build, map packs carried: $carry, Xcode $(xcodebuild -version | head -1)."
 carry_args=()
-[[ "$carry" == yes ]] || carry_args=(CARRY_MAP_PACKS=NO)
+if [[ "$carry" == yes ]]; then carry_args=(CARRY_MAP_PACKS=YES); else carry_args=(CARRY_MAP_PACKS=NO); fi
 
 work="$HOME/RailwayTestFlight/$build"
 mkdir -p "$work"
