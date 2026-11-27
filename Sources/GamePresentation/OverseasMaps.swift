@@ -40,11 +40,12 @@ public enum OverseasMap: String, CaseIterable, Sendable, Hashable {
     /// the Kyushu Shinkansen's (`kyushushinkansen.json`), another
     /// company's, on another gauge, and (decision 1028) JR Kyushu's
     /// conventional lines' (`jrkyushu.json`, the Relay Kamome's) and
-    /// (decision 1029) JR West's Sanyo Shinkansen's (`sanyoshinkansen.json`).
+    /// (decision 1029) JR West's Sanyo Shinkansen's (`sanyoshinkansen.json`)
+    /// and (decision 1041) the Kumamoto City Tram's (`kumamotocity.json`).
     public var systems: [String] {
         switch self {
         case .hongKong, .rovaniemi: [system]
-        case .fukuoka: [system, "kyushushinkansen", "jrkyushu", "sanyoshinkansen"]
+        case .fukuoka: [system, "kyushushinkansen", "jrkyushu", "sanyoshinkansen", "kumamotocity"]
         }
     }
 
@@ -783,6 +784,13 @@ extension RealRailways.System {
         RealRailways.System(id: "sanyoshinkansen", english: "JR West", chinese: "JR西日本", lineColors: [
             "sanyoshinkansen|SY": RealRailways.RGB(0x0072BC),
         ]),
+        // Decision 1041: the Kumamoto City Tram (熊本市交通局), street
+        // trams, a system of their own. The colours are the operator's
+        // own (its GTFS `route_color`, `build_kumamoto_tram.py`).
+        RealRailways.System(id: "kumamotocity", english: "Kumamoto City Tram", chinese: "熊本市電", lineColors: [
+            "kumamotocity|A": RealRailways.RGB(0xE50014),
+            "kumamotocity|B": RealRailways.RGB(0x005BAC),
+        ]),
     ]
 
     /// Every system of the cities outside Taiwan.
@@ -860,6 +868,14 @@ extension RealBranchLine {
         // Kyushu Shinkansen's track at Hakata and stand at its platforms
         // there (``leavesAt``), so it is sold once that line is bought.
         ("sanyoshinkansen", "SY", "Sanyo Shinkansen", "山陽新幹線", "kyushushinkansen:KS", .metro, false),
+        // Decision 1041 (KUMAMOTO-TRAM): the Kumamoto City Tram's two
+        // lines, street trams bought as a light rail, to the operator's
+        // timetable (`build_kumamoto_tram.py`). They share Kengunmachi to
+        // Karashimacho, so they are sold together (``RealLineBundle/groups(of:)``),
+        // Line A laid first and Line B from Karashimacho, where they part
+        // (as Danhai's Blue Coast Line after the Green Mountain Line).
+        ("kumamotocity", "A", "Kumamoto City Tram Line A", "熊本市電A系統", nil, .lightRail, false),
+        ("kumamotocity", "B", "Kumamoto City Tram Line B", "熊本市電B系統", "kumamotocity:A", .lightRail, false),
     ]
 
     /// Decision 753: the lines of the cities outside Taiwan drawn along

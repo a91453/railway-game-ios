@@ -401,14 +401,17 @@ PACK_FILES = (f"{SYSTEM}.json", f"{SYSTEM}_times.json")
 # Shin-Minamata's, staged by build_kyushu_shinkansen_south.py, last, so
 # the lines before it keep their places); and how each line's notes are
 # told apart in a file both share.
-LINE_ORDER = ("KS", "NK", "RK", "SY", "KS2")
+LINE_ORDER = ("KS", "NK", "RK", "SY", "KS2", "A", "B")
 LINE_NOTES = {"KS": " Kyushu Shinkansen: ", "NK": " Nishi-Kyushu Shinkansen: ", "RK": " Relay Kamome: ",
-              "SY": " Sanyo Shinkansen: ", "KS2": " Kyushu Shinkansen south of Kumamoto: "}
+              "SY": " Sanyo Shinkansen: ", "KS2": " Kyushu Shinkansen south of Kumamoto: ",
+              "A": " Kumamoto City Tram: "}
 # Decision 1028: the systems `merge` takes a staged line of, by the file
 # the staging folder holds: this one's, and the Relay Kamome's JR Kyushu
 # conventional line (`build_relay_kamome.py`); decision 1029, JR West's
-# Sanyo Shinkansen (`build_sanyo_shinkansen.py`).
-MERGED_SYSTEMS = (SYSTEM, "jrkyushu", "sanyoshinkansen")
+# Sanyo Shinkansen (`build_sanyo_shinkansen.py`); decision 1041, the
+# Kumamoto City Tram's two lines (`build_kumamoto_tram.py`), whose one
+# note is the first line's (Line A's).
+MERGED_SYSTEMS = (SYSTEM, "jrkyushu", "sanyoshinkansen", "kumamotocity")
 
 
 def merge(staged, pack):
@@ -448,8 +451,11 @@ def merge(staged, pack):
                 parts[line_id] = theirs[at + len(LINE_NOTES[line_id]):after]
         elif own and theirs:
             head, parts = "", {own: theirs}
+        # Decision 1041: lines staged together share their note, written
+        # once, as the first's.
         for line_id in line_ids:
-            parts[line_id] = ours
+            parts.pop(line_id, None)
+        parts[line_ids[0]] = ours
         if own and not head and len(parts) == 1:
             return next(iter(parts.values()))
         return head + "".join(LINE_NOTES[k] + parts[k] for k in sorted(parts, key=order))

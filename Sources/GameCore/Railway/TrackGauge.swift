@@ -147,7 +147,8 @@ public struct TrackGauge: Hashable, Sendable {
     /// Kūkō and Hakozaki Lines 1,067 and its Nanakuma Line 1,435; JR
     /// Kyushu's conventional lines (the Relay Kamome's, decision 1028)
     /// 1,067; JR West's Sanyo Shinkansen (decision 1029) the
-    /// Shinkansen's. `nil` for a name of a system the game does not know.
+    /// Shinkansen's; the Kumamoto City Tram (decision 1041) 1,435. `nil`
+    /// for a name of a system the game does not know.
     public static func ofRealLine(_ name: String) -> TrackGauge? {
         let parts = name.split(separator: ":", maxSplits: 1).map(String.init)
         guard let system = parts.first else { return nil }
@@ -155,7 +156,7 @@ public struct TrackGauge: Hashable, Sendable {
         case "tra", "tra_sched", "jrkyushu": return .cape
         case "thsr", "thsr_sched", "kyushushinkansen", "sanyoshinkansen": return .shinkansen
         case "afr", "afr_sched": return .forest
-        case "trtc", "mrt", "tmrt", "krtc", "tymc", "ntdlrt", "ntalrt", "sanying", "hkmtr": return .standard
+        case "trtc", "mrt", "tmrt", "krtc", "tymc", "ntdlrt", "ntalrt", "sanying", "hkmtr", "kumamotocity": return .standard
         case "vr": return .broad
         case "fksubway": return parts.count > 1 && parts[1] == "N" ? .standard : .cape
         default: return nil

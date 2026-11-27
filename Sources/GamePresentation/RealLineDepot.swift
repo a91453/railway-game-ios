@@ -371,6 +371,54 @@ struct RealLineDepotSite: Sendable {
         sidings: 3, beyond: nil, compact: false, stablesFor: "熊本"
     )
 
+    /// Decision 1041 (KUMAMOTO-TRAM): the Kumamoto City Tram's Ōe depot
+    /// (大江車庫), Line A's, beside the line north of it some 100 m east
+    /// of Kōtsūkyoku-mae, behind the transport bureau. Its sidings (ways
+    /// 1086686019 to 1086686021) leave the line's north track at node
+    /// 9956968390 and run north-north-east some 140 m
+    /// (`tools/rail-depots/kumamoto_tram_depot_site.py`, osmtoday's whole
+    /// extract of Kyushu, 2026-11-25). The game's wye and its two
+    /// crossovers take some 400 m of line clear of the stops, and the
+    /// real junction is 100 m from Kōtsūkyoku-mae's; so ``junction`` is
+    /// moved 220 m east along the line, to the middle of the 440 m to
+    /// Misotenjin-mae, and the lead runs from there to the real yard.
+    /// The operator's timetable starts the morning's trains at
+    /// Kōtsūkyoku-mae and Misotenjin-mae, either side of it, and every one
+    /// of the line's trains stands there overnight
+    /// (`extract_metro_runs.STABLED_AT`). The operator publishes no
+    /// stabling plan; its sidings hold the line's trains, one each.
+    static let oe = RealLineDepotSite(
+        line: "kumamotocity:A", english: "Ōe Depot", chinese: "大江車庫",
+        junction: (32.796223, 130.721983),
+        yard: ((32.797900, 130.720080), (32.798650, 130.720280)),
+        sidings: 22, beyond: nil, compact: true
+    )
+
+    /// Decision 1041 (KUMAMOTO-TRAM): the Kumamoto City Tram's
+    /// Kami-Kumamoto depot (上熊本車庫), Line B's, at its end. The real
+    /// yard (ways 413212655 to 413212664, the longest 139 m) lies west of
+    /// the line's last 150 m, its spurs (ways 413212658, 413212665 to
+    /// 413212667) leaving the line just short of the stop
+    /// (`tools/rail-depots/kumamoto_tram_depot_site.py`): a train runs
+    /// into it from the terminus backwards, which the game's trains do
+    /// not do. So, as Hashimoto's (``hashimoto``), the game's leads go on
+    /// past the end, and ``junction`` and ``yard`` are the game's own. The
+    /// drawn line ends 48 m past the stop, short of its loops' 60 m
+    /// (``RealLineLayout/streetTram``), and a yard there turned the lead
+    /// back on itself; so the junction is 100 m on from the stop, along
+    /// the line's last bearing (18°), and the yard lies north-east of it,
+    /// its near end 110 m on, clear of the JR and Shinkansen viaducts
+    /// 40 m west (OSM ways 190982786, 530022189; the Kumamoto Electric
+    /// Railway's ground track it crosses is not in the game). Every one of
+    /// Line B's trains stands there overnight
+    /// (`extract_metro_runs.STABLED_AT`); its sidings hold them, one each.
+    static let kamiKumamoto = RealLineDepotSite(
+        line: "kumamotocity:B", english: "Kami-Kumamoto Depot", chinese: "上熊本車庫",
+        junction: (32.817981, 130.699599),
+        yard: ((32.818767, 130.700300), (32.819277, 130.700906)),
+        sidings: 9, beyond: "上熊本", compact: true
+    )
+
     /// THSR-SALE (decision 993): the High Speed Rail's depot past Nangang,
     /// its north end, on from its track there along the real line's way
     /// east, where the real Nangang sidings (南港留置線, ``HighSpeedDemo/realDepots``)
@@ -420,7 +468,7 @@ struct RealLineDepotSite: Sendable {
     /// one past Shuangcheng; decision 556, the Taoyuan Airport MRT two
     /// beside the line).
     static func sites(of line: String) -> [RealLineDepotSite] {
-        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan, hashimoto, kumamoto, tomiai, thsrNangang, thsrWuri, thsrZuoying].filter { $0.line == line }
+        [sanxia, danhai, muzha, neihu, ankeng, luzhu, qingpu, klrt, wongChukHang, siuHoWan, hashimoto, kumamoto, tomiai, oe, kamiKumamoto, thsrNangang, thsrWuri, thsrZuoying].filter { $0.line == line }
     }
 
     /// Decision 556: whether its sidings fan out away from the line, not
@@ -435,7 +483,10 @@ struct RealLineDepotSite: Sendable {
     /// THSR-SALE (decision 993): and the High Speed Rail's Wuri depot,
     /// east of the line.
     /// Decision 1030: and Tomiai's, east of the line.
-    var mayLeaveTheFirstTrack: Bool { line.hasPrefix("hkmtr:") || line == "thsr_sched:THSR" || line == "kyushushinkansen:KS2" }
+    /// Decision 1041: and the Ōe depot, north of Line A.
+    var mayLeaveTheFirstTrack: Bool {
+        line.hasPrefix("hkmtr:") || line == "thsr_sched:THSR" || line == "kyushushinkansen:KS2" || line == "kumamotocity:A"
+    }
 
     func name(in language: DisplayLanguage) -> String {
         language.text(english, chinese)

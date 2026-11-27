@@ -183,7 +183,11 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         // only under the realistic rules, as the High Speed Rail. Decision
         // 1030: and Kumamoto to Shin-Minamata, sold with Hakata–Kumamoto
         // (they share Kumamoto), which `testFukuokaShinkansen` plays with it.
-        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS", "kyushushinkansen:KS2", "kyushushinkansen:NK", "jrkyushu:RK"])
+        // Decision 1041: and the Kumamoto City Tram's Lines A and B, sold
+        // together (they share Kengunmachi to Karashimacho), which
+        // `testKumamotoTram` plays together.
+        XCTAssertEqual(fukuoka, ["fksubway:K", "fksubway:H", "fksubway:N", "kyushushinkansen:KS", "kyushushinkansen:KS2", "kyushushinkansen:NK", "jrkyushu:RK",
+                                 "kumamotocity:A", "kumamotocity:B"])
         let realisticFukuoka = Set(try Self.fukuoka(rules: .realistic).buyableRealLines.map(\.id))
         XCTAssertEqual(realisticFukuoka.subtracting(fukuoka), ["sanyoshinkansen:SY"], "the Sanyo Shinkansen under the realistic rules")
     }
@@ -202,7 +206,8 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
         XCTAssertEqual(taiwan, [["ntdlrt:V", "ntdlrt:VB"], ["tra:LIUJIA", "tra:NEIWAN"]])
         XCTAssertEqual(hongKong, [["hkmtr:TCL", "hkmtr:AEL", "hkmtr:DRL"]], "TimetableCheckupFullTests plays hk TCL+AEL+DRL, in this order")
         XCTAssertEqual(rovaniemi, [["vr:KJA", "vr:MUL"]])
-        XCTAssertEqual(fukuoka.map(Set.init), [["fksubway:K", "fksubway:H", "fksubway:N"], ["kyushushinkansen:KS", "kyushushinkansen:KS2"]], "testFukuokaLines and testFukuokaShinkansen play them")
+        XCTAssertEqual(fukuoka.map(Set.init), [["fksubway:K", "fksubway:H", "fksubway:N"], ["kumamotocity:A", "kumamotocity:B"], ["kyushushinkansen:KS", "kyushushinkansen:KS2"]],
+                       "testFukuokaLines, testKumamotoTram and testFukuokaShinkansen play them")
     }
 
     // MARK: - The whole days
@@ -333,6 +338,20 @@ final class TimetableCheckupAllBoughtTests: XCTestCase {
             try check(name, {
                 let session = try Self.fukuoka(rules: rules)
                 try Self.buyTogether(["jrkyushu:RK"], in: session)
+                return session.world
+            }())
+        }
+    }
+
+    /// Decision 1041: the Kumamoto City Tram's Lines A and B, bought
+    /// together from a new game begun round Kumamoto, under both rules.
+    func testKumamotoTram() throws {
+        try full()
+        for (label, rules) in Self.rules {
+            let name = "fukuoka kumamotocity:A+B \(label)"
+            try check(name, {
+                let session = try Self.fukuoka(rules: rules, start: 2)
+                try Self.buyTogether(["kumamotocity:A", "kumamotocity:B"], in: session)
                 return session.world
             }())
         }

@@ -202,6 +202,21 @@ final class DepotReturnReportTests: XCTestCase {
         }())
     }
 
+    /// Decision 1041: the Kumamoto City Tram's Lines A and B, bought
+    /// together from the land round Kumamoto, with the Ōe and
+    /// Kami-Kumamoto depots (`kumamoto`; only when named).
+    func testKumamotoTram() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["DEPOT_RETURN_REPORT"] != nil, environment["DEPOT_RETURN_ONLY"] == "kumamoto" else {
+            throw XCTSkip("Set DEPOT_RETURN_REPORT=1 DEPOT_RETURN_ONLY=kumamoto to measure the Kumamoto City Tram's depots (decision 1041).")
+        }
+        try report("kumamoto", Self.resumed() ?? {
+            let session = try TimetableCheckupAllBoughtTests.fukuoka(rules: environment["DEPOT_RETURN_SIMPLE"] != nil ? .simple : .realistic, start: 2)
+            try TimetableCheckupAllBoughtTests.buyTogether(["kumamotocity:A", "kumamotocity:B"], in: session)
+            return session.world
+        }())
+    }
+
     static func hongKongBought(_ ids: [String], rules: NewGameRules? = nil) throws -> GameWorld {
         let simple = ProcessInfo.processInfo.environment["DEPOT_RETURN_SIMPLE"] != nil
         let ground = try HongKongMapTests.ground()

@@ -45,5 +45,12 @@ extension TimetableCheckupBudgets {
         // (2026-11-27: all 0 but the Kyushu Shinkansen's own peak gap of
         // +2 minutes, as bought alone above).
         "fukuoka kyushushinkansen:KS+KS2+sanyoshinkansen:SY realistic": .init(notSent: 0, late: 0, lateOutOfDepot: 0, peakGapMinutes: 2),
+        // Decision 1041: the Kumamoto City Tram's Lines A and B, bought
+        // together from a game begun round Kumamoto (2026-11-27): every run
+        // sent; the operator's timetable is to the minute with no time at
+        // the stops, so some trips run late (KUMAMOTO-TRAM-LATE, in
+        // assets-2 `docs/priorities/KUMAMOTO-TRAM.md`).
+        "fukuoka kumamotocity:A+B simple": .init(notSent: 0, late: 30, lateOutOfDepot: 7, peakGapMinutes: 17),
+        "fukuoka kumamotocity:A+B realistic": .init(notSent: 0, late: 23, lateOutOfDepot: 6, peakGapMinutes: 8),
     ]
 }

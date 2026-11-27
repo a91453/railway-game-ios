@@ -72,7 +72,7 @@ final class RealLineBundleTests: XCTestCase {
         // laid after it.
         let fukuoka = try FukuokaRailwaysTests.fukuoka()
         checkEveryLineIsSoldOnce(fukuoka)
-        XCTAssertEqual(bundles(of: fukuoka), [["fksubway:K", "fksubway:H", "fksubway:N"], ["kyushushinkansen:KS", "kyushushinkansen:KS2"], ["kyushushinkansen:NK"], ["jrkyushu:RK"], ["sanyoshinkansen:SY"]])
+        XCTAssertEqual(bundles(of: fukuoka), [["fksubway:K", "fksubway:H", "fksubway:N"], ["kyushushinkansen:KS", "kyushushinkansen:KS2"], ["kyushushinkansen:NK"], ["jrkyushu:RK"], ["sanyoshinkansen:SY"], ["kumamotocity:A", "kumamotocity:B"]])
     }
 
     func testABundleIsNamedAfterItsFirstLine() throws {

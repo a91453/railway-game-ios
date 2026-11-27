@@ -24,6 +24,9 @@ SHINKANSEN = "kyushushinkansen"
 CONVENTIONAL = "jrkyushu"
 # Decision 1029: JR West's Sanyo Shinkansen, Hakata to Kokura.
 SANYO = "sanyoshinkansen"
+# Decision 1041: the Kumamoto City Tram's Lines A and B, run to the
+# operator's timetable.
+TRAM = "kumamotocity"
 
 
 def main(folder):
@@ -33,7 +36,7 @@ def main(folder):
     tool = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(tool)
     tool.LINES = []
-    for system in (SYSTEM, SHINKANSEN, CONVENTIONAL, SANYO):
+    for system in (SYSTEM, SHINKANSEN, CONVENTIONAL, SANYO, TRAM):
         # The Shinkansen's file is there once `build_kyushu_shinkansen.py
         # merge` has run.
         if not os.path.exists(os.path.join(folder, f"{system}.json")):
@@ -41,10 +44,22 @@ def main(folder):
         with open(os.path.join(folder, f"{system}.json"), encoding="utf-8") as f:
             network = json.load(f)
         tool.LINES += [(system, line["id"], None, None) for line in network["lines"]]
+        # Decision 1041: Line B shares Kengunmachi to Karashimacho with
+        # Line A, so once A is the company's it is laid from Karashimacho,
+        # where they part, its trips cut there (as Danhai's Blue Coast
+        # Line is after the Green Mountain Line, decision 400).
+        if system == TRAM:
+            tool.LINES.append((TRAM, "B", "辛島町", "A"))
     tool.METROS = {SYSTEM, SHINKANSEN, CONVENTIONAL, SANYO}
     # Decision 712 (Hong Kong's, kept): a train standing overnight at a station between the
     # ends leaves before the morning's first train the same way reaches it.
     tool.OUT_BEFORE_FIRST = True
+    # Decision 1041: Kumamoto's trams stand overnight in their two real
+    # depots, Line A's at Ōe beside Kōtsūkyoku-mae (`RealLineDepotSite.oe`)
+    # and Line B's past Kami-Kumamoto (`RealLineDepotSite.kamiKumamoto`):
+    # each train comes from there before its first run and goes back after
+    # its last (the operator's timetable leaves those runs out).
+    tool.STABLED_AT = {f"{TRAM}:A": "交通局前", f"{TRAM}:B": "上熊本"}
     # Decision 898: the Nanakuma Line is bought with a depot past
     # Hashimoto, its end (`RealLineDepotSite.hashimoto`), counts its trains
     # by the game's dwell, and has three minutes at Hashimoto to make a

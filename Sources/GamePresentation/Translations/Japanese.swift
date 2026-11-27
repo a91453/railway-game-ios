@@ -1383,6 +1383,8 @@ Kept a month, {0} of interest in all; kept a year, {1}, and {2} with the loan re
 Kept for your track and buildings: the city builds nothing new here.	線路や建物のために確保：都市はここに新しい建物を建てません。
 Kind	種類
 Kindergarten	幼稚園
+Kumamoto City Tram	熊本市電
+Kumamoto City Tram GTFS data	熊本市電 GTFS データ
 Kumamoto, Saga, Kitakyushu, Amakusa, Nagasaki and Iki Airports	熊本・佐賀・北九州・天草・長崎・壱岐空港
 Kyushu Shinkansen	九州新幹線
 Kyushu’s weather	九州の天気
@@ -2632,6 +2634,7 @@ Stops	停車駅
 Stops here:	停車：
 Stops here: 	停車：
 Stops you on the mark. At most half the bonus.	停止位置に止めます。ボーナスは最大半分です。
+Stops, their names and the timetable: Kumamoto City Transportation Bureau’s GTFS data (熊本市交通局), CC BY 2.1 JP, changed for the game. Track and depots: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with the Kumamoto City Transportation Bureau.	電停、電停名と時刻表：熊本市交通局のGTFSデータ、CC BY 2.1 JP、ゲーム用に加工。軌道と車庫：© OpenStreetMap contributors、ODbL 1.0。本ゲームは熊本市交通局とは関係ありません。
 Straight	直線
 Straight on from the track	線路からまっすぐ延長
 Students ride your trains to it on school days. Families move in nearby, and land around it is worth more.	登校日には学生があなたの列車で通います。近くに家族が移り住み、周辺の地価も上がります。
@@ -2863,6 +2866,7 @@ The English line and station names are compiled by {0}.	英語の路線名と駅
 The Fukuoka City Subway’s three lines, the Kuko, Hakozaki and Nanakuma lines, with their stations’ names in Chinese, English and Japanese. There is no published timetable, so their trains run at estimated intervals.	福岡市地下鉄の空港線・箱崎線・七隈線の3路線で、駅名は中国語・英語・日本語です。公開された時刻表がないため、列車は推定の運転間隔で走ります。
 The Green Line (Wuri–Wenxin–Beitun) from Beitun Main Station to HSR Taichung Station.	北屯総站〜高鉄台中駅間の緑線（烏日文心北屯線）。
 The High Speed Rail could not be built from the real-world data.	実地図データから高鉄を建設できませんでした。
+The Kumamoto City Tram’s Lines A and B, with their stops’ names in Chinese, English and Japanese and their trams’ real timetable.	熊本市電のA系統とB系統。電停名は中国語・英語・日本語で、電車は実際の時刻表どおりに走ります。
 The Kyushu Shinkansen from Hakata to Kumamoto, with its seven stations’ names in Chinese, English and Japanese. Its trains call at every station, at estimated times.	博多〜熊本間の九州新幹線で、7駅の駅名は中国語・英語・日本語です。列車は各駅に停車し、推定の時刻で走ります。
 The Main Line from Chiayi to Alishan and the Shenmu, Zhaoping and Zhushan Lines, in the Alishan Forest Railway’s red.	本線（嘉義〜阿里山）と神木線、沼平線、祝山線を、阿里山森林鉄道の赤で描きます。
 The OSM base map of real-world maps in Taiwan (OSM in the map style menu), which works without a network: sea, rivers, woods, parks, roads, boundaries and place names. The 3D map lays its sea, rivers, woods, parks and roads on the ground.	台湾の実在の地図の OSM ベースマップ（地図スタイルメニューの「OSM」）。ネットワークなしで表示できます：海、川、森林、公園、道路、境界、地名。3D地図では、海、川、森林、公園、道路を地面に描きます。

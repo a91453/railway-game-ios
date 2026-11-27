@@ -39,6 +39,11 @@ extension Map3DRealTrains {
             // garage's, first drawn on a line here), the line's two
             // fleets as the game has them.
             return Formation(key: Map3DN700S.key, cars: 16, alternate: Map3DSeries700.key)
+        case "kumamotocity":
+            // Decision 1041: the Kumamoto City Tram's low-floor trams
+            // drawn, until the studio's (`kumamoto-tram-lowfloor`) is in,
+            // as Kaohsiung's Citadis, a low-floor tram, one car.
+            return Formation(key: "klrtCitadis", cars: 1)
         default:
             return nil
         }
