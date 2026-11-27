@@ -20,7 +20,25 @@ extension Map3DScene.Builder {
         var streetFrontage = false
         var frontage = Frontage()
         var noBuild = NoBuild()
+        /// Decision 1031: the registry's houses round the scene, by the
+        /// 64 m cell they stand in.
+        var registry: [Map3DScene.ChunkKey: [RegistryHouse]] = [:]
     }
+
+    /// Decision 1031: a house of ``RegistryHouses`` in the scene: where its
+    /// door is, scene metres, and what it is.
+    struct RegistryHouse {
+        let x: Float
+        let z: Float
+        let storeys: Int
+        let kind: RegistryHouses.Kind
+    }
+
+    /// Decision 1031: how far from a sold house's door a house laid along
+    /// the road takes its storeys and kind, metres: a door's point is at
+    /// the front of its house or a few metres off, and a 透天厝 is some 5 m
+    /// wide.
+    static let registryReach: Float = 12
 
     /// Decision 385: the no-build land round the scene, in scene metres, by
     /// the 64 m cells its outlines' boxes cover.
@@ -119,7 +137,9 @@ extension Map3DScene.Builder {
     /// each road's side, for their shadow, and the runs of shops side by
     /// side, for their shoppers.
     struct LaidFrontage {
-        var houses: [(house: StreetHouse, flats: Bool, shops: Bool, seed: (Int32, Int32), salt: Int32, wall: UInt32)] = []
+        /// Decision 1031: `floors` a sold house's storeys, `nil` for its
+        /// hash's.
+        var houses: [(house: StreetHouse, flats: Bool, shops: Bool, seed: (Int32, Int32), salt: Int32, wall: UInt32, floors: Int?)] = []
         var spans: [(from: Map3DPoint, to: Map3DPoint, front: Map3DPoint, depth: Float)] = []
         var runs: [(from: Map3DPoint, to: Map3DPoint, front: Map3DPoint)] = []
         /// Decision 707: the most floors a house here has (the tallest
@@ -176,6 +196,29 @@ extension Map3DScene.Builder {
             }
         }
         self.state.roadside.noBuild = noBuild
+        // Decision 1031: the registry's houses round the scene.
+        var registry: [Map3DScene.ChunkKey: [RegistryHouse]] = [:]
+        for house in land.registryHouses?.houses(south: low.latitude - margin, north: high.latitude + margin,
+                                                 west: low.longitude - margin, east: high.longitude + margin) ?? [] {
+            let at = frame.worldPosition(latitude: house.latitude, longitude: house.longitude)
+            guard contains(x: at.x, y: at.y) else { continue }
+            let scene = point(x: at.x, y: at.y, height: 0)
+            registry[chunk(of: scene), default: []].append(RegistryHouse(x: scene.x, z: scene.z, storeys: house.storeys, kind: house.kind))
+        }
+        self.state.roadside.registry = registry
+    }
+
+    /// Decision 1031: the registry's house of cell `key` within
+    /// ``registryReach`` of `point` nearest it, of those not in `taken`
+    /// (indices into the cell's houses).
+    func registryHouse(near point: Map3DPoint, in key: Map3DScene.ChunkKey, taken: Set<Int>) -> Int? {
+        guard let houses = state.roadside.registry[key] else { return nil }
+        var best: (index: Int, distance: Float)?
+        for (index, house) in houses.enumerated() where !taken.contains(index) {
+            let dx = house.x - point.x, dz = house.z - point.z, distance = dx * dx + dz * dz
+            if distance <= Self.registryReach * Self.registryReach, distance < best?.distance ?? .infinity { best = (index, distance) }
+        }
+        return best?.index
     }
 
     /// Decision 385: whether scene point `point` is on no-build land.
@@ -272,6 +315,8 @@ extension Map3DScene.Builder {
         guard let near = state.roadside.frontage.byCell[key] else { return laid }
         let cell = Double(Land.cellLength)
         laid.tallest = state.lowRise.lowRise?.cap(worldX: (Double(key.column) + 0.5) * cell, worldY: (Double(key.row) + 0.5) * cell)
+        // Decision 1031: the registry's houses of the cell each taken once.
+        var sold = Set<Int>()
         for index in near {
             let piece = state.roadside.frontage.pieces[index]
             guard piece.fronted, let along = (piece.b - piece.a).normalized else { continue }
@@ -305,15 +350,22 @@ extension Map3DScene.Builder {
                     let salt = sideSalt + 10 + number * 23
                     number += 1
                     let r = { (extra: Int32) in map3DRandom(seed.0, seed.1, salt: salt + extra) }
+                    // Decision 1031: a house sold here is what stands here,
+                    // and no gap: its front's middle within reach of its
+                    // door.
+                    let soldHere = registryHouse(near: piece.a + along * (t + 3) + out * (piece.half + 2), in: key, taken: sold)
+                        .map { (index: $0, house: state.roadside.registry[key]![$0]) }
                     // A gap now and then: an alley, a yard, a vacant lot.
-                    if r(14) < Self.openShare(density: density) {
+                    if soldHere == nil, r(14) < Self.openShare(density: density) {
                         t += 3 + r(15) * 7
                         endRun()
                         continue
                     }
-                    let flats = r(16) < flatShare
-                    let width = min(flats ? 8 + r(1) * 6 : 4.4 + r(1) * 2.2, length - t)
-                    let depth: Float = flats ? 12 + r(17) * 6 : 9 + r(17) * 6
+                    let flats = soldHere.map { $0.house.kind.isFlats } ?? (r(16) < flatShare)
+                    // Decision 1031: a tower broader and deeper than a block.
+                    let tower = soldHere?.house.kind == .tower
+                    let width = min(tower ? 16 + r(1) * 6 : flats ? 8 + r(1) * 6 : 4.4 + r(1) * 2.2, length - t)
+                    let depth: Float = tower ? 18 + r(17) * 6 : flats ? 12 + r(17) * 6 : 9 + r(17) * 6
                     // On a busy road the fronts meet the pavement (arcades);
                     // on a lane, many stand back behind a yard or a car.
                     let setback = piece.half + 0.3 + (busy || r(18) < 0.45 ? 0 : 0.5 + r(19) * 3)
@@ -327,7 +379,7 @@ extension Map3DScene.Builder {
                     }
                     // Decision 1006: a house only for the people there are.
                     // Its shadow and the shops' run stop at the gap.
-                    guard Self.keepsHouse(seed, side: sideSalt, index: number - 1, fill: fill) else {
+                    guard soldHere != nil || Self.keepsHouse(seed, side: sideSalt, index: number - 1, fill: fill) else {
                         endRun()
                         if let open = span { laid.spans.append((open.from, open.to, -out, open.depth)) }
                         span = nil
@@ -340,7 +392,8 @@ extension Map3DScene.Builder {
                     state.roadside.frontage.houses[key, default: []].append(house)
                     let shops = lotShops || r(13) < shopShare
                     let wall = Self.pickWall((seed.0 &+ salt, seed.1))
-                    laid.houses.append((house, flats, shops, seed, salt, wall))
+                    if let soldHere { sold.insert(soldHere.index) }
+                    laid.houses.append((house, flats, shops, seed, salt, wall, soldHere?.house.storeys))
                     let from = piece.a + along * start + out * (piece.half + 0.3), to = piece.a + along * t + out * (piece.half + 0.3)
                     span = (span?.from ?? from, to, max(span?.depth ?? 0, setback - piece.half - 0.3 + depth))
                     if !shops {
@@ -377,10 +430,11 @@ extension Map3DScene.Builder {
                 let r = { (extra: Int32) in map3DRandom(lot.seed.0, lot.seed.1, salt: lot.salt + extra) }
                 if far {
                     Self.addFarTownHouse(&mesh, middle: house.middle, front: house.front, width: house.width, depth: house.depth,
-                                         flats: lot.flats, wall: lot.wall, tallest: laid.tallest, look: look, r: r)
+                                         flats: lot.flats, wall: lot.wall, tallest: laid.tallest, floors: lot.floors, look: look, r: r)
                 } else {
                     Self.addTownHouse(&mesh, close: &closeDetail, blades: &blades, middle: house.middle, front: house.front, width: house.width,
-                                      depth: house.depth, flats: lot.flats, shops: lot.shops, wall: lot.wall, far: false, tallest: laid.tallest, look: look, r: r)
+                                      depth: house.depth, flats: lot.flats, shops: lot.shops, wall: lot.wall, far: false, tallest: laid.tallest,
+                                      floors: lot.floors, look: look, r: r)
                 }
             }
         }
@@ -455,7 +509,8 @@ extension Map3DScene.Builder {
     /// (decision 238): one box of its height, its front and back painted
     /// with its windows, no roof clutter.
     static func addFarTownHouse(_ mesh: inout Map3DMesh, middle: Map3DPoint, front: Map3DPoint, width: Float, depth: Float, flats: Bool,
-                                wall: UInt32, tallest: Int? = nil, look: Map3DRegionLook = .taiwan, r: (Int32) -> Float) {
+                                wall: UInt32, tallest: Int? = nil, floors sold: Int? = nil, look: Map3DRegionLook = .taiwan,
+                                r: (Int32) -> Float) {
         // Decision 802: Finland's houses.
         if look.buildings == .nordic {
             addNordicHouse(&mesh, middle: middle, front: front, width: width, depth: depth, flats: flats, far: true, snow: look.snow,
@@ -468,7 +523,9 @@ extension Map3DScene.Builder {
                              tallest: tallest, r: r)
             return
         }
-        let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
+        // Decision 1031: a sold house's storeys, whatever stands round it.
+        let floors = sold.map { Float(max(1, $0)) }
+            ?? min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
         let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3
         // Decision 764: its roof, and its walls a little lighter or darker.
@@ -486,7 +543,7 @@ extension Map3DScene.Builder {
     /// `front`, a shop below with `shops`; its look from `r`.
     static func addTownHouse(_ mesh: inout Map3DMesh, close closeDetail: inout Map3DMesh, blades: inout [Map3DSign], middle: Map3DPoint,
                              front: Map3DPoint, width: Float, depth: Float, flats: Bool, shops: Bool, wall: UInt32, far: Bool,
-                             tallest: Int? = nil, look: Map3DRegionLook = .taiwan, r: (Int32) -> Float) {
+                             tallest: Int? = nil, floors sold: Int? = nil, look: Map3DRegionLook = .taiwan, r: (Int32) -> Float) {
         // Decision 802: Finland's houses.
         if look.buildings == .nordic {
             addNordicHouse(&mesh, middle: middle, front: front, width: width, depth: depth, flats: flats, far: far, snow: look.snow,
@@ -499,7 +556,9 @@ extension Map3DScene.Builder {
                              tallest: tallest, r: r)
             return
         }
-        let floors = min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
+        // Decision 1031: a sold house's storeys, whatever stands round it.
+        let floors = sold.map { Float(max(1, $0)) }
+            ?? min(flats ? Float(3 + Int(r(2) * 4)) : (r(2) < 0.375 ? 2 : r(2) < 0.875 ? 3 : 4), Float(tallest ?? 6))
         let groundFloor: Float = flats ? 3.5 + r(3) * 0.6 : 3.8 + r(3) * 0.5
         let upper: Float = flats ? 3.0 + r(4) * 0.25 : 3.4 + r(4) * 0.3
         // Decision 764: its roof, and its walls a little lighter or darker.
