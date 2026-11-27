@@ -75,6 +75,7 @@ extension Map3DScene {
         builder.time("read the land cover")
         // Decision 732: Hong Kong's streets on its map.
         builder.streetLife.region = builder.look.streets
+        builder.taipeiOutline = Map3DStreetScooters.taipei(in: worldFrame, region: builder.look.streets)
         let snapshot = snapshot ?? world.railwaySnapshot()
         // Decision 737: the ground levelled before anything is laid on it.
         builder.levelGround(under: snapshot)

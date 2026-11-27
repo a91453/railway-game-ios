@@ -212,6 +212,10 @@ extension DataSourceCredits {
                 // stone lions (Map3DTempleStoneLion).
                 // Decision 918: and five more people (Map3DPedestrian) and
                 // the parked bicycles (Map3DBicycle).
+                // Decision 1037: and the second batch's nine people
+                // (Map3DPedestrianBatch2), the studio's rebuilds of Meshy
+                // figures; the studio's scooters (Map3DScooterModels) are
+                // its own, nothing generated.
                 DataSourceCredit(
                     id: "meshy",
                     title: "Meshy",

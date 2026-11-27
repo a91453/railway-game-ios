@@ -300,6 +300,9 @@ public struct Map3DModelPack: Sendable {
         // Decision 949: the bicycle rack and shed, after the boom and
         // before the route bus.
         groups.append { Map3DBikeParking.drawn }
+        // Decision 1037: the second batch of people seen close up, after
+        // the bicycle parking and before the route bus.
+        groups.append { Map3DPedestrian.secondDrawn }
         // Decision 400, 10i-6: the player's route buses, last, so no model
         // before them moves.
         groups.append { [Map3DLowFloorBus.routeModel()] }

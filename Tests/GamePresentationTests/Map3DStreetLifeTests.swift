@@ -20,7 +20,7 @@ final class Map3DStreetLifeTests: XCTestCase {
     func testTheModelsAreSmallAndTheirRealSizes() throws {
         for (kind, height, length, triangles) in [
             (Map3DStreetModel.standing, Float(1.67), Float(0.3), 60...90), (.walking, 1.67, 0.45, 60...90),
-            (.scooter, 1.68, 1.8, 120...200), (.scooterPair, 1.68, 1.8, 150...260), (.car, 1.46, 4.5, 80...160), (.van, 1.9, 4.7, 80...160),
+            (.scooter, 1.68, 1.9, 120...200), (.scooterPair, 1.68, 1.9, 150...260), (.car, 1.46, 4.5, 80...160), (.van, 1.9, 4.7, 80...160),
         ] {
             let shape = try model(kind)
             XCTAssertEqual(shape.minimum.z, 0, accuracy: 0.01, "\(kind) stands on the ground")
@@ -74,12 +74,17 @@ final class Map3DStreetLifeTests: XCTestCase {
         let commuter = Set(Map3DCommuterFigure.models.compactMap { Map3DStreetLife.models[$0] })
         XCTAssertEqual(commuter.count, 2)
         let others = Set(Map3DStreetLife.pedestrianModels.values)
-        XCTAssertEqual(others.count, 10)
+        // Decision 1037: and the second batch's seventeen.
+        XCTAssertEqual(others.count, 27)
         let commuters = commuter.union(others)
         let near = life.frame(target: middle, distance: 40, time: 0, detail: .full, activity: busy)
         XCTAssertGreaterThan(near.closeUps, 0)
         XCTAssertEqual(near.instances.filter { commuters.contains($0.model) }.count, near.closeUps)
         XCTAssertLessThanOrEqual(near.closeUps, Map3DCommuterFigure.mostCloseUp(of: Map3DStreetDetail.full.people))
+        // Decision 1037: and no more triangles close up than decision
+        // 918's six cost on average, whichever stand there.
+        let triangles = near.instances.filter { commuters.contains($0.model) }.map { Map3DStreetLife.closeUpTriangles[$0.model] ?? 0 }
+        XCTAssertLessThanOrEqual(triangles.reduce(0, +), Map3DCommuterFigure.mostCloseUpTriangles(of: Map3DStreetDetail.full.people))
         // Both the commuter and the others are among them, each person
         // the same one in the next frame.
         XCTAssertTrue(near.instances.contains { commuter.contains($0.model) })

@@ -47,11 +47,13 @@ final class Map3DModelTests: XCTestCase {
         // Decision 923: Japan's utility poles and pedestrian signals.
         let japanStreet: Int = Map3DJapanStreet.Unit.allCases.count
         // Decision 918: the parked bicycles.
-        let bicycles: Int = Map3DBicycle.Unit.allCases.count + Map3DPedestrian.Kind.allCases.count * 2
+        let bicycles: Int = Map3DBicycle.Unit.allCases.count + Map3DPedestrian.drawn.count
         // Decision 941: the level crossings' boom.
         let crossingBoom: Int = Map3DCrossingGate.drawn.count
         // Decision 949: the bicycle rack and shed.
         let bikeParking: Int = Map3DBikeParking.Unit.allCases.count
+        // Decision 1037: the second batch of people.
+        let secondPeople: Int = Map3DPedestrian.secondDrawn.count
         // Decision 449: and after them, the running cars' windows. Decision
         // 575: the cable car; decision 585, PR-3: the ferries and their pier;
         // decision 699: the aircraft and the airfields' vehicles; decision
@@ -59,7 +61,7 @@ final class Map3DModelTests: XCTestCase {
         XCTAssertEqual(pack.models.filter { !$0.name.hasPrefix(Map3DTrainLights.prefix) }.count, baseModels + shortSets + longSets + rest
                        + Map3DCableCar.drawn.count + Map3DFerry.drawn.count + Map3DAircraft.drawn.count + Map3DCoaches.drawn.count + hongKongSignals + winterDecor
                        + santa + herd + plainWalks + finlandStreet + yellowTit + japanSignals
-                       + japanStreet + bicycles + crossingBoom + bikeParking)
+                       + japanStreet + bicycles + crossingBoom + bikeParking + secondPeople)
         // One term per line, typed: as a single sum of 30 terms the type
         // checker took 213 s on it (decision 563).
         let studyModels: [Int] = [

@@ -218,6 +218,9 @@ extension Map3DScene {
         var signs: [ChunkKey: [Map3DSign]] = [:]
         /// Decision 259: where people walk and vehicles drive.
         var streetLife = Map3DStreetLife()
+        /// Decision 1037: Taipei City's outline in world units on a map of
+        /// Taiwan, for its lanes' share of scooters.
+        var taipeiOutline: [(x: Double, y: Double)]?
         /// Review L14-7: where a study can be drawn (its origin in a chunk
         /// some block of the scene builds): a station stands for one only
         /// whose origin is in it, else it draws its own building, as a
