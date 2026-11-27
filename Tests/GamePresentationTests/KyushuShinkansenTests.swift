@@ -125,14 +125,16 @@ final class KyushuShinkansenTests: XCTestCase {
         let track = Set(try XCTUnwrap(bought.track))
         XCTAssertEqual(Set(world.network.edges.filter { track.contains($0.id) }.map(\.gauge)), [.shinkansen])
 
-        // Every station on the real viaduct, its platforms 200 m long.
+        // Every station on the real viaduct, its platforms 200 m long;
+        // SANYO-HAKATA-SHARED (decision 1032): Hakata's 400 m, for the
+        // Sanyo Shinkansen's sixteen cars that run onto them.
         var tracks: [String: Int] = [:]
         for stop in line.stops {
             let name = try XCTUnwrap(world.station(id: stop)?.name)
             let platforms = world.network.platforms(of: stop)
             tracks[name] = platforms.count
             for platform in platforms {
-                XCTAssertEqual(Double(platform.end - platform.start) / Self.metre, 200, accuracy: 0.5, name)
+                XCTAssertEqual(Double(platform.end - platform.start) / Self.metre, name == "博多" ? 400 : 200, accuracy: 0.5, name)
             }
             let over = SharedStationLayoutTests.overGround(stop, in: world)
             XCTAssertTrue(over.allSatisfy { $0 > 8 && $0 < 30 }, "\(name): on the viaduct, \(over) m over the ground")
