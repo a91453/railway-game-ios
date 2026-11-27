@@ -30,6 +30,11 @@
 
 - `continue-on-error: true`，到時只是警告，不會讓 job 紅；沒做完的暖機由第一支測試接著付。沒改。
 
+## 550e1377 的 full lane（run 46018530736，16:35 UTC 仍紅）
+
+- 收了：build job `ToolbarSmokeTests.testJapaneseThenTraditionalChineseGetsChinese` :29。不是 App 的 bug：這支是日文介面 #2815 以前寫的，那時沒有日文介面，日文優先要退到繁中。#2815 之後日文優先就該是日文（標題「鉄道ゲーム」）。改成兩支：`testKoreanThenTraditionalChineseGetsChinese`（App 沒有的語言排第一、繁中第二→繁中）、`testJapaneseThenTraditionalChineseGetsJapanese`。
+- 沒收（這串壓縮過一次，照 CLAUDE.md 不接新工作，交回協調者）：second job `RealWorldMapUITests` 三項 :788（`realWorld.start`／`place.tra-taipei` 捲不到）、lessons job `Feature284To286UITests` 四項 :177、iPad `testLargeTextTutorialNavigation` :674（`dock.build` 點不到）。550e1377 早於 #2833（`9c0c5c4`），iPad 那項要先看 #2833 之後的 full lane 還紅不紅。紀錄在 assets-2 `docs/memory/post-release-log-2.md` 第 4 項。
+
 ## DEBUG 例行
 
 1. **讀新增的程式找當機寫法**（強制解包、`try!`、`as!`、`fatalError`、`precondition`）：新的都安全。

@@ -1,4 +1,5 @@
 import XCTest
+import GamePresentation
 
 @MainActor
 final class ToolbarSmokeTests: XCTestCase {
@@ -16,17 +17,29 @@ final class ToolbarSmokeTests: XCTestCase {
         ])
     }
 
-    /// The app has no Japanese interface: someone who reads Japanese first
-    /// and Traditional Chinese second gets the Chinese one, not English.
-    func testJapaneseThenTraditionalChineseGetsChinese() {
+    /// The app has no Korean interface: someone who reads Korean first and
+    /// Traditional Chinese second gets the Chinese one, not English. (This
+    /// was Japanese first until the Japanese interface, #2815; main
+    /// 550e1377's full lane, run 46018530736, then showed 鉄道ゲーム.)
+    func testKoreanThenTraditionalChineseGetsChinese() {
+        checkStartBrand(languages: "(ko, zh-Hant)", locale: "ko_KR", expected: BuiltBrand.current.chinese)
+    }
+
+    /// Japanese first gets the Japanese interface (#2815), even with
+    /// Traditional Chinese second.
+    func testJapaneseThenTraditionalChineseGetsJapanese() {
+        checkStartBrand(languages: "(ja, zh-Hant)", locale: "ja_JP", expected: BuiltBrand.current.name(in: .japanese))
+    }
+
+    private func checkStartBrand(languages: String, locale: String, expected: String) {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments = ["-ui-testing", "-AppleLanguages", "(ja, zh-Hant)", "-AppleLocale", "ja_JP"]
+        app.launchArguments = ["-ui-testing", "-AppleLanguages", languages, "-AppleLocale", locale]
         app.launch()
         defer { app.terminate() }
         let brand = app.staticTexts["start.brand"]
         XCTAssertTrue(brand.appears(within: 10))
-        XCTAssertEqual(brand.label, BuiltBrand.current.chinese)
+        XCTAssertEqual(brand.label, expected)
         XCTAssertTrue(app.buttons["start.newGame"].exists)
     }
 
