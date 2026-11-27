@@ -13,6 +13,9 @@ public struct GameBrand: Codable, Hashable, Sendable {
     /// The name in English and in Traditional Chinese.
     public var english: String
     public var chinese: String
+    /// The name in Japanese (decision 1034), or nil: then a Japanese game
+    /// shows the English one.
+    public var japanese: String?
     /// The file name extension of the game's own save type, without a dot
     /// (``SharedNetwork/fileExtension``; the Info.plist declares it too).
     public var saveExtension: String
@@ -23,16 +26,17 @@ public struct GameBrand: Codable, Hashable, Sendable {
     /// 503), or nil: then they name the developer instead.
     public var contactEmail: String?
 
-    public init(english: String, chinese: String, saveExtension: String, website: String? = nil, contactEmail: String? = nil) {
+    public init(english: String, chinese: String, japanese: String? = nil, saveExtension: String, website: String? = nil, contactEmail: String? = nil) {
         self.english = english
         self.chinese = chinese
+        self.japanese = japanese
         self.saveExtension = saveExtension
         self.website = website
         self.contactEmail = contactEmail
     }
 
     /// The brand of a build the private brand was not put into.
-    public static let neutral = GameBrand(english: "Railway Game", chinese: "鐵道遊戲", saveExtension: "railwaygame")
+    public static let neutral = GameBrand(english: "Railway Game", chinese: "鐵道遊戲", japanese: "鉄道ゲーム", saveExtension: "railwaygame")
 
     /// The brand of this build: `GameBrand.json` in the app's bundle, or
     /// ``neutral`` when there is none or it cannot be read.
@@ -48,7 +52,11 @@ public struct GameBrand: Codable, Hashable, Sendable {
 
     /// The name in `language`.
     public func name(in language: DisplayLanguage) -> String {
-        language.text(english, chinese)
+        switch language {
+        case .english: english
+        case .traditionalChinese: chinese
+        case .japanese: japanese ?? english
+        }
     }
 
     /// The website's home page, or nil.
@@ -64,7 +72,7 @@ public struct GameBrand: Codable, Hashable, Sendable {
     /// Whether every field is usable: names, an extension of letters and
     /// digits, and a host with no scheme or path.
     public var isValid: Bool {
-        !english.isEmpty && !chinese.isEmpty && !saveExtension.isEmpty
+        !english.isEmpty && !chinese.isEmpty && japanese?.isEmpty != true && !saveExtension.isEmpty
             && saveExtension.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber) }
             && (website.map { !$0.isEmpty && !$0.contains("/") && !$0.contains(":") } ?? true)
             && (contactEmail.map { $0.contains("@") } ?? true)

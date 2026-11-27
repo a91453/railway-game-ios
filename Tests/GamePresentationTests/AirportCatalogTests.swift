@@ -136,7 +136,8 @@ final class AirportCatalogTests: XCTestCase {
             let summary = day.summary(in: language)
             XCTAssertTrue(summary.contains("142"), summary)
             XCTAssertTrue(summary.contains(language.text("15,200", "15,200")), summary)
-            XCTAssertTrue(summary.contains(language.text("No station yet", "還沒有車站")), summary)
+            // Japanese is the translators' sentence (decision 1034).
+            XCTAssertTrue(summary.contains(language == .japanese ? "まだ駅がありません" : language.text("No station yet", "還沒有車站")), summary)
             XCTAssertNil(day.yesterdayText(in: language))
             XCTAssertNil(day.growthText(in: language))
         }

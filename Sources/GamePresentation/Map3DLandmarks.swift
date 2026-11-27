@@ -31,8 +31,47 @@ extension Map3DScene.Builder {
         var triangles: Int { mesh.indices.count / 3 }
     }
 
+    /// Decision 1035: which of the studio's small temple pieces the kit
+    /// temples take: none, their close-up shapes, or their far ones.
+    enum TempleProps: Sendable { case none, near, far }
+
+    /// Decision 1035: the pieces the scene's temples take, measured on
+    /// the scenes with the most temples (``Map3DTemplePropTests``): with
+    /// the far shapes they draw at least nine in ten of the temples they
+    /// drew without them (Taipei 22 of 23); with the close-up shapes,
+    /// 1,700 triangles more a temple, two no longer fit a chunk and only
+    /// two in three were drawn (Taipei 15 of 23).
+    static let templeProps = TempleProps.far
+
     /// Each size's temple, from the civic kit.
-    static let templeModels: [RealTemples.Size: TempleModel] = {
+    static let templeModels: [RealTemples.Size: TempleModel] = templeModels(props: templeProps)
+
+    /// Decision 1035: where the dragon columns stand on the gate, how
+    /// tall they are drawn (``Map3DTempleProp/dragonPillar`` is 3.2 m, cut
+    /// to the gate's eaves, never under 2.6 m), and where the dragons sit
+    /// on the hall's ridge; `nil` where the gate leaves no room.
+    static let templePropPlaces: (pillarX: Float, pillarZ: Float, pillarFoot: Float, pillarHeight: Float?, ridgeX: Float, ridgeY: Float) = {
+        // The gate at x 7 on the 0.12 m square, its pad 5–9 m and 0.25 m
+        // high: the columns 0.4 m in from its front, 1.2 m outside the
+        // lions (±1.75 m).
+        let gate: Float = 7, pillarX: Float = 9 - 0.4, pillarZ: Float = 1.75 + 1.2, foot: Float = 0.12 + 0.25
+        let radius = (Map3DTempleProp.dragonPillar.model.map { max($0.maximum.x - $0.minimum.x, $0.maximum.y - $0.minimum.y) } ?? 0.7) / 2
+        // The lowest of the gate's roof over the column's base (the kit's
+        // native x front, y left, z up).
+        let eaves = Map3DCivicKit.model(for: .templeGate).vertices.filter { v in
+            v.z > 3 && abs(v.x + gate - pillarX) <= radius && abs(abs(v.y) - pillarZ) <= radius
+        }.map(\.z).min().map { $0 + 0.12 }
+        let room = eaves.map { $0 - foot - 0.05 } ?? 3.2
+        let height: Float? = room >= 3.2 ? 3.2 : room >= 2.6 ? room : nil
+        // The hall at x −5: the top of its ridge at its middle.
+        let hall: Float = -5
+        let ridge = Map3DCivicKit.model(for: .templeHall).vertices.filter { abs($0.x) < 0.6 && abs($0.y) < 0.6 }.map(\.z).max() ?? 5.87
+        return (pillarX, pillarZ, foot, height, hall, 0.12 + ridge)
+    }()
+
+    /// Each size's temple, from the civic kit, with the studio's pieces
+    /// `props`.
+    static func templeModels(props: TempleProps) -> [RealTemples.Size: TempleModel] {
         func part(_ part: Map3DCivicKit.Part, _ x: Float, into builder: inout StationKitBuilder) {
             builder.add(Map3DCivicKit.model(for: part), at: Map3DPoint(x, 0.12, 0))
         }
@@ -44,12 +83,21 @@ extension Map3DScene.Builder {
         }
         // And the studio's stone lions `apart` metres apart at `x`, facing
         // out: the male on the temple's left (its −z, looking out along +x).
-        func lions(_ x: Float, apart: Float, into builder: inout StationKitBuilder) {
+        // Decision 1035: `scale` times their 1.8 m.
+        func lions(_ x: Float, apart: Float, scale: Float = 1, into builder: inout StationKitBuilder) {
             for (lion, z) in [(Map3DTempleStoneLion.left, -apart / 2), (.right, apart / 2)] {
                 guard let model = lion.model else { continue }
-                builder.add(model, at: Map3DPoint(x, 0.12, z))
+                builder.add(model, at: Map3DPoint(x, 0.12, z), scale: scale)
             }
         }
+        func prop(_ near: Map3DTempleProp, _ far: Map3DTempleProp) -> Map3DModelPack.Model? {
+            switch props {
+            case .none: nil
+            case .near: near.model
+            case .far: far.model
+            }
+        }
+        let places = templePropPlaces
         // The kit's temple square, 30 m by 32 m, its main hall at -6, as
         // it is: with the Tiangong burner it would pass 5,000 triangles,
         // and two would no longer fit a chunk (``templeChunkTriangles``).
@@ -63,13 +111,28 @@ extension Map3DScene.Builder {
         tiangong(2, into: &temple)
         part(.templeGate, 7, into: &temple)
         lions(9.9, apart: 3.5, into: &temple)
+        // Decision 1035: the cut-tile dragons on the hall's ridge, facing
+        // out, and a dragon column each side of the gate's front, outside
+        // the lions.
+        if let dragons = prop(.ridgeDragons, .ridgeDragonsFar) {
+            temple.add(dragons, at: Map3DPoint(places.ridgeX, places.ridgeY, 0))
+        }
+        if let pillar = prop(.dragonPillar, .dragonPillarFar), let height = places.pillarHeight {
+            for z in [-places.pillarZ, places.pillarZ] {
+                temple.add(pillar, at: Map3DPoint(places.pillarX, places.pillarFoot, z), height: height / 3.2)
+            }
+        }
         // A side hall, the Tiangong burner and the lions either side of
-        // the way to it.
+        // the way to it. Decision 1035: a shrine's lions 1.2 m, two thirds
+        // of a temple's, and Tudigong on the hall's platform at its door.
         var small = StationKitBuilder()
         small.box(0, 0, 0, 12, 11, 0.12, Map3DPalette.plaza)
         part(.templeSideHall, -1.5, into: &small)
         tiangong(4.5, into: &small)
-        lions(2.6, apart: 4.4, into: &small)
+        lions(2.6, apart: 4.4, scale: 1.2 / 1.8, into: &small)
+        if let figure = prop(.tudigong, .tudigongFar) {
+            small.add(figure, at: Map3DPoint(Self.tudigongX, 0.12 + 0.35, 0))
+        }
         // The halls' walls (the kit's `templeHall` and `templeSideHall`):
         // 1.6 m shorter and 1 m narrower than the hall, 0.7 m back, 3.4 m
         // tall on its 0.35 m platform on the square; the box a little
@@ -79,7 +142,13 @@ extension Map3DScene.Builder {
             .temple: TempleModel(mesh: temple.mesh, length: 22, width: 16, hall: (-5.7, 8.2, 10.8, 3.3)),
             .small: TempleModel(mesh: small.mesh, length: 12, width: 11, hall: (-2.2, 5.2, 5.8, 3.3)),
         ]
-    }()
+    }
+
+    /// Decision 1035: Tudigong's middle on a shrine's square. The side
+    /// hall (at −1.5) has its wall's front at 0.5 m and the bases of its
+    /// front columns from 1.45 m: the figure, 0.7 m deep, half a metre
+    /// before the wall, clear of both.
+    static let tudigongX: Float = 1.0
 
     /// How high over a temple's foot its hall's walls begin: the square
     /// and the hall's platform.
@@ -102,9 +171,11 @@ extension Map3DScene.Builder {
     /// clear of track, platforms and roads and on no cell in `cleared` or
     /// another's; within ``templeTriangles``, and ``templeChunkTriangles``
     /// a chunk. Returns the 64 m cells they stand on, which keep no city
-    /// lot.
-    mutating func addTemples(_ temples: RealTemples, frame: RealWorldFrame, clearOf cleared: Set<Map3DScene.ChunkKey>)
-        -> Set<Map3DScene.ChunkKey> {
+    /// lot. `models` and `animals` (decision 1035's measure) stand in for
+    /// ``templeModels`` and the squares' dogs and pigeons.
+    mutating func addTemples(_ temples: RealTemples, frame: RealWorldFrame, clearOf cleared: Set<Map3DScene.ChunkKey>,
+                             models: [RealTemples.Size: TempleModel]? = nil, animals withAnimals: Bool = true) -> Set<Map3DScene.ChunkKey> {
+        let models = models ?? Self.templeModels
         let middle = (x: (region.minX + region.maxX) / 2, y: (region.minY + region.maxY) / 2)
         var near: [(distance: Double, place: (x: Double, y: Double), size: RealTemples.Size)] = []
         for temple in temples.temples {
@@ -115,14 +186,15 @@ extension Map3DScene.Builder {
         }
         near.sort { ($0.distance, $1.size, $0.place.x, $0.place.y) < ($1.distance, $0.size, $1.place.x, $1.place.y) }
         var taken = Set<Map3DScene.ChunkKey>(), triangles = 0, chunkTriangles: [Map3DScene.ChunkKey: Int] = [:]
+        var stood: [(size: RealTemples.Size, centre: Map3DPoint, foot: Map3DPoint, facing: Map3DPoint, chunk: Map3DScene.ChunkKey)] = []
         for temple in near {
-            guard let model = Self.templeModels[temple.size], triangles + model.triangles <= Self.templeTriangles else { continue }
+            guard let model = models[temple.size] else { continue }
             let centre = point(x: temple.place.x, y: temple.place.y, height: 0)
+            let chunk = key(of: centre), cost = model.triangles
+            guard triangles + cost <= Self.templeTriangles, chunkTriangles[chunk, default: 0] + cost <= Self.templeChunkTriangles else { continue }
             // REVIEW-L33: not inside a registered landmark (decision 928's
             // Wen Wu Temple stands on a mapped temple's point).
             guard !underLandmark(centre) else { continue }
-            let chunk = key(of: centre)
-            guard chunkTriangles[chunk, default: 0] + model.triangles <= Self.templeChunkTriangles else { continue }
             for facing in Self.templeFacings {
                 let footprint = Self.templeFootprint(model, centre: centre, facing: facing)
                 let cells = cells(under: footprint)
@@ -132,6 +204,7 @@ extension Map3DScene.Builder {
                 let foot = Map3DPoint(centre.x, footprint.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0, centre.z)
                 target = .close
                 mesh(at: centre) { $0.append(model.mesh, at: foot, forward: facing) }
+                stood.append((temple.size, centre, foot, facing, chunk))
                 let hall = foot + facing * model.hall.x + Map3DPoint(0, Self.templeHallFloor, 0)
                 for level in [Target.near, .far] {
                     target = level
@@ -142,10 +215,23 @@ extension Map3DScene.Builder {
                 }
                 target = .base
                 taken.formUnion(cells)
-                triangles += model.triangles
-                chunkTriangles[chunk, default: 0] += model.triangles
+                triangles += cost
+                chunkTriangles[chunk, default: 0] += cost
                 break
             }
+        }
+        // Decision 1035: then the dogs and pigeons of the squares that have
+        // them, nearest first, in what the caps have left, never in place
+        // of a temple.
+        target = .close
+        defer { target = .base }
+        for temple in stood where withAnimals {
+            let animals = templeAnimals(temple.size, centre: temple.centre), cost = animals.indices.count / 3
+            guard cost > 0, triangles + cost <= Self.templeTriangles, chunkTriangles[temple.chunk, default: 0] + cost <= Self.templeChunkTriangles
+            else { continue }
+            mesh(at: temple.centre) { $0.append(animals, at: temple.foot, forward: temple.facing) }
+            triangles += cost
+            chunkTriangles[temple.chunk, default: 0] += cost
         }
         return taken
     }

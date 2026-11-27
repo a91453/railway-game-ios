@@ -27,6 +27,9 @@ final class GameBrandTests: XCTestCase {
         XCTAssertTrue(try text("Resources/en.lproj/InfoPlist.strings").contains(#""CFBundleDisplayName" = "Railway Game";"#))
         XCTAssertTrue(try text("Resources/zh-Hant.lproj/InfoPlist.strings").contains(#""CFBundleDisplayName" = "鐵道遊戲";"#))
         XCTAssertTrue(try text("Resources/zh-Hant.lproj/InfoPlist.strings").contains(#""Railway Game Save" = "鐵道遊戲存檔";"#))
+        // Decision 1034: the Japanese name, which apply_brand.py replaces too.
+        XCTAssertTrue(try text("Resources/ja.lproj/InfoPlist.strings").contains(#""CFBundleDisplayName" = "鉄道ゲーム";"#))
+        XCTAssertTrue(try text("Resources/ja.lproj/InfoPlist.strings").contains(#""Railway Game Save" = "鉄道ゲームのセーブデータ";"#))
     }
 
     func testATestBuildIsNeutral() {
@@ -43,6 +46,10 @@ final class GameBrandTests: XCTestCase {
         XCTAssertTrue(GameBrand.neutral.isValid)
         XCTAssertEqual(brand.websiteName, "railway.example")
         XCTAssertEqual(brand.name(in: .traditionalChinese), "測試")
+        // Decision 1034: a brand with no Japanese name shows its English one.
+        XCTAssertEqual(brand.name(in: .japanese), "Test")
+        XCTAssertEqual(GameBrand.neutral.name(in: .japanese), "鉄道ゲーム")
+        XCTAssertFalse(GameBrand(english: "A", chinese: "B", japanese: "", saveExtension: "ab").isValid)
         XCTAssertFalse(GameBrand(english: "A", chinese: "B", saveExtension: "a.b").isValid)
         XCTAssertFalse(GameBrand(english: "A", chinese: "B", saveExtension: "ab", website: "https://x").isValid)
         XCTAssertFalse(GameBrand(english: "", chinese: "B", saveExtension: "ab").isValid)

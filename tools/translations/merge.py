@@ -44,7 +44,7 @@ def answers_in(text):
 def droppable(arg):
     """Whether an interpolation is only English grammar (a plural ending, an
     article), which Japanese may leave out."""
-    return bool(re.fullmatch(r'.*\?\s*"[A-Za-z ]*"\s*:\s*"[A-Za-z ]*"', arg)) or arg.strip() in ('"a"', '"an"')
+    return bool(re.fullmatch(r'.*\?\s*"[A-Za-z\' ]*"\s*:\s*"[A-Za-z\' ]*"', arg)) or arg.strip() in ('"a"', '"an"')
 
 
 def check_game(key, args, sentence):
