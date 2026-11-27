@@ -73,5 +73,8 @@ extension Map3DLandmarkRegistry {
         Map3DCheKungTemple.registration,
         Map3DKokuraCastle.registration,
         Map3DKaratsuCastle.registration,
+        Map3DKumamotoStation.registration,
+        Map3DKumamotoStationTower.registration,
+        Map3DDuoliangStation.registration,
     ]
 }

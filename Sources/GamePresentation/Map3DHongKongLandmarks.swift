@@ -139,6 +139,10 @@ extension Map3DScene.Builder {
         /// built, so the houses along the roads round it stay
         /// (``landmarkPlots`` keeps them off its cells).
         var replacedPlots: [PlacedSquare] = []
+        /// Decision 1020: where each station landmark stands and whether
+        /// it does, asked once of the whole network
+        /// (``stationLandmarkPlace(_:snapshot:frame:)``).
+        var stationPlaces: [String: StationLandmarkPlace] = [:]
     }
 
     /// Decision 791: Hong Kong's landmarks where they stand, and after
@@ -149,14 +153,18 @@ extension Map3DScene.Builder {
     /// Central stand closer than that); the footprints their model stands
     /// on are left undrawn (``landmarkPlans``). Returns the names of those
     /// built (the enum's raw values, the registrations' ids).
+    /// Decision 1020: a station landmark is not kept clear of the track
+    /// but stands where `snapshot`'s track and platforms and the real
+    /// lines' track keep clear of it
+    /// (``stationLandmarkPlace(_:snapshot:frame:)``).
     @discardableResult
-    mutating func addHongKongLandmarks(frame: RealWorldFrame) -> Set<String> {
+    mutating func addHongKongLandmarks(frame: RealWorldFrame, snapshot: RailwaySnapshot? = nil) -> Set<String> {
         typealias Placed = (id: String, latitude: Double, longitude: Double, baseHeight: Float, sink: Float,
-                            model: (Bool) -> LandmarkMesh)
+                            model: (Bool) -> LandmarkMesh, registration: Map3DLandmarkRegistration?)
         let landmarks: [Placed] = Map3DHongKongLandmark.allCases.map { landmark in
-            (landmark.rawValue, landmark.latitude, landmark.longitude, landmark.baseHeight, 0, landmark.model(full:))
+            (landmark.rawValue, landmark.latitude, landmark.longitude, landmark.baseHeight, 0, landmark.model(full:), nil)
         } + Map3DLandmarkRegistry.landmarks.map { landmark in
-            (landmark.id, landmark.latitude, landmark.longitude, landmark.baseHeight, landmark.sink, landmark.model(full:))
+            (landmark.id, landmark.latitude, landmark.longitude, landmark.baseHeight, landmark.sink, landmark.model(full:), landmark)
         }
         var built = Set<String>()
         for landmark in landmarks {
@@ -165,13 +173,20 @@ extension Map3DScene.Builder {
             let centre = point(x: place.x, y: place.y, height: 0)
             let models = [true: landmark.model(true), false: landmark.model(false)]
             let body = LandmarkMesh.corners(Map3DHongKongLandmark.body(of: models[true]!), origin: centre, rotation: 0)
-            guard isClearOfTrack(body) else { continue }
-            // On its podium where the ground is lower than its foot; one
-            // sunk into a hillside (decision 913) with its floor on the
-            // ground at its middle, its foot that far below.
-            let found = landmark.sink > 0 ? drawnGround(x: centre.x, z: centre.z)
-                : body.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0
-            let ground = max(found, landmark.baseHeight) - landmark.sink
+            let ground: Float
+            if let station = landmark.registration, station.station != nil {
+                let stood = stationLandmarkPlace(station, snapshot: snapshot, frame: frame)
+                guard stood.stands else { continue }
+                ground = stood.ground
+            } else {
+                guard isClearOfTrack(body) else { continue }
+                // On its podium where the ground is lower than its foot; one
+                // sunk into a hillside (decision 913) with its floor on the
+                // ground at its middle, its foot that far below.
+                let found = landmark.sink > 0 ? drawnGround(x: centre.x, z: centre.z)
+                    : body.map { drawnGround(x: $0.x, z: $0.z) }.min() ?? 0
+                ground = max(found, landmark.baseHeight) - landmark.sink
+            }
             let saved = target
             for (level, full) in [(Target.near, true), (.far, false)] {
                 target = level

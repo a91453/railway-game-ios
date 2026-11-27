@@ -3,7 +3,8 @@
 /// `game-art-previews/docs/art/fukuoka-landmarks-2026-11/revision-4`):
 /// the main building, the platform roofs east of it and the Hakata exit's
 /// canopy, written here by `tools/landmarks/glb_to_swift.py`
-/// (``encoded``). Decision 895: a registered landmark.
+/// (``encoded``). Decision 895: a registered landmark; decision 1020: a
+/// station landmark (``Map3DStationLandmark``).
 enum Map3DHakataStation {
     static let registration = Map3DLandmarkRegistration(
         id: "hakata-station", map: "fukuoka",
@@ -18,6 +19,10 @@ enum Map3DHakataStation {
                   Map3DPalette.cityOfficeWalls[5], Map3DPalette.cityRoofs[3].color, Map3DPalette.steel],
         glass: [3],
         encoded: encoded,
+        // Decision 1020: a station landmark, drawn when the Kyushu
+        // Shinkansen is bought too, its own building and canopies then
+        // left out.
+        station: Map3DStationLandmark(),
         // OpenStreetMap's outlines of the main building and the platform
         // roofs, and the Hakata exit's canopy to the west.
         size: (196.7, 400.7, 63.05))
