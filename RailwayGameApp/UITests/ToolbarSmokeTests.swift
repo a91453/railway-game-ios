@@ -847,7 +847,20 @@ extension XCUIApplication {
         let area = onScreen.isEmpty ? holder.frame : onScreen
         // Clear of the holder's edges, where a navigation or home bar can
         // lie over it.
-        let band = area.insetBy(dx: 0, dy: 24)
+        var band = area.insetBy(dx: 0, dy: 24)
+        // And clear of a search field in the navigation bar's drawer: the
+        // rows scroll under the glass bar, and a touch on a row lying there
+        // opens the search instead (main 550e1377's full lane, run
+        // 46018530736: the real-world picker's Taipei row stopped at y 179
+        // under its field, larger text, a phone on its side; the touch
+        // opened the keyboard and Build Here went).
+        let search = searchFields.firstMatch
+        if search.exists, search.frame.intersects(area) {
+            let top = max(band.minY, search.frame.maxY + 8)
+            if top < band.maxY - 44 {
+                band = CGRect(x: band.minX, y: top, width: band.width, height: band.maxY - top)
+            }
+        }
         func shown() -> Bool {
             button.exists && band.minY <= button.frame.midY && button.frame.midY <= band.maxY
         }

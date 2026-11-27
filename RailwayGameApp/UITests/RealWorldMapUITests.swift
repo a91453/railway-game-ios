@@ -785,8 +785,13 @@ final class RealWorldMapUITests: XCTestCase {
                 button.tap()
                 continue
             }
+            // With the largest text the whole maps' long summaries come
+            // before Taiwan's places: Taipei's row took 38 of the 40 drags
+            // in main d5572844's full lane (run 45924059254) and was not
+            // reached in 550e1377's (run 46018530736), once Fukuoka's map
+            // named its new lines (#2824).
             XCTAssertTrue(
-                app.scrollUntilShown(button, in: holder),
+                app.scrollUntilShown(button, in: holder, drags: holder == nil ? 40 : 90),
                 "\(identifier) cannot be scrolled to: \(button.exists ? "\(button.frame)" : "missing"), app \(app.frame)"
             )
             app.tapMiddle(of: button)
