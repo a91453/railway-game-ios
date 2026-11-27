@@ -42,6 +42,11 @@
 //   its hospitals, the two added, else 0: the island city reference's
 //   `LV_W.school = 9` and `hospital = 5` (g23.js) on the scale its
 //   `park = 6` has here (P's 600).
+// - L, decision 1025: on a map of real places, base is floor(base × L /
+//   1000), L the factor of the 256 m square the cell lies in
+//   (``LandLocations``): its place's land price over the country's
+//   median of the same zone, from the real-price registry (實價登錄), a
+//   tenth to ten times. A cell without one keeps its base.
 //
 // The value reads the world and changes nothing: raising buildings
 // (decision 75) never reads it, and growth only to choose which zoned cell
@@ -52,7 +57,8 @@ public struct LandValue: Hashable, Sendable {
     /// `clamp(base + servicePremium + accessPremium + parkPremium +
     /// companyPremium + waterPremium, minimum, maximum)`.
     public let value: Int64
-    /// `floor(B × D / 1000)`: the use's base by the density's factor.
+    /// `floor(B × D / 1000)`: the use's base by the density's factor;
+    /// since decision 1025 by its place's factor too, where it has one.
     public let base: Int64
     /// ``LandValueRules/servicePremium`` × S.
     public let servicePremium: Int64
@@ -190,6 +196,14 @@ public enum LandValueRules {
     public static let maximum: Int64 = 150_000
 
     /// `base + service + access + park + company + water + civic` within
+    /// A base where its cell lies (decision 1025): `floor(base × factor /
+    /// 1000)` for a cell whose square has a factor (``LandLocations``),
+    /// the base as it is for one without.
+    public static func located(_ base: Int64, factor: Int64?) -> Int64 {
+        guard let factor else { return base }
+        return base * factor / 1_000
+    }
+
     /// ``minimum`` … ``maximum``.
     static func value(base: Int64, service: Int64, access: Int64, park: Int64 = 0, company: Int64 = 0, water: Int64 = 0, civic: Int64 = 0) -> Int64 {
         min(maximum, max(minimum, base + service + access + park + company + water + civic))
@@ -318,7 +332,7 @@ extension GameWorld {
         row: Int, column: Int, near stations: [(id: StationID, point: PlanPoint, service: Int64, reached: Int64)], parks: [Int: [PlanPoint]],
         companies: (zoned: [PlanPoint], byUse: [LandUse: [PlanPoint]]), civics: (schools: [PlanPoint], hospitals: [PlanPoint])
     ) -> LandValue {
-        let base: Int64
+        var base: Int64
         // Decision 728: the use the uses round it lift, none for empty land.
         var use: LandUse?
         if let building = buildings.building(row: row, column: column) {
@@ -330,6 +344,8 @@ extension GameWorld {
         } else {
             base = LandValueRules.vacantBase * LandValueRules.vacantDensityFactor / 1_000
         }
+        // Decision 1025: where the cell lies, on a map of real places.
+        base = LandValueRules.located(base, factor: landLocations.factor(row: row, column: column))
         let length = Land.cellLength
         let x = Int64(column) * length + length / 2, y = Int64(row) * length + length / 2
         let reach = Land.catchmentRadius * Land.catchmentRadius
@@ -403,11 +419,14 @@ extension GameWorld {
             for c in (column - 1)...(column + 1) where (r, c) != (row, column) {
                 guard (0..<rows).contains(r), (0..<columns).contains(c),
                       !claimsForItsLand(building, row: r, column: c), !isClaimedByPlacedBuilding(row: r, column: c) else { continue }
+                let base: Int64
                 if let city = buildings.building(row: r, column: c) {
-                    sum += LandValueRules.base(of: city.use) * LandValueRules.densityFactor(city.density) / 1_000
+                    base = LandValueRules.base(of: city.use) * LandValueRules.densityFactor(city.density) / 1_000
                 } else {
-                    sum += LandValueRules.vacantBase * LandValueRules.vacantDensityFactor / 1_000
+                    base = LandValueRules.vacantBase * LandValueRules.vacantDensityFactor / 1_000
                 }
+                // Decision 1025: each where it lies.
+                sum += LandValueRules.located(base, factor: landLocations.factor(row: r, column: c))
                 count += 1
             }
         }

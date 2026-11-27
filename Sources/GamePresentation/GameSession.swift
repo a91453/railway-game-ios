@@ -671,7 +671,7 @@ public final class GameSession {
 
     /// The stations picked, in order, for the next line. Only a draft:
     /// GameCore checks them when ``createLineFromDraft()`` creates the line.
-    public private(set) var lineDraft: [StationID] = []
+    public internal(set) var lineDraft: [StationID] = []
 
     /// Decision 303: the new line's confirmation card while it is up, the
     /// settings it opens the drafted line with (``confirmLineDraft()``).
@@ -698,7 +698,16 @@ public final class GameSession {
     /// Whether a tap on a station on the map adds it to ``lineDraft``
     /// (decision 100), so the player picks a new line's ends on the map
     /// without a button for each.
-    public private(set) var isPickingLineStops = false
+    public internal(set) var isPickingLineStops = false
+
+    /// Decision 1024: the stations the track tools built last, oldest
+    /// first (``noteStationBuiltWithTrackTools(_:)``).
+    var stationsBuiltWithTrackTools: [StationID] = []
+
+    /// Decision 1024: the two ends of the longest stretch of track joining
+    /// stations just built, worked out when a station or track is built;
+    /// the build card offers a line between them (``lineFromBuiltTrack``).
+    var builtTrackLine: LineFromBuiltTrack?
 
     /// The station demand copied to paste onto other stations (Stage C2;
     /// see ``copySelectedStationDemand()``). Only a clipboard: GameCore

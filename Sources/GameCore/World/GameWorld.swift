@@ -338,6 +338,10 @@ public struct GameWorld: Equatable, Sendable {
     /// The ground under the land (decision 105): which cells are water. A
     /// new world, and every blank map, has none.
     public internal(set) var terrain = Terrain()
+    /// How dear each read square's place is against the country
+    /// (decision 1025, ``LandLocations``). A new world, a blank map and a
+    /// map abroad have none.
+    public internal(set) var landLocations = LandLocations()
     /// The ground's height where it has been read (decision 124). A new
     /// world, and every blank map, has none, and is flat at 0 m; a new
     /// real-world game has ground (``mapGround()``).
@@ -3501,7 +3505,7 @@ extension GameWorld: Codable {
         case bounds, map, stations, trains, lines, serviceDay, clock, economy, nextStationID, nextTrainID, nextLineID, network, trafficControl
         case passengers, riders, passengerRoutingMode, passengerRouteBalances, weeklyDemand, tidalDemand, passengerPatience, annualTaxes, modeShift, demandEvents, disruptions, townGrowth, accounts, geoAnchor, geoAnchorBounds
         case land, landBlocks, landDemand, distanceDemand, farDemand, doorCrowding, keepLeft, switchInterlocking, switchLies, realisticOperation, blockSections, curveSpeedLimits, realCarLengths, spacingAllowances, flexDispatch, rollingStockEconomics, lineAccounts, tripLog, tourism, cityRequests, outsideConnections, realTransfers, acquisitions, leftTrack, cityDemand, cityFootprints, areaBuyOut, cityBuildings, buildings, transferGroups, nextTransferGroupID, scenario
-        case placedBuildings, nextPlacedBuildingID, zones, terrain, ground, freight, mapExpansion, wholeMapOpen, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, airRoutes, nextAirRouteID, driving
+        case placedBuildings, nextPlacedBuildingID, zones, terrain, landLocations, ground, freight, mapExpansion, wholeMapOpen, roads, busRoutes, nextBusRouteID, airports, coachStops, cableways, nextCablewayID, ferryRoutes, nextFerryRouteID, airRoutes, nextAirRouteID, driving
         case playerMelodies, nextPlayerMelodyID
     }
 
@@ -3677,6 +3681,7 @@ extension GameWorld: Codable {
         nextPlacedBuildingID = container.contains(.nextPlacedBuildingID) ? try container.decode(Int.self, forKey: .nextPlacedBuildingID) : 1
         zones = container.contains(.zones) ? try container.decode(Zoning.self, forKey: .zones) : Zoning()
         terrain = container.contains(.terrain) ? try container.decode(Terrain.self, forKey: .terrain) : Terrain()
+        landLocations = container.contains(.landLocations) ? try container.decode(LandLocations.self, forKey: .landLocations) : LandLocations()
         ground = container.contains(.ground) ? try container.decode(Ground.self, forKey: .ground) : Ground()
         freight = try container.decodeIfPresent(FreightState.self, forKey: .freight)
         mapExpansion = try container.decodeIfPresent(MapExpansion.self, forKey: .mapExpansion)
@@ -3746,8 +3751,8 @@ extension GameWorld: Codable {
     /// transfer groups has no `"transferGroups"`, and one that never had
     /// one no `"nextTransferGroupID"` (decision 81); likewise
     /// `"placedBuildings"` and `"nextPlacedBuildingID"` (decision 92), and
-    /// `"zones"` (decision 98), `"terrain"` (decision 105), and `"ground"`
-    /// (decision 124). An explicit
+    /// `"zones"` (decision 98), `"terrain"` (decision 105), `"ground"`
+    /// (decision 124) and `"landLocations"` (decision 1025). An explicit
     /// `null` for any of them is
     /// rejected. The world's extent is written as `"bounds"`, in world units
     /// (Stage F3d).
@@ -3957,6 +3962,9 @@ extension GameWorld: Codable {
         }
         if !terrain.isEmpty {
             try container.encode(terrain, forKey: .terrain)
+        }
+        if !landLocations.isEmpty {
+            try container.encode(landLocations, forKey: .landLocations)
         }
         if ground.isMapped {
             try container.encode(ground, forKey: .ground)
@@ -4204,7 +4212,7 @@ extension GameWorld: Codable {
             ?? townGrowthProblem() {
             return problem
         }
-        if let problem = mapGrowthProblem() ?? land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? terrainProblem()
+        if let problem = mapGrowthProblem() ?? land.problem(in: bounds) ?? landBlocksProblem() ?? buildingProblem() ?? zones.problem(in: bounds) ?? landLocations.problem(in: bounds) ?? terrainProblem()
             ?? ground.problem(in: bounds) ?? mapExpansionProblem() ?? roads?.problem(in: bounds) {
             return problem
         }

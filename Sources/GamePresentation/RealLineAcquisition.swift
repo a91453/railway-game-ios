@@ -723,6 +723,52 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
         )
     }
 
+    /// STATION-ALIGN-APPLY (decision 1022): how far from the line's way a
+    /// real platform's ends may lie for the station to be laid along it.
+    static let realPlatformReach = 80 * metre
+
+    /// STATION-ALIGN-APPLY (decision 1022): the stations at `at` along a
+    /// line's way `length` long, each moved so its platforms' middle is
+    /// the middle of the real platforms' ends `realEnds` (along the same
+    /// way; `nil` where OpenStreetMap has none), so the platforms `half`
+    /// either side of it lie along the real ones. A station stays where it
+    /// was where that is more than ``RealPlatformEnds/farthest`` metres
+    /// off, where the real platforms are shorter than 10 m (a mark, not a
+    /// platform), where an end's loops would leave the way (`endReach`
+    /// from its end; no farther in than that, or than it was where it was
+    /// farther), or where it would come nearer a neighbour than
+    /// `gap` (two platforms and their loops) and nearer than it was.
+    static func alignedStations(
+        _ at: [(along: Double, away: Double)], realEnds: [(Double, Double)?], half: Double, length: Double, endReach: Double, gap: Double
+    ) -> [(along: Double, away: Double)] {
+        var placed = at
+        let wanted: [Double?] = at.indices.map { index in
+            guard index < realEnds.count, let (first, last) = realEnds[index], last - first >= 10 * metre else { return nil }
+            let middle = (first + last) / 2
+            guard abs(middle - at[index].along) <= RealPlatformEnds.farthest * metre else { return nil }
+            // Never farther past the room an end needs than it was.
+            let low = min(index == 0 ? endReach : half + RealWorldDemo.platformMargin, at[index].along)
+            let high = max(length - (index == at.count - 1 ? endReach : half + RealWorldDemo.platformMargin), at[index].along)
+            guard low <= high else { return nil }
+            return min(max(middle, low), high)
+        }
+        func clear(_ value: Double, of index: Int, from neighbour: Int) -> Bool {
+            guard at.indices.contains(neighbour) else { return true }
+            let before = abs(at[index].along - at[neighbour].along)
+            // One before is where it was left; one after may yet move.
+            let candidates = neighbour < index ? [placed[neighbour].along] : [placed[neighbour].along, wanted[neighbour] ?? placed[neighbour].along]
+            return candidates.allSatisfy { other in
+                let distance = abs(value - other)
+                return distance >= min(gap, before) && (value - other).sign == (at[index].along - at[neighbour].along).sign
+            }
+        }
+        for index in at.indices {
+            guard let value = wanted[index], clear(value, of: index, from: index - 1), clear(value, of: index, from: index + 1) else { continue }
+            placed[index] = (value, at[index].away)
+        }
+        return placed
+    }
+
     /// Cars per train: the DR1000's three (decision 315's reference row).
     static let carsPerTrain = 3
     static let metre = Double(WorldCoordinate.unitsPerMetre)
@@ -759,11 +805,21 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// loops beyond it 6 m apart as an end's are.
     static let besideIslandOffset = 16 * metre
 
-    /// Decision 462: how far over the ground a station on a viaduct stands
-    /// at least: as high as a station on the ground beside it may, and
-    /// the clearance of track crossing over track (``TrackStructure/clearance``)
-    /// above that.
+    /// Decision 462: how far over the ground a station stood up to clear
+    /// the company's track there (decision 809) stands at least: as high
+    /// as a station on the ground beside it may, and the clearance of
+    /// track crossing over track (``TrackStructure/clearance``) above that.
     static let raisedStation = RealWorldDemo.stationReach + Double(TrackStructure.clearance)
+
+    /// Decision 1023: how far over the ground a station on its line's real
+    /// viaduct stands at least: as high as the viaduct between stations
+    /// (``TrackRise/carriedHeight``, 10 m), as real elevated stations'
+    /// rails are 10–12 m up (Hakata 12.3 m, Kumamoto 10 m, the Taipei MRT
+    /// shells' 9 m); at ``raisedStation``'s 16 m their rails stood some
+    /// 17.8 m up. Where its track then meets another at one level, the
+    /// purchase's later tries (decision 552's clearing, decision 809's
+    /// standing up) hold it clear as before.
+    static let viaductStation = TrackRise.carriedHeight
 
     /// Decision 462: whether a station `at` along a line's path, its
     /// neighbours `before` and `after` (`nil` at an end), stands on the
@@ -1143,6 +1199,11 @@ struct RealLineLaying: Sendable {
     /// width off the other at the stations both call at
     /// (``inLane(_:of:runs:frame:railways:traces:)``).
     var laneIslands = true
+    /// STATION-ALIGN-APPLY (decision 1022): whether each station's
+    /// platforms are laid along the real ones where OpenStreetMap has
+    /// them (``RealRailways/platformEnds``), not round the station's
+    /// point; a line refused so is laid round the points as before.
+    var alignsPlatforms = true
 
     static func realPoint(of name: String, system: String, railways: RealRailways, frame: RealWorldFrame) -> WorldVector? {
         railways.stations.first { $0.id == "\(system)|\(name)" }.map {
@@ -1275,6 +1336,23 @@ extension RealLineLaying {
     /// With `whereItStood`, on its real way, no station moved beside the
     /// company's track (decision 528, later).
     private func laidOffer(for line: RealBranchLine, whereItStood: Bool = false) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
+        let laid = laidOfferAligned(for: line, whereItStood: whereItStood)
+        // STATION-ALIGN-APPLY (decision 1022): refused with its platforms
+        // along the real ones (a station moved onto a curve or a slope its
+        // loops do not fit), laid round the stations' points as before.
+        // Not where the same line, bought and removed, left its track:
+        // that is taken up first (decision 528, ``offer(for:)``), and laid
+        // round the points the line would miss it and stand beside it.
+        guard laid.offer.acquisition == nil, alignsPlatforms, railways?.platformEnds != nil, !landCheckOnly,
+              RealLineClearing.left(in: world, for: line) == nil
+        else { return laid }
+        var plain = self
+        plain.alignsPlatforms = false
+        let again = plain.laidOfferAligned(for: line, whereItStood: whereItStood)
+        return again.offer.acquisition == nil ? laid : again
+    }
+
+    private func laidOfferAligned(for line: RealBranchLine, whereItStood: Bool) -> (offer: RealLineOffer, laid: RealLineAcquisition?) {
         let laid = laidOfferInLanes(for: line, whereItStood: whereItStood)
         // LANE-SHARED-ISLAND: refused so (a game that bought the Airport
         // Express before its lane moved, on the Disneyland side), laid in
@@ -1934,10 +2012,29 @@ extension RealLineLaying {
             }
             crossing = found
         }
-        let along = points.map { path.nearest($0) }
-        guard along.allSatisfy({ $0.away <= RealLineAcquisition.stationReach }), zip(along, along.dropFirst()).allSatisfy({ $0.along < $1.along }) else {
+        let atPoints = points.map { path.nearest($0) }
+        guard atPoints.allSatisfy({ $0.away <= RealLineAcquisition.stationReach }), zip(atPoints, atPoints.dropFirst()).allSatisfy({ $0.along < $1.along }) else {
             return refused("The real line's stations are not along its track here.", "真實車站不在這段鐵路上。")
         }
+        // STATION-ALIGN-APPLY (decision 1022): each station's platforms
+        // along the real ones where OpenStreetMap has them, their middle
+        // at the real platforms' middle; their length as before (the
+        // trains'). Not the station it leaves another line's track past
+        // (SHALUN-ONE-ISLAND), whose platform is the other line's.
+        let realEnds: [(Double, Double)?] = runs.stops.indices.map { index in
+            guard alignsPlatforms, !(joined != nil && index == 0),
+                  let ends = railways.platformEnds?.ends(line: line.id, station: runs.stops[index]) else { return nil }
+            let first = path.nearest(WorldVector(frame.worldPosition(latitude: ends.first.latitude, longitude: ends.first.longitude)))
+            let last = path.nearest(WorldVector(frame.worldPosition(latitude: ends.last.latitude, longitude: ends.last.longitude)))
+            guard max(first.away, last.away) <= RealLineAcquisition.realPlatformReach else { return nil }
+            return (min(first.along, last.along), max(first.along, last.along))
+        }
+        let endLevel = max(1, layout.endLevels)
+        let along = RealLineAcquisition.alignedStations(
+            atPoints, realEnds: realEnds, half: half, length: path.length,
+            endReach: max(half + RealWorldDemo.platformMargin, layout.reach(level: endLevel)),
+            gap: 2 * (half + RealWorldDemo.platformMargin) + 2 * layout.loopReach
+        )
 
         // The ground under the way, read in on a copy, and under the depot's.
         var draft = world.pricingCopy()
@@ -2148,7 +2245,7 @@ extension RealLineLaying {
             // it (the Wenhu Line's Songshan Airport and Dazhi).
             let sunk = !raised && sunkStations[index]
             let low = raised
-                ? height + RealLineAcquisition.raisedStation
+                ? height + (stoodUp ? RealLineAcquisition.raisedStation : RealLineAcquisition.viaductStation)
                 : sunk ? height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach : height - RealWorldDemo.stationReach
             var level = TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach)
             // SHARED-STATION-LEVEL: laid beside the company's station, at

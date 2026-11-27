@@ -170,6 +170,20 @@ extension GameSession {
     /// steep). Want of cash is not a problem here: the card weighs the
     /// price against the balance.
     public func realStationOffer(for suggestion: RealStationSuggestion, system wanted: String? = nil) -> RealStationOffer {
+        // STATION-ALIGN-APPLY (decision 1022): where the real platforms'
+        // place cannot be laid (Fenqihu's is on the grade), as near it as
+        // can be: halfway, then round the station's point as before (and
+        // refused as before where that is).
+        for share in railways?.platformEnds == nil ? [] : [1.0, 0.5] {
+            let aligned = realStationOffer(for: suggestion, system: wanted, aligned: share)
+            if aligned.purchase != nil { return aligned }
+        }
+        return realStationOffer(for: suggestion, system: wanted, aligned: 0)
+    }
+
+    /// The offer with the platforms' middle `aligned` (0–1) of the way
+    /// from the station's point to the real platforms'.
+    private func realStationOffer(for suggestion: RealStationSuggestion, system wanted: String?, aligned: Double) -> RealStationOffer {
         let systems = realStationSystems(of: suggestion)
         let system = systems.first { $0.id == wanted } ?? systems[0]
         func refused(_ english: String, _ chinese: String) -> RealStationOffer {
@@ -179,7 +193,15 @@ extension GameSession {
               let real = suggestion.stations.first(where: { $0.system.id == system.id }) else {
             return refused("This map has no real railway here.", "這張地圖這裡沒有真實鐵路。")
         }
-        let point = WorldVector(frame.worldPosition(latitude: real.coordinate.latitude, longitude: real.coordinate.longitude))
+        let station = WorldVector(frame.worldPosition(latitude: real.coordinate.latitude, longitude: real.coordinate.longitude))
+        // STATION-ALIGN-APPLY (decision 1022): centred on the real
+        // platforms where OpenStreetMap has them (their ends' middle), not
+        // on the station's point; within ``RealPlatformEnds/farthest`` of it.
+        let point = (aligned > 0 ? railways?.platformEnds?.ends(system: system.id, station: real.chinese) : nil).map { ends in
+            WorldVector(frame.worldPosition(latitude: ends.middle.latitude, longitude: ends.middle.longitude))
+        }.flatMap { middle in
+            (middle - station).length <= RealPlatformEnds.farthest * Double(WorldCoordinate.unitsPerMetre) ? station + (middle - station) * aligned : nil
+        } ?? station
         guard let snap = traces.snap(point, within: DemoRealLines.stationReach, system: system.id) else {
             return refused("The real line's track could not be followed here.", "這裡沒辦法沿著真實鐵路鋪軌。")
         }
@@ -192,7 +214,7 @@ extension GameSession {
         let name = suggestion.name(in: language)
         let length: Double
         if system.id == Self.traSystem {
-            let cars = realPlatformCars(forStationNamed: name, at: point.plan) ?? Self.defaultPlatformCars
+            let cars = realPlatformCars(forStationNamed: name, at: station.plan) ?? Self.defaultPlatformCars
             length = Double(Int64(cars) * world.platformCarLength)
         } else {
             let cars = DemoRealLines.cars(ofSystem: system.id)
