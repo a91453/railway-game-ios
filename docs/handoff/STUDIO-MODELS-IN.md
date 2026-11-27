@@ -28,7 +28,7 @@
 | 順序 | 素材庫資料夾 | 要先做的 |
 | --: | --- | --- |
 | 1 | `suizenji-garden-2026-11` 能樂殿、兩座石橋 | **已接**（revision-4 補了遠景，決策 1018 續 3） |
-| 2 | `kumamoto-station-2026-11`、`duoliang-station-2026-11`（`tw-rail-ref-landmarks-2026-11` 的多良站同一件） | 規則已定（下一節「車站地標的規則」）；博多站同一張修 |
+| 2 | `kumamoto-station-2026-11`、`duoliang-station-2026-11`（`tw-rail-ref-landmarks-2026-11` 的多良站同一件） | **已接**（決策 1020：第 1～3、5 條；博多站同一張修好）。第 4 條（站房來源順序、月台對準 OSM）是 (c) 單 |
 | 3 | `hk-dream-castle`、`hk-park-layout`、`hk-park-main-street`、`hk-park-rides`、`hk-park-zones-north`、`hk-park-zones-south`（皆 `-2026-11`） | 童話樂園整座一起擺，照 `hk-park-layout` 的配置；會轉的設施要動畫（`motion` 技能），香港地圖預算約 20,132，七件加起來先算 |
 | 4 | `hk-ocean-park-landmarks-2026-11` | 摩天輪會轉、纜車要畫線 |
 | 5 | `estate-amusement-park`、`estate-department-store`、`estate-hotel-tower`（皆 `-2026-11`） | 換玩家蓋的建物外觀；遊樂園要慢轉 |

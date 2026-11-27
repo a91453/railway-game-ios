@@ -1,0 +1,13 @@
+{
+  "comment" : "Decision 895: the models of the registered landmark kumamoto-station-tower: FNV-1a of every vertex field and index (Map3DLandmarkRegistryTests). A changed value is a deliberate model change the PR must justify.",
+  "models" : {
+    "kumamoto-station-tower" : {
+      "hash" : "58d5313fe8d55f08",
+      "triangles" : 2180
+    },
+    "kumamoto-station-tower-far" : {
+      "hash" : "b0a3e1f728748bb5",
+      "triangles" : 1064
+    }
+  }
+}

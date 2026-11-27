@@ -90,13 +90,13 @@ final class MapTrainCarsOnTrackTests: XCTestCase {
     }
 
     /// The general way (``TrainCars/cars(body:heading:count:gap:track:)``
-    /// given the run's track), which ``TrainCars/mapCars(of:progress:)``
+    /// given the run's track and, TURNBACK, its room behind), which ``TrainCars/mapCars(of:progress:)``
     /// reads more quickly off the trail.
     static func general(_ run: TrainMotion.Run, _ progress: Double) -> [[Point]] {
         guard let head = run.head(at: progress) else { return [] }
         return TrainCars.cars(body: run.body(at: progress), heading: head.heading, count: TrainCars.count(length: run.length, carPitch: run.carPitch),
                               length: TrainCars.carLength(pitch: run.carPitch), lead: TrainCars.noseLead(pitch: run.carPitch),
-                              track: run.track(at: progress))
+                              track: run.track(at: progress), turnRoom: run.turnRoom(at: progress))
     }
 
     /// The demo map through a morning, a game minute at a time: its ring
