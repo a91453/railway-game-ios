@@ -743,11 +743,21 @@ public struct RealLineAcquisition: Hashable, Sendable, Codable {
     /// loops beyond it 6 m apart as an end's are.
     static let besideIslandOffset = 16 * metre
 
-    /// Decision 462: how far over the ground a station on a viaduct stands
-    /// at least: as high as a station on the ground beside it may, and
-    /// the clearance of track crossing over track (``TrackStructure/clearance``)
-    /// above that.
+    /// Decision 462: how far over the ground a station stood up to clear
+    /// the company's track there (decision 809) stands at least: as high
+    /// as a station on the ground beside it may, and the clearance of
+    /// track crossing over track (``TrackStructure/clearance``) above that.
     static let raisedStation = RealWorldDemo.stationReach + Double(TrackStructure.clearance)
+
+    /// Decision 1023: how far over the ground a station on its line's real
+    /// viaduct stands at least: as high as the viaduct between stations
+    /// (``TrackRise/carriedHeight``, 10 m), as real elevated stations'
+    /// rails are 10–12 m up (Hakata 12.3 m, Kumamoto 10 m, the Taipei MRT
+    /// shells' 9 m); at ``raisedStation``'s 16 m their rails stood some
+    /// 17.8 m up. Where its track then meets another at one level, the
+    /// purchase's later tries (decision 552's clearing, decision 809's
+    /// standing up) hold it clear as before.
+    static let viaductStation = TrackRise.carriedHeight
 
     /// Decision 462: whether a station `at` along a line's path, its
     /// neighbours `before` and `after` (`nil` at an end), stands on the
@@ -2121,7 +2131,7 @@ extension RealLineLaying {
             // it (the Wenhu Line's Songshan Airport and Dazhi).
             let sunk = !raised && sunkStations[index]
             let low = raised
-                ? height + RealLineAcquisition.raisedStation
+                ? height + (stoodUp ? RealLineAcquisition.raisedStation : RealLineAcquisition.viaductStation)
                 : sunk ? height - RealLineAcquisition.sunkStation - 2 * RealWorldDemo.stationReach : height - RealWorldDemo.stationReach
             var level = TrackRise.Level(span, from: low, to: low + 2 * RealWorldDemo.stationReach)
             // SHARED-STATION-LEVEL: laid beside the company's station, at
