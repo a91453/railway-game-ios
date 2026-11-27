@@ -20,6 +20,14 @@
 - 共站的量法：`SHARED_STATION_REPORT=<檔> SHARED_STATION_ONLY=kamome swift test --skip-build --filter SharedStationLayoutTests.testReport`（`SHARED_STATION_PROFILE=<線>` 印整條線的高度）。全部的線都買要很多錢：`FukuokaRailwaysTests.fukuoka(balance: RelayKamomeTests.everyLine)`。
 - 教訓（real-line-laying §4 第 1028 列）：真實月台在高架而 OSM 沒標，後買的地鐵會被擋；端點站的月台以站點為中心，N02 的點不一定在月台上。
 
+## 各站月台（作者 2026-11-27 給的整理，JR 九州官方構內圖＋日文維基）
+
+- 博多：在來線島式 4 面 8 線（1–8，2 樓），新幹線島式 3 面 6 線（11–16，3 樓；11–12 JR 九州、13–16 JR 西日本）。第一張的博多高架（`HAKATA_VIADUCT`）就是照 2 樓。
+- 小倉：在來線島式 4 面 8 線（1–8，2 樓），新幹線島式 2 面 4 線（11–14，4 樓，和北九州單軌同層）。
+- 新水俣：新幹線 2 面 3 線（11–13，高架）；肥薩橙鐵道地面島式 1 面 2 線，不共站房。
+- 熊本：新幹線島式 2 面 4 線（11–14）。武雄溫泉：10（接力特急）與 11（新幹線）同月台對面、12 平常不用，第一張已照這樣鋪。
+- 樓層沒寫的（熊本、新水俣的新幹線）官方圖沒標，用 OSM 的 `layer`／橋標與標高量。
+
 ## 第二張：SANYO-SHINKANSEN-KOKURA（決策 1029，評分 2.85）
 
 - 山陽新幹線博多—小倉，約 67 km，中間沒有站，大半在隧道（新關門隧道以南的部分）。OSM route relation 1837932。
