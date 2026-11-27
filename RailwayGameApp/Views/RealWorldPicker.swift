@@ -78,6 +78,11 @@ struct RealWorldPicker: View {
     @State private var middle: CLLocationCoordinate2D
     @State private var query = ""
     @State private var search = PlaceSearch()
+    /// Counts the list's taps that moved the map, each of which leaves the
+    /// search (``SearchLeaver``) so Build Here is there at once
+    /// (2026-11-27: a station found by name still needed the search's
+    /// close button before Build Here could be tapped).
+    @State private var mapMoves = 0
     /// The groups of the list that are open (decision 262).
     @State private var expandedGroups: Set<String> = ["country-TW"]
     /// Taiwan's real railways as the map draws them, made when the picker
@@ -412,6 +417,33 @@ struct RealWorldPicker: View {
                     }
                 }
             }
+            // 2026-11-27: what Apple's map found, under the list's own
+            // matches and above the whole maps, not under them all, where
+            // a place found by name (小倉城) had to be scrolled to.
+            if search.isSearching || search.results != nil {
+                Section("Search Results") {
+                    if search.isSearching {
+                        ProgressView()
+                    } else if let results = search.results, results.isEmpty {
+                        Text("No places found.")
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    ForEach(search.results ?? []) { result in
+                        Button {
+                            show(result.coordinate)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(verbatim: result.name)
+                                if !result.detail.isEmpty {
+                                    Text(verbatim: result.detail)
+                                        .font(.footnote)
+                                        .foregroundStyle(Theme.textSecondary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // Decision 88: one map of the whole of Taiwan, for lines from
             // one end of it to the other. Decision 477: first of the
             // places, not after Taiwan's 22, where it was found last.
@@ -477,7 +509,7 @@ struct RealWorldPicker: View {
                 Section {
                     ForEach(Array(recent.enumerated()), id: \.offset) { index, place in
                         Button {
-                            position = Self.camera(on: Self.coordinate(of: place))
+                            show(Self.coordinate(of: place))
                         } label: {
                             HStack(spacing: 10) {
                                 Image(systemName: "clock.arrow.circlepath")
@@ -492,30 +524,6 @@ struct RealWorldPicker: View {
                     }
                 } header: {
                     Text(verbatim: launcher.language.text("Recent", "最近用過"))
-                }
-            }
-            if search.isSearching || search.results != nil {
-                Section("Search Results") {
-                    if search.isSearching {
-                        ProgressView()
-                    } else if let results = search.results, results.isEmpty {
-                        Text("No places found.")
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    ForEach(search.results ?? []) { result in
-                        Button {
-                            position = Self.camera(on: result.coordinate)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(verbatim: result.name)
-                                if !result.detail.isEmpty {
-                                    Text(verbatim: result.detail)
-                                        .font(.footnote)
-                                        .foregroundStyle(Theme.textSecondary)
-                                }
-                            }
-                        }
-                    }
                 }
             }
             Section {
@@ -586,12 +594,19 @@ struct RealWorldPicker: View {
             }
         }
         .listStyle(.insetGrouped)
+        .background(SearchLeaver(moves: mapMoves))
+    }
+
+    /// Moves the map to `point` from the list, and leaves the search.
+    private func show(_ point: CLLocationCoordinate2D) {
+        position = Self.camera(on: point)
+        mapMoves += 1
     }
 
     /// Moves the map to one of the list's places.
     private func placeButton(_ place: RealWorldPlace, id prefix: String = "place") -> some View {
         Button {
-            position = Self.camera(on: Self.coordinate(of: place.anchor))
+            show(Self.coordinate(of: place.anchor))
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "mappin.circle.fill")
@@ -619,7 +634,7 @@ struct RealWorldPicker: View {
     /// Moves the map to a station of Taiwan's real railways.
     private func stationButton(_ station: RealRailways.Station, showsSystem: Bool) -> some View {
         Button {
-            position = Self.camera(on: CLLocationCoordinate2D(latitude: station.coordinate.latitude, longitude: station.coordinate.longitude))
+            show(CLLocationCoordinate2D(latitude: station.coordinate.latitude, longitude: station.coordinate.longitude))
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "tram.circle.fill")
@@ -716,6 +731,24 @@ extension Color {
     }
 }
 
+/// Leaves the picker's search each time the list moves the map, as its
+/// close button does: the field empties and the bar's Build Here comes
+/// back. Read inside the search's view, where the environment has its
+/// dismiss action.
+private struct SearchLeaver: View {
+    let moves: Int
+    @Environment(\.dismissSearch) private var dismissSearch
+
+    var body: some View {
+        Color.clear
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .onChange(of: moves) {
+                dismissSearch()
+            }
+    }
+}
+
 /// A place found by a search: shown, then dropped.
 struct PlaceSearchResult: Identifiable, Sendable {
     let id: Int
@@ -753,7 +786,10 @@ final class PlaceSearch {
         isSearching = true
         // The search ends once, so holding `self` until then leaks nothing.
         search.start { response, _ in
-            let found = (response?.mapItems ?? []).prefix(20).enumerated().map { index, item in
+            // 2026-11-27: the place named as typed first, as the list's
+            // own matches are (``PlaceSearchOrder``).
+            let items = PlaceSearchOrder.ordered(response?.mapItems ?? [], query: query) { $0.name ?? "" }
+            let found = items.prefix(20).enumerated().map { index, item in
                 PlaceSearchResult(
                     id: index,
                     name: item.name ?? "",

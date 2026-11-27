@@ -52,13 +52,13 @@ final class LandLocationTests: XCTestCase {
     }
 
     func testTheValueIsHeldToItsMaximum() throws {
-        var world = try world([LandCell(row: 0, column: 0, use: .office, residents: 0, jobs: 40)])
+        // More jobs than a D4 building holds: existing stock, D4.
+        var world = try world([LandCell(row: 0, column: 0, use: .office, residents: 0, jobs: 100_000)])
         try world.setLandLocations([LandLocation(row: 0, column: 0, factor: 10_000)])
-        // 10,500 × 10 = 105,000, under 150,000.
+        // No building yet: 10,500 × 10 = 105,000, under 150,000.
         XCTAssertEqual(world.landValue(row: 0, column: 0)?.value, 105_000)
         world.setCityBuildings(true)
-        // A D1 building: 10,500 × 1,000 ÷ 1,000 × 10 = 105,000; its
-        // existing stock is D4: 10,500 × 2 × 10 = 210,000, held to 150,000.
+        // D4: 10,500 × 2 × 10 = 210,000, held to 150,000.
         let density = try XCTUnwrap(world.buildings.building(row: 0, column: 0)?.density)
         XCTAssertEqual(density, .d4)
         XCTAssertEqual(world.landValue(row: 0, column: 0)?.base, 210_000)

@@ -769,6 +769,10 @@ struct Map3DPreviewScreen: View {
                     // Decision 645 (D6): the light the last frame drew.
                     // Decision 750: the models on the GPU so far.
                     Text(verbatim: String(format: "models %d/%d · %.0f MB", stats.modelsMade, stats.models, stats.modelMegabytes))
+                    // WURI-FPS (decision 1027): the still scene held, and the
+                    // longest handing over of its chunks on the main thread.
+                    Text(verbatim: String(format: "scene %d chunks · %.0f MB · placing %.0f ms", stats.sceneChunks, stats.sceneMegabytes,
+                                          stats.placingLongestMilliseconds))
                     Text(verbatim: String(format: "light %02d:%02d · night %.2f · lights %.2f", Int(stats.drawnHour) % 24,
                                           Int(stats.drawnHour * 60) % 60, stats.drawnNight, stats.drawnLights))
                 }
@@ -1413,15 +1417,20 @@ final class Map3DChunkStreamer {
         guard !build.isEmpty else { return }
         let grid = window.grid, generation = window.generation, trackCover = trackCover, detail = window.buildingAround
         let detailAhead = window.buildingAhead
+        // WURI-FPS (decision 1027): the block made ready to draw (its
+        // props sorted, its floats, its buffers) where it was built, not on
+        // the main thread, which only swaps it in.
+        let maker = view?.chunkMaker
         Task.detached(priority: .utility) { [weak self] in
             let chunks = source.chunks(build, of: grid, trackCover: trackCover, detail: detail, detailAhead: detailAhead)
-            await self?.finished(chunks, keys: build, generation: generation)
+            let ready = maker?.make(chunks) ?? Map3DReadyChunks(chunks: [])
+            await self?.finished(ready, keys: build, generation: generation)
         }
     }
 
-    private func finished(_ chunks: [Map3DScene.Chunk], keys: [Map3DStreaming.Key], generation: Int) {
+    private func finished(_ ready: Map3DReadyChunks, keys: [Map3DStreaming.Key], generation: Int) {
         guard window?.finished(keys, generation: generation) == true else { return }
-        view?.place(chunks, at: keys)
+        view?.place(ready, at: keys)
         // Decision 711: the scene's buffers within what this device holds.
         if let view, view.heldBytes > Map3DSceneBudget.bytes(memory: FrameTimeRecorder.memoryTier) { shed(overBudget: true) }
     }

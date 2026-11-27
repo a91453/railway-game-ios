@@ -80,6 +80,12 @@ struct Map3DBaseMap: Sendable {
         /// RIVER-BRIDGE-CLEARANCE: the tiles' lake or pond (water `class`
         /// `lake`, `pond`): a park's bridge over one lies low on it.
         var isLake = false
+        /// Decision 331's seventh later note: the park layer's nature
+        /// reserve or national park (`class` `nature_reserve`,
+        /// `national_park`), not a park people use: its outline takes in
+        /// rivers, the sea and hills (the Tamsui's mouth), so no park
+        /// scene goes in it.
+        var isReserve = false
     }
 
     struct Road: Sendable {
@@ -407,7 +413,8 @@ struct Map3DBaseMap: Sendable {
                     // No fountain, pool or pond too small to read as one.
                     if lake, Self.isSpeck(rings, in: tile) { continue }
                     areas.append(Area(cover: cover, rings: rings, bounds: bounds, isSea: feature.string("class") == "ocean",
-                                      isLake: Self.isLake(layer: layer.name, class: feature.string("class"))))
+                                      isLake: Self.isLake(layer: layer.name, class: feature.string("class")),
+                                      isReserve: Self.isReserve(layer: layer.name, class: feature.string("class"))))
                 }
             case ("transportation", .line):
                 guard feature.string("brunnel") != "tunnel", let kind = Self.roadKind(feature.string("class")) else { continue }
@@ -504,6 +511,12 @@ struct Map3DBaseMap: Sendable {
     /// of `class` is a lake or a pond.
     static func isLake(layer: String, class name: String?) -> Bool {
         layer == "water" && (name == "lake" || name == "pond")
+    }
+
+    /// Decision 331's seventh later note: whether a feature of the
+    /// tiles' `layer` of `class` is a nature reserve or a national park.
+    static func isReserve(layer: String, class name: String?) -> Bool {
+        layer == "park" && (name == "nature_reserve" || name == "national_park")
     }
 
     static func cover(layer: String, class name: String?) -> Cover? {
