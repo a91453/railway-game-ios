@@ -71,7 +71,9 @@ public struct RegistryHouses: Sendable {
             let longitude = Double(Int32(bitPattern: word(at))) / 1e6, latitude = Double(Int32(bitPattern: word(at + 4))) / 1e6
             houses.append(House(latitude: latitude, longitude: longitude, storeys: Int(bytes[at + 8]), kind: kind))
         }
-        self.houses = houses
+        // The tool writes them by latitude; a file that is not is sorted.
+        let ordered = zip(houses, houses.dropFirst()).allSatisfy { ($0.latitude, $0.longitude) <= ($1.latitude, $1.longitude) }
+        self.houses = ordered ? houses : houses.sorted { ($0.latitude, $0.longitude) < ($1.latitude, $1.longitude) }
     }
 
     /// The houses from `south` to `north` and `west` to `east`, degrees.
