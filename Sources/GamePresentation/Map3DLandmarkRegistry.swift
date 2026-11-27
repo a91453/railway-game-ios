@@ -35,6 +35,12 @@ public struct Map3DLandmarkRegistration: Sendable {
     /// (decision 913); its floor is set on the ground at its middle. 0 to
     /// stand on the lowest ground under it.
     public let sink: Float
+    /// BRIDGE-LANDMARK-DECK: a road bridge's road surface over its model's
+    /// foot (metres), or `nil` for a landmark no road crosses: its deck
+    /// is set level with the drawn ground at its two ends (their mean),
+    /// and the real map's own bridge under it is left out
+    /// (``Map3DBaseMap/leavingOut(_:)``).
+    public let deck: Float?
     /// The colour of each of its mesh's materials, in the order
     /// `glb_to_swift.py --materials` gave them: ``Map3DPalette``'s.
     let palette: [UInt32]
@@ -55,7 +61,8 @@ public struct Map3DLandmarkRegistration: Sendable {
     /// Kumamoto, Duoliang), `nil` for any other landmark.
     public let station: Map3DStationLandmark?
 
-    init(id: String, map: String, latitude: Double, longitude: Double, baseHeight: Float = 0, sink: Float = 0, palette: [UInt32],
+    init(id: String, map: String, latitude: Double, longitude: Double, baseHeight: Float = 0, sink: Float = 0, deck: Float? = nil,
+         palette: [UInt32],
          glass: Set<Int> = [], bandedGlass: Set<Int> = [], encoded: [String: String], station: Map3DStationLandmark? = nil,
          size: (x: Float, y: Float, z: Float)) {
         self.id = id
@@ -64,6 +71,7 @@ public struct Map3DLandmarkRegistration: Sendable {
         self.longitude = longitude
         self.baseHeight = baseHeight
         self.sink = sink
+        self.deck = deck
         self.palette = palette
         self.glass = glass
         self.bandedGlass = bandedGlass

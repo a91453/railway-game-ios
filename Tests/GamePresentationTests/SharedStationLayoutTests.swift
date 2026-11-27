@@ -309,6 +309,9 @@ final class SharedStationLayoutTests: XCTestCase {
                 let over = (Double(middle.z) - Double(world.groundHeight(at: middle.plan) ?? 0)) / Self.metre
                 if laidBy[platform] == shinkansen {
                     XCTAssertGreaterThan(over, 8, "\(order): the Shinkansen's platform on its viaduct")
+                    // Decision 1023: at a real viaduct's height (Hakata's
+                    // rails 12.3 m up), not the 16 m of a station stood up.
+                    XCTAssertLessThan(over, 12, "\(order): the Shinkansen's platform at a real viaduct's height")
                 } else {
                     XCTAssertLessThan(over, -4, "\(order): the subway's platform under the ground")
                 }
@@ -332,13 +335,15 @@ final class SharedStationLayoutTests: XCTestCase {
     /// island (its track 10, the Kamome's 11), a minute's change across
     /// the platform (decision 912), as the real one's. Hakata is on two
     /// levels as before (the subway under the ground, JR's two lines on
-    /// their viaducts, the Relay Kamome's 8 or 16 m up beside the
-    /// Shinkansen's 16 m as it is bought before or after them: the real
-    /// station's second and third floors), and Shin-Tosu too, whose two
-    /// lines cross square to each other (83°) 170 m apart, the
-    /// Shinkansen's platforms up on its viaduct and the conventional
-    /// line's on the ground or a level up: no two lines that cross can
-    /// stand beside each other.
+    /// their viaducts, the Relay Kamome's 10 m up beside the Shinkansen's:
+    /// the real station's second and third floors), and Shin-Tosu too, whose two
+    /// lines cross square to each other (83°): since decision 1022 lays
+    /// the Shinkansen's platforms along the real ones, over the
+    /// conventional line's, the two cross one over the other, the one
+    /// station where a platform stands over another (lines that cross
+    /// cannot stand beside each other): the Relay Kamome's on the ground
+    /// under the Shinkansen's viaduct, as the real station's, bought
+    /// before or after it.
     func testTheRelayKamomeMeetsTheKamomeAcrossThePlatform() throws {
         let kamome = RelayKamomeTests.id, nishi = NishiKyushuShinkansenTests.id, shinkansen = KyushuShinkansenTests.id
         for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen, kamome, nishi], [kamome, nishi, shinkansen, "fksubway:N", "fksubway:H", "fksubway:K"]] {
@@ -346,8 +351,18 @@ final class SharedStationLayoutTests: XCTestCase {
             let laidBy = try Self.buy(order, on: session)
             let world = session.world
             let laid = Self.platforms(of: world, laidBy: laidBy)
-            XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            let stacked = Self.stacked(laid, in: world)
+            XCTAssertTrue(stacked.allSatisfy { $0.hasPrefix("新鳥栖: ") && $0.contains(kamome) && $0.contains(shinkansen) }, "\(order): only where the lines cross, \(stacked)")
             XCTAssertEqual(Self.uneven(laid, in: world), ["博多", "新鳥栖"], "\(order): every other station level")
+            let shinTosu = try XCTUnwrap(world.stations.first { $0.name == "新鳥栖" }?.id)
+            let under = try XCTUnwrap(laid.filter { $0.station == shinTosu && $0.line == kamome }.flatMap(\.points).map(\.z).max())
+            let over = try XCTUnwrap(laid.filter { $0.station == shinTosu && $0.line == shinkansen }.flatMap(\.points).map(\.z).min())
+            // Either way the Relay Kamome under the Shinkansen's viaduct,
+            // as the real one. Bought after the Shinkansen it was stood up
+            // over the company's track (decision 809, decision 1028 §6)
+            // until decision 1029 left the subway under the ground out of
+            // its viaduct Hakata's company track.
+            XCTAssertGreaterThanOrEqual(Double(over - under), 8 * Self.metre, "\(order): the Relay Kamome under the Shinkansen's viaduct at Shin-Tosu")
             for (name, ids) in [("博多", [kamome, shinkansen, "fksubway:K", "fksubway:N"]), ("新鳥栖", [kamome, shinkansen]), ("武雄溫泉", [kamome, nishi])] {
                 let stations = world.stations.filter { $0.name == name }
                 XCTAssertEqual(stations.count, 1, "\(order): one \(name)")
@@ -373,8 +388,10 @@ final class SharedStationLayoutTests: XCTestCase {
     /// other line of Japan's map and before them. It shares Hakata with
     /// the Kyushu Shinkansen, the Relay Kamome and the subway's Kuko and
     /// Nanakuma Lines: its platforms beside the Kyushu Shinkansen's, on
-    /// the station's third floor with them (the real station's tracks 11
-    /// to 16, which both lines use), none over another's.
+    /// its viaduct 10 m up (decision 1023), at one height with them where
+    /// it is bought first (the real station's third floor, tracks 11 to
+    /// 16, which both lines use) and stood up some 5 m over them where it
+    /// is bought last (decision 809), none over another's.
     func testTheSanyoShinkansenStandsBesideTheKyushuShinkansen() throws {
         let sanyo = SanyoShinkansenTests.id, kamome = RelayKamomeTests.id, nishi = NishiKyushuShinkansenTests.id, shinkansen = KyushuShinkansenTests.id
         for order in [["fksubway:K", "fksubway:H", "fksubway:N", shinkansen, kamome, nishi, sanyo], [sanyo, shinkansen, kamome, nishi, "fksubway:N", "fksubway:H", "fksubway:K"]] {
@@ -382,7 +399,8 @@ final class SharedStationLayoutTests: XCTestCase {
             let laidBy = try Self.buy(order, on: session)
             let world = session.world
             let laid = Self.platforms(of: world, laidBy: laidBy)
-            XCTAssertEqual(Self.stacked(laid, in: world), [], "\(order)")
+            let stacked = Self.stacked(laid, in: world)
+            XCTAssertTrue(stacked.allSatisfy { $0.hasPrefix("新鳥栖: ") && $0.contains(kamome) && $0.contains(shinkansen) }, "\(order): only where the Relay Kamome crosses the Kyushu Shinkansen, \(stacked)")
             let hakata = try XCTUnwrap(world.stations.first { $0.name == "博多" }?.id)
             XCTAssertEqual(world.stations.filter { $0.name == "博多" }.count, 1, "\(order): one Hakata")
             for id in [sanyo, shinkansen, kamome, "fksubway:K", "fksubway:N"] {
@@ -390,7 +408,14 @@ final class SharedStationLayoutTests: XCTestCase {
                 XCTAssertTrue(line.stops.contains(hakata), "\(order): \(id) stops at Hakata")
             }
             let pair = try XCTUnwrap(Self.between(sanyo, shinkansen, at: hakata, in: laid), "\(order)")
-            XCTAssertLessThanOrEqual(pair.height, 1, "\(order): the two Shinkansen lines on one floor")
+            if order.first == sanyo {
+                XCTAssertLessThanOrEqual(pair.height, 1, "\(order): the two Shinkansen lines on one floor")
+            } else {
+                // Bought last, its first laying meets the company's track
+                // at one level and its Hakata is stood up (decision 809),
+                // some 5 m over the Kyushu Shinkansen's (decision 1029 §6).
+                XCTAssertLessThanOrEqual(pair.height, 7, "\(order): stood up beside it, not over it")
+            }
             XCTAssertGreaterThanOrEqual(pair.distance, 4, "\(order): side by side")
             XCTAssertLessThanOrEqual(pair.distance, 20, "\(order): side by side, one station")
             let sanyoPlatforms = world.network.platforms(of: hakata).filter { laidBy[$0] == sanyo }
@@ -399,7 +424,7 @@ final class SharedStationLayoutTests: XCTestCase {
                 let geometry = try XCTUnwrap(world.trackGeometry(of: platform.edge))
                 let middle = geometry.location(at: (platform.start + platform.end) / 2).position
                 let over = (Double(middle.z) - Double(world.groundHeight(at: middle.plan) ?? 0)) / Self.metre
-                XCTAssertGreaterThan(over, 12, "\(order): on its viaduct")
+                XCTAssertGreaterThan(over, 8, "\(order): on its viaduct")
             }
         }
     }

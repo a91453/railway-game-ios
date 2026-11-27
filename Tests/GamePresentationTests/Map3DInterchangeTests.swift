@@ -187,8 +187,15 @@ extension Map3DSceneMemoryTests {
         // 台中's trunk road; the worst now a ramp in 高雄, 22.710,
         // 120.330), the ground under them a few metres lower or flatter;
         // no rule changed.
+        // Decision 822's later note (RAMP-GRADE): with ramps at 7 % at
+        // most, 292 (ramps 160 → 171, a deck and the ground 76 → 75, two
+        // decks 40 → 46): a link road too short to come down at 7 % ends
+        // higher and the road on from it comes down along the ground
+        // past more side streets, and a lower bridge lifted to a higher
+        // one comes down from it over longer, as decision 391's height
+        // did; Fukuoka's links had come down at 12–23 %.
         XCTAssertLessThanOrEqual(kinds[.deckAndGround] ?? 0, 80, "\(kinds[.deckAndGround] ?? 0) sites where a deck and a road on the ground meet 0.5–4.5 m apart")
-        XCTAssertLessThanOrEqual(all.count, 276, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
+        XCTAssertLessThanOrEqual(all.count, 292, "\(all.count) sites where two roads' surfaces meet 0.5–4.5 m apart, worst \(all.first?.gap ?? 0) m")
     }
 }
 

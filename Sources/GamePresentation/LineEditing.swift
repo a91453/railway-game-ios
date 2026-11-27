@@ -268,9 +268,11 @@ extension GameSession {
         setStops(of: line, to: LineStopEditing.moving(index, by: offset, in: line.stops))
     }
 
-    /// Adds `station` to the selected line where it fits best
-    /// (decision 80, MapBuilder's `handleAddStationToLine`): at
-    /// ``LineStopEditing/insertionIndex(of:into:)`` of where it stands.
+    /// Adds `station` to the selected line where it fits best: where the
+    /// track has it (``GameWorld/trackInsertionIndex(of:into:preferring:)``,
+    /// TestFlight 2026-11-27), or else, and on a ring, at
+    /// ``LineStopEditing/insertionIndex(of:into:)`` of where it stands
+    /// (decision 80, MapBuilder's `handleAddStationToLine`).
     /// Only for a line that exists: the stops picked for a new line
     /// (``lineDraft``) keep the order they were picked in.
     public func addStationToSelectedLine(_ station: StationID) {
@@ -280,7 +282,12 @@ extension GameSession {
             return
         }
         let points = line.stops.compactMap { world.station(id: $0)?.point }
-        let index = points.count == line.stops.count ? LineStopEditing.insertionIndex(of: point, into: points) : line.stops.count
+        let guess = points.count == line.stops.count ? LineStopEditing.insertionIndex(of: point, into: points) : line.stops.count
+        // TestFlight 2026-11-27: where the track has it, the guess from
+        // where the stations stand only when the track gives no place
+        // (``GameWorld/trackInsertionIndex(of:into:preferring:)``; not on a
+        // ring, whose last stop runs on to its first).
+        let index = line.isRing ? guess : world.trackInsertionIndex(of: station, into: line.stops, preferring: guess) ?? guess
         setStops(of: line, to: LineStopEditing.inserting(station, at: index, into: line.stops))
     }
 

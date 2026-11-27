@@ -42,6 +42,7 @@
 		1F82AC1DD5AF1785A5B830C7 /* departure-a.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 5D10664B0FD2F9FFECA97ED0 /* departure-a.m4a */; };
 		20561212C765FBDE6629645A /* ListSearchField.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDFF0DE7D90A7A399342FCC8 /* ListSearchField.swift */; };
 		20778028B235A16BDD963DCE /* run-motor-brake-45.caf in Resources */ = {isa = PBXBuildFile; fileRef = BBFF707BB9379ADCD2D345D3 /* run-motor-brake-45.caf */; };
+		2098DAD24AACCA1CE92E113F /* taiwan_registry_houses.dat in Resources */ = {isa = PBXBuildFile; fileRef = 4248E797DEB7968B9AAE937D /* taiwan_registry_houses.dat */; };
 		20FE3BBEDED4CCA7EE59B14A /* FrameTimeBenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5B19D3B11CAE01ADC9F0A2 /* FrameTimeBenchView.swift */; };
 		212CC094C5B0E27037EAD07F /* melody-piano-93.wav in Resources */ = {isa = PBXBuildFile; fileRef = 07EF14ABC107A3C3943C0F67 /* melody-piano-93.wav */; };
 		21720CA3F8090EB484A82AC2 /* OneShotLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D5BF8179644D02716F92269 /* OneShotLocation.swift */; };
@@ -191,6 +192,7 @@
 		8F7D3D9A5618E26E83A6DA59 /* trtc_times.json in Resources */ = {isa = PBXBuildFile; fileRef = 9E428A92A98C07A45636F5E3 /* trtc_times.json */; };
 		8FBF6253CD6BFB1226209F25 /* TodaySettlementsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = E95E148A603B48CD12C8A714 /* TodaySettlementsSection.swift */; };
 		901FBCAF3CF18040ABB7DCA1 /* MapLockMarks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 362FE08DC4352F1A844AF86D /* MapLockMarks.swift */; };
+		9024FECC605F12A90EB047FD /* real_platforms.json in Resources */ = {isa = PBXBuildFile; fileRef = 721AD2B3FB8C3FB2EC7F2416 /* real_platforms.json */; };
 		90D833E8F70651BA68429E5D /* run-electric.caf in Resources */ = {isa = PBXBuildFile; fileRef = A0AD6227FA521E0662955DEC /* run-electric.caf */; };
 		91041868D52D54D5FC9E952C /* tpe-temple-tianhou.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = 4C9276C63851EF52D3D6D16E /* tpe-temple-tianhou.m3dmodel */; };
 		9108B7149F1546CA165D177A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 0DE544A75839254BE9C37E2D /* PrivacyInfo.xcprivacy */; };
@@ -273,6 +275,7 @@
 		CC783E4053798355ECF17075 /* StartSaveFlowSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2CB75E448956BC3D8E7FE02 /* StartSaveFlowSmokeTests.swift */; };
 		CC9E99100E350FA519724E36 /* kenney-ui-open.wav in Resources */ = {isa = PBXBuildFile; fileRef = EBFE12DC5EE8EA16F13F9F9A /* kenney-ui-open.wav */; };
 		CDA0BE241DE1D06BA9047372 /* ControlPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07E2BC9805D886DEE596859 /* ControlPanel.swift */; };
+		CDA18253B2F398708E4021E3 /* taiwan_land_price.dat in Resources */ = {isa = PBXBuildFile; fileRef = C08BDAD17AE71940CF931C07 /* taiwan_land_price.dat */; };
 		CDB469C7BE7C6097272449BE /* chime-tourist.wav in Resources */ = {isa = PBXBuildFile; fileRef = 52449D8DCD618CC726CACDDE /* chime-tourist.wav */; };
 		CDBCC1C27BD15017BA4A9E69 /* BaseMap in Resources */ = {isa = PBXBuildFile; fileRef = DA79BA929F6262FB0DD353E2 /* BaseMap */; };
 		CE4A55FA3D5A13F0CFC0FFAA /* coins.wav in Resources */ = {isa = PBXBuildFile; fileRef = 825875E22D08C0197C0EC180 /* coins.wav */; };
@@ -451,6 +454,7 @@
 		41251B12461A0FD34DFCB786 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		41B126494052744FF5AE9A8B /* CoverageShortcutUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoverageShortcutUITests.swift; sourceTree = "<group>"; };
 		42160E499C1AD4A505ACB027 /* tpe-temple-huiji.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-huiji.m3dmodel"; sourceTree = "<group>"; };
+		4248E797DEB7968B9AAE937D /* taiwan_registry_houses.dat */ = {isa = PBXFileReference; path = taiwan_registry_houses.dat; sourceTree = "<group>"; };
 		4353DE6A285346A08373E79A /* kenney-pine.m3dmodel */ = {isa = PBXFileReference; path = "kenney-pine.m3dmodel"; sourceTree = "<group>"; };
 		45DEF39159CB4B2FE6C85BE4 /* run-motor-power-14.caf */ = {isa = PBXFileReference; path = "run-motor-power-14.caf"; sourceTree = "<group>"; };
 		464ED7CD74C3D89609658AD5 /* RealWorldMapUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealWorldMapUITests.swift; sourceTree = "<group>"; };
@@ -511,6 +515,7 @@
 		6F8DA1B59CC2DD5AF84AEA1C /* PromotionLineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromotionLineView.swift; sourceTree = "<group>"; };
 		70170091E76358BF8886BB8E /* Map3DSurfaces.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Map3DSurfaces.png; sourceTree = "<group>"; };
 		71EB126E20DDE2A8668CD619 /* NextStepChipUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepChipUITests.swift; sourceTree = "<group>"; };
+		721AD2B3FB8C3FB2EC7F2416 /* real_platforms.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = real_platforms.json; sourceTree = "<group>"; };
 		75E70549159C0EC6DAE1303D /* PromoMaterialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromoMaterialTests.swift; sourceTree = "<group>"; };
 		76E2973BBBB24FACFFCBE7AD /* RailwayGame.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RailwayGame.entitlements; sourceTree = "<group>"; };
 		771361B568387359268A6B83 /* RollingStockCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RollingStockCatalogView.swift; sourceTree = "<group>"; };
@@ -610,6 +615,7 @@
 		BF99D3AA87D898A7B9F0A295 /* FeedbackViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackViews.swift; sourceTree = "<group>"; };
 		C02012D8840DFEC5FEBCB494 /* LessonUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LessonUITests.swift; sourceTree = "<group>"; };
 		C08B430E6B57DEDAF0C1964E /* EconomyPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EconomyPanel.swift; sourceTree = "<group>"; };
+		C08BDAD17AE71940CF931C07 /* taiwan_land_price.dat */ = {isa = PBXFileReference; path = taiwan_land_price.dat; sourceTree = "<group>"; };
 		C12C3242BE7CC739B03D2613 /* tra_pingxi_runs.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = tra_pingxi_runs.json; sourceTree = "<group>"; };
 		C251D4CCDA182936D3B548DB /* tpe-temple-zhinan.m3dmodel */ = {isa = PBXFileReference; path = "tpe-temple-zhinan.m3dmodel"; sourceTree = "<group>"; };
 		C32DC68DE89FFF96A515EA04 /* chime-metro.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "chime-metro.wav"; sourceTree = "<group>"; };
@@ -758,11 +764,13 @@
 			children = (
 				CF26D5EFF8FE10DB6A8376C9 /* taiwan_coverage.dat */,
 				2C59CD3C076F73D4C4D5094B /* taiwan_heights.dat */,
+				C08BDAD17AE71940CF931C07 /* taiwan_land_price.dat */,
 				F104E3ABF4FB1175A1038A45 /* taiwan_landcover.dat */,
 				69236EA935C27C1BCE988215 /* taiwan_no_build.json */,
 				CCCFEDE062F8A4532BBAA221 /* taiwan_place_names.json */,
 				894953309F6C9C2D5C1F0DB6 /* taiwan_places.json */,
 				6B5BA7FA721C9F96C83683A7 /* taiwan_population.json */,
+				4248E797DEB7968B9AAE937D /* taiwan_registry_houses.dat */,
 				29F78307DC6EE99597B85320 /* taiwan_sight_visitors.json */,
 				9902CF9A2042BE71CD4FF88C /* taiwan_station_landmarks.json */,
 				31A2D9E61F0D1A4537E1B356 /* taiwan_water.json */,
@@ -805,6 +813,7 @@
 				545BF3B8583FFA46FF41A442 /* rail_dispatch.json */,
 				4C1017DDE782DF1CF07D561E /* rail_structures.json */,
 				7E7435AD3984A55E9A5FF4F7 /* rail_tracks.json */,
+				721AD2B3FB8C3FB2EC7F2416 /* real_platforms.json */,
 				B7DE13B493FCE66BA5ED5DBB /* sanying_ridership.json */,
 				68B0C0FD89F59C53A9685C67 /* sanying_times.json */,
 				92FBF87A0B909AF9C100FC70 /* sanying.json */,
@@ -1414,6 +1423,7 @@
 				32C1BFF8BFF1C89EF38AAD5C /* real_buses_YunlinCounty.json in Resources */,
 				027E54A5C85E5929C11956A3 /* real_buses_index.json in Resources */,
 				D498AF823A53AB4DB4D8BB84 /* real_coaches.json in Resources */,
+				9024FECC605F12A90EB047FD /* real_platforms.json in Resources */,
 				4850EFE156B582D7BA6FD80E /* recycling-truck.m3dmodel in Resources */,
 				585C09A427696BD99073713D /* refused.wav in Resources */,
 				7D3131E179FBE863523685B0 /* run-diesel-coast.caf in Resources */,
@@ -1445,11 +1455,13 @@
 				A3C9D6B6FECF2BBDAD9C372A /* station_transfers.json in Resources */,
 				A904805EE220E391FA3C4618 /* taiwan_coverage.dat in Resources */,
 				D4FDC4F705567E31E0A61764 /* taiwan_heights.dat in Resources */,
+				CDA18253B2F398708E4021E3 /* taiwan_land_price.dat in Resources */,
 				A25288EF35439864404F191E /* taiwan_landcover.dat in Resources */,
 				94E81FC86FD208CF85F36A0E /* taiwan_no_build.json in Resources */,
 				4CC1E6E850C8B587B582C668 /* taiwan_place_names.json in Resources */,
 				8163932343EEB39A635118DD /* taiwan_places.json in Resources */,
 				19E3457A000AB98921141272 /* taiwan_population.json in Resources */,
+				2098DAD24AACCA1CE92E113F /* taiwan_registry_houses.dat in Resources */,
 				5644406356216F19F80AB16F /* taiwan_sight_visitors.json in Resources */,
 				E9561E386B6596E9E85C520D /* taiwan_station_landmarks.json in Resources */,
 				D46AECD3578B57EB4AD69DB4 /* taiwan_water.json in Resources */,

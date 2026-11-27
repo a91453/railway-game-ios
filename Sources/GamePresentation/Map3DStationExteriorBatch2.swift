@@ -160,39 +160,35 @@ public enum Map3DStationExteriorBatch2 {
         (-24.525, -81.286),
     ]
     static let tainanOrigin: (Double, Double) = (120.21332, 22.99714)
-    // way 204493488; height=none, levels=none, roof=none.
-    static let way204493488: [(Float, Float)] = [
-        (-183.795, 61.048),
-        (-184.779, 66.547),
-        (-191.245, 66.002),
-        (-199.760, 63.809),
-        (-207.559, 60.102),
-        (-214.670, 54.847),
-        (-220.378, 48.647),
-        (-224.036, 43.025),
-        (-226.957, 36.613),
-        (-221.690, 34.142),
-        (-217.273, 42.725),
-        (-209.721, 51.196),
-        (-203.675, 55.471),
-        (-197.158, 58.532),
-        (-189.626, 60.502),
+    // relation 6477070 臺南火車站, building=train_station; height=none, levels=none, roof=none.
+    // STATION-ALIGN-APPLY (decision 1022): the 1936 station itself, from the
+    // 2026-11-27 extract (tools/station-alignment/data/taiwan.json).
+    static let relation6477070: [(Float, Float)] = [
+        (-97.042, -0.223),
+        (-95.505, -6.234),
+        (-91.303, -7.124),
+        (-82.696, -8.906),
+        (-85.257, -22.375),
+        (-80.749, -23.266),
+        (-62.918, -26.494),
+        (-54.311, 23.711),
+        (-73.473, 27.051),
+        (-75.215, 16.253),
+        (-85.155, 17.700),
+        (-86.897, 17.811),
+        (-90.996, 18.368),
+        (-92.021, 15.473),
+        (-93.455, 15.807),
     ]
-    // way 204493489; height=none, levels=none, roof=none.
-    static let way204493489: [(Float, Float)] = [
-        (-227.520, 10.464),
-        (-222.018, 10.909),
-        (-219.691, 1.391),
-        (-214.865, -8.995),
-        (-207.559, -18.557),
-        (-203.070, -22.754),
-        (-196.676, -27.340),
-        (-199.320, -31.348),
-        (-206.001, -27.151),
-        (-212.580, -21.407),
-        (-220.265, -11.399),
-        (-225.266, -0.301),
-    ]
+    /// STATION-ALIGN-APPLY (decision 1022): where the 1936 station stands,
+    /// in the study's metres: its porch at the real one's west face
+    /// (relation 6477070, the entrance block 25 m wide on its west side),
+    /// facing west to the station square as the real one does, its long
+    /// side along the real one's, 9.8° east of north. Before, it stood
+    /// 132 m west of here on the bus station (ways 204493488 and
+    /// 204493489), facing the track (decision 1021).
+    static let tainan1936Centre = Map3DPoint(-76.2, 0, 3.1)
+    static let tainan1936Facing = Map3DPoint(-0.9854, 0, 0.1702)
     // way 1568887226; height=none, levels=2, roof=none.
     static let way1568887226: [(Float, Float)] = [
         (-23.343, -38.083),
@@ -292,8 +288,7 @@ public enum Map3DStationExteriorBatch2 {
             b.studyOutline(way286891391, elevation: 0)
             b.chiayi1933(detail)
         case .tainan:
-            b.studyOutline(way204493488, elevation: 0)
-            b.studyOutline(way204493489, elevation: 0)
+            b.studyOutline(relation6477070, elevation: 0)
             b.studyOutline(way1568887226, elevation: 0)
             b.studyOutline(way1568933253, elevation: 8)
             b.tainan1936(detail)
@@ -752,11 +747,18 @@ private extension StationKitBuilder {
         eaveLights(x+22.3,4.40,z,21,detail:detail)
     }
     mutating func tainan1936(_ detail: Detail) {
+        // STATION-ALIGN-APPLY (decision 1022): drawn round its own middle,
+        // its front to +x, then stood on the real station.
+        var local = StationKitBuilder()
+        local.tainan1936Body(detail)
+        mesh.append(local.mesh, at: Map3DStationExteriorBatch2.tainan1936Centre, forward: Map3DStationExteriorBatch2.tainan1936Facing)
+    }
+    mutating func tainan1936Body(_ detail: Detail) {
         // Slight source brightening compensates for the renderer's diffuse
         // shading, so the rendered facade reads as the photographed warm white.
         let white=rgb(0xFFFDF7),trim=rgb(0xE5E1D9),pink=rgb(0xD7C3B9),glass=rgb(0x9FB5B6)
-        let x:Float = -208,z:Float = 20
-        for wingZ: Float in [-4,44] {
+        let x:Float = 0,z:Float = 0
+        for wingZ: Float in [z-24,z+24] {
             box(x,0,wingZ,25,26,11,white)
             box(x+12.62,0,wingZ,0.20,26,1.0,pink)
             archRow(x+12.7,0.7,wingZ,22,count:4,stone:trim,glass:glass,detail:detail)
