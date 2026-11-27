@@ -32,7 +32,7 @@ import XCTest
 /// - `SAVED_WORLD_EACH=1`: every checksum, with its time.
 /// - `SAVED_WORLD_AUDIT=1`: every answer a memo gives again (a run's trip,
 ///   a line's plans, the trains in the way, the due runs that cannot
-///   leave, ``GameWorld/AnswerAudit``) and every set of holders changed in
+///   leave, a traffic plan's meets and overtakes, ``GameWorld/AnswerAudit``) and every set of holders changed in
 ///   place (``GameWorld/HolderAudit``) is checked against working it out
 ///   again, and the test traps on the first that differs. Several times
 ///   slower: for a proof, not for times.
@@ -68,7 +68,8 @@ final class SavedWorldTickReportTests: XCTestCase {
             + "\(holders.updates) holders changed in place were the holders worked out again (\(holders.rebuilds) worked out, "
             + "\(holders.unchanged) trains changed left in them as they were); "
             + "\(answers.detoursNotSearched) ways round not searched for were none when searched for (\(answers.detoursSearched) searched for); "
-            + "\(answers.heldNotAsked) departures kept from their way without asking were kept when asked\n"
+            + "\(answers.heldNotAsked) departures kept from their way without asking were kept when asked; "
+            + "\(answers.trafficCoresKept) traffic plans' meets and overtakes kept were those worked out again\n"
         FileHandle.standardError.write(Data(text.utf8))
     }
 

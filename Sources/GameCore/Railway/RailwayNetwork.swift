@@ -425,15 +425,44 @@ public struct RailwayNetwork: Hashable, Sendable {
     /// read by `numberAt`, ascend. The numbers are handed out in turn and
     /// seldom removed, so the element as far from the first as its number
     /// is from the first's is tried first: then it is O(1).
-    private static func index(of number: Int, count: Int, numberAt: (Int) -> Int) -> Int? {
+    ///
+    /// Decision 1038: when that one's number is past `number` by `d`, the
+    /// element is at least `d` places before it (the numbers ascend and
+    /// differ, so each place back lowers the number by one or more), and
+    /// that place is tried next, then the search between the two: once a
+    /// number early on was removed, the first guess missed almost every
+    /// time (Taiwan bought whole: 5,204 of 5,943 edges), and the search
+    /// was a twelfth of a tick. The search finds the same element, the
+    /// only one with its number, in fewer looks.
+    static func index(of number: Int, count: Int, numberAt: (Int) -> Int) -> Int? {
+        var low = 0
+        var high = count - 1
         if count > 0 {
             // A save's numbers can be anything, so the difference can
             // overflow; then there is no guess, only the search.
             let (guess, overflow) = number.subtractingReportingOverflow(numberAt(0))
-            if !overflow, guess >= 0, guess < count, numberAt(guess) == number { return guess }
+            if !overflow, guess >= 0 {
+                let place = min(guess, count - 1)
+                let at = numberAt(place)
+                if at == number { return place }
+                if at < number {
+                    // The element would be at `place` or before (each
+                    // place on raises the number by one or more), where
+                    // every number is at most `at`: none has it.
+                    return nil
+                } else {
+                    high = place - 1
+                    let (past, overflowed) = at.subtractingReportingOverflow(number)
+                    if !overflowed, past <= place {
+                        let back = place - past
+                        let there = numberAt(back)
+                        if there == number { return back }
+                        if there > number { return nil }
+                        low = back + 1
+                    }
+                }
+            }
         }
-        var low = 0
-        var high = count - 1
         while low <= high {
             let middle = low + (high - low) / 2
             let candidate = numberAt(middle)
