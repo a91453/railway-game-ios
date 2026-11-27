@@ -51,6 +51,9 @@ enum Map3DSuizenjiShrine {
         // stone, dark, shrineRed, roofTile, gold.
         palette: [Map3DPalette.concrete, Map3DPalette.dark, Map3DPalette.cityRoofs[2].color, Map3DPalette.arcade, Map3DPalette.gold],
         encoded: encoded,
+        // LANDMARK-PLINTH: its court is level; the map's ground under it
+        // rises 1.1 m.
+        plinth: Map3DPalette.concrete,
         size: (49.36, 46.44, 11.24))
 }
 
