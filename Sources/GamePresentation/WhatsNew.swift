@@ -3,7 +3,10 @@
 /// updated app opens (``GameLauncher/showsWhatsNew``), and again from Help.
 ///
 /// Before each TestFlight release, the newest entry is written with
-/// `.github/testflight-whats-new.md` (decision 415 says how): a new entry
+/// `.github/testflight-whats-new.md` (decision 415 says how; every release,
+/// owner 2026-11-28, which `tools/release/testflight-local.sh` checks), and
+/// each line's Japanese goes into the Japanese table under its English
+/// (`Translations/Japanese.swift`): a new entry
 /// on top with a new ``Entry/id`` shows the card again to everyone who
 /// updates; an entry already released keeps its id.
 ///
@@ -36,6 +39,179 @@ public enum WhatsNew {
     /// The released builds' news, the newest first. The next build's lines
     /// wait in `WhatsNewNext/` until its release.
     public static let entries: [Entry] = [
+        // 149–154: everything after 148's card (150 and 151 shipped
+        // it; 152 and 153 went out without a card of their own).
+        Entry(
+            id: "2026-11-28-154",
+            items: [
+                Line(
+                    english: "The game speaks Japanese: choose 日本語 under Language in Settings and it takes effect the next time the app opens; stations and lines on the Japan map show their Japanese names.",
+                    chinese: "可以用日文玩：設定的「語言」選日本語，下次開啟生效；日本地圖的站名、線名也用日文。"
+                ),
+                Line(
+                    english: "The app no longer carries its maps: a map downloads the first time you open it (you need to be online), and Map in Settings can remove one or download it again.",
+                    chinese: "App 不再內建地圖：第一次開某張地圖會自動下載（要連網路）；設定的「地圖」可刪除或重新下載。"
+                ),
+                Line(
+                    english: "The Kyushu Shinkansen goes on south from Kumamoto to Shin-Yatsushiro and Shin-Minamata on the Japan map; a game that already has Hakata to Kumamoto can buy the rest.",
+                    chinese: "日本地圖的九州新幹線往南延到新八代、新水俁；已經買了博多到熊本的局可以加買這一段。"
+                ),
+                Line(
+                    english: "The Relay Kamome from Hakata to Takeo-Onsen is on sale on the Japan map, run by 885 and 787 series trains, and at Takeo-Onsen it meets the N700S Kamome across the platform.",
+                    chinese: "日本地圖可以買海鷗接力號（博多到武雄溫泉，885 系與 787 系），在武雄溫泉同月台轉 N700S 海鷗號。"
+                ),
+                Line(
+                    english: "With realistic rules, a Japan game that owns the Kyushu Shinkansen can buy the Sanyo Shinkansen from Hakata to Kokura: its sixteen-car trains run into the Kyushu Shinkansen's platforms at Hakata.",
+                    chinese: "寫實規則的日本地圖買了九州新幹線後，可收購山陽新幹線（博多到小倉），16 節列車開進九州新幹線的博多月台。"
+                ),
+                Line(
+                    english: "The Kumamoto City Tram's Lines A and B are on sale together on the Japan map: white and wine-red low-floor trams run to their real timetable from their own depots.",
+                    chinese: "日本地圖可以一起買熊本市電 A、B 系統：白底酒紅色的低地板電車照真實時刻表從自己的車庫出車。"
+                ),
+                Line(
+                    english: "The Japan map's introduction now tells of Fukuoka, Saga, Nagasaki and Kumamoto and the lines you can buy there.",
+                    chinese: "日本地圖的介紹改寫成福岡、佐賀、長崎、熊本四縣與現在能買的路線。"
+                ),
+                Line(
+                    english: "The Taiwan High Speed Rail is for sale in a Taiwan game with realistic rules: buy it from Nangang to Zuoying with its viaducts, depots, land along the way and the real day of trains; it pays a monthly upkeep once bought.",
+                    chinese: "寫實規則的台灣新局可以收購台灣高鐵：南港到左營的高架、機廠、沿線的地和真實一天的班次一起買下，之後每月付維護費。"
+                ),
+                Line(
+                    english: "The Taiwan High Speed Rail you buy runs 700T trains, and on high-speed lines you build yourself every other train is an N700ST in Taiwan High Speed Rail colours.",
+                    chinese: "買下的台灣高鐵全是 700T；自己蓋的高鐵線，單號車是台灣高鐵塗裝的 N700ST。"
+                ),
+                Line(
+                    english: "The Nishi-Kyushu Shinkansen runs the N700S Kamome, and the suspended monorail has a new model.",
+                    chinese: "西九州新幹線換成 N700S 海鷗號，懸吊式單軌換新模型。"
+                ),
+                Line(
+                    english: "After you build two stations joined by track, Build offers their line in one tap; New Line in Lines starts picking stations at once.",
+                    chinese: "蓋好兩座有軌道相連的車站後，建設裡一鍵就能建路線；路線的「新路線」一按就開始選站。"
+                ),
+                Line(
+                    english: "On a real-world map, tap a search result and Build Here is there at once; places whose names match come first.",
+                    chinese: "實景地圖選址：點搜尋結果就能直接按「在這裡建造」，名稱相符的排最前面。"
+                ),
+                Line(
+                    english: "Taiwan's 3D maps show the latest buildings: ones put up or mapped since September appear, and ones pulled down are gone.",
+                    chinese: "台灣 3D 地圖的建物更新到最新：九月以後新蓋、新畫上的房子出現了，拆掉的也不見了。"
+                ),
+                Line(
+                    english: "Taichung's 3D map now draws its buildings from the city's own building map: every street lined as it really is, and nearly three times as many buildings.",
+                    chinese: "台中市的 3D 地圖改用市府建物圖：每條街的房子照實際位置排好，建物多了將近三倍。"
+                ),
+                Line(
+                    english: "On the Taiwan 3D map, streets the building map left bare are lined with the homes really sold there, as tall as they are: the towers round Taoyuan's high-speed station now stand.",
+                    chinese: "台灣 3D 地圖上建物圖漏掉的街，路邊改蓋那裡真的賣過的房子，樓層照實際：桃園高鐵站旁的大樓現在立起來了。"
+                ),
+                Line(
+                    english: "On the Taiwan map, land is dear where real land is dear: a lot in a city's middle costs far more than one in the hills, whatever you zone it.",
+                    chinese: "台灣地圖的地價照真實行情：市中心的地比山區貴得多，改了分區也一樣。"
+                ),
+                Line(
+                    english: "On the Japan map, Kumamoto, Kokura and Karatsu Castles now stand where they are, and Kumamoto and Tara stations have their real station buildings.",
+                    chinese: "日本地圖多了熊本城、小倉城、唐津城，熊本站、多良站換成真實站房。"
+                ),
+                Line(
+                    english: "On the Japan map, Dazaifu Tenmangu, Munakata Taisha, Yutoku Inari and Aoi Aso shrines now stand where they are, with the Chikugo River Lift Bridge, the Tsujun Bridge and the Tenmon Bridge.",
+                    chinese: "日本地圖多了太宰府天滿宮、宗像大社、祐德稻荷、青井阿蘇神社，以及筑後川昇開橋、通潤橋和天門橋。"
+                ),
+                Line(
+                    english: "On the Japan map, Mojiko station, the Former Moji Customs House and the Mitsui Club now stand in Mojiko, and Suizenji garden in Kumamoto has its Noh stage and two stone bridges.",
+                    chinese: "日本地圖的門司港多了門司港站、舊門司稅關和三井俱樂部，熊本水前寺成趣園也有了能樂殿和兩座石橋。"
+                ),
+                Line(
+                    english: "On the Japan map, the main hall and watchtower of Yoshinogari and the Mandaken mine now stand.",
+                    chinese: "日本地圖多了吉野里遺跡的主祭殿與物見櫓，以及萬田坑。"
+                ),
+                Line(
+                    english: "On the Taiwan map, Fo Guang Shan, Yehliu's Queen's Head, the Bitan Suspension Bridge and the Peng Wan Bridge now stand where they are, and the Tamsui line's elevated stations have a new model.",
+                    chinese: "台灣地圖多了佛光山、野柳女王頭、碧潭吊橋和鵬灣跨海大橋；淡水線的高架站換新模型。"
+                ),
+                Line(
+                    english: "Xiluo Bridge and the old Dashu iron bridge now stand over their rivers, and long Taiwan ferry routes sail a Xiaoliuqiu fast ferry.",
+                    chinese: "西螺大橋和大樹舊鐵橋立在河上；台灣的長程渡輪改用小琉球高速客輪。"
+                ),
+                Line(
+                    english: "On the Hong Kong map, Wong Tai Sin Temple, Chi Lin Nunnery and Che Kung Temple now stand where they are.",
+                    chinese: "香港地圖多了黃大仙祠、志蓮淨苑和車公廟。"
+                ),
+                Line(
+                    english: "On the Hong Kong map, the cable car mode can lay the Peak Tram on its real track: two cars climb to The Peak every day from 7:30 to 23:00.",
+                    chinese: "香港地圖的纜車模式可照真實路線鋪山頂纜車，兩台車廂每天 7:30 到 23:00 上下山頂。"
+                ),
+                Line(
+                    english: "Stations of lines you buy line up with the real platforms, and Tainan's 1936 station building stands where it really is.",
+                    chinese: "收購路線的月台對準真實月台；台南 1936 年的站房移到真正的位置。"
+                ),
+                Line(
+                    english: "Elevated stations on lines you buy now stand at a real viaduct's height, about 10 m up, instead of climbing higher than the viaduct either side.",
+                    chinese: "收購路線的高架車站降到真實高架的高度（約離地 10 公尺），不再比兩邊的高架高出一截。"
+                ),
+                Line(
+                    english: "Passers-by change with the place and the hour, and there are as many scooters as each place has: many in Taiwan, few in Japan and Hong Kong, none in Finland.",
+                    chinese: "路人照地點與時段換人，機車多寡照各地：台灣多、日本香港少、芬蘭沒有。"
+                ),
+                Line(
+                    english: "Temples have dragons on their roofs and dragon columns at their gates, shrines a Tudigong figure, and some squares a dog and pigeons. Elevated stations with shops have a row of shops under the viaduct.",
+                    chinese: "廟頂有剪黏雙龍、門口有龍柱，土地公廟有土地公，有的廟埕有狗和鴿子；有車站商業的高架站，高架下有一排店。"
+                ),
+                Line(
+                    english: "Street trams stop at low open-air stops, some building materials trains now run silver cement wagons from cement silo yards, and Ōmura depot stands beside the Nishi-Kyushu Shinkansen.",
+                    chinese: "路面電車停在沒有雨棚的矮月台；部分建材列車改成銀色水泥車，從水泥筒倉貨場出發；西九州新幹線旁看得到大村車輛基地。"
+                ),
+            ],
+            fixes: [
+                Line(
+                    english: "Choose a type on a line's page no longer gets stuck, and the N700 is back in the Japan catalogue.",
+                    chinese: "路線頁按「選擇車種」不再卡住，日本的車種型錄也看得到 N700 了。"
+                ),
+                Line(
+                    english: "Maps open again on the phones that could not read them after a map update.",
+                    chinese: "地圖換新版後有些手機讀不到地圖的問題修好了。"
+                ),
+                Line(
+                    english: "High-speed crossovers and station tracks are drawn whole again.",
+                    chinese: "高鐵與新幹線的渡線、站內股道不再破圖。"
+                ),
+                Line(
+                    english: "A train waiting to turn back at the end of its line stands inside the platform, not a car past it.",
+                    chinese: "列車在路線終點等著折返時停在月台內，不再超出一節。"
+                ),
+                Line(
+                    english: "Stations tapped for a new line after its ends, or added to a line, go where the track passes them, so the line still shows and its trains call there.",
+                    chinese: "選好起終點後再點的車站、或加進路線的車站，會照軌道排進正確位置，路線照常顯示，列車也會停靠。"
+                ),
+                Line(
+                    english: "Following a train for a long time, or watching trains run into a big station, no longer gets slower and slower.",
+                    chinese: "長時間跟車、列車進大站時畫面不再越來越卡。"
+                ),
+                Line(
+                    english: "Big maps run more smoothly: Hong Kong with everything bought at rush hour, and Taiwan with everything bought under realistic rules.",
+                    chinese: "大地圖比較順了：香港全買後的尖峰時段，和台灣全買的寫實規則。"
+                ),
+                Line(
+                    english: "In the 3D view, tunnels on flat ground have portals, side-by-side bridges have no railing between them, and ramps are no longer too steep.",
+                    chinese: "3D 道路：平地隧道有洞口，並排的橋中間不再立護欄，交流道匝道不再太陡。"
+                ),
+                Line(
+                    english: "Fukuoka's traffic light poles are no longer half black, and their lamp frames are whole.",
+                    chinese: "福岡的紅綠燈柱子不再半邊黑，燈框也不缺角。"
+                ),
+                Line(
+                    english: "Parks are no longer built in nature reserves, national parks or on water.",
+                    chinese: "公園不再蓋在自然保留區、國家公園或水上。"
+                ),
+                Line(
+                    english: "Dazaifu Tenmangu's main hall and gate no longer sink into the slope.",
+                    chinese: "太宰府天滿宮的本殿與樓門不再陷進斜坡。"
+                ),
+                Line(
+                    english: "The card of the tutorial's last step no longer jumps back and forth.",
+                    chinese: "教學最後一步的卡片不再來回跳。"
+                ),
+            ]
+        ),
         // 148.
         Entry(
             id: "2026-11-26-148",

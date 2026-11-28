@@ -20,6 +20,8 @@
 #                    after processing it joins every External Testing group
 #                    and is submitted to Beta App Review
 #   --whats-new FILE What to Test, as written, instead of the merged-PR list
+#   --stale-card     release although the app's What's New card is not this
+#                    build's (a re-upload of a build already released)
 #   --archive PATH   reuse an archive this script already made for --build
 #   --no-upload      stop after the IPA check (nothing is sent to Apple)
 #   --skip-packs     do not upload map packs (an earlier run already did)
@@ -56,6 +58,7 @@ packs=true
 carry=no
 external=false
 whats_new_file=""
+stale_card=false
 while (($#)); do
   case "$1" in
     --build) build="${2:?--build needs a number}"; shift 2 ;;
@@ -64,8 +67,9 @@ while (($#)); do
     --skip-packs) packs=false; shift ;;
     --carry-map-packs) carry="${2:?--carry-map-packs needs yes or no}"; shift 2 ;;
     --external) external=true; shift ;;
+    --stale-card) stale_card=true; shift ;;
     --whats-new) whats_new_file="$(cd "$(dirname "${2:?--whats-new needs a file}")" && pwd)/$(basename "$2")"; shift 2 ;;
-    *) echo "usage: $0 [--build N] [--carry-map-packs yes|no] [--archive PATH] [--no-upload] [--skip-packs]" >&2; exit 64 ;;
+    *) echo "usage: $0 [--build N] [--carry-map-packs yes|no] [--external] [--whats-new FILE] [--stale-card] [--archive PATH] [--no-upload] [--skip-packs]" >&2; exit 64 ;;
   esac
 done
 
@@ -98,6 +102,16 @@ if [[ -z "$build" ]]; then
   build="$(local_release next-build --ci-build "$last")"
 fi
 [[ "$build" =~ ^[1-9][0-9]{0,3}(\.[0-9]{1,2}){0,2}$ ]] || die "build number $build is not N, N.M or N.M.K."
+# Decision 415: every release brings its own What's New card (owner,
+# 2026-11-28: the card stopped at 148 while 150 to 153 went out). The card
+# is in the app, so it is on main before the release: WhatsNewNext/ holds
+# no line and the newest entry's id ends in this build's number.
+next_lines="$(find Sources/GamePresentation/WhatsNewNext/new Sources/GamePresentation/WhatsNewNext/fixed -name '*.txt' | wc -l | tr -d ' ')"
+card="$(grep -m1 -oE 'id: "[^"]+"' Sources/GamePresentation/WhatsNew.swift | sed -e 's/^id: "//' -e 's/"$//')"
+if [[ "$stale_card" != true ]]; then
+  ((next_lines == 0)) || die "$next_lines lines wait in Sources/GamePresentation/WhatsNewNext/: move them into WhatsNew.entries (tools/whats-new/next.py) in a pull request and merge it first, or pass --stale-card."
+  [[ "$card" == *-"$build" || "$card" == *-"${build%%.*}" ]] || die "the newest What's New card is $card, not build $build's: write it (decision 415) and merge it first, or pass --stale-card."
+fi
 scope=internal
 [[ "$external" != true ]] || scope=external
 echo "App of main $(git rev-parse --short "$base"), build $build, $scope TestFlight, map packs carried: $carry, Xcode $(xcodebuild -version | head -1)."

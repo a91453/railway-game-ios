@@ -1,2 +1,0 @@
-en: Stations tapped for a new line after its ends, or added to a line, go where the track passes them, so the line still shows and its trains call there.
-zh: 選好起終點後再點的車站、或加進路線的車站，會照軌道排進正確位置，路線照常顯示，列車也會停靠。

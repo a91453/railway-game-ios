@@ -16,6 +16,14 @@ tools/release/testflight-local.sh
 
 `--no-upload` 只封存、匯出、檢查 IPA，不傳任何東西給 Apple；`--archive <路徑>` 重用已經封存好的 archive（同一個 build 號）。
 
+## 發版前：這版的「新功能」卡片（每一版都要）
+
+App 裡的「新功能」卡片（決策 415，`Sources/GamePresentation/WhatsNew.swift`）跟著程式碼進 build，所以**每一次發版前都先開一張 PR 寫這一版的卡片、合進 main，再從 main 發**（作者 2026-11-28：「新功能卡片要跟發版小卡一樣，做到哪更新到哪」；卡片停在 148，150～153 都沒寫，154 才一次補）。
+
+1. `python3 -I tools/whats-new/next.py` 印出 `WhatsNewNext/` 等著的行，連同沒寫那一行的玩家看得到的改動（上次發版之後合的 PR），寫成 `WhatsNew.entries` 最上面的一則，`id` 是「日期-build 號」（例如 `2026-11-28-154`）；英文、中文寫在條目裡，日文照同一句英文加進 `Sources/GamePresentation/Translations/Japanese.swift`（`tools/translations/table.py` 的格式，照英文排序）。
+2. `python3 -I tools/whats-new/next.py --clear` 刪掉搬完的檔，PR 綠了就合。
+3. 腳本在「Checks」那步會擋：`WhatsNewNext/` 還有行、或最上面那則的 `id` 不是以這次的 build 號（或它的整數部分，例如 `154.1` 對 `-154`）結尾，就停下來。重傳已經發過的同一版時才加 `--stale-card`。
+
 ## build 號
 
 預設是「最新一次成功的 `testflight.yml` run 號」加 `.1`，例如 CI 最後是 152，本機就發 `152.1`。CI 的 build 號是 `N`（第一次）或 `N.2`～`N.99`（重跑），從來不用 `N.1`（`testflight-preflight.sh`），所以本機和 CI 永遠不會撞號，下一次 CI（153）也一定比本機的大。同一個 CI 版之後再發本機版，腳本自己接著用 `152.1.1`、`152.1.2`…（記在 `~/RailwayTestFlight/last-release.json`）。

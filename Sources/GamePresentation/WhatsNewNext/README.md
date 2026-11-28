@@ -34,6 +34,11 @@ removed).
 
 ## At a release 發版時
 
+Every release writes its card (owner, 2026-11-28: the card stopped at 148
+while 150 to 153 went out); `tools/release/testflight-local.sh` refuses to
+release while a line waits here or the newest entry is not the build's
+(`docs/TESTFLIGHT_LOCAL.md`). 每一版發版前都寫卡片；這裡還有行、或最上面那則不是這一版，本機發版腳本會停下來。
+
 The game-planning session runs `python3 -I tools/whats-new/next.py`, which
 prints these lines as `Line(english:chinese:)` ready for the new entry at
 the top of `WhatsNew.entries`, moves them there (rewording where needed),
