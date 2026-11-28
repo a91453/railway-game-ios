@@ -804,4 +804,26 @@ final class TutorialCardPlacementTests: XCTestCase {
         let after = covering.frame(in: Self.screen, measure: card)
         XCTAssertFalse(after.intersects(under), "card \(after) covers the row \(under)")
     }
+
+    /// The same step on an iPad held on its side (main 025b147's full
+    /// lane, run 46093046766): the folded card, the screen's width, stood
+    /// over the cash, the step's own control, and stayed there, since it
+    /// covered no more than when it was put there. Over the step's own
+    /// controls it is placed afresh, below them.
+    func testACardOverTheStepsOwnControlsDoesNotStayThere() {
+        let screen = Frame(x: 0, y: 0, width: 1376, height: 1032)
+        let pill = { (proposal: Size) in Size(width: min(1356, proposal.width), height: 44) }
+        let cash = Frame(x: 24, y: 53, width: 150.5, height: 28)
+        let speed = Frame(x: 600, y: 53, width: 118, height: 28)
+        var placement = TutorialCardPlacement(
+            target: cash, controls: [cash, speed, Frame(x: 1300, y: 900, width: 50, height: 44)], required: [cash, speed],
+            map: Frame(x: 0, y: 95, width: 1376, height: 937)
+        ).folded
+        let over = Frame(x: 10, y: 65, width: 1356, height: 44)
+        placement.previous = over
+        placement.previousCost = placement.cost(ofCardAt: over, in: screen) * 2
+        let frame = placement.frame(in: screen, measure: pill)
+        XCTAssertFalse(frame.intersects(cash), "card \(frame) covers the cash \(cash)")
+        XCTAssertFalse(frame.intersects(speed), "card \(frame) covers the speed \(speed)")
+    }
 }

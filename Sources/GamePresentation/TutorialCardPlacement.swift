@@ -148,8 +148,9 @@ public struct TutorialCardPlacement: Equatable, Sendable {
     /// details card beside it grew shorter, as its waiting passengers
     /// changed, the middle of the screen over the details card covered
     /// less, and Finish moved twice a game hour, under the finger (main
-    /// d557284's full lane, run 45924059254). `nil`: placed by what it
-    /// covers alone.
+    /// d557284's full lane, run 45924059254). Not while it stands over the
+    /// step's own controls, the places to tap or a panel. `nil`: placed by
+    /// what it covers alone.
     public var previousCost: Double?
 
     /// The card's distance from the screen's edges: the map's other
@@ -350,10 +351,16 @@ public struct TutorialCardPlacement: Equatable, Sendable {
         let map = self.map?.offsetBy(dx: bounds.minX, dy: bounds.minY)
         let cost = costs(in: bounds)
         // Where it stands covers no more than when it was put there: it
-        // stays (``previousCost``).
+        // stays (``previousCost``). Not over the step's own controls, the
+        // places to tap or a panel, which are weighed afresh: what it
+        // covered when it was put there may since have gone, and at "Wait
+        // for your first fares" on an iPad the folded card stayed over the
+        // cash, the step's own, though a place covering nothing was free
+        // (main 025b147's full lane, run 46093046766).
         if let stay, let previousCost {
             let frame = Frame(x: stay.x, y: stay.y, width: size.width, height: size.height)
-            if available.contains(frame), cost(frame) <= previousCost {
+            let ownFree = !(required + sites + panels).contains { $0.offsetBy(dx: bounds.minX, dy: bounds.minY).intersects(frame) }
+            if available.contains(frame), ownFree, cost(frame) <= previousCost {
                 return (stay, cost(frame))
             }
         }
