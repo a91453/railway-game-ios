@@ -81,7 +81,13 @@ extension StationKitBuilder {
     /// studio's models, its back at x 7 (as the boxes before it), and an
     /// expanded one's wings either side and its front canopy.
     mutating func genericHouse(_ station: Map3DStationKit.Station, expansion: StationExpansion?, far: Bool = false) {
-        // Decision 922: in Japan, the earlier version's wooden station.
+        // Decision 1042: in Japan, the earlier version's ground station
+        // for two platforms and more or an expanded one; decision 922:
+        // its wooden station for one.
+        if japanese, let building = Map3DOldGroundStation.building(profile: station.profile, tier: station.tier, expansion: expansion) {
+            oldGroundStation(building, back: 7, far: far)
+            return
+        }
         if japanese, Map3DJapanStation.replaces(profile: station.profile, expansion: expansion) {
             japanStation(back: 7, far: far)
             return

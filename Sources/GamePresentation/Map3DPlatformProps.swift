@@ -394,6 +394,11 @@ extension Map3DScene.Builder {
             let top = Self.platformHeight
             let canopyShare = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
             let shellRoofed = state.stations.shellRoofed
+            // Decision 1042: in Japan, under the earlier version's canopies
+            // (taller, a post every 20 m), and its railing at each end.
+            let old = index < state.platforms.laidPlatforms.count && oldCanopy(platform) && !shellRoofed.contains(platform.station)
+            let canopyColumns = old ? Map3DOldGroundStation.posts(length: path.length, share: canopyShare)
+                : Map3DPlatformProps.canopyColumns(length: path.length, share: canopyShare)
             // NAME-BOARD-STYLES: a station's board in the style of the
             // system of the line on this platform.
             let styledBoard = state.nameBoards.boardSigns[platform.station]?.board(realLine: platform.edge.flatMap {
@@ -423,8 +428,10 @@ extension Map3DScene.Builder {
                 }
                 if kind == .railway {
                     for lamp in Map3DPlatformProps.canopyLamps(length: path.length) {
-                        // Under the canopy (3.2 m up), over the edge half.
-                        let at = place(lamp, platform.offset - side * min(platform.width, 7) / 4, top + 3.0)
+                        // Under the canopy (3.2 m up; the old one's higher),
+                        // over the edge half.
+                        let at = place(lamp, platform.offset - side * min(platform.width, 7) / 4,
+                                       top + (old ? Map3DOldGroundStation.lampHeight : 3.0))
                         let first = mesh.vertices.count
                         mesh.addBox(base: at.point, forward: at.along, length: 1.2, width: 0.14, height: 0.08,
                                     top: Map3DPalette.tunnelLamp, side: Map3DPalette.tunnelLamp)
@@ -457,8 +464,7 @@ extension Map3DScene.Builder {
                 let forward = platform.modulesForward ?? (abs(whole.x) >= abs(whole.z) ? whole.x >= 0 : whole.z >= 0)
                 // Decision 882: the name boards at its back, facing its track.
                 if let name {
-                    let columns = under || shellRoofed.contains(platform.station) ? []
-                        : Map3DPlatformProps.canopyColumns(length: path.length, share: canopyShare)
+                    let columns = under || shellRoofed.contains(platform.station) ? [] : canopyColumns
                     for board in Map3DPlatformProps.nameBoards(length: path.length, depth: platform.width, island: platform.island,
                                                                forward: forward, bins: bins, columns: columns)
                         where clearOfCrossing(board, 1.5) {
@@ -477,6 +483,17 @@ extension Map3DScene.Builder {
                         mesh.makeNightLit(from: first)
                     }
                 }
+                // Decision 1042: the railing across each end, as wide as
+                // the platform, none where a crossing stands by it.
+                if old {
+                    let across = platform.width / Self.platformWidth
+                    for (along, forward) in [(Float(0), false), (path.length, true)] where clearOfCrossing(along, 2) {
+                        let at = place(along, platform.offset, top)
+                        let railing = Map3DOldGroundStation.placed(Map3DOldGroundStation.railing, along: 1, across: across,
+                                                                   forward: forward, trackLeft: side > 0)
+                        mesh.append(railing, at: at.point, forward: at.along)
+                    }
+                }
                 guard !(under && platform.island) else { return }
                 let roof: ClosedRange<Float>? = under ? 0...path.length
                     : shellRoofed.contains(platform.station) ? nil
@@ -484,8 +501,8 @@ extension Map3DScene.Builder {
                 let furniture = Map3DPlatformProps.furniture(
                     length: path.length, depth: platform.width, island: platform.island,
                     rightHalf: (side < 0) == forward, forward: forward, bins: bins, roof: roof,
-                    signTop: under ? nil : Map3DPlatformProps.signTopUnderCanopy,
-                    columns: under ? [] : Map3DPlatformProps.canopyColumns(length: path.length, share: canopyShare)
+                    signTop: under ? nil : old ? Map3DOldGroundStation.signTop : Map3DPlatformProps.signTopUnderCanopy,
+                    columns: under ? [] : canopyColumns
                 )
                 for piece in furniture where clearOfCrossing(piece.along, piece.length / 2 + 0.3) {
                     let at = place(piece.along, back - side * (piece.near + piece.far) / 2, top + piece.bottom)

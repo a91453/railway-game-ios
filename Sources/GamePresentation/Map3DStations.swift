@@ -582,7 +582,12 @@ extension Map3DScene.Builder {
     /// (decision 506, later: ``Map3DStationKit/canopyShare(_:)``), in
     /// pieces of at most 8 m along its line; far off the flat canopy.
     private mutating func addCanopies(skipping roofed: Set<StationID> = []) {
-        for platform in state.platforms.laidPlatforms where !roofed.contains(platform.station) && !platform.tramStop {
+        let all = state.platforms.laidPlatforms
+        for (index, platform) in all.enumerated() where !roofed.contains(platform.station) && !platform.tramStop {
+            if oldCanopy(platform) {
+                addOldCanopy(on: index, of: all)
+                continue
+            }
             let share = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
             let middle = Self.middle(of: platform.line, share: share)
             guard let path = Map3DStreetLife.Path(middle) else { continue }
@@ -606,6 +611,64 @@ extension Map3DScene.Builder {
                 mesh.addRibbon(along: middle, width: min(platform.width, 3.6), offset: platform.offset, lift: Self.canopyHeight, depth: 0.3,
                                top: Map3DPalette.canopy, side: Map3DPalette.canopy, topPaint: Self.metal)
             }
+        }
+    }
+
+    /// Decision 1042: whether `platform` takes the earlier version's 20 m
+    /// canopies and end railings: on the ground in Japan.
+    func oldCanopy(_ platform: LaidPlatform) -> Bool {
+        look.buildings == .japan && platform.structure == .surface
+    }
+
+    /// Decision 1042: the earlier version's canopy over platform `index`
+    /// of `all` (``Map3DOldGroundStation``), in units of about 20 m over
+    /// its middle share: an island's whole, from the half laid first and
+    /// over its middle line, as wide as the island; a side platform's (or
+    /// a half with no other found, on a curve) its own, as wide as it.
+    mutating func addOldCanopy(on index: Int, of all: [LaidPlatform]) {
+        typealias Old = Map3DOldGroundStation
+        let platform = all[index]
+        let share = Map3DStationKit.canopyShare(world.station(id: platform.station)?.expansion)
+        let middle = Self.middle(of: platform.line, share: share)
+        guard let line = Map3DStreetLife.Path(platform.line), let path = Map3DStreetLife.Path(middle) else { return }
+        let side: Float = platform.offset >= 0 ? 1 : -1
+        func back(_ platform: LaidPlatform, _ path: Map3DStreetLife.Path) -> Map3DPoint {
+            let at = path.at(path.length / 2), side: Float = platform.offset >= 0 ? 1 : -1
+            return at.point + at.right * (platform.offset + side * platform.width / 2)
+        }
+        var partner: Int?
+        if platform.island {
+            let here = back(platform, line)
+            partner = all.indices.first { other in
+                guard other != index, all[other].station == platform.station, all[other].island,
+                      all[other].structure == platform.structure, let path = Map3DStreetLife.Path(all[other].line) else { return false }
+                let there = back(all[other], path)
+                return abs(there.x - here.x) + abs(there.z - here.z) < 1 && abs(there.y - here.y) < 0.3
+            }
+            // The other half draws it.
+            if let partner, partner < index { return }
+        }
+        let island = partner != nil
+        let offset = island ? platform.offset + side * platform.width / 2 : platform.offset
+        let across = island ? (platform.width + all[partner!].width) / 7.8 : min(platform.width, 7) / Self.platformWidth
+        let units = Old.units(length: path.length, share: 1)
+        let centre = path.at(path.length / 2).point
+        target = .near
+        mesh(at: centre) { mesh in
+            for unit in 0..<units.count {
+                let a = path.at(units.step * Float(unit)), b = path.at(units.step * Float(unit + 1))
+                let along = Map3DPoint(b.point.x - a.point.x, 0, b.point.z - a.point.z)
+                let piece = Old.placed(Old.canopyUnit(island: island, last: unit == units.count - 1), alongShift: -Old.canopyUnit / 2,
+                                       along: units.stretch, across: across, trackLeft: side > 0)
+                let foot = (a.point + b.point) * 0.5 + (a.right + b.right) * (offset / 2) + Map3DPoint(0, Self.platformHeight, 0)
+                mesh.append(piece, at: foot, forward: along)
+            }
+        }
+        target = .far
+        mesh(at: centre) { mesh in
+            mesh.addRibbon(along: middle, width: (island ? Old.islandCanopyWidth : Old.sideCanopyWidth) * across,
+                           offset: offset, lift: Self.canopyHeight, depth: 0.3,
+                           top: Map3DPalette.canopy, side: Map3DPalette.canopy, topPaint: Self.metal)
         }
     }
 

@@ -38,8 +38,10 @@ enum Map3DJapanStation {
 
     /// Whether a station of `profile` with `expansion` is drawn as the
     /// wooden station in Japan: a regional station not yet expanded. A
-    /// halt keeps its shelter, and an expanded station the studio's
-    /// building with its wings.
+    /// halt keeps its shelter. Decision 1042 asks first: a station of two
+    /// platforms or more, or an expanded one, takes the earlier version's
+    /// ground station (``Map3DOldGroundStation/building(profile:tier:expansion:)``),
+    /// so the wooden one is left the stations of one platform.
     static func replaces(profile: Map3DStationKit.Profile, expansion: StationExpansion?) -> Bool {
         profile == .regional && expansion == nil
     }
