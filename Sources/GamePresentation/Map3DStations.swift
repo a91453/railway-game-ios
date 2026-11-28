@@ -301,6 +301,9 @@ extension Map3DScene.Builder {
         /// Decision 722: the triangles of the station kit's buildings among
         /// ``ownColourNear``'s, which hold the studies' too.
         var houseTriangleCount = 0
+        /// Decision 1043: the stations whose building stands over their
+        /// tracks (``Map3DOldOvertrack``), with no footbridge of their own.
+        var overtracks: [StationID: PlacedOvertrack] = [:]
     }
 
     /// A platform as ``addPlatforms(_:)`` laid it: its line at the rails'
@@ -380,6 +383,63 @@ extension Map3DScene.Builder {
         // draw no building, entrances or canopies of their own.
         let underLandmarks = stationsUnderLandmarks(snapshot, frame: frame, anchors: anchors)
         state.stations.underStationLandmarks = underLandmarks
+        // Decision 625: a station a real exterior study stands for (one of
+        // its recipes, or its platforms within the study's outlines) draws
+        // no building of its own, but an expanded one's wings beside it.
+        // Whether the study stands is asked of the whole network, so a
+        // block of chunks without the study's origin agrees.
+        var standing: [Map3DExteriorStudy: Bool] = [:]
+        func exterior(for id: StationID, profile: Map3DStationKit.Profile, at anchor: Map3DPoint) -> Map3DExteriorStudy? {
+            guard let frame else { return nil }
+            let within = Map3DExteriorStudy.allCases.filter { study in
+                sceneOutlines(of: study, frame: frame).contains { Map3DStationExterior.distance(from: anchor, to: $0) <= Self.exteriorCovers }
+            }
+            for study in (Map3DExteriorStudy.study(for: profile).map { [$0] } ?? []) + within {
+                // Review L14-7: a study drawn nowhere stands for no station.
+                if let reach = studyRegion {
+                    let origin = study.origin
+                    let place = frame.worldPosition(latitude: origin.latitude, longitude: origin.longitude)
+                    guard place.x >= reach.minX, place.x <= reach.maxX, place.y >= reach.minY, place.y <= reach.maxY else { continue }
+                }
+                if standing[study] == nil {
+                    standing[study] = state.exteriors.stationExteriors.contains { $0.station == study } || exteriorStands(study, snapshot: snapshot, frame: frame)
+                }
+                if standing[study] == true { return study }
+            }
+            return nil
+        }
+        // Decision 1043: in Japan, the stations whose building stands over
+        // their tracks, before their canopies, which leave room for it.
+        if look.buildings == .japan {
+            // As decision 936's footbridges: none at a station with a
+            // platform wholly outside this block of chunks.
+            var partial = Set<StationID>(), underground = Set<StationID>()
+            for platform in snapshot.platforms where platform.points.count > 1 {
+                if platform.structure == .tunnel { underground.insert(platform.platform.station); continue }
+                if !platform.points.contains(where: { contains(x: Double($0.x), y: Double($0.y)) }) { partial.insert(platform.platform.station) }
+            }
+            var byStation: [StationID: [Int]] = [:]
+            for (index, platform) in state.platforms.laidPlatforms.enumerated() { byStation[platform.station, default: []].append(index) }
+            let tracks = state.track.trackLines.filter { $0.kind != .tunnel }.compactMap { Map3DStreetLife.Path($0.points) }
+            let skipped = Set(shells.keys).union(underLandmarks)
+            for (id, indices) in byStation.sorted(by: { $0.key < $1.key }) where indices.count >= 2 {
+                let platforms = indices.map { state.platforms.laidPlatforms[$0] }
+                guard platforms.allSatisfy({ $0.structure == .surface && !$0.tramStop }), !underground.contains(id), !partial.contains(id),
+                      !skipped.contains(id), let game = self.world.station(id: id), !game.isDepot, game.expansion != .hall,
+                      let longest = platforms.compactMap({ Map3DStreetLife.Path($0.line) }).max(by: { $0.length < $1.length }) else { continue }
+                let middle = longest.at(longest.length / 2)
+                let at = (x: originX + Double(middle.point.x) * Self.metre, y: originY + Double(middle.point.z) * Self.metre)
+                let station = Map3DStationKit.recipe(for: id, at: at, layout: .surface(platforms: platforms.count, longest: longest.length),
+                                                     frame: frame)
+                guard station.profile == .regional, !drawnElsewhere.contains(station.profile), Map3DStudioStation(rawValue: station.id) == nil,
+                      exterior(for: id, profile: station.profile, at: anchors[id] ?? middle.point) == nil,
+                      let placed = planOvertrack(id, indices: indices, tracks: tracks),
+                      Map3DOldOvertrack.chosen(placed.plan, expansion: game.expansion,
+                                               roomBeside: roomBeside(station, id: id, platforms: platforms, middle: middle)) else { continue }
+                state.stations.overtracks[id] = placed
+                for (index, range) in placed.keepOut { state.stationCrossings.crossingKeepOut[index] = range }
+            }
+        }
         addCanopies(skipping: Set(shells.keys).union(underLandmarks))
         // Decision 1020: a station landmark roofs its platforms as a shell
         // does: no kit canopy's columns or hung signs, no footbridge.
@@ -422,31 +482,6 @@ extension Map3DScene.Builder {
                 }
             }
         }
-        // Decision 625: a station a real exterior study stands for (one of
-        // its recipes, or its platforms within the study's outlines) draws
-        // no building of its own, but an expanded one's wings beside it.
-        // Whether the study stands is asked of the whole network, so a
-        // block of chunks without the study's origin agrees.
-        var standing: [Map3DExteriorStudy: Bool] = [:]
-        func exterior(for id: StationID, profile: Map3DStationKit.Profile, at anchor: Map3DPoint) -> Map3DExteriorStudy? {
-            guard let frame else { return nil }
-            let within = Map3DExteriorStudy.allCases.filter { study in
-                sceneOutlines(of: study, frame: frame).contains { Map3DStationExterior.distance(from: anchor, to: $0) <= Self.exteriorCovers }
-            }
-            for study in (Map3DExteriorStudy.study(for: profile).map { [$0] } ?? []) + within {
-                // Review L14-7: a study drawn nowhere stands for no station.
-                if let reach = studyRegion {
-                    let origin = study.origin
-                    let place = frame.worldPosition(latitude: origin.latitude, longitude: origin.longitude)
-                    guard place.x >= reach.minX, place.x <= reach.maxX, place.y >= reach.minY, place.y <= reach.maxY else { continue }
-                }
-                if standing[study] == nil {
-                    standing[study] = state.exteriors.stationExteriors.contains { $0.station == study } || exteriorStands(study, snapshot: snapshot, frame: frame)
-                }
-                if standing[study] == true { return study }
-            }
-            return nil
-        }
         let yards = freightYards
         for (id, station, open, longest, middle) in found {
             if self.world.station(id: id)?.isDepot == true {
@@ -463,6 +498,9 @@ extension Map3DScene.Builder {
                 if let expansion = self.world.station(id: id)?.expansion, let frame {
                     cells.formUnion(addExpansionWings(expansion, beside: study, frame: frame, snapshot: snapshot))
                 }
+            } else if let placed = state.stations.overtracks[id] {
+                // Decision 1043: its building over its tracks.
+                outlined.formUnion(outlining { $0.addOvertrack(placed) })
             } else if Map3DStationKit.hasHouse(station.profile) {
                 outlined.formUnion(outlining { $0.addHouse(station, id: id, platforms: open, middle: middle) })
             } else {
@@ -653,12 +691,20 @@ extension Map3DScene.Builder {
         let across = island ? (platform.width + all[partner!].width) / 7.8 : min(platform.width, 7) / Self.platformWidth
         let units = Old.units(length: path.length, share: 1)
         let centre = path.at(path.length / 2).point
+        // Decision 1043: none under a building over the tracks (its stairs
+        // and columns stand there), a closing post before it.
+        let from = line.length * (1 - share) / 2
+        let hall = state.stations.overtracks[platform.station]?.keepOut[index]
+        let kept = (0..<units.count).map { unit in
+            hall.map { from + units.step * Float(unit + 1) <= $0.lowerBound || from + units.step * Float(unit) >= $0.upperBound } ?? true
+        }
         target = .near
         mesh(at: centre) { mesh in
-            for unit in 0..<units.count {
+            for unit in 0..<units.count where kept[unit] {
                 let a = path.at(units.step * Float(unit)), b = path.at(units.step * Float(unit + 1))
                 let along = Map3DPoint(b.point.x - a.point.x, 0, b.point.z - a.point.z)
-                let piece = Old.placed(Old.canopyUnit(island: island, last: unit == units.count - 1), alongShift: -Old.canopyUnit / 2,
+                let last = unit == units.count - 1 || !kept[unit + 1]
+                let piece = Old.placed(Old.canopyUnit(island: island, last: last), alongShift: -Old.canopyUnit / 2,
                                        along: units.stretch, across: across, trackLeft: side > 0)
                 let foot = (a.point + b.point) * 0.5 + (a.right + b.right) * (offset / 2) + Map3DPoint(0, Self.platformHeight, 0)
                 mesh.append(piece, at: foot, forward: along)
@@ -753,6 +799,17 @@ extension Map3DScene.Builder {
         return cells
     }
 
+    /// Decision 1043: whether `station`'s own building would stand beside
+    /// its `platforms` with no other track where it stands.
+    func roomBeside(_ station: Map3DStationKit.Station, id: StationID, platforms: [LaidPlatform],
+                    middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint)) -> Bool {
+        var kit = StationKitBuilder()
+        kit.japanese = look.buildings == .japan
+        kit.house(station, expansion: world.station(id: id)?.expansion)
+        guard let bounds = kit.mesh.bounds else { return true }
+        return bestBeside(depth: bounds.max.x - bounds.min.x, wide: bounds.max.z - bounds.min.z, platforms: platforms, middle: middle).blocked == 0
+    }
+
     /// Where a building `depth` deep (across the line) and `wide` long
     /// (along it) stands beside `platforms`: the way it faces out from
     /// them (`forward`) and the middle of its back (`back`), on the side
@@ -762,9 +819,19 @@ extension Map3DScene.Builder {
     func besidePlatforms(depth: Float, wide: Float, platforms: [LaidPlatform],
                          middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint),
                          sides: [Float] = [-1, 1]) -> (forward: Map3DPoint, back: Map3DPoint) {
+        let best = bestBeside(depth: depth, wide: wide, platforms: platforms, middle: middle, sides: sides)
+        return (best.forward, best.back)
+    }
+
+    /// ``besidePlatforms(depth:wide:platforms:middle:sides:)``'s choice
+    /// and how many points of other track lie where the building stands
+    /// there (decision 1043: none when there is room beside them).
+    func bestBeside(depth: Float, wide: Float, platforms: [LaidPlatform],
+                    middle: (point: Map3DPoint, along: Map3DPoint, right: Map3DPoint),
+                    sides: [Float] = [-1, 1]) -> (forward: Map3DPoint, back: Map3DPoint, blocked: Int) {
         if platforms.isEmpty {
             let forward = middle.right
-            return (forward, middle.point - forward * (depth / 2))
+            return (forward, middle.point - forward * (depth / 2), 0)
         }
         // How far each side the platforms and their track reach from
         // the middle, and how much other track lies where the
@@ -819,7 +886,7 @@ extension Map3DScene.Builder {
         }
         let best = choices.min { ($0.blocked, $0.shut, abs($0.slide), $0.side) < ($1.blocked, $1.shut, abs($1.slide), $1.side) }!
         let forward = middle.right * best.side
-        return (forward, middle.point + middle.along * best.slide + forward * best.edge)
+        return (forward, middle.point + middle.along * best.slide + forward * best.edge, best.blocked)
     }
 
     /// An underground station's exits at street level, a viaduct's stair
