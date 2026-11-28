@@ -121,3 +121,72 @@ private nonisolated struct ArrivalScene: View, Animatable {
         Color(red: Double((rgb >> 16) & 0xFF) / 255, green: Double((rgb >> 8) & 0xFF) / 255, blue: Double(rgb & 0xFF) / 255)
     }
 }
+
+/// Decision 1044: the banner of a bought line's opening, over the top of
+/// the map while its first train is out. It does not dim the game or
+/// stop it: a tap on it opens the line, the cross closes it, and it goes
+/// by itself after ``GameSession/lineOpeningShown``. ContentView plays the
+/// bugle call with it (the session does, when the ceremony starts).
+struct LineOpeningBanner: View {
+    let opening: LineOpening
+    let language: DisplayLanguage
+    let go: () -> Void
+    let close: () -> Void
+
+    var body: some View {
+        let ribbon = Palette.lineColor(opening.line, custom: opening.color)
+        HStack(spacing: 12) {
+            Image(systemName: "flag.2.crossed.fill")
+                .font(.title2)
+                .foregroundStyle(ribbon)
+                .accessibilityHidden(true)
+            Button(action: go) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: opening.title(in: language))
+                        .font(.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                        .accessibilityIdentifier("lineOpening.title")
+                    Text(verbatim: opening.detail(in: language))
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text(verbatim: language.text("Opens the line.", "打開這條線。")))
+            .accessibilityIdentifier("lineOpening.go")
+            Button(action: close) {
+                Image(systemName: "xmark")
+                    .font(.headline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: language.text("Close", "關閉")))
+            .accessibilityIdentifier("lineOpening.close")
+        }
+        .padding(.leading, 16)
+        .padding(.trailing, 4)
+        .padding(.vertical, 6)
+        .frame(maxWidth: 440)
+        .background(Theme.panel, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(alignment: .leading) {
+            // The line's colour, a ribbon down the banner's side.
+            UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14)
+                .fill(ribbon)
+                .frame(width: 6)
+                .accessibilityHidden(true)
+        }
+        .padding(.horizontal, 16)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("lineOpening.banner")
+        .task(id: opening.id) {
+            try? await Task.sleep(for: GameSession.lineOpeningShown)
+            guard !Task.isCancelled else { return }
+            close()
+        }
+    }
+}

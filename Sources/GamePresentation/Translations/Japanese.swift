@@ -2953,6 +2953,7 @@ The ferry route is closed.	フェリー航路を廃止しました。
 The file could not be written: {0}	ファイルを書き出せませんでした：{0}
 The first ones arrived in Taiwan.	初編成が台湾に到着しました。
 The first stretch is straight. Lay the next one from its end and it bends along.	最初の区間は直線です。その端から次を敷くと、なめらかに曲がります。
+The first train has left {0} for {1}.	一番列車が{0}を発車し、{1}へ向かいました。
 The fullest section is {0}% full	最も混む区間の乗車率 {0}%
 The fullest train of a day leaves {0} full on average	1日で最も混む便の平均乗車率は{0}
 The game as it is now is kept as an autosave, so you can come back to it.	現在のゲームは自動保存として残るので、あとで戻れます。
@@ -3859,6 +3860,7 @@ yesterday {0}	昨日{0}人
 {0} is now a stop of {1}.	{0}を{1}の停車駅にしました。
 {0} is now {1}.	{0}は{1}になりました。
 {0} is on a trip: change its type when it waits for its next one.	{0}は運行中です：次の便を待っているときに車種を変更してください。
+{0} is open	{0}開業
 {0} is outside the map.	{0}は地図の外です。
 {0} is over: {1} riders a day, {2}% fewer than before it. Were the trains full?	{0}が終わりました：1日{1}人、開始前より{2}%減です。列車が満員でしたか？
 {0} is over: {1} riders a day, {2}% more than before it.	{0}が終わりました：1日{1}人、開始前より{2}%増です。
@@ -3949,6 +3951,7 @@ yesterday {0}	昨日{0}人
 {0} on the ground	{0}は地平
 {0} on {1}	{0}（{1}）
 {0} opacity	{0}の不透明度
+{0} opened: the first train left {1} for {2}.	{0}開業：一番列車が{1}から{2}へ発車しました。
 {0} paint	{0}塗装
 {0} passengers	旅客 {0}人
 {0} passengers a day	1日{0}人

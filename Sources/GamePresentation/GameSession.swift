@@ -632,6 +632,12 @@ public final class GameSession {
     /// Decision 566: the models whose card this session has shown, so one
     /// sold and bought again, or undone and done again, has none.
     @ObservationIgnored var trainArrivalsShown: Set<String> = []
+    /// Decision 1044: the opening ceremony showing, the banner over the
+    /// map (``noteLineOpenings()``); `nil` for none. Never saved.
+    public internal(set) var lineOpening: LineOpening?
+    /// Decision 1044: the lines bought in this session whose first train
+    /// has not run yet, in the order bought. Never saved.
+    @ObservationIgnored var awaitingOpenings: [LineID] = []
 
     /// The real line offered on the purchase card (decision 315), while
     /// the card is open. Decision 862: with the lines sold with it.
@@ -2460,7 +2466,11 @@ public final class GameSession {
             scenarioJustEnded = true
         }
         // Decision 175: the secretary room reads what the step changed.
-        meter.measure(.stepNews) { observeNews(closedBefore: closedBefore) }
+        meter.measure(.stepNews) {
+            observeNews(closedBefore: closedBefore)
+            // Decision 1044: a bought line's first train out, its ceremony.
+            noteLineOpenings()
+        }
         if world.clock.now.seconds / GameTime.secondsPerDay > dayBefore {
             meter.measure(.stepMidnight) {
                 // Decision 509: before the achievements, which say theirs last.

@@ -19,7 +19,8 @@ station chime above), the metro interchange chime and the tourist chime,
 each also as its motif, the first notes alone, for high speed. Decision
 256: the goal-met tune is played from its score too (`scores/goal-met`,
 kept to the chime rules), as a whole only, and so is decision 315's
-line-acquired tune (`scores/line-acquired`). Decision 815:
+line-acquired tune (`scores/line-acquired`) and decision 1044's
+line-opened fanfare (`scores/line-opened`). Decision 815:
 the theme (`music-loop.caf`) and the winter tune (`music-winter.caf`,
 Jingle Bells, public domain) are each three stems written in MML
 (`mml/theme-*.mml`, `mml/winter-*.mml`), the instruments in
@@ -896,6 +897,8 @@ TUNES = [
     ("line-acquired", "line-acquired.wav"),
     # Decision 566: a model new to the fleet came ashore.
     ("new-train", "new-train.wav"),
+    # Decision 1044: a bought line's first train out, its opening.
+    ("line-opened", "line-opened.wav"),
 ]
 
 

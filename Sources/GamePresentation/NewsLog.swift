@@ -16,6 +16,8 @@ public enum NewsCategory: String, Codable, CaseIterable, Sendable {
     case achievement
     /// A model new to the fleet (decision 566).
     case newTrain
+    /// A bought line's first train out, its opening (decision 1044).
+    case opening
 
     /// The item's SF Symbol.
     public var symbolName: String {
@@ -37,6 +39,7 @@ public enum NewsCategory: String, Codable, CaseIterable, Sendable {
         case .deadline: "hourglass"
         case .achievement: "rosette"
         case .newTrain: "tram.fill"
+        case .opening: "flag.2.crossed.fill"
         }
     }
 

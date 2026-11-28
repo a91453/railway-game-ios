@@ -636,6 +636,9 @@ final class GameAudio {
         case .ticketIssued: 0.5
         // Decision 566: as loud as the line-acquired tune.
         case .newTrain: 0.55
+        // Decision 1044: its file is about 3 LU quieter than the new-train
+        // tune (measure_music.py: -17.9 against -14.6 LUFS), so louder here.
+        case .lineOpened: 0.75
         // Decision 675: the button sounds sit well under the game's own
         // (a click is pressed again and again), the jingle's file is the
         // goal-met tune's.
@@ -692,6 +695,7 @@ final class GameAudio {
         case .ticketIssued: .milliseconds(700)
         // Decision 566: one card after another, a fanfare each.
         case .newTrain: .seconds(1)
+        case .lineOpened: .seconds(3)
         // Decision 403 (續二): a tap while the horn still sounds blows it
         // again, but not faster than about two blows a second.
         case .horn: .milliseconds(450)
@@ -713,7 +717,7 @@ final class GameAudio {
         switch cue {
         case .refused: .error
         case .warning: .warning
-        case .built, .goalMet, .lineAcquired, .newTrain: .success
+        case .built, .goalMet, .lineAcquired, .newTrain, .lineOpened: .success
         case .arrival, .track, .transition, .income, .ticketIssued, .horn,
              .uiTap, .uiToggle, .uiConfirm, .uiCancel, .uiOpen, .departure, .playerDeparture: nil
         }

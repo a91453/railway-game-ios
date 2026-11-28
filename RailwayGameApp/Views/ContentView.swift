@@ -128,6 +128,26 @@ struct ContentView: View {
                 }
                 .animation(MotionRule.cardIn.running(reduceMotion: reduceMotion)?.animation, value: session.trainArrivals.first?.id)
             }
+            // Decision 1044: a bought line's first train out, its opening
+            // banner over the top of the map; the game goes on under it.
+            .overlay(alignment: .top) {
+                ZStack {
+                    if let opening = session.lineOpening {
+                        LineOpeningBanner(
+                            opening: opening, language: session.language,
+                            go: {
+                                session.goToLineOpening()
+                                screen.panel = .lines
+                            },
+                            close: { session.dismissLineOpening() }
+                        )
+                        .padding(.top, 8)
+                        .id(opening.id)
+                        .transition(.pop(from: 0.9, reduceMotion: reduceMotion))
+                    }
+                }
+                .animation(MotionRule.cardIn.running(reduceMotion: reduceMotion)?.animation, value: session.lineOpening?.id)
+            }
             // L1-3 (#1549's review): while Back to Start writes the
             // autosave, nothing takes a touch, so nothing done then is left
             // out of it.

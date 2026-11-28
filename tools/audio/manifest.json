@@ -398,6 +398,19 @@
       "endLevel": 0.0
     },
     {
+      "file": "line-opened.wav",
+      "score": "tools/audio/scores/line-opened.score.json",
+      "scoreSha256": "e3da659d1ddd5c9cbe0f9cf12e5326e19f2105408c9d05ff467dac153f1abf03",
+      "kind": "tune",
+      "sha256": "61fbcd6aee0d924c9f546333ca88ac422c98136c5217d7836326dcdc7fe29968",
+      "frames": 144000,
+      "seconds": 3.0,
+      "peakDbfs": -4.44,
+      "rmsDbfs": -22.43,
+      "largestStep": 0.11615,
+      "endLevel": 0.0
+    },
+    {
       "file": "melody-piano-74.wav",
       "kind": "sample",
       "made": "melody_samples.py, decision 883",
