@@ -1,0 +1,69 @@
+{
+  "format": 1,
+  "role": "chime",
+  "title": "Line opened",
+  "source": "Decision 1044: a bought line's first train out, a bugle call on the C major chord's notes (three quick G5s up to C6, then G5 C6 E6 onto a held G6) over a C major chord twice, a drum roll (clack) under the calls; hand written, kept to the chime rules",
+  "tempo": 120,
+  "beatsPerBar": 4,
+  "length": 5760,
+  "motif": 2,
+  "fadeOut": 1440,
+  "tracks": [
+    {
+      "voice": "bell",
+      "gain": 100,
+      "pan": 0,
+      "notes": [
+        {"pitch": 79, "start": 0, "length": 240, "velocity": 85},
+        {"pitch": 79, "start": 320, "length": 240, "velocity": 90},
+        {"pitch": 79, "start": 640, "length": 240, "velocity": 95},
+        {"pitch": 84, "start": 960, "length": 960, "velocity": 110},
+        {"pitch": 79, "start": 1920, "length": 320, "velocity": 90},
+        {"pitch": 84, "start": 2240, "length": 320, "velocity": 95},
+        {"pitch": 88, "start": 2560, "length": 320, "velocity": 100},
+        {"pitch": 91, "start": 2880, "length": 2880, "velocity": 115}
+      ]
+    },
+    {
+      "voice": "pluck",
+      "gain": 70,
+      "pan": 0,
+      "notes": [
+        {"pitch": 60, "start": 960, "length": 960, "velocity": 100},
+        {"pitch": 67, "start": 960, "length": 960, "velocity": 95},
+        {"pitch": 76, "start": 960, "length": 960, "velocity": 95},
+        {"pitch": 48, "start": 2880, "length": 1920, "velocity": 110},
+        {"pitch": 60, "start": 2880, "length": 1920, "velocity": 100},
+        {"pitch": 64, "start": 2880, "length": 1920, "velocity": 100},
+        {"pitch": 67, "start": 2880, "length": 1920, "velocity": 100}
+      ]
+    },
+    {
+      "voice": "clack",
+      "gain": 65,
+      "pan": 0,
+      "notes": [
+        {"pitch": 60, "start": 0, "length": 120, "velocity": 60},
+        {"pitch": 60, "start": 320, "length": 120, "velocity": 70},
+        {"pitch": 60, "start": 640, "length": 120, "velocity": 80},
+        {"pitch": 60, "start": 960, "length": 240, "velocity": 110},
+        {"pitch": 60, "start": 1920, "length": 120, "velocity": 70},
+        {"pitch": 60, "start": 2240, "length": 120, "velocity": 80},
+        {"pitch": 60, "start": 2560, "length": 120, "velocity": 90},
+        {"pitch": 60, "start": 2880, "length": 240, "velocity": 127}
+      ]
+    },
+    {
+      "voice": "pad",
+      "gain": 35,
+      "pan": 0,
+      "notes": [
+        {"pitch": 55, "start": 960, "length": 1920, "velocity": 85},
+        {"pitch": 60, "start": 960, "length": 1920, "velocity": 85},
+        {"pitch": 55, "start": 2880, "length": 2880, "velocity": 95},
+        {"pitch": 60, "start": 2880, "length": 2880, "velocity": 95},
+        {"pitch": 64, "start": 2880, "length": 2880, "velocity": 90}
+      ]
+    }
+  ]
+}

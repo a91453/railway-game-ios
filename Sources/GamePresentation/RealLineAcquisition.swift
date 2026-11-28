@@ -3520,6 +3520,8 @@ extension GameSession {
         shownRealLineOffer = nil
         selectLine(line.id)
         playSound?(.lineAcquired)
+        // Decision 1044: its opening ceremony waits for its first train.
+        awaitOpening(of: [line.id])
         return true
     }
 }

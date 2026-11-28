@@ -328,7 +328,7 @@ final class SoundCueTests: XCTestCase {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("tools/audio/manifest.json"))) as? [String: Any]
         let listed = Set((manifest?["files"] as? [[String: Any]] ?? []).compactMap { $0["file"] as? String })
-        var cues: [SoundCue] = [.track, .transition, .built, .income, .refused, .warning, .lineAcquired, .ticketIssued, .newTrain]
+        var cues: [SoundCue] = [.track, .transition, .built, .income, .refused, .warning, .lineAcquired, .ticketIssued, .newTrain, .lineOpened]
         for chime in StationChime.allCases {
             for watched in [false, true] {
                 cues.append(.arrival(watched: watched, chime: chime, motif: false))
@@ -343,7 +343,7 @@ final class SoundCueTests: XCTestCase {
             XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("RailwayGameApp/Resources/Audio/\(file)").path), "\(file) is bundled")
         }
         XCTAssertEqual(SoundCue.arrival(watched: false, chime: .local).resource.name, "station-chime", "the local chime is decision 79's")
-        XCTAssertEqual(files.count, 15, "three chimes, three motifs, nine sounds (the goal-met jingle is Kenney's, below)")
+        XCTAssertEqual(files.count, 16, "three chimes, three motifs, ten sounds (the goal-met jingle is Kenney's, below)")
     }
 
     /// Decision 675: the interface sounds and the goal jingle are Kenney's

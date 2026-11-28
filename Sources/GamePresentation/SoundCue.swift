@@ -45,6 +45,9 @@ public enum SoundCue: Hashable, Sendable {
     /// A model new to the fleet came ashore (decision 566): a short
     /// fanfare on the station chime's pentatonic scale, drum taps under it.
     case newTrain
+    /// A bought line's first train out, its opening (decision 1044): a
+    /// bugle call on the C major chord, a drum roll under it.
+    case lineOpened
     /// Decision 675, Kenney's Interface Sounds: a button pressed, a switch or
     /// choice changed, a main action confirmed, a removal or back, a panel
     /// opened. Short, soft and quiet; heard only with the sounds on.
@@ -202,6 +205,7 @@ public enum SoundCue: Hashable, Sendable {
         case .ticketIssued: ("ticket-issued", "wav")
         case .horn(let horn): horn.resource
         case .newTrain: ("new-train", "wav")
+        case .lineOpened: ("line-opened", "wav")
         case .uiTap: ("kenney-ui-tap", "wav")
         case .uiToggle: ("kenney-ui-toggle", "wav")
         case .uiConfirm: ("kenney-ui-confirm", "wav")
