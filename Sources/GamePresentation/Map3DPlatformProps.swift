@@ -427,7 +427,9 @@ extension Map3DScene.Builder {
                     mesh.makeGlowing(from: first)
                 }
                 if kind == .railway {
-                    for lamp in Map3DPlatformProps.canopyLamps(length: path.length) {
+                    // Decision 1043: none where a building over the
+                    // tracks stands, with no canopy under it.
+                    for lamp in Map3DPlatformProps.canopyLamps(length: path.length) where clearOfCrossing(lamp) {
                         // Under the canopy (3.2 m up; the old one's higher),
                         // over the edge half.
                         let at = place(lamp, platform.offset - side * min(platform.width, 7) / 4,

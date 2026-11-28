@@ -276,7 +276,9 @@ extension Map3DScene.Builder {
         }
         let tracks = state.track.trackLines.filter { $0.kind != .tunnel }.compactMap { Map3DStreetLife.Path($0.points) }
         for (id, indices) in byStation.sorted(by: { $0.key < $1.key }) where indices.count >= 2 {
+            // Decision 1043: a building over the tracks stands for it.
             guard !partial.contains(id), !state.stations.shellRoofed.contains(id), !state.stations.studiedStations.contains(id),
+                  state.stations.overtracks[id] == nil,
                   world.station(id: id)?.isDepot != true else { continue }
             let paths = indices.compactMap { index in Map3DStreetLife.Path(state.platforms.laidPlatforms[index].line).map { (index: index, path: $0) } }
             guard paths.count == indices.count, let reference = paths.max(by: { $0.path.length < $1.path.length }) else { continue }
