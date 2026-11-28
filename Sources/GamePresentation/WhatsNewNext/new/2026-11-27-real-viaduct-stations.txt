@@ -1,2 +1,0 @@
-en: Elevated stations on lines you buy now stand at a real viaduct's height, about 10 m up, instead of climbing higher than the viaduct either side.
-zh: 收購路線的高架車站降到真實高架的高度（約離地 10 公尺），不再比兩邊的高架高出一截。

@@ -316,6 +316,7 @@ A train is on that track now. Tap again once it has passed.	今その線路に�
 A train is on that track. Take the train off the track first.	その線路に列車がいます。先に列車を線路から外してください。
 A train of {0} is waiting for another on single track: only one can use it at a time.	{0}の列車が単線で別の列車を待っています：単線は一度に1本しか使えません。
 A train stays at a stop {0} s to {1} min.	停車時間は{0}秒〜{1}分です。
+A train waiting to turn back at the end of its line stands inside the platform, not a car past it.	終点で折り返しを待つ列車は、1両はみ出さずにホーム内に停まります。
 A train was full yesterday ({0}%). Add a train or longer trains so nobody is left behind.	昨日、満員の列車がありました（{0}%）。積み残しが出ないよう、列車を増やすか長くしてください。
 A train was over full	定員超過の列車あり
 A train's rate cannot be negative.	列車のレートは負にできません。
@@ -398,6 +399,7 @@ Adds {0}	{0}延長
 Adjusts to what this device can do: more while it runs smoothly, a little less when it struggles.	端末の性能に合わせます：なめらかなときは多めに、重いときは少し控えめにします。
 Advanced	詳細設定
 Advanced: 	詳細：
+After you build two stations joined by track, Build offers their line in one tap; New Line in Lines starts picking stations at once.	線路でつながった駅を2つ建てると、「建設」からワンタップで路線を作れます。「路線」の「新しい路線」を押すとすぐに駅選びが始まります。
 Against stop order	停車順と逆
 Ah-Kun's letter home	阿坤から家族への手紙
 Ah-Shui	阿水
@@ -516,6 +518,7 @@ Behind	後方
 Best day's riders	1日最多利用者
 Best: {0} {1}, {2}	最高記録：{0}日、{2}
 Between 0% and 100% of riders can switch to scooters or cars.	バイクや車に乗り換える利用者の割合は0%〜100%です。
+Big maps run more smoothly: Hong Kong with everything bought at rush hour, and Taiwan with everything bought under realistic rules.	大きな地図が軽くなりました：香港をすべて買った後のラッシュ時と、台湾をすべて買ったリアルルールです。
 Bigger concourse	コンコース拡張
 Blank Map	白紙の地図
 Block signals, curve speed limits, punctuality, crowded doors, train prices, building materials and weather all count, passengers who wait too long leave, and income tax is paid once a year.	閉塞信号、カーブの速度制限、定時運行、ドアの混雑、車両価格、建設資材、天気がすべて影響し、待ちすぎた乗客は去り、所得税は年に1回払います。
@@ -703,6 +706,7 @@ Choose a Station	駅を選択
 Choose a route for a leg of this service.	この停車パターンの区間の経路を選んでください。
 Choose a station	駅を選択
 Choose a type	車種を選ぶ
+Choose a type on a line's page no longer gets stuck, and the N700 is back in the Japan catalogue.	路線ページの「車種を選ぶ」で止まらなくなり、日本の車種カタログにN700が表示されるようになりました。
 Choose it as a line's depot on the line panel.	路線パネルで路線の車両基地に選んでください。
 Choose stops	停車駅を選ぶ
 Choose this	これにする
@@ -839,6 +843,7 @@ Day {0} of {1} · {2}	{0}/{1}日目 · {2}
 Day {0} · {1}	{0}日目 · {1}
 Days {0}–{1}	{0}〜{1}日目
 Daytime	日中
+Dazaifu Tenmangu's main hall and gate no longer sink into the slope.	太宰府天満宮の本殿と楼門が斜面に埋まらなくなりました。
 Deadlock	デッドロック
 Deadlocked with {0}	{0}と互いに動けません
 Debt ratio	負債比率
@@ -975,6 +980,7 @@ Eid al-Fitr	断食明け祭
 Eighth	8分音符
 Electric train recordings	電車の録音
 Elevated	高架
+Elevated stations on lines you buy now stand at a real viaduct's height, about 10 m up, instead of climbing higher than the viaduct either side.	買収した路線の高架駅は実際の高架の高さ（地上約10 m）になり、両側の高架より高く飛び出さなくなりました。
 Elsewhere	その他
 Emergency brake	非常ブレーキ
 Empty	なし
@@ -1092,6 +1098,7 @@ Follow	追従
 Follow a Bus	バスに追従
 Follow in 3D	3Dで追従
 Following	追従中
+Following a train for a long time, or watching trains run into a big station, no longer gets slower and slower.	列車を長く追いかけたり、大きな駅に列車が入るのを見ていたりしても、だんだん重くならなくなりました。
 Following {0}	{0}に続行
 Follows one of your trains. Tap again for the next one.	あなたの列車の1本を追います。もう一度タップで次の列車へ。
 Follows the aircraft from behind.	機体の後方から追いかけます。
@@ -1137,6 +1144,7 @@ Fukuoka	福岡
 Fukuoka Airport	福岡空港
 Fukuoka City Subway	福岡市地下鉄
 Fukuoka City: Fukuoka Airport	福岡市：福岡空港について
+Fukuoka's traffic light poles are no longer half black, and their lamp frames are whole.	福岡の信号機の柱が半分黒くならなくなり、灯器の枠も欠けなくなりました。
 Fukuoka’s Railways	福岡の鉄道
 Fukuoka’s buildings	福岡の建物
 Fukuoka’s hills and plains: how high the ground is where track is laid, and the hill shading of the map.	福岡の山と平野：線路を敷く場所の地面の高さと、地図の陰影起伏。
@@ -1239,6 +1247,7 @@ High-Speed Rail	高速鉄道
 High-rises	高層ビル
 High-speed	高速鉄道
 High-speed 700T and 700 Series	高鉄700T型と700系
+High-speed crossovers and station tracks are drawn whole again.	高速線の渡り線と駅構内の線路が欠けずに描かれるようになりました。
 High-speed line upkeep	高速鉄道維持費
 High-speed line upkeep (daily)	高速鉄道維持費（日次）
 High-speed rail	高速鉄道
@@ -1316,6 +1325,7 @@ In depot	留置中
 In depot / off track	車両基地／線路外
 In iCloud	iCloudに保存済み
 In stop order	停車順
+In the 3D view, tunnels on flat ground have portals, side-by-side bridges have no railing between them, and ramps are no longer too steep.	3Dの道路：平地のトンネルに坑口ができ、並んだ橋の間に柵が立たなくなり、ランプが急すぎなくなりました。
 In the Lines panel, select the line and tap Add a Train.	路線パネルで路線を選び、「列車を追加」をタップしてください。
 Income	損益計算書
 Income and costs by kind	種類別の収入と費用
@@ -1562,6 +1572,7 @@ Map packs: {0}	地図パック：{0}
 Map seed	地図シード
 Map, {0} by {1} kilometres	地図、{0}×{1} km
 Map: {0} of {1} tiles	地図：{0}／{1}マス
+Maps open again on the phones that could not read them after a map update.	地図の更新後に一部の端末で地図を読み込めなかった問題を直しました。
 Marina	マリーナ
 Market	商店街
 Market square	市場広場
@@ -1904,11 +1915,21 @@ On Rovaniemi’s map, the outlines, uses and heights of the buildings on the 3D 
 On Rovaniemi’s map, the rivers and lakes, roads, woods, the airport and place names, on the flat map and the 3D map.	ロヴァニエミの地図の川と湖、道路、森林、空港、地名。平面地図と3D地図の両方で使います。
 On a map of Taiwan, how often it rains and thunders in each month in each part of the island: the north’s wet winters, the south’s dry ones and summer thunderstorms.	台湾の地図の各地で、月ごとに雨や雷がどれくらいあるか：北部の雨の多い冬、南部の乾いた冬、夏の雷雨。
 On a map of the real place.	実在の場所の地図で。
+On a real-world map, tap a search result and Build Here is there at once; places whose names match come first.	実在の地図の場所選びでは、検索結果をタップするとすぐ「ここに建設」を押せます。名前が一致する場所が先頭に並びます。
 On a trip: try again when it finishes	運行中：便が終わってから再試行
 On approach	進入中
 On sale · {0}	販売中 · {0}
 On show	展示中
+On the Hong Kong map, Wong Tai Sin Temple, Chi Lin Nunnery and Che Kung Temple now stand where they are.	香港の地図に黄大仙祠・志蓮浄苑・車公廟が実際の場所に加わりました。
+On the Hong Kong map, the cable car mode can lay the Peak Tram on its real track: two cars climb to The Peak every day from 7:30 to 23:00.	香港の地図では、ロープウェイモードでピークトラムを実際のルートに敷けます。2両の車両が毎日7:30〜23:00にザ・ピークへ上り下りします。
+On the Japan map, Dazaifu Tenmangu, Munakata Taisha, Yutoku Inari and Aoi Aso shrines now stand where they are, with the Chikugo River Lift Bridge, the Tsujun Bridge and the Tenmon Bridge.	日本地図に太宰府天満宮・宗像大社・祐徳稲荷神社・青井阿蘇神社と、筑後川昇開橋・通潤橋・天門橋が加わりました。
+On the Japan map, Kumamoto, Kokura and Karatsu Castles now stand where they are, and Kumamoto and Tara stations have their real station buildings.	日本地図に熊本城・小倉城・唐津城が実際の場所に建ち、熊本駅と多良駅は実際の駅舎になりました。
+On the Japan map, Mojiko station, the Former Moji Customs House and the Mitsui Club now stand in Mojiko, and Suizenji garden in Kumamoto has its Noh stage and two stone bridges.	日本地図の門司港に門司港駅・旧門司税関・旧門司三井倶楽部が建ち、熊本の水前寺成趣園には能楽殿と2つの石橋ができました。
+On the Japan map, the main hall and watchtower of Yoshinogari and the Mandaken mine now stand.	日本地図に吉野ヶ里遺跡の主祭殿と物見櫓、万田坑が加わりました。
 On the Simulator the figures say little about a device.	シミュレータでの数値は実機の参考になりません。
+On the Taiwan 3D map, streets the building map left bare are lined with the homes really sold there, as tall as they are: the towers round Taoyuan's high-speed station now stand.	台湾の3D地図で建物図に抜けていた通りには、実際に売買された住宅が実際の階数で建ちます。桃園の高速鉄道駅周辺の高層ビルも建ちました。
+On the Taiwan map, Fo Guang Shan, Yehliu's Queen's Head, the Bitan Suspension Bridge and the Peng Wan Bridge now stand where they are, and the Tamsui line's elevated stations have a new model.	台湾の地図に佛光山・野柳の女王頭・碧潭吊橋・鵬湾跨海大橋が実際の場所に加わり、淡水線の高架駅は新しいモデルになりました。
+On the Taiwan map, land is dear where real land is dear: a lot in a city's middle costs far more than one in the hills, whatever you zone it.	台湾の地図では地価が実際の相場どおりになりました。市の中心の土地は山間部よりずっと高く、用途地域を変えても同じです。
 On the first of every month the city asks for up to three things. Take one on and meet it in time: the subsidy is paid on the first of the next month and the city trusts you a star more. Missing one costs a star, never money. Two stars of trust let you hold two at once, four stars three.	毎月1日に都市が最大3件の依頼を出します。引き受けて期限内に達成すると、翌月1日に補助金が入り、信頼が星1つ上がります。未達成なら星1つ下がるだけで、お金は取られません。星2つで2件、星4つで3件まで同時に引き受けられます。
 On the ground	地平
 On the map, arrows on a line's colour show a track its trains take one way only.	地図上の路線色の矢印は、列車がその線路を一方向にしか通らないことを示します。
@@ -2013,6 +2034,7 @@ Paid {0}{1}	購入額 {0}{1}
 Paints this line's trains red with a white band and a gold line.	この路線の列車を、白帯と金色のラインが入った赤い塗装にします。
 Parallel to the track	線路と平行
 Park	公園
+Parks are no longer built in nature reserves, national parks or on water.	公園が自然保護区・国立公園・水上に造られなくなりました。
 Part of this stretch already has a second track. Choose “This piece only” to double the piece picked.	この区間の一部はすでに複線です。「この区間のみ」を選び、選んだ区間だけを複線化してください。
 Pass lesson {0} to open it.	レッスン{0}をクリアすると開きます。
 Passenger load	輸送量
@@ -2029,6 +2051,7 @@ Passengers now plan journeys across the network and change trains.	乗客が路�
 Passengers now take only a line that serves both their stations.	乗客は両方の駅に停まる路線にだけ乗るようになりました。
 Passengers of 2025 and flights of the year to March 2026: Fukuoka City, from the Ministry of Land, Infrastructure, Transport and Tourism’s airport figures. Flights to Taiwan: Civil Aviation Administration, Ministry of Transportation and Communications (Taiwan), Civil Aviation Statistics annual report 2025. Position: OpenStreetMap contributors. The game is not affiliated with Fukuoka International Airport.	2025年の旅客数と2025年度（2026年3月まで）の便数：国土交通省の空港統計を福岡市がまとめたもの。台湾行きの路線：台湾交通部民用航空局『民航統計年報』2025年。位置：OpenStreetMap contributors。本ゲームは福岡国際空港株式会社とは関係ありません。
 Passengers waiting for a train there leave.	そこで列車を待っている乗客は去ります。
+Passers-by change with the place and the hour, and there are as many scooters as each place has: many in Taiwan, few in Japan and Hong Kong, none in Finland.	通行人は場所と時間帯で変わり、バイクの数も土地ごとです。台湾は多く、日本と香港は少なく、フィンランドにはいません。
 Passes	通過
 Past	行き過ぎ
 Past, {0} past the stopping point	行き過ぎ、停止位置を{0}超過
@@ -2596,8 +2619,10 @@ Stations	駅
 Stations and their Japanese names: made by processing “National Land Numerical Information (Railway Data)” (Ministry of Land, Infrastructure, Transport and Tourism), CC BY 4.0 (「国土数値情報（鉄道データ）」（国土交通省）を加工して作成). Track, platforms, tunnels and viaducts: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with Kyushu Railway Company or the Government of Japan.	駅と日本語駅名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成、CC BY 4.0。線路、ホーム、トンネル、高架：© OpenStreetMap contributors, ODbL 1.0。本ゲームは九州旅客鉄道株式会社および日本国政府とは関係ありません。
 Stations and their Japanese names: made by processing “National Land Numerical Information (Railway Data)” (Ministry of Land, Infrastructure, Transport and Tourism), CC BY 4.0 (「国土数値情報（鉄道データ）」（国土交通省）を加工して作成). Track, platforms, tunnels, viaducts and line colours: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with the Fukuoka City Transportation Bureau or the Government of Japan.	駅と日本語駅名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成、CC BY 4.0。線路、ホーム、トンネル、高架、路線色：© OpenStreetMap contributors, ODbL 1.0。本ゲームは福岡市交通局および日本国政府とは関係ありません。
 Stations and their Japanese names: made by processing “National Land Numerical Information (Railway Data)” (Ministry of Land, Infrastructure, Transport and Tourism), CC BY 4.0 (「国土数値情報（鉄道データ）」（国土交通省）を加工して作成). Track, viaducts and the line colour: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with Kyushu Railway Company or the Government of Japan.	駅と日本語駅名：「国土数値情報（鉄道データ）」（国土交通省）を加工して作成、CC BY 4.0。線路、高架、路線色：© OpenStreetMap contributors, ODbL 1.0。本ゲームは九州旅客鉄道株式会社および日本国政府とは関係ありません。
+Stations of lines you buy line up with the real platforms, and Tainan's 1936 station building stands where it really is.	買収した路線の駅は実際のホームの位置にそろい、台南の1936年の駅舎は本来の場所に移りました。
 Stations playing it go back to each line's own.	このメロディを使う駅は各路線のメロディに戻ります。
 Stations ready. Open Lines and join them into a line.	駅の準備ができました。「路線」を開いて駅を路線で結びましょう。
+Stations tapped for a new line after its ends, or added to a line, go where the track passes them, so the line still shows and its trains call there.	起点と終点の後に選んだ駅や路線に追加した駅は、線路の通る順に入るので、路線は表示されたままで列車も停車します。
 Statistical areas’ boundaries	統計区の境界
 Statistical areas’ population	統計区の人口
 Stays on track {0}	線路 {0} にとどまる
@@ -2638,6 +2663,7 @@ Stops you on the mark. At most half the bonus.	停止位置に止めます。ボ
 Stops, their names and the timetable: Kumamoto City Transportation Bureau’s GTFS data (熊本市交通局), CC BY 2.1 JP, changed for the game. Track and depots: © OpenStreetMap contributors, ODbL 1.0. The game is not affiliated with the Kumamoto City Transportation Bureau.	電停、電停名と時刻表：熊本市交通局のGTFSデータ、CC BY 2.1 JP、ゲーム用に加工。軌道と車庫：© OpenStreetMap contributors、ODbL 1.0。本ゲームは熊本市交通局とは関係ありません。
 Straight	直線
 Straight on from the track	線路からまっすぐ延長
+Street trams stop at low open-air stops, some building materials trains now run silver cement wagons from cement silo yards, and Ōmura depot stands beside the Nishi-Kyushu Shinkansen.	路面電車は屋根のない低い電停に停まり、一部の建材列車は銀色のセメント貨車になってセメントサイロの貨物駅から出発し、西九州新幹線の横には大村車両基地が建ちました。
 Students ride your trains to it on school days. Families move in nearby, and land around it is worth more.	登校日には学生があなたの列車で通います。近くに家族が移り住み、周辺の地価も上がります。
 Subsidiaries (daily)	子会社（日次）
 Subsidiary costs	子会社費用
@@ -2664,6 +2690,7 @@ Taichung Metro riders by station	台中MRTの駅別利用者
 Taichung building map (2022)	台中市建物図（2022年）
 Taichung building map (2024)	台中市建物図（2024年）
 Taichung building map (2025)	台中市建物図（2025年）
+Taichung's 3D map now draws its buildings from the city's own building map: every street lined as it really is, and nearly three times as many buildings.	台中市の3D地図は市の建物図を使うようになりました。どの通りも実際どおりに建物が並び、建物の数は約3倍になりました。
 Tainan parcel centres	台南市宗地資料
 Tainan usage permits	台南市使用執照
 Taipei	台北
@@ -2684,6 +2711,7 @@ Taiwan Railway (data.gov.tw)	台湾鉄路（data.gov.tw）
 Taiwan Railway Corporation, 2026: train timetables, from TRA open data (ods.railway.gov.tw). 	国営台湾鉄路股份有限公司、2026年：列車時刻表、台鉄オープンデータ（ods.railway.gov.tw）より。
 Taiwan Railway Corporation, daily entries and exits by station; Taipei Rapid Transit Corporation, hourly entries and exits by station; Taichung Mass Rapid Transit Corporation, riders by station; Kaohsiung City Government, entries and exits by station of the Kaohsiung Metro: used under the Open Government Data License, version 1.0. Taiwan High Speed Rail Corporation, passengers entering and leaving each station; New Taipei Metro Corporation, daily riders by station; Taoyuan Metro Corporation, riders by station: from their published operating statistics.	台湾鉄路股份有限公司「台鉄毎日各站点進出站人数」、台北大衆捷運股份有限公司「台北捷運各站分時進出量統計」、台中捷運股份有限公司「捷運各站旅運量」、高雄市政府「高雄都会区大衆捷運系統各站旅運量」：Open Government Data License, version 1.0 に基づき利用。台湾高速鉄路股份有限公司「各站進出旅客人数」、新北大衆捷運股份有限公司「每日全線各站運量統計表」、桃園大衆捷運股份有限公司「各站旅運量統計」：各社が公表している営業統計によります。
 Taiwan railway history	台湾鉄道史
+Taiwan's 3D maps show the latest buildings: ones put up or mapped since September appear, and ones pulled down are gone.	台湾の3D地図の建物を最新にしました。9月以降に建った・描かれた建物が現れ、取り壊された建物は消えました。
 Taiwan’s OpenStreetMap base map	台湾の OpenStreetMap ベースマップ
 Taiwan’s Railways	台湾の鉄道
 Taiwan’s real city and county bus routes: their stops in order, the roads they take and how often they run. Where a route has no timetable, its headway is an estimate and says so.	台湾の実在の市内・県内バス路線：停留所の順序、経路、運転間隔。時刻表のない路線の運転間隔は推定で、その旨を表示します。
@@ -2800,6 +2828,7 @@ Teachers' Day	教師節
 Temple	寺院
 Temple square	寺院前広場
 Temples	寺廟
+Temples have dragons on their roofs and dragon columns at their gates, shrines a Tudigong figure, and some squares a dog and pigeons. Elevated stations with shops have a row of shops under the viaduct.	廟の屋根には剪黏の双龍、門には龍柱が立ち、土地公廟には土地公が祀られ、廟の広場には犬や鳩がいることもあります。店舗のある高架駅は高架下に店が並びます。
 Term Loans	定期借入
 Term loans	定期借入
 Term {0}	期間 {0}
@@ -2867,19 +2896,27 @@ The English line and station names are compiled by {0}.	英語の路線名と駅
 The Fukuoka City Subway’s three lines, the Kuko, Hakozaki and Nanakuma lines, with their stations’ names in Chinese, English and Japanese. There is no published timetable, so their trains run at estimated intervals.	福岡市地下鉄の空港線・箱崎線・七隈線の3路線で、駅名は中国語・英語・日本語です。公開された時刻表がないため、列車は推定の運転間隔で走ります。
 The Green Line (Wuri–Wenxin–Beitun) from Beitun Main Station to HSR Taichung Station.	北屯総站〜高鉄台中駅間の緑線（烏日文心北屯線）。
 The High Speed Rail could not be built from the real-world data.	実地図データから高鉄を建設できませんでした。
+The Japan map's introduction now tells of Fukuoka, Saga, Nagasaki and Kumamoto and the lines you can buy there.	日本地図の紹介文を、福岡・佐賀・長崎・熊本の4県と今買える路線の内容に書き直しました。
+The Kumamoto City Tram's Lines A and B are on sale together on the Japan map: white and wine-red low-floor trams run to their real timetable from their own depots.	日本地図で熊本市電のA系統・B系統をまとめて買えます。白とワインレッドの超低床電車が、実際の時刻表どおりに自前の車庫から出庫します。
 The Kumamoto City Tram’s Lines A and B, with their stops’ names in Chinese, English and Japanese and their trams’ real timetable.	熊本市電のA系統とB系統。電停名は中国語・英語・日本語で、電車は実際の時刻表どおりに走ります。
 The Kyushu Shinkansen from Hakata to Kumamoto, with its seven stations’ names in Chinese, English and Japanese. Its trains call at every station, at estimated times.	博多〜熊本間の九州新幹線で、7駅の駅名は中国語・英語・日本語です。列車は各駅に停車し、推定の時刻で走ります。
+The Kyushu Shinkansen goes on south from Kumamoto to Shin-Yatsushiro and Shin-Minamata on the Japan map; a game that already has Hakata to Kumamoto can buy the rest.	日本地図の九州新幹線が熊本から新八代・新水俣まで南へ延びました。博多〜熊本を買ってあるゲームでは残りを買い足せます。
 The Main Line from Chiayi to Alishan and the Shenmu, Zhaoping and Zhushan Lines, in the Alishan Forest Railway’s red.	本線（嘉義〜阿里山）と神木線、沼平線、祝山線を、阿里山森林鉄道の赤で描きます。
+The Nishi-Kyushu Shinkansen runs the N700S Kamome, and the suspended monorail has a new model.	西九州新幹線はN700S かもめになり、懸垂式モノレールは新しいモデルになりました。
 The OSM base map of real-world maps in Taiwan (OSM in the map style menu), which works without a network: sea, rivers, woods, parks, roads, boundaries and place names. The 3D map lays its sea, rivers, woods, parks and roads on the ground.	台湾の実在の地図の OSM ベースマップ（地図スタイルメニューの「OSM」）。ネットワークなしで表示できます：海、川、森林、公園、道路、境界、地名。3D地図では、海、川、森林、公園、道路を地面に描きます。
 The OSM base map of real-world maps outside Taiwan (OSM in the map style menu).	台湾以外の実在の地図の OSM ベースマップ（地図スタイルメニューの「OSM」）。
 The Pingxi Line is ours now, built for coal and losing money. Reach {0} riders a day and a year's net profit of {1}. The Sky Lantern Festival brings crowds to Shifen and Pingxi: get trains ready for it!	平渓線は私たちの路線になりました。石炭輸送のために造られ、赤字が続いています。1日の利用者{0}人、年間純利益{1}を達成しましょう。天灯祭りには十分と平渓に人が押し寄せます。列車を備えておきましょう！
 The Red Line, the Orange Line and the Circular Light Rail, each in its own colour.	紅線、橘線、環状ライトレール。各路線の色で描きます。
+The Relay Kamome from Hakata to Takeo-Onsen is on sale on the Japan map, run by 885 and 787 series trains, and at Takeo-Onsen it meets the N700S Kamome across the platform.	日本地図でリレーかもめ（博多〜武雄温泉、885系・787系）を買えます。武雄温泉では同じホームの向かいでN700S かもめに乗り換えます。
 The Sky Lantern Festival starts in {0} day{1}: {2}% more passengers at {3}. Add trains before it.	天燈祭りまであと{0}日：{3}で乗客が{2}%増えます。前もって増発しましょう。
+The Taiwan High Speed Rail is for sale in a Taiwan game with realistic rules: buy it from Nangang to Zuoying with its viaducts, depots, land along the way and the real day of trains; it pays a monthly upkeep once bought.	リアルルールの台湾のゲームで台湾高速鉄道を買収できます。南港〜左営の高架橋、車両基地、沿線の土地、実際の1日分のダイヤをまとめて買い、以後は毎月維持費がかかります。
+The Taiwan High Speed Rail you buy runs 700T trains, and on high-speed lines you build yourself every other train is an N700ST in Taiwan High Speed Rail colours.	買収した台湾高速鉄道はすべて700Tで走ります。自分で建設した高速線では、1本おきに台湾高速鉄道塗装のN700STが走ります。
 The Train Pack’s high-speed train on the 3D map, white with two blue lines: a model the game’s author made.	トレインパックの3D地図の高速列車（白い車体に青い2本線）：ゲーム作者が作ったモデル。
 The Wenhu, Tamsui–Xinyi (with the Xinbeitou branch), Songshan–Xindian (with the Xiaobitan branch), Zhonghe–Xinlu and Bannan Lines, each in its own colour.	文湖線、淡水信義線（新北投支線を含む）、松山新店線（小碧潭支線を含む）、中和新蘆線、板南線。各路線の色で描きます。
 The Western Trunk, Mountain, Coast, Chengzhui, Pingtung, South-Link, Taitung, North-Link and Yilan Lines, and six branch lines: Pingxi, Shenao, Neiwan, Liujia, Jiji and Shalun, all in TRA blue. On a real-world map you can buy the six branch lines, and their trains keep TRA’s real times.	縦貫線、山線、海線、成追線、屏東線、南廻線、台東線、北廻線、宜蘭線と、平渓・深澳・内湾・六家・集集・沙崙の6支線。すべて台鉄ブルーで描きます。実在の地図ではこの6支線を購入でき、列車は台鉄の実際の時刻で走ります。
 The Yilan Line could not be built from the real-world data.	実地図データから宜蘭線を建設できませんでした。
 The air route is sold.	航空路線を売却しました。
+The app no longer carries its maps: a map downloads the first time you open it (you need to be online), and Map in Settings can remove one or download it again.	地図はアプリに内蔵されなくなりました：初めて開くときに自動でダウンロードされます（ネット接続が必要）。設定の「地図」で削除や再ダウンロードができます。
 The bands you split or changed go.	分割・変更した時間帯は削除されます。
 The bank cannot make this term loan: check the amount, the term and how much it still lends.	銀行はこの定期借入に応じられません：金額、期間、残りの融資枠を確認してください。
 The bank has nothing more to lend now. It lends more as the company is worth more.	今は銀行の融資枠がありません。会社の価値が上がると融資枠も増えます。
@@ -2891,6 +2928,7 @@ The bus route to {0} is changed, for {1}.	{0}へのバス路線を変更しま�
 The cable car cannot go here.	ここにはロープウェイを造れません。
 The cable car is taken down.	ロープウェイを撤去しました。
 The camera follows its landing.	カメラが着陸を追います。
+The card of the tutorial's last step no longer jumps back and forth.	チュートリアル最後のステップのカードが行ったり来たりしなくなりました。
 The cells within 800 m of a station, and the cells with people that no station reaches.	駅から800 m以内のマスと、どの駅も届かない人がいるマスです。
 The challenge ends in {0} day{1}.	チャレンジ終了まであと{0}日です。
 The city	都市
@@ -2926,6 +2964,7 @@ The game is running at {0}, slower than {1}.	ゲームは{0}で動作してお�
 The game pauses when a typhoon is announced, a goal is met, the cash goes below zero or a challenge has a week left. Every 30 days a monthly report compares the month with the one before; it is always kept in the news log.	台風の発表、目標の達成、現金のマイナス、チャレンジの残り1週間でゲームが一時停止します。30日ごとに月次レポートで前月と比較し、ニュースに必ず記録されます。
 The game really runs {0} times real time, slower than its speed	ゲームは実時間の{0}倍で動作しており、設定速度に追いつきません
 The game runs {0} times real time	ゲームは実時間の{0}倍で進みます
+The game speaks Japanese: choose 日本語 under Language in Settings and it takes effect the next time the app opens; stations and lines on the Japan map show their Japanese names.	日本語で遊べます：設定の「言語」で日本語を選ぶと次回の起動から切り替わり、日本地図の駅名・路線名も日本語になります。
 The game will be in {0} the next time it opens. {1}	次回起動時から{0}になります。{1}
 The game will use the {0}'s language the next time it opens. {1}	次回起動時から{0}の言語を使います。{1}
 The goal was not met in time. Try again?	期限内に目標を達成できませんでした。もう一度挑戦しますか？
@@ -3388,6 +3427,7 @@ Winter event: {0} done. The Christmas livery is yours to keep.	冬イベント�
 With a passing loop	待避線1か所付き
 With a train	列車1本付き
 With a train and a passing loop	列車1本と待避線1か所付き
+With realistic rules, a Japan game that owns the Kyushu Shinkansen can buy the Sanyo Shinkansen from Hakata to Kokura: its sixteen-car trains run into the Kyushu Shinkansen's platforms at Hakata.	リアルルールの日本地図では、九州新幹線を持っていれば山陽新幹線（博多〜小倉）を買収できます。16両の列車が博多で九州新幹線のホームに入ります。
 Within 800 m: {0} residents · {1} jobs	800 m以内：住民{0}人 · 就業{1}人
 Without a crossover, trains cannot change between the two tracks here, so the line runs fewer trains.	渡り線がないと、列車はここで2線を行き来できず、運行本数が減ります。
 Without that track, two tracks nearby would run less than 4 m apart with no junction near. Remove one of them first.	その線路がなくなると、近くの2本が4 m未満で並び、近くに分岐もありません。先にどちらかを撤去してください。
@@ -3400,6 +3440,7 @@ Wrote a lot to storage at {0}	{0}にストレージへ大量に書き込み
 Wulai Cable Car	烏来ロープウェイ
 Xiaowei	小葳
 Xiaoyu	小宇
+Xiluo Bridge and the old Dashu iron bridge now stand over their rivers, and long Taiwan ferry routes sail a Xiaoliuqiu fast ferry.	西螺大橋と大樹旧鉄橋が川に架かり、台湾の長距離フェリーは小琉球の高速船になりました。
 Xiulan	秀蘭
 Year	年
 Year {0}	{0}年目

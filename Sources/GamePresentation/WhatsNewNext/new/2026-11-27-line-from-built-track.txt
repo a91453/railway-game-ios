@@ -1,2 +1,0 @@
-en: After you build two stations joined by track, Build offers their line in one tap; New Line in Lines starts picking stations at once.
-zh: 蓋好兩座有軌道相連的車站後，建設裡一鍵就能建路線；路線的「新路線」一按就開始選站。
