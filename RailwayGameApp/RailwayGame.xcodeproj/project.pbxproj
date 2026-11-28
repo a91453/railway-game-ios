@@ -163,6 +163,7 @@
 		7CFC437C2E691CD94BA7812D /* MapStationTagView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFA812528CA2F00BD6143418 /* MapStationTagView.swift */; };
 		7D3131E179FBE863523685B0 /* run-diesel-coast.caf in Resources */ = {isa = PBXBuildFile; fileRef = F390F949C4A3FC86EC095654 /* run-diesel-coast.caf */; };
 		7D49EA0784B2BD7293A9005D /* hk-taxi.m3dmodel in Resources */ = {isa = PBXBuildFile; fileRef = E7C9AF0B862D5C7D596754AE /* hk-taxi.m3dmodel */; };
+		7E50BBD17CFA65D043510512 /* line-opened.wav in Resources */ = {isa = PBXBuildFile; fileRef = 38C08B72EEC4D1DA78D04FF2 /* line-opened.wav */; };
 		7E6BC92CBBB09DA09DE9F8EB /* krtc_ridership.json in Resources */ = {isa = PBXBuildFile; fileRef = A0EC41B721D0D2D757CD6EF0 /* krtc_ridership.json */; };
 		7ED85DF9A5EB5C57A8441F33 /* rail_dispatch.json in Resources */ = {isa = PBXBuildFile; fileRef = 545BF3B8583FFA46FF41A442 /* rail_dispatch.json */; };
 		7F30F7088835511597E4BCFB /* melody-piano-74.wav in Resources */ = {isa = PBXBuildFile; fileRef = 9B323103C394C7FD37604B5F /* melody-piano-74.wav */; };
@@ -439,6 +440,7 @@
 		362FE08DC4352F1A844AF86D /* MapLockMarks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapLockMarks.swift; sourceTree = "<group>"; };
 		36F48CC81ACC3C48AD1B45BE /* BaseMapProjectionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaseMapProjectionUITests.swift; sourceTree = "<group>"; };
 		37971520DEDE438F5E6272D6 /* music-loop.caf */ = {isa = PBXFileReference; path = "music-loop.caf"; sourceTree = "<group>"; };
+		38C08B72EEC4D1DA78D04FF2 /* line-opened.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "line-opened.wav"; sourceTree = "<group>"; };
 		3934A6F628AA98414B2B952D /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		3A47FE76CCB95D1AB460CE99 /* AppleMapBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleMapBackground.swift; sourceTree = "<group>"; };
 		3B5995200C877BF409F730A8 /* WhatsNewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewView.swift; sourceTree = "<group>"; };
@@ -1075,6 +1077,7 @@
 				15F8BB42601B157F11A9F8ED /* horn-metro.wav */,
 				10C0D6A5386F14390430D99A /* horn-steam.wav */,
 				64FC0E6D263BA9DF11A366DD /* line-acquired.wav */,
+				38C08B72EEC4D1DA78D04FF2 /* line-opened.wav */,
 				9B323103C394C7FD37604B5F /* melody-piano-74.wav */,
 				F75F0FF7CADA5DCA1C348068 /* melody-piano-78.wav */,
 				CA0564DD4E124696BBA0C328 /* melody-piano-82.wav */,
@@ -1374,6 +1377,7 @@
 				7E6BC92CBBB09DA09DE9F8EB /* krtc_ridership.json in Resources */,
 				789C9FAADEA0419549125729 /* krtc_times.json in Resources */,
 				7720BB19B20EEC81C11BF19E /* line-acquired.wav in Resources */,
+				7E50BBD17CFA65D043510512 /* line-opened.wav in Resources */,
 				7F30F7088835511597E4BCFB /* melody-piano-74.wav in Resources */,
 				DCEF24658856E7AB390BE500 /* melody-piano-78.wav in Resources */,
 				53DF9F41197B4AFAFAD35734 /* melody-piano-82.wav in Resources */,
