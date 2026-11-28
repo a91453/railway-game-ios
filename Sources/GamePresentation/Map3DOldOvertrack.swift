@@ -35,6 +35,12 @@ enum Map3DOldOvertrack {
 
     static let stair = "overtrack-stair", corridor = "corridor"
 
+    /// Whether the scene places them. Off until the studio's new shapes
+    /// come (owner, 2026-11-28: these are still the earlier version's
+    /// shapes, and the game's should differ); the planning, drawing and
+    /// tests stay, so turning it on is this line.
+    static let inGame = false
+
     static let models: [String: Map3DModelPack.Model] = {
         var models: [String: Map3DModelPack.Model] = [:]
         for (name, text) in encoded {
