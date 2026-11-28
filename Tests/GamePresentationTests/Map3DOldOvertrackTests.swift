@@ -14,8 +14,9 @@ final class Map3DOldOvertrackTests: XCTestCase {
 
     // MARK: The models
 
-    /// Every model decodes in the ground stations' palette with no old
-    /// red left, its roof green; each hall's underside at the footbridge
+    /// Every model decodes in its palette with no old red left, the
+    /// studio's new shape (a steel roof floating over the hall, a green
+    /// clerestory over it); each hall's underside at the footbridge
     /// deck over the platforms (nothing between the platforms' height and
     /// it over its tracks), a blue name board on each street front, and
     /// its far version lighter.
@@ -26,7 +27,7 @@ final class Map3DOldOvertrackTests: XCTestCase {
             let near = try XCTUnwrap(Old.model(hall.rawValue)), far = try XCTUnwrap(Old.model(hall.rawValue, far: true))
             XCTAssertLessThan(far.triangleCount, near.triangleCount, hall.rawValue)
             for model in [near, far] {
-                XCTAssertTrue(model.vertices.allSatisfy { Map3DOldGroundStation.meshPalette.contains($0.color) && $0.color != red }, hall.rawValue)
+                XCTAssertTrue(model.vertices.allSatisfy { Old.meshPalette.contains($0.color) && $0.color != red }, hall.rawValue)
                 XCTAssertEqual(model.minimum.x, Old.hallReach.lowerBound, accuracy: 0.15, hall.rawValue)
                 XCTAssertEqual(model.maximum.x, Old.hallReach.upperBound, accuracy: 0.15, hall.rawValue)
                 XCTAssertTrue(model.vertices.contains { abs($0.z - face) < 0.01 }, "\(hall) underside")
@@ -35,7 +36,8 @@ final class Map3DOldOvertrackTests: XCTestCase {
                     XCTAssertFalse(model.vertices.contains { abs($0.y - track) < 1.5 && $0.z > 0.9 && $0.z < face - 0.01 }, "\(hall) over \(track)")
                 }
             }
-            XCTAssertTrue(near.vertices.contains { $0.color == Map3DPalette.gymGreen && $0.z > 11.5 }, "\(hall) green roof")
+            XCTAssertTrue(near.vertices.contains { $0.color == Map3DPalette.gymGreen && $0.z > 14 }, "\(hall) green clerestory")
+            XCTAssertTrue(near.vertices.contains { $0.color == Map3DPalette.steel && $0.z > 12 }, "\(hall) steel roof")
             for front in fronts {
                 XCTAssertTrue(near.vertices.contains { $0.color == Map3DPalette.canopy && $0.y * front > 11.3 && $0.z > 11.9 }, "\(hall) board \(front)")
             }
@@ -173,7 +175,7 @@ final class Map3DOldOvertrackTests: XCTestCase {
         XCTAssertEqual(near.map(\.x).max()!, length / 2, accuracy: 0.2)
         // Its street side to the left (−z), its wall the other side.
         XCTAssertEqual(near.map(\.z).min()!, -Old.sideStreet, accuracy: 0.05)
-        XCTAssertEqual(near.map(\.z).max()!, Old.hallWall + 0.3, accuracy: 0.05)
+        XCTAssertEqual(near.map(\.z).max()!, Old.hallEave, accuracy: 0.05)
         let deck = Map3DScene.railLift + Builder.platformHeight + Old.deck
         XCTAssertFalse(near.contains { abs(abs($0.z) - 2.5) < 1.5 && $0.y > 0.9 && $0.y < deck - 0.01 }, "the trains' way clear")
         XCTAssertEqual(b.state.stations.houseFootprints.count, 1)
