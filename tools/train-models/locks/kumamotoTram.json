@@ -1,0 +1,39 @@
+{
+  "comment" : "Decision 782: the models of the registered train kumamotoTram (Map3DKumamotoTram): FNV-1a of every vertex field (tools/train-models/export.swift --lock), and its cars' lamps and windows (Map3DModelPackLockTests). A changed value is a deliberate model change the PR must justify.",
+  "lampCount" : 4,
+  "lamps" : "285d4cad87686119",
+  "models" : {
+    "light-set-kumamotoTram-head" : {
+      "hash" : "faaa69c65eb3919",
+      "triangles" : 32
+    },
+    "light-set-kumamotoTram-single" : {
+      "hash" : "faaa69c65eb3919",
+      "triangles" : 32
+    },
+    "light-set-kumamotoTramFar-head" : {
+      "hash" : "faaa69c65eb3919",
+      "triangles" : 32
+    },
+    "light-set-kumamotoTramFar-single" : {
+      "hash" : "faaa69c65eb3919",
+      "triangles" : 32
+    },
+    "set-kumamotoTram-head" : {
+      "hash" : "c18a67a82c592842",
+      "triangles" : 7526
+    },
+    "set-kumamotoTram-single" : {
+      "hash" : "c18a67a82c592842",
+      "triangles" : 7526
+    },
+    "set-kumamotoTramFar-head" : {
+      "hash" : "46fc4f9772307577",
+      "triangles" : 3670
+    },
+    "set-kumamotoTramFar-single" : {
+      "hash" : "46fc4f9772307577",
+      "triangles" : 3670
+    }
+  }
+}

@@ -60,6 +60,8 @@ public enum RealLineStock {
         // Decision 1028 (continued): the Relay Kamome's.
         case Map3DKyushu885.key: language.text("Series 885", "885 系")
         case Map3DKyushu787.key: language.text("Series 787", "787 系")
+        // Decision 1041 (continued): the Kumamoto City Tram's.
+        case Map3DKumamotoTram.key: language.text("Kumamoto low-floor tram", "熊本市電低地板電車")
         default: nil
         }
     }
