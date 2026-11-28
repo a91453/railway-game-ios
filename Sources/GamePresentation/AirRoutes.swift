@@ -307,7 +307,9 @@ extension GameLauncher {
         let cities = Set(overseasGrounds.map(\.city)).union(overseasAwaited.map(\.city))
         let all = AirRoutes(cities: cities)
         return AirRoutes(
-            cities: cities, opened: isDemoMode ? Set(all.maps.map(\.id)) : Set(preferences.airRoutesOpened ?? []),
+            // Decision 1010: and every one where the App Store answers:
+            // there the free map and the unlock open maps, not flights.
+            cities: cities, opened: allMapsOpen || overseasUnlock != nil ? Set(all.maps.map(\.id)) : Set(preferences.airRoutesOpened ?? []),
             best: preferences.airRouteBest ?? [:]
         )
     }
@@ -317,8 +319,9 @@ extension GameLauncher {
     /// with the way to open it until they open, and each city no flights
     /// open (Rovaniemi), open from the start. Decision 858: a city whose
     /// map pack is not on the device yet is closed, with how its download
-    /// stands (`status`), until it is. None while the real-world data is
-    /// read.
+    /// stands (`status`), until it is. Decision 1010: every one but the
+    /// free map is closed until the maps unlock is bought. None while the
+    /// real-world data is read.
     public func overseasMapRows(
         in language: DisplayLanguage, status: (OverseasMap) -> MapPackStatus = MapPackDownloads.status
     ) -> [OverseasMapRow] {
@@ -327,16 +330,29 @@ extension GameLauncher {
         let read = Set(overseasGrounds.map(\.city))
         let awaited = Set(overseasAwaited.map(\.city))
         return OverseasMap.allCases.compactMap { city in
-            let waiting = awaited.contains(city) ? city.notDownloadedText(status(city), in: language) : nil
-            if routes.offers(city.rawValue) {
-                guard routes.canStart(city.rawValue) else {
-                    return OverseasMapRow(city: city, closed: routes.howToOpen(city.rawValue, in: language))
-                }
-                return OverseasMapRow(city: city, closed: waiting, waitsForDownload: waiting != nil)
+            // Decision 1010: closed until the unlock is bought, ahead of
+            // its flights and its download, unless it is the free map.
+            let row = row(of: city, routes: routes, read: read, awaited: awaited, language: language, status: status)
+            guard row != nil, !mayStartNewGame(on: city.rawValue) else { return row }
+            return OverseasMapRow(city: city, closed: OverseasUnlock.lockedText(in: language), needsPurchase: true)
+        }
+    }
+
+    /// The map picker's row of `city` as its flights and its download
+    /// leave it, or `nil` when it is not offered.
+    private func row(
+        of city: OverseasMap, routes: AirRoutes, read: Set<OverseasMap>, awaited: Set<OverseasMap>,
+        language: DisplayLanguage, status: (OverseasMap) -> MapPackStatus
+    ) -> OverseasMapRow? {
+        let waiting = awaited.contains(city) ? city.notDownloadedText(status(city), in: language) : nil
+        if routes.offers(city.rawValue) {
+            guard routes.canStart(city.rawValue) else {
+                return OverseasMapRow(city: city, closed: routes.howToOpen(city.rawValue, in: language))
             }
-            guard !city.opensByFlights, read.contains(city) || awaited.contains(city) else { return nil }
             return OverseasMapRow(city: city, closed: waiting, waitsForDownload: waiting != nil)
         }
+        guard !city.opensByFlights, read.contains(city) || awaited.contains(city) else { return nil }
+        return OverseasMapRow(city: city, closed: waiting, waitsForDownload: waiting != nil)
     }
 
     /// The id of the map `world` is on: the city whose ground holds it
@@ -350,7 +366,18 @@ extension GameLauncher {
     /// them on the device and says so in the game; and hands the game what
     /// is open. A demo, the tutorial and the lessons open none: their
     /// trains are not the player's.
+    ///
+    /// Decision 1010: where the App Store answers (the maps unlock is sold
+    /// or bought), flights open no map: a player plays their free map, or
+    /// every map once bought. The airports, the air routes and their
+    /// riders stay the game's; only the counting towards a map and its
+    /// news go.
     func checkAirRoutes(of session: GameSession) {
+        guard overseasUnlock == nil else {
+            session.airRoutes = AirRoutes()
+            session.onAirRouteBought = nil
+            return
+        }
         var routes = airRoutes
         routes.here = airMap(of: session.world)
         defer {
@@ -379,15 +406,79 @@ extension GameLauncher {
 
     /// Before a new game on the real map `id`: `false`, with the way to
     /// open it, while it is closed; and the player's first real map is
-    /// remembered as open.
+    /// remembered as open. Decision 1010: closed too while it is not the
+    /// free map and the unlock is not bought (asked first, so a refused
+    /// map is not taken as the first); the first is the free map.
     func takeMap(_ id: String) -> Bool {
+        settleFreeMap()
+        guard mayStartNewGame(on: id) else {
+            message = StatusMessage(kind: .failure, text: refusedText(id))
+            return false
+        }
         let routes = airRoutes
         guard routes.canStart(id) else {
             message = StatusMessage(kind: .failure, text: routes.howToOpen(id, in: language))
             return false
         }
         if !isDemoMode, routes.offers(id), routes.opened.isEmpty { rememberAirRoutes([id]) }
+        chooseFreeMap(id)
         return true
+    }
+
+    // MARK: - Decision 1010: the free map
+
+    /// The map the player plays free (``AirMap/id``), chosen with their
+    /// first new game on a real map; `nil` until then.
+    public var freeMap: String? { preferences.freeMap }
+
+    /// Whether a new game on the real map `id` is paid for: the unlock is
+    /// bought or a gift, or nothing is sold here, or it is the free map,
+    /// or no free map is chosen yet (this one will be). Flights are asked
+    /// apart (``takeMap(_:)``).
+    public func mayStartNewGame(on id: String) -> Bool {
+        !sellsAllMaps || freeMap == nil || freeMap == id
+    }
+
+    /// Whether the next new game on a real map makes it the free map: the
+    /// unlock is for sale and no free map is chosen yet. The map picker
+    /// asks first.
+    public var choosesFreeMap: Bool {
+        sellsAllMaps && freeMap == nil
+    }
+
+    /// Why the whole-of-Taiwan row and Taiwan's places start no new game,
+    /// `nil` when they do: not the free map and not bought, or (decision
+    /// 712) its flights not open.
+    public func taiwanClosed(in language: DisplayLanguage) -> String? {
+        guard mayStartNewGame(on: AirMap.taiwan.id) else { return OverseasUnlock.lockedText(in: language) }
+        let routes = airRoutes
+        return routes.canStart(AirMap.taiwan.id) ? nil : routes.howToOpen(AirMap.taiwan.id, in: language)
+    }
+
+    /// The name of the map `id` as the free map's lines call it.
+    public func freeMapName(_ id: String, in language: DisplayLanguage) -> String {
+        switch id {
+        case AirMap.taiwan.id: language.text("Taiwan", "台灣")
+        case OverseasMap.fukuoka.rawValue: language.text("Japan (Kyushu)", "日本九州")
+        case OverseasMap.rovaniemi.rawValue: language.text("Finland (Rovaniemi)", "芬蘭羅瓦涅米")
+        default: OverseasMap(rawValue: id)?.name(in: language) ?? id
+        }
+    }
+
+    /// Why a new game on `id` is refused while it is not the free map.
+    func refusedText(_ id: String) -> String {
+        OverseasUnlock.refusedText(freeMap: freeMap.map { freeMapName($0, in: language) } ?? "", in: language)
+    }
+
+    /// The real map a new game on `world` is on, the one the free map and
+    /// the unlock are about: its city's, Taiwan's for a world on Taiwan's
+    /// ground, `nil` for a blank map (always free).
+    func paidMap(of world: GameWorld) -> String? {
+        let id = airMap(of: world)
+        guard id == AirMap.taiwan.id else { return id }
+        guard let anchor = world.geoAnchor,
+              WholeTaiwan.contains(latitude: anchor.latitudeDegrees, longitude: anchor.longitudeDegrees) else { return nil }
+        return id
     }
 }
 
@@ -399,4 +490,7 @@ public struct OverseasMapRow: Equatable, Sendable {
     /// Decision 858: whether it is closed because its map pack is not on
     /// the device yet, not because its flights have not opened.
     public var waitsForDownload = false
+    /// Decision 1010: whether it is closed because the overseas maps
+    /// unlock is not bought.
+    public var needsPurchase = false
 }

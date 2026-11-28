@@ -118,6 +118,15 @@ struct RealWorldPicker: View {
     @State private var size: CGSize = .zero
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Decision 1010: the new game waiting for the player to say yes to
+    /// its map becoming their free map.
+    @State private var freePick: FreePick?
+
+    /// Decision 1010: a first new game on a real map, asked about first.
+    private struct FreePick {
+        let name: String
+        let start: () -> Void
+    }
 
     init(launcher: GameLauncher) {
         self.launcher = launcher
@@ -156,6 +165,18 @@ struct RealWorldPicker: View {
             .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
             .navigationTitle("Real-World Map")
             .navigationBarTitleDisplayMode(.inline)
+            // Decision 1010: the free map is chosen once, so the first new
+            // game on a real map asks before it starts.
+            .confirmationDialog(
+                OverseasUnlock.confirmTitle(freePick?.name ?? "", in: launcher.language),
+                isPresented: Binding(get: { freePick != nil }, set: { if !$0 { freePick = nil } }),
+                titleVisibility: .visible, presenting: freePick
+            ) { pick in
+                Button(OverseasUnlock.confirmButton(pick.name, in: launcher.language)) { pick.start() }
+                Button(launcher.language.text("Cancel", "取消"), role: .cancel) {}
+            } message: { _ in
+                Text(verbatim: OverseasUnlock.confirmMessage(in: launcher.language))
+            }
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search for a place")
             .onSubmit(of: .search) {
                 search.find(query, near: middle)
@@ -452,18 +473,28 @@ struct RealWorldPicker: View {
             // flights opened sat under the half-screen list's foot, where
             // a player told to choose it did not find it (2026-11-14).
             Section {
-                let routes = launcher.airRoutes
                 let language = launcher.language
+                // Decision 1010: while the maps unlock is for sale, its row
+                // first, with which map is free (or that one can be
+                // chosen); every map but the free one says to buy it.
+                if launcher.sellsAllMaps {
+                    OverseasUnlockRow(store: .shared, language: language, freeMap: freeMapLine)
+                        // A free map a reinstall forgot, named again by
+                        // the oldest saved game on a real map.
+                        .onAppear { launcher.settleFreeMap() }
+                }
                 WholeMapRow(
                     id: "realWorld.wholeTaiwan", name: language.text("The whole of Taiwan", "全台灣"), symbol: "map.fill",
                     summary: language.text(
                         "The main island and Penghu, about 286 by 390 km, all open from the start with no land to buy. Achievements and rankings do not count it. With a large network, older devices may slow down.",
                         "本島加澎湖，約 286 × 390 公里，一開始全部開放、不用買地。不計成就與排名。路網蓋得大時，較舊的裝置可能變慢。"
                     ),
-                    howToOpen: routes.canStart(AirMap.taiwan.id) ? nil : routes.howToOpen(AirMap.taiwan.id, in: language)
+                    howToOpen: launcher.taiwanClosed(in: language)
                 ) {
-                    dismiss()
-                    launcher.startWholeTaiwan()
+                    asking(AirMap.taiwan.id) {
+                        dismiss()
+                        launcher.startWholeTaiwan()
+                    }
                 }
                 .disabled(launcher.population == nil)
                 // Decision 712: the cities outside Taiwan the app has the
@@ -473,7 +504,8 @@ struct RealWorldPicker: View {
                 // Decision 858: a city whose map pack is still to come
                 // says so, read afresh when its download answers.
                 let _ = mapPackAnswers
-                ForEach(launcher.overseasMapRows(in: language), id: \.city) { row in
+                let overseasRows = launcher.overseasMapRows(in: language)
+                ForEach(overseasRows, id: \.city) { row in
                     // Decision 999: a row for each place its map can
                     // begin round (Japan: Fukuoka, Saga, Kumamoto).
                     ForEach(launcher.overseasStartRows(for: row, in: language), id: \.start) { start in
@@ -483,7 +515,9 @@ struct RealWorldPicker: View {
                             summary: start.summary, howToOpen: row.closed,
                             closedSymbol: row.waitsForDownload ? "arrow.down.circle" : "lock.fill"
                         ) {
-                            if launcher.startOverseasMap(row.city, start: start.start) { dismiss() }
+                            asking(row.city.rawValue) {
+                                if launcher.startOverseasMap(row.city, start: start.start) { dismiss() }
+                            }
                         }
                     }
                     // Decision 992: a map that starts with four tiles can
@@ -494,7 +528,9 @@ struct RealWorldPicker: View {
                             symbol: "map.fill", summary: whole, howToOpen: row.closed,
                             closedSymbol: row.waitsForDownload ? "arrow.down.circle" : "lock.fill"
                         ) {
-                            if launcher.startOverseasMap(row.city, wholeMap: true) { dismiss() }
+                            asking(row.city.rawValue) {
+                                if launcher.startOverseasMap(row.city, wholeMap: true) { dismiss() }
+                            }
                         }
                     }
                 }
@@ -673,16 +709,37 @@ struct RealWorldPicker: View {
 
     private func start() {
         guard let anchor else { return }
+        let inTaiwan = RealWorldExpansion(around: anchor) != nil
         // Decision 712, continued: a place in Taiwan while Taiwan's map is
-        // closed starts nothing; the launcher says what opens it.
-        if RealWorldExpansion(around: anchor) != nil, !launcher.airRoutes.canStart(AirMap.taiwan.id) {
+        // closed starts nothing; the launcher says what opens it (decision
+        // 1010: or that it is not the free map).
+        if inTaiwan, launcher.taiwanClosed(in: launcher.language) != nil {
             dismiss()
             launcher.openRealWorldGame(at: anchor)
             return
         }
-        recentStarts = RecentStartPlaces(stored: recentStarts).adding(anchor).stored
-        dismiss()
-        launcher.openRealWorldGame(at: anchor)
+        let open = {
+            recentStarts = RecentStartPlaces(stored: recentStarts).adding(anchor).stored
+            dismiss()
+            launcher.openRealWorldGame(at: anchor)
+        }
+        // Decision 1010: a place outside every real map is a small map of
+        // its own, free, and chooses nothing.
+        if inTaiwan { asking(AirMap.taiwan.id, then: open) } else { open() }
+    }
+
+    /// Decision 1010: `start`s a new game on the real map `id`, first
+    /// asking whether it is to be the free map when it would become it.
+    private func asking(_ id: String, then start: @escaping () -> Void) {
+        guard launcher.choosesFreeMap else { return start() }
+        freePick = FreePick(name: launcher.freeMapName(id, in: launcher.language), start: start)
+    }
+
+    /// Decision 1010: the free map's line over the unlock's row.
+    private var freeMapLine: String {
+        let language = launcher.language
+        guard let free = launcher.freeMap else { return OverseasUnlock.chooseText(in: language) }
+        return OverseasUnlock.freeMapText(launcher.freeMapName(free, in: language), in: language)
     }
 
     // MARK: - The map

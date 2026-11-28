@@ -236,6 +236,24 @@ public final class GameLauncher {
     /// lesson is open, a new game has unlimited funds and the whole map,
     /// and every game it starts counts nothing, as a demo.
     public var isDemoMode = false
+    /// Decision 1010: what the App Store says of the maps unlock, set by
+    /// the app (``OverseasUnlock``); `nil` where there is no App Store to
+    /// ask (the tests, the headless game, a Debug build), where nothing is
+    /// sold and the maps open as decision 712 opens them.
+    public var overseasUnlock: OverseasUnlock.State?
+    /// Decision 1010: whether every map is open at once, with no flights
+    /// to wait for: the unlock is bought or a gift, or the demo mode is on.
+    public var allMapsOpen: Bool {
+        isDemoMode || overseasUnlock?.isOpen == true
+    }
+    /// Decision 1010: whether the unlock is for sale here: the App Store
+    /// answered and the maps are not all open.
+    public var sellsAllMaps: Bool {
+        overseasUnlock != nil && !allMapsOpen
+    }
+    /// Decision 1010: told of the free map once it is chosen, so the app
+    /// keeps it where a reinstall does not reach (``adoptFreeMap(_:)``).
+    @ObservationIgnored public var onFreeMapChosen: (@MainActor (String) -> Void)?
     @ObservationIgnored private var isActive = false
     @ObservationIgnored private var autosaveLoop: Task<Void, Never>?
     /// The world of the last autosave taken in turn, or of the game when
@@ -845,7 +863,8 @@ public final class GameLauncher {
             message = StatusMessage(kind: .failure, text: waiting ?? language.text("The real-world data is not ready yet.", "實景資料還沒準備好。"))
             return false
         }
-        // Decision 712: the city's flights open its map.
+        // Decision 712: the city's flights open its map; decision 1010:
+        // and the free map or the unlock.
         guard takeMap(city.rawValue) else { return false }
         let options = newGameOptions
         var world = GameWorld.newOverseasGame(
@@ -1064,6 +1083,42 @@ public final class GameLauncher {
         let new = stationStamps.collect(found, at: date)
         session.collectedStamps = stationStamps.dates
         session.noteStationStamps(new, at: found)
+    }
+
+    /// Decision 1010: remembers `id` as the free map, when it is the
+    /// first, and hands it to ``onFreeMapChosen``.
+    func chooseFreeMap(_ id: String) {
+        guard sellsAllMaps, preferences.freeMap == nil else { return }
+        preferences.freeMap = id
+        savePreferences()
+        onFreeMapChosen?(id)
+    }
+
+    /// Decision 1010: a free map the player chose before, kept where a
+    /// reinstall does not reach (the app's Keychain, which iCloud Keychain
+    /// also carries to the player's other devices): taken when this
+    /// device remembers none. A known map only.
+    public func adoptFreeMap(_ id: String) {
+        guard preferences.freeMap == nil, id == AirMap.taiwan.id || OverseasMap(rawValue: id) != nil else { return }
+        preferences.freeMap = id
+        savePreferences()
+    }
+
+    /// Decision 1010: when no free map is remembered, the player's oldest
+    /// saved game on a real map names it: a reinstall, or a new device,
+    /// with the saves back from iCloud does not choose again. Reads at most
+    /// three saves, oldest first; asked before a new game on a real map
+    /// and when the map picker opens.
+    public func settleFreeMap() {
+        guard sellsAllMaps, preferences.freeMap == nil, !isLoadingRealWorldData else { return }
+        let real = library.entries()
+            .filter { $0.problem == nil && $0.summary?.realWorld == true }
+            .sorted { ($0.savedAt ?? .distantFuture) < ($1.savedAt ?? .distantFuture) }
+        for entry in real.prefix(3) {
+            guard let world = try? library.load(entry), let map = paidMap(of: world) else { continue }
+            chooseFreeMap(map)
+            return
+        }
     }
 
     /// Remembers on the device that the flights to `cities` are open
@@ -1908,6 +1963,18 @@ public final class GameLauncher {
                 isReadingReceivedNetwork = false
                 switch made {
                 case .success(let world):
+                    // Decision 1010: a new game on a friend's network on
+                    // a real map is a new game there: it is the free
+                    // map's, or needs the unlock; looking at it does not.
+                    if let map = paidMap(of: world) {
+                        settleFreeMap()
+                        guard mayStartNewGame(on: map) else {
+                            let refused = StatusMessage(kind: .failure, text: refusedText(map))
+                            if let session { session.message = refused } else { message = refused }
+                            return
+                        }
+                        chooseFreeMap(map)
+                    }
                     guard keepPlayersGame() else { return }
                     begin(world, keepingAutosave: true, isDemo: true)
                 case .failure(let error):
