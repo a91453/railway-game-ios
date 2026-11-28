@@ -29,3 +29,9 @@
 
 - RealWorldMapUITests 三支：這個 PR 用 `ios-build.yml` 的 `only_testing` 跑過才算（結果補在 PR）。
 - 暖機 8 分、iPad 兩支：只能看之後的 full lane。
+
+## 025b1479 的 full lane（run 46093046766，11-28）
+
+- second、lessons、build 三個 job 綠。暖機：second 2 分 41 秒、lessons 5 分 19 秒、build 5 分 21 秒，後兩個超過舊的 5 分，8 分有用。Feature284To286UITests 四支過。iPad 的 `testLargeTextTutorialNavigation`、`testTheLineStepLeavesTheLinesPanelUsable` 過（#2833 生效）。
+- iPad 紅一支新的：`TutorialJourneyUITests.testTheWholeTutorialOnAnIPad` 第 15 步「Wait for your first fares」，收起的卡片（10, 65, 1356 × 44）蓋到現金，兩次都紅；550e1377 那晚是過的。原因：#2833 的 `previousCost`，卡片原位蓋到的不比放上去時多就不動，連蓋到這一步自己的按鈕（現金、倍速）也不動。
+- 改：`TutorialCardPlacement` 原位蓋到這一步自己的按鈕、要點的地方或面板時不留，重新找位置（舊規則）；只蓋到其他按鈕或細節卡時照 #2833 留著。`testACardOverTheStepsOwnControlsDoesNotStayThere` 沒修時紅、修了綠（Linux，VERIFIED）。UNVERIFIED：iPad 那支要看下一次 full lane 或 `only_testing_ipad`。
