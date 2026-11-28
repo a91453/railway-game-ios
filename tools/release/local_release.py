@@ -14,6 +14,9 @@ JSON file ({"build": "152.1", "commit": "<sha>"}) by `record`:
   local_release.py external   --record FILE --build B --version V
       add the processed build to every External Testing group and submit it
       to Beta App Review (ASC_APP_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH)
+  local_release.py pack-review --record FILE --packs "ID ID ..."
+      submit the newest version of each map pack for external TestFlight
+      review, or say what to press in App Store Connect (same variables)
 
 The CI scripts read GITHUB_TOKEN, GITHUB_REPOSITORY and GITHUB_RUN_ID as in
 CI. Only Python's standard library and git are used.
@@ -90,14 +93,101 @@ def external(build, version):
     return 0
 
 
+# Apple's answer (developer forums thread 841564, 2026-08): asset packs go to
+# TestFlight review through betaBackgroundAssetReviewSubmissions, "available
+# publicly soon"; betaAppReviewSubmissions is for builds only. Until then the
+# public API answers 404 and the version is submitted in App Store Connect.
+PACK_REVIEW = "/v1/betaBackgroundAssetReviewSubmissions"
+PACK_WAIT_STATES = {"AWAITING_UPLOAD", "PROCESSING"}
+PACK_SUBMITTABLE = "READY_FOR_BETA_SUBMISSION"
+
+
+def newest_pack_version(client, app_id, pack_id):
+    """The newest version of the map pack and its external beta release state."""
+    assets = client.request("GET", f"/v1/apps/{app_id}/backgroundAssets",
+                            {"filter[assetPackIdentifier]": pack_id, "limit": "1"}).get("data") or []
+    if not assets:
+        return None
+    answer = client.request("GET", f"/v1/backgroundAssets/{assets[0]['id']}/versions",
+                            {"sort": "-version", "limit": "1", "include": "externalBetaRelease"})
+    versions = answer.get("data") or []
+    if not versions:
+        return None
+    version = versions[0]
+    release = ((version.get("relationships") or {}).get("externalBetaRelease") or {}).get("data") or {}
+    state = None
+    for item in answer.get("included") or []:
+        if item.get("type") == "backgroundAssetVersionExternalBetaReleases" and item.get("id") == release.get("id"):
+            state = (item.get("attributes") or {}).get("state")
+    attributes = version.get("attributes") or {}
+    return {"id": version["id"], "version": attributes.get("version"),
+            "state": attributes.get("state"), "external": state}
+
+
+def pack_review(packs, wait=60, attempts=20):
+    """Submit each uploaded map pack's newest version for external review.
+
+    Runs after the build's own Beta App Review submission (Apple: submit the
+    build before the asset packs it needs). A pack still processing is asked
+    again every `wait` seconds. Whatever cannot be submitted here is listed
+    with what to press in App Store Connect; the release does not fail on it.
+    """
+    import os
+    import time
+    processing = load("testflight-processing")
+    client = processing.Client(os.environ["ASC_KEY_ID"], os.environ["ASC_ISSUER_ID"],
+                               os.environ["ASC_KEY_PATH"], "https://api.appstoreconnect.apple.com")
+    app_id = os.environ["ASC_APP_ID"]
+    by_hand = []
+    for pack_id in packs:
+        found = None
+        for attempt in range(attempts):
+            found = newest_pack_version(client, app_id, pack_id)
+            if not found or found["state"] not in PACK_WAIT_STATES:
+                break
+            if attempt + 1 < attempts:
+                time.sleep(wait)
+        if not found:
+            print(f"{pack_id}: no version in App Store Connect.", file=sys.stderr)
+            by_hand.append((pack_id, None))
+            continue
+        label = f"{pack_id} version {found['version']}"
+        if found["state"] != "COMPLETE":
+            print(f"{label} is {found['state']}, not ready for review.", file=sys.stderr)
+            by_hand.append((pack_id, found["version"]))
+            continue
+        if found["external"] and found["external"] != PACK_SUBMITTABLE:
+            print(f"{label}: external testing is already {found['external']}.")
+            continue
+        try:
+            client.request("POST", PACK_REVIEW, body={"data": {
+                "type": "betaBackgroundAssetReviewSubmissions",
+                "relationships": {"backgroundAssetVersion": {
+                    "data": {"type": "backgroundAssetVersions", "id": found["id"]}}}}})
+            print(f"Submitted {label} for external TestFlight review.")
+        except Exception as error:  # 404 until Apple makes the resource public
+            print(f"{label} could not be submitted by the API: {error}", file=sys.stderr)
+            by_hand.append((pack_id, found["version"]))
+    if by_hand:
+        print()
+        print("Map packs to submit by hand for external testers: App Store Connect > TestFlight >")
+        print("Builds & Assets > Asset Packs > the pack > Replace (or Set Up External Testing) >")
+        print("choose the version > Submit for Review.")
+        print("（中文介面：TestFlight → 素材包 → 那一包 → 取代 → 選這一版 → 提交以供審查）")
+        for pack_id, version in by_hand:
+            print(f"  - {pack_id}" + (f", version {version}" if version else ""))
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("action", choices=["packs", "whats-new", "next-build", "record", "external"])
+    parser.add_argument("action", choices=["packs", "whats-new", "next-build", "record", "external", "pack-review"])
     parser.add_argument("--record", required=True)
     parser.add_argument("--build")
     parser.add_argument("--commit")
     parser.add_argument("--ci-build")
     parser.add_argument("--version")
+    parser.add_argument("--packs", default="")
     args = parser.parse_args(argv)
     record = read_record(args.record)
 
@@ -107,6 +197,9 @@ def main(argv=None):
 
     if args.action == "external":
         return external(args.build, args.version)
+
+    if args.action == "pack-review":
+        return pack_review(args.packs.split())
 
     if args.action == "next-build":
         # CI makes N and N.2..N.99, never N.1: the Mac takes N.1, then N.1.1,

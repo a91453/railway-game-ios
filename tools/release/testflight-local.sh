@@ -299,8 +299,17 @@ ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ASC_PRIVATE_KEY="$(cat "
 
 if [[ "$external" == true ]]; then
   step "External Testing groups and Beta App Review"
+  external_status=0
   ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ASC_KEY_PATH="$key" ASC_APP_ID="$app_id" \
-    local_release external --build "$build" --version "$version"
+    local_release external --build "$build" --version "$version" || external_status=$?
+  # A new map pack version needs its own review before external testers get
+  # it, submitted after the build's (Apple's order).
+  if [[ -n "$changed" ]]; then
+    step "Map packs for external testing"
+    ASC_KEY_ID="$ASC_KEY_ID" ASC_ISSUER_ID="$ASC_ISSUER_ID" ASC_KEY_PATH="$key" ASC_APP_ID="$app_id" \
+      local_release pack-review --packs "$changed"
+  fi
+  ((external_status == 0)) || exit "$external_status"
 fi
 
 echo
