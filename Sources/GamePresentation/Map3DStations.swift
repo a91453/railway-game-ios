@@ -410,7 +410,7 @@ extension Map3DScene.Builder {
         }
         // Decision 1043: in Japan, the stations whose building stands over
         // their tracks, before their canopies, which leave room for it.
-        if look.buildings == .japan {
+        if look.buildings == .japan && Map3DOldOvertrack.inGame {
             // As decision 936's footbridges: none at a station with a
             // platform wholly outside this block of chunks.
             var partial = Set<StationID>(), underground = Set<StationID>()
