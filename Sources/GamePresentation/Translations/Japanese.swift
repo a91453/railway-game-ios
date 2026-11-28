@@ -281,6 +281,7 @@ A platform track runs beside the platform with a turnout at each end. Island: on
 A population of {0}	人口{0}人
 A quiet month: little changed	穏やかな月：変化はわずか
 A random map each game.	毎回ランダムな地図。
+A real line you buy now has its opening when its first train leaves: a bugle call, a banner, and the map shows the line.	買収した実在の路線は、一番列車が出発するときに開業式を行います。ファンファーレが鳴り、開業の横断幕が出て、地図がその路線を映します。
 A real station your trains carried passengers at gets its stamp the next day. Kept on this device.	列車が乗客を運んだ実在の駅には、翌日スタンプが押されます。この端末に記録されます。
 A record day for the railway	鉄道の1日最多記録
 A report on the year only: it gives and takes no money.	この1年の成績表です。お金の増減はありません。
@@ -1209,6 +1210,7 @@ Grand station hall	大駅舎
 Grand temple	大寺院
 Granny Peng	彭阿婆
 Ground	地面
+Ground-level stations on the Japan map have Japanese station buildings that go up a size as the station grows, long single-post platform roofs and railings at the platform ends.	日本地図の地上駅は日本の駅舎になり、駅を拡張すると一回り大きくなります。ホームには一本柱の長い上屋と、端に柵が付きました。
 Grow the town round {0}	{0}周辺の町を育てる
 Grown from {0} to {1} trips a day · {2} yesterday	1日{0}→{1}旅客に増加 · 昨日{2}
 Guideway	軌道桁
@@ -1925,6 +1927,7 @@ On the Hong Kong map, the cable car mode can lay the Peak Tram on its real track
 On the Japan map, Dazaifu Tenmangu, Munakata Taisha, Yutoku Inari and Aoi Aso shrines now stand where they are, with the Chikugo River Lift Bridge, the Tsujun Bridge and the Tenmon Bridge.	日本地図に太宰府天満宮・宗像大社・祐徳稲荷神社・青井阿蘇神社と、筑後川昇開橋・通潤橋・天門橋が加わりました。
 On the Japan map, Kumamoto, Kokura and Karatsu Castles now stand where they are, and Kumamoto and Tara stations have their real station buildings.	日本地図に熊本城・小倉城・唐津城が実際の場所に建ち、熊本駅と多良駅は実際の駅舎になりました。
 On the Japan map, Mojiko station, the Former Moji Customs House and the Mitsui Club now stand in Mojiko, and Suizenji garden in Kumamoto has its Noh stage and two stone bridges.	日本地図の門司港に門司港駅・旧門司税関・旧門司三井倶楽部が建ち、熊本の水前寺成趣園には能楽殿と2つの石橋ができました。
+On the Japan map, small island-platform stations and enlarged ground stations have their station building over the tracks, with stairs down to the platforms.	日本地図の島式ホームの小さな駅と拡張した地上駅は、線路の上に駅舎を構える橋上駅舎になり、階段でホームへ降ります。
 On the Japan map, the main hall and watchtower of Yoshinogari and the Mandaken mine now stand.	日本地図に吉野ヶ里遺跡の主祭殿と物見櫓、万田坑が加わりました。
 On the Simulator the figures say little about a device.	シミュレータでの数値は実機の参考になりません。
 On the Taiwan 3D map, streets the building map left bare are lined with the homes really sold there, as tall as they are: the towers round Taoyuan's high-speed station now stand.	台湾の3D地図で建物図に抜けていた通りには、実際に売買された住宅が実際の階数で建ちます。桃園の高速鉄道駅周辺の高層ビルも建ちました。
@@ -3060,6 +3063,7 @@ The tracks turn too sharply for an X crossover there.	そこは線路の曲が�
 The train cannot follow that path: each step must lead to joined track, without turning back.	列車はその進路を走れません：各区間はつながった線路へ進み、折り返してはいけません。
 The trains pay for themselves in about {0} {1}	約{0}日で購入費を回収
 The trains wait at the first station and leave one by one. Change counts per time of day below.	列車は始発駅で待機し、1本ずつ発車します。時間帯ごとの本数は下で変更できます。
+The tutorial's card no longer covers what its step points at, such as your cash on an iPad.	チュートリアルのカードが、そのステップで見るところ（iPadの現金など）を隠さなくなりました。
 The two diagonals would cross too shallowly to tell apart: make the crossover shorter.	2本の斜線の交差角が浅すぎて見分けられません：渡り線を短くしてください。
 The two tracks must be level	2本の線路は同じ高さに
 The two tracks spread apart round one platform between them.	2線が間のホーム1面を挟んで広がります。

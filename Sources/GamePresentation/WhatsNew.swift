@@ -53,6 +53,10 @@ public enum WhatsNew {
                     chinese: "App 不再內建地圖：第一次開某張地圖會自動下載（要連網路）；設定的「地圖」可刪除或重新下載。"
                 ),
                 Line(
+                    english: "A real line you buy now has its opening when its first train leaves: a bugle call, a banner, and the map shows the line.",
+                    chinese: "買下的真實路線在首班車開出時舉行通車典禮：號角、通車橫幅，地圖帶到那條線。"
+                ),
+                Line(
                     english: "The Kyushu Shinkansen goes on south from Kumamoto to Shin-Yatsushiro and Shin-Minamata on the Japan map; a game that already has Hakata to Kumamoto can buy the rest.",
                     chinese: "日本地圖的九州新幹線往南延到新八代、新水俁；已經買了博多到熊本的局可以加買這一段。"
                 ),
@@ -111,6 +115,14 @@ public enum WhatsNew {
                 Line(
                     english: "On the Japan map, Kumamoto, Kokura and Karatsu Castles now stand where they are, and Kumamoto and Tara stations have their real station buildings.",
                     chinese: "日本地圖多了熊本城、小倉城、唐津城，熊本站、多良站換成真實站房。"
+                ),
+                Line(
+                    english: "Ground-level stations on the Japan map have Japanese station buildings that go up a size as the station grows, long single-post platform roofs and railings at the platform ends.",
+                    chinese: "日本地圖的地面站換上日本站房，擴建時換大一級；月台有單柱的長雨棚和端頭欄杆。"
+                ),
+                Line(
+                    english: "On the Japan map, small island-platform stations and enlarged ground stations have their station building over the tracks, with stairs down to the platforms.",
+                    chinese: "日本地圖的島式小站和擴建過的地面站，站房蓋在軌道上方，走樓梯下月台。"
                 ),
                 Line(
                     english: "On the Japan map, Dazaifu Tenmangu, Munakata Taisha, Yutoku Inari and Aoi Aso shrines now stand where they are, with the Chikugo River Lift Bridge, the Tsujun Bridge and the Tenmon Bridge.",
@@ -209,6 +221,10 @@ public enum WhatsNew {
                 Line(
                     english: "The card of the tutorial's last step no longer jumps back and forth.",
                     chinese: "教學最後一步的卡片不再來回跳。"
+                ),
+                Line(
+                    english: "The tutorial's card no longer covers what its step points at, such as your cash on an iPad.",
+                    chinese: "教學卡片不再蓋住這一步要看的地方，例如 iPad 上的現金。"
                 ),
             ]
         ),
