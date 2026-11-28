@@ -10,10 +10,13 @@ import GameCore
 /// size, the halls' underside 6.50 m over the rails, the deck of the
 /// game's footbridges (decision 936; `a91453/railway-assets-private-2`
 /// `game-art-previews/docs/art/old-port-station-ground-2026-11/revision-1`,
-/// #662), and `tools/old-models/old_overtrack.py` made them the game's own
-/// (owner, 2026-11-28: like the old ones, not the same): their red roofs
-/// the game's station green, a name board in the sign blue on the hall's
-/// street front.
+/// #662), and then, the owner having seen them in the game (2026-11-28:
+/// the shape should differ from the old one's, not only its colours),
+/// drew them again in a shape of their own with the same connections and
+/// sizes: a steel roof floating over the hall with a green clerestory
+/// over the tracks, tall windows between slim ribs, stairs that turn at
+/// a landing (#691). `tools/old-models/old_overtrack.py` adds a name board
+/// in the sign blue on the hall's street front.
 ///
 /// It stands for the station's building and its footbridge together: a
 /// station with one draws neither (``Map3DScene/Builder/addStations``,
@@ -35,18 +38,23 @@ enum Map3DOldOvertrack {
 
     static let stair = "overtrack-stair", corridor = "corridor"
 
-    /// Whether the scene places them. Off until the studio's new shapes
-    /// come (owner, 2026-11-28: these are still the earlier version's
-    /// shapes, and the game's should differ); the planning, drawing and
-    /// tests stay, so turning it on is this line.
-    static let inGame = false
+    /// Whether the scene places them (off from #2846 until the studio's
+    /// new shapes came, #691).
+    static let inGame = true
+
+    /// The ground stations' palette, then the new shape's own: its pale
+    /// walls, the clerestory's silver trim, the timber soffits and the
+    /// warm grey beams (the tool's `MATERIALS`).
+    static let meshPalette: [UInt32] = Map3DOldGroundStation.meshPalette + [
+        Map3DPalette.cityConcreteWalls[4], Map3DPalette.tankSteel, Map3DPalette.timber, Map3DPalette.arcade,
+    ]
 
     static let models: [String: Map3DModelPack.Model] = {
         var models: [String: Map3DModelPack.Model] = [:]
         for (name, text) in encoded {
             guard let data = Data(base64Encoded: text, options: .ignoreUnknownCharacters) else { continue }
             models[name] = Map3DRedCommuter.decodedMesh([UInt8](data), named: "old-port-station-ground-" + name,
-                                                        palette: Map3DOldGroundStation.meshPalette)
+                                                        palette: meshPalette)
         }
         return models
     }()
@@ -66,7 +74,7 @@ enum Map3DOldOvertrack {
     static let deck: Float = 5.35
     /// How far a hall reaches along the platforms, the stairs' foot at the
     /// low end; its middle.
-    static let hallReach: ClosedRange<Float> = -17.8...13.44
+    static let hallReach: ClosedRange<Float> = -17.82...12.8
     static var hallMiddle: Float { (hallReach.lowerBound + hallReach.upperBound) / 2 }
     /// The side hall's two tracks either side of its middle, and the walls
     /// of each stair down to a side platform, across (the +y one's two
@@ -90,6 +98,8 @@ enum Map3DOldOvertrack {
     /// The side hall's wall the corridor leaves (+y), half the further
     /// stair's walls and half its roof.
     static let hallWall: Float = 8
+    /// How far the side hall's floating roof reaches on that side.
+    static let hallEave: Float = 8.7
     static let stairWall: Float = 2.06, stairRoof: Float = 2.3
     /// The narrowest island a further stair (4.6 m) stands on.
     static let stairBody: Float = 4.8
@@ -121,7 +131,7 @@ enum Map3DOldOvertrack {
         var reach: ClosedRange<Float> {
             switch hall {
             case .island: -islandStreet...islandStreet
-            case .side: -sideStreet...max(hallWall + 0.3, (stairs.last ?? 0) + stairRoof)
+            case .side: -sideStreet...max(hallEave, (stairs.last ?? 0) + stairRoof)
             }
         }
     }
