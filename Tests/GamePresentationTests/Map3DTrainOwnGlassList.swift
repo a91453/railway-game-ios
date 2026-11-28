@@ -31,6 +31,7 @@ enum Map3DTrainOwnGlassList {
         "set-MAGLEV", // Decision 930.
         "set-SKYRAIL", // Decision 930.
         "set-hkPeakTram", // Decision 930.
+        "set-kumamotoTram", // Decision 1041 (continued).
         "set-SUMMER-head", // Decision 930.
         "set-SUMMERFar-head", // Decision 930.
         "set-STEAM-car", // Decision 957: the steam train's wooden coaches.
@@ -75,6 +76,7 @@ enum Map3DTrainOwnGlassList {
         { far in far ? [] : Map3DN700SKamome.Unit.allCases.map { Map3DN700SKamome.model($0) } }, // Decision 998 (continued): near only.
         { far in far ? [] : Map3DKyushu885.Unit.allCases.map { Map3DKyushu885.model($0) } }, // Decision 1028 (continued): near only.
         { far in far ? [] : Map3DKyushu787.Unit.allCases.map { Map3DKyushu787.model($0) } }, // Decision 1028 (continued): near only.
+        { far in [Map3DKumamotoTram.model(far: far)] }, // Decision 1041 (continued): the Kumamoto tram.
     ]
 
     /// The studio cars whose dark faces were never taken for glass, so
@@ -85,7 +87,8 @@ enum Map3DTrainOwnGlassList {
     /// Kyushu Shinkansen's N700's (decision 977), the N700S's (decision
     /// 979) and the 800's (decision 978: its cab mask and car ends too);
     /// the 885's and the 787's (decision 1028, continued) are their masks,
-    /// lamp housings, bogies and floors.
+    /// lamp housings, bogies and floors; the Kumamoto tram's (decision
+    /// 1041, continued) its cab windows' frames, wiper and wheels.
     static let darkNeverGlass: [String] = [
         "mtr-tuen-ma",
         "keikyu-new1000",
@@ -95,5 +98,6 @@ enum Map3DTrainOwnGlassList {
         "kyushu-800",
         "kyushu-885",
         "kyushu-787",
+        "kumamoto-tram",
     ]
 }

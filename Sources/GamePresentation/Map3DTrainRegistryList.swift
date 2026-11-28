@@ -34,5 +34,6 @@ extension Map3DTrainRegistry {
         Map3DN700SKamome.registration,
         Map3DKyushu885.registration,
         Map3DKyushu787.registration,
+        Map3DKumamotoTram.registration,
     ]
 }

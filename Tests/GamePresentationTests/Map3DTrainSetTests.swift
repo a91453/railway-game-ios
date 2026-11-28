@@ -171,7 +171,11 @@ final class Map3DTrainSetTests: XCTestCase {
                 let maglev = ["MAGLEV", "MAGLEVFar"].contains(set.key)
                 // Decision 957: the steam train's wooden coaches, 2.38 m wide.
                 let steamCoach = ["STEAM", "STEAMFar"].contains(set.key) && [set.middleName, set.tailName].contains(name)
-                XCTAssertTrue((alishan ? 2.1...2.35 : nanakuma ? 2.45...2.55 : maglev ? 3.65...3.75 : steamCoach ? 2.36...2.40 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
+                // Decision 1041 (continued): the Kumamoto low-floor tram, 2.40 m
+                // wide, its pantograph raised to 5.10 m.
+                let kumamoto = [Map3DKumamotoTram.key, Map3DKumamotoTram.key + "Far"].contains(set.key)
+                XCTAssertTrue((alishan ? 2.1...2.35 : nanakuma ? 2.45...2.55 : maglev ? 3.65...3.75 : steamCoach ? 2.36...2.40
+                               : kumamoto ? 2.39...2.41 : 2.6...3.5).contains(model.maximum.y - model.minimum.y), "\(name): \(model.maximum.y - model.minimum.y) m wide")
                 XCTAssertEqual(model.minimum.z, 0, accuracy: 0.1, "\(name) stands on the rail")
                 // The low-floor tram is lower than a train.
                 let height: ClosedRange<Float> = name == set.headName && ["E500CK", "STAR", "E500CKFar", "STARFar", "pushPull", "pushPullFar", "pushPullE1000", "pushPullE1000Far"].contains(set.key) ? 5.2...5.5
@@ -189,6 +193,7 @@ final class Map3DTrainSetTests: XCTestCase {
                     // Decision 531: the forest railway's low cars, 3.05 and 3.22 m.
                     : alishan ? 3.0...3.3
                     : nanakuma ? 3.1...3.2
+                    : kumamoto ? 5.05...5.15
                     // Decision 864: the Finnish double-deck coaches, 5.2 m (decision 900: the control car and the sleepers too).
                     // Decision 930: the night train's restaurant car a single-deck one, 3.97 m.
                     : name == set.pantographName && set.key.hasPrefix("finlandNight") ? 3.9...4.0

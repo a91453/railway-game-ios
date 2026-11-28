@@ -1385,6 +1385,7 @@ Kind	種類
 Kindergarten	幼稚園
 Kumamoto City Tram	熊本市電
 Kumamoto City Tram GTFS data	熊本市電 GTFS データ
+Kumamoto low-floor tram	熊本市電 超低床電車
 Kumamoto, Saga, Kitakyushu, Amakusa, Nagasaki and Iki Airports	熊本・佐賀・北九州・天草・長崎・壱岐空港
 Kyushu Shinkansen	九州新幹線
 Kyushu’s weather	九州の天気
