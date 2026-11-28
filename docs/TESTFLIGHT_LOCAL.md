@@ -40,7 +40,7 @@ build 號只在封存時以 `CURRENT_PROJECT_VERSION` 傳進去，repo 裡的 `p
 tools/release/testflight-local.sh --build 153 --external --whats-new ~/RailwayTestFlight/153/whats-new-153.txt
 ```
 
-本機新傳的地圖包版本也要過審才會給外部測試者；送審後到 App Store Connect 看那幾包的狀態。給了整數 build 號（例如 153），下一次 CI 的 run 號如果也是 153 會撞號，CI 那次要改 `BUILD_NUMBER_OFFSET`。
+本機新傳的地圖包版本也要過審才會給外部測試者。`--external` 在 build 送審之後跑「Map packs for external testing」（`local_release.py pack-review`）：等這次上傳的每一包處理完，試著用 `POST /v1/betaBackgroundAssetReviewSubmissions` 送外部測試審查；Apple 說這個資源「很快」公開（開發者論壇 841564，2026-08），2026-11-28 的 OpenAPI 4.6.1 還沒有，公開 API 回 404 時，腳本最後列出要在 App Store Connect 手動送的包與版本（TestFlight → 素材包 → 那一包 → 取代 → 選版本 → 提交以供審查），不讓發版失敗。154 的 `mappack-fukuoka` 版本 7 是作者手動按「取代」送的。給了整數 build 號（例如 153），下一次 CI 的 run 號如果也是 153 會撞號，CI 那次要改 `BUILD_NUMBER_OFFSET`。
 
 ## 和 CI 不同的地方
 
